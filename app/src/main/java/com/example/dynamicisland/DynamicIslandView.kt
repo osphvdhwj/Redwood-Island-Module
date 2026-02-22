@@ -3,17 +3,18 @@ package com.example.dynamicisland
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
-import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.DisplayCutout
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.ViewGroup
+import android.view.View
 import android.view.WindowInsets
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.TextView
+import android.widget.LinearLayout
 
 class DynamicIslandView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -22,6 +23,10 @@ class DynamicIslandView @JvmOverloads constructor(
     private val backgroundDrawable = GradientDrawable()
     private var currentAnimator: ValueAnimator? = null
     private val contentText: TextView
+    private val musicContainer: LinearLayout
+    private val musicTitle: TextView
+    private val musicArtist: TextView
+    private val musicVisualizer: View // Placeholder for visualizer
 
     // Default dimensions (in pixels) - will be updated by config
     var collapsedWidth = 100
@@ -39,18 +44,44 @@ class DynamicIslandView @JvmOverloads constructor(
         backgroundDrawable.cornerRadius = cornerRadius
         background = backgroundDrawable
 
-        // Centered text for testing
+        // Generic Content (Notifications)
         contentText = TextView(context)
-        contentText.text = "Island"
+        contentText.text = "Notification"
         contentText.setTextColor(Color.WHITE)
         contentText.gravity = Gravity.CENTER
-        contentText.alpha = 0f // Hidden initially
+        contentText.alpha = 0f
         addView(contentText, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+
+        // Music Content
+        musicContainer = LinearLayout(context)
+        musicContainer.orientation = LinearLayout.VERTICAL
+        musicContainer.gravity = Gravity.CENTER
+        musicContainer.alpha = 0f
+
+        musicTitle = TextView(context)
+        musicTitle.setTextColor(Color.WHITE)
+        musicTitle.textSize = 14f
+        musicTitle.gravity = Gravity.CENTER
+
+        musicArtist = TextView(context)
+        musicArtist.setTextColor(Color.LTGRAY)
+        musicArtist.textSize = 12f
+        musicArtist.gravity = Gravity.CENTER
+
+        musicVisualizer = View(context)
+        musicVisualizer.setBackgroundColor(Color.GREEN) // Placeholder visualizer
+        val vizParams = LinearLayout.LayoutParams(100, 10)
+        vizParams.topMargin = 20
+
+        musicContainer.addView(musicTitle)
+        musicContainer.addView(musicArtist)
+        musicContainer.addView(musicVisualizer, vizParams)
+
+        addView(musicContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
         if (ev?.action == MotionEvent.ACTION_DOWN) {
-            // If expanded, claim the touch immediately to prevent parent interception (e.g. brightness slider)
             if (isExpanded) {
                 parent?.requestDisallowInterceptTouchEvent(true)
             }
@@ -62,7 +93,6 @@ class DynamicIslandView @JvmOverloads constructor(
         if (isExpanded) {
             return true
         }
-        // If collapsed, let touch pass through unless specifically handled
         return super.onTouchEvent(event)
     }
 
@@ -73,7 +103,6 @@ class DynamicIslandView @JvmOverloads constructor(
              if (rects.isNotEmpty()) {
                  val rect = rects[0]
 
-                 // Update collapsed size to match cutout roughly + padding
                  collapsedHeight = rect.height() + 10
                  collapsedWidth = rect.width() + 40
 
@@ -93,7 +122,6 @@ class DynamicIslandView @JvmOverloads constructor(
         expandedWidth = eW
         expandedHeight = eH
 
-        // Apply initial collapsed state if not expanded
         if (!isExpanded && layoutParams != null) {
             updateLayout(collapsedWidth, collapsedHeight)
         }
@@ -105,6 +133,22 @@ class DynamicIslandView @JvmOverloads constructor(
             params.width = width
             params.height = height
             layoutParams = params
+        }
+    }
+
+    fun updateMusicInfo(title: String?, artist: String?) {
+        musicTitle.text = title ?: "Unknown Title"
+        musicArtist.text = artist ?: "Unknown Artist"
+    }
+
+    fun showMusicVisualizer(show: Boolean) {
+        // Toggle between music view and default view?
+        // For now, if music is playing, we show music container
+        if (show) {
+            contentText.alpha = 0f
+            musicContainer.animate().alpha(1f).duration = 300
+        } else {
+            musicContainer.animate().alpha(0f).duration = 300
         }
     }
 
@@ -122,9 +166,6 @@ class DynamicIslandView @JvmOverloads constructor(
             val currentWidth = (collapsedWidth + (expandedWidth - collapsedWidth) * fraction).toInt()
             val currentHeight = (collapsedHeight + (expandedHeight - collapsedHeight) * fraction).toInt()
             updateLayout(currentWidth, currentHeight)
-
-            // Fade in content
-            contentText.alpha = fraction
         }
         currentAnimator = anim
         anim.start()
@@ -144,8 +185,10 @@ class DynamicIslandView @JvmOverloads constructor(
             val currentWidth = (collapsedWidth + (expandedWidth - collapsedWidth) * fraction).toInt()
             val currentHeight = (collapsedHeight + (expandedHeight - collapsedHeight) * fraction).toInt()
             updateLayout(currentWidth, currentHeight)
-             // Fade out content
-            contentText.alpha = fraction
+
+            // Fade out all content
+            contentText.alpha = 0f
+            musicContainer.alpha = 0f
         }
         currentAnimator = anim
         anim.start()

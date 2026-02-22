@@ -1,23 +1,51 @@
 package com.example.dynamicisland
 
+import android.animation.ValueAnimator
+import android.content.BroadcastReceiver
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.MediaMetadata
+import android.media.session.MediaController
+import android.media.session.MediaSessionManager
+import android.media.session.PlaybackState
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import java.lang.ref.WeakReference
-import android.provider.Settings
-import android.content.ContentResolver
 
 object IslandController {
 
     private var islandViewRef: WeakReference<DynamicIslandView>? = null
     private var clockViewRef: WeakReference<View>? = null
     private var isExpanding = false
+    private var currentController: MediaController? = null
+    private var mediaSessionManager: MediaSessionManager? = null
+
+    // Callbacks need to be held as strong references?
+    private val sessionsListener = object : MediaSessionManager.OnActiveSessionsChangedListener {
+        override fun onActiveSessionsChanged(controllers: MutableList<MediaController>?) {
+            updateActiveController(controllers)
+        }
+    }
+
+    private val mediaCallback = object : MediaController.Callback() {
+        override fun onPlaybackStateChanged(state: PlaybackState?) {
+            updateMediaState(state)
+        }
+        override fun onMetadataChanged(metadata: MediaMetadata?) {
+            updateMetadata(metadata)
+        }
+    }
 
     fun init(view: DynamicIslandView) {
         islandViewRef = WeakReference(view)
-        checkClockPosition(view.context.contentResolver)
+        setupMediaListener(view.context)
     }
 
     fun setClock(view: View) {
@@ -28,18 +56,76 @@ object IslandController {
         return isExpanding
     }
 
-    private fun checkClockPosition(resolver: ContentResolver) {
+    private fun setupMediaListener(context: Context) {
         try {
-            // crDroid clock style: 0=Right, 1=Center, 2=Left
-            val style = Settings.System.getInt(resolver, "status_bar_clock_style", 0)
-            if (style == 1) {
-                XposedBridge.log("DynamicIsland: [WARN] Clock is set to CENTER. This conflicts with Island.")
-                // In a real module, we might force change it, but that's intrusive.
-                // Just logging for now, or we could permanently hide the clock.
-                clockViewRef?.get()?.visibility = View.GONE
-            }
+            mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
+
+            // Register listener for active sessions
+            // Requires permissions usually, but SystemUI has them
+            val componentName = ComponentName(context, "com.android.systemui.SystemUIService")
+            mediaSessionManager?.addOnActiveSessionsChangedListener(sessionsListener, componentName)
+
+            // Initial check
+            val controllers = mediaSessionManager?.getActiveSessions(componentName)
+            updateActiveController(controllers)
+
+            XposedBridge.log("DynamicIsland: [MEDIA] Listener setup complete")
         } catch (e: Throwable) {
-             // Ignore
+            XposedBridge.log("DynamicIsland: [ERROR] Media setup failed: " + e)
+        }
+    }
+
+    private fun updateActiveController(controllers: List<MediaController>?) {
+        if (controllers.isNullOrEmpty()) return
+
+        // Unregister old
+        currentController?.unregisterCallback(mediaCallback)
+
+        // Pick first active one
+        currentController = controllers.first()
+        currentController?.registerCallback(mediaCallback)
+
+        XposedBridge.log("DynamicIsland: [MEDIA] Active controller: " + currentController?.packageName)
+
+        // Initial state update
+        updateMediaState(currentController?.playbackState)
+        updateMetadata(currentController?.metadata)
+    }
+
+    private fun updateMediaState(state: PlaybackState?) {
+        if (state == null) return
+        val isPlaying = state.state == PlaybackState.STATE_PLAYING
+
+        val island = islandViewRef?.get() ?: return
+
+        island.post {
+            if (isPlaying) {
+                if (!island.isExpanded) {
+                    XposedBridge.log("DynamicIsland: [MEDIA] Playing -> Expand")
+                    island.expand()
+                }
+                island.showMusicVisualizer(true)
+            } else {
+                XposedBridge.log("DynamicIsland: [MEDIA] Paused -> Collapse (delayed)")
+                island.showMusicVisualizer(false)
+                // Collapse after 2s delay if paused
+                island.postDelayed({
+                    if (currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
+                        island.collapse()
+                    }
+                }, 2000)
+            }
+        }
+    }
+
+    private fun updateMetadata(metadata: MediaMetadata?) {
+        if (metadata == null) return
+        val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
+        val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
+
+        val island = islandViewRef?.get() ?: return
+        island.post {
+            island.updateMusicInfo(title, artist)
         }
     }
 

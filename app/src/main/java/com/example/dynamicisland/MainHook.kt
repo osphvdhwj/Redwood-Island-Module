@@ -1,6 +1,9 @@
 package com.example.dynamicisland
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
@@ -20,7 +23,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
 
     private var islandInitialized = false
 
-    // File Logger for deep debugging
     private fun log(msg: String) {
         XposedBridge.log("DynamicIsland: " + msg)
     }
@@ -30,7 +32,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
 
         log("[RES] Hooking resources for SystemUI")
 
-        // Try hooking common layout files
         val layouts = arrayOf("status_bar", "super_status_bar", "phone_status_bar")
 
         for (layoutName in layouts) {
@@ -64,7 +65,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
              }
         }
 
-        // Try standard hooks as backup
         try {
             XposedHelpers.findAndHookMethod(
                 "com.android.systemui.statusbar.phone.PhoneStatusBarView",
@@ -93,10 +93,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
     }
 
     private fun injectIsland(parentView: ViewGroup) {
-        // Check if already added to avoid duplicates
         for (i in 0 until parentView.childCount) {
             if (parentView.getChildAt(i) is DynamicIslandView) {
-                log("[UI] Island already exists in " + parentView.javaClass.simpleName)
                 return
             }
         }
@@ -104,11 +102,14 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
         try {
             val context = parentView.context
 
-            // Load prefs
             val prefs = XSharedPreferences("com.example.dynamicisland", "dynamic_island_prefs")
-            val offsetY = prefs.getInt("offset_y", 0)
+            var offsetY = prefs.getInt("offset_y", 0)
 
-            // Create Island
+            // Adjust Offset slightly up if user said it was "below" punch hole
+            // Standard punch hole is usually 0-10px from top, but crDroid might pad it.
+            // If user said "below", we might need negative margin or check cutout logic
+            // For now, let's trust the Cutout logic in DynamicIslandView to override this if Cutout exists.
+
             val islandView = DynamicIslandView(context)
             islandView.id = View.generateViewId()
 
@@ -121,14 +122,13 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
 
             islandView.layoutParams = lp
 
-            // DEBUG: Force visibility and RED
             islandView.visibility = View.VISIBLE
             islandView.elevation = 2000f
-            islandView.setBackgroundColor(Color.RED)
+            // Color handled in view init (Black)
 
             parentView.addView(islandView)
             islandInitialized = true
-            log("[UI] SUCCESS: Added Island (RED) to " + parentView.javaClass.simpleName)
+            log("[UI] SUCCESS: Added Island (Black) to " + parentView.javaClass.simpleName)
 
             islandView.post {
                 try {
