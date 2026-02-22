@@ -3,6 +3,7 @@ package com.example.dynamicisland
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.DisplayCutout
@@ -37,7 +38,6 @@ class DynamicIslandView @JvmOverloads constructor(
         backgroundDrawable.setColor(Color.BLACK)
         backgroundDrawable.cornerRadius = cornerRadius
         background = backgroundDrawable
-        background = backgroundDrawable
 
         // Centered text for testing
         contentText = TextView(context)
@@ -48,23 +48,21 @@ class DynamicIslandView @JvmOverloads constructor(
         addView(contentText, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
     }
 
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        if (ev?.action == MotionEvent.ACTION_DOWN) {
+            // If expanded, claim the touch immediately to prevent parent interception (e.g. brightness slider)
+            if (isExpanded) {
+                parent?.requestDisallowInterceptTouchEvent(true)
+            }
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
     override fun onTouchEvent(event: MotionEvent?): Boolean {
-        // If expanded, consume touch events to prevent clicks passing through
-        // If collapsed, only consume if touching the island itself, but mostly we want pass-through behavior
-        // for areas "around" the island if we were full screen, but since our LayoutParams size *is* the island size,
-        // standard View behavior applies.
-
-        // HOWEVER, if we are in a large container (PhoneStatusBarView), we might be blocking touches if we were larger.
-        // Since we resize our LayoutParams, we only occupy the space we see.
-
         if (isExpanded) {
-            // When expanded, we definitely want to catch touches
             return true
         }
-
-        // When collapsed, we might want to allow tapping "through" the notch area if it was just dead space,
-        // but it is the camera, so users rarely tap there.
-        // Returning false would let the touch propagate to the status bar (pull down shade).
+        // If collapsed, let touch pass through unless specifically handled
         return super.onTouchEvent(event)
     }
 
