@@ -1,9 +1,6 @@
 package com.example.dynamicisland
 
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
@@ -90,6 +87,43 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
         }
 
         IslandController.hookHeadsUpManager(lpparam)
+
+        // AGGRESSIVE GHOST FIX
+        // Hook NotificationStackScrollLayout onChildViewAdded AND onLayout
+        try {
+            val nsslClass = "com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayout"
+
+            XposedHelpers.findAndHookMethod(
+                nsslClass,
+                lpparam.classLoader,
+                "onChildViewAdded",
+                View::class.java,
+                View::class.java,
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        try {
+                            val child = param.args[1] as View
+                            if (IslandController.isExpanding()) {
+                                if (child.javaClass.name.contains("ExpandableNotificationRow")) {
+                                    log("[GHOST] Suppressing new notification view during expansion")
+                                    child.alpha = 0f
+                                    child.visibility = View.INVISIBLE
+                                    // Force layout params to 0 height? Might cause bugs
+                                }
+                            }
+                        } catch (e: Throwable) {
+                             // Ignore
+                        }
+                    }
+                }
+            )
+
+            // Also hook setHeadsUpVisible on NSSL if it exists?
+            // Or HeadsUpAppearanceController
+
+        } catch (e: Throwable) {
+            log("[WARN] Failed to hook StackScrollLayout: " + e)
+        }
     }
 
     private fun injectIsland(parentView: ViewGroup) {
@@ -105,11 +139,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
             val prefs = XSharedPreferences("com.example.dynamicisland", "dynamic_island_prefs")
             var offsetY = prefs.getInt("offset_y", 0)
 
-            // Adjust Offset slightly up if user said it was "below" punch hole
-            // Standard punch hole is usually 0-10px from top, but crDroid might pad it.
-            // If user said "below", we might need negative margin or check cutout logic
-            // For now, let's trust the Cutout logic in DynamicIslandView to override this if Cutout exists.
-
             val islandView = DynamicIslandView(context)
             islandView.id = View.generateViewId()
 
@@ -124,7 +153,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
 
             islandView.visibility = View.VISIBLE
             islandView.elevation = 2000f
-            // Color handled in view init (Black)
 
             parentView.addView(islandView)
             islandInitialized = true

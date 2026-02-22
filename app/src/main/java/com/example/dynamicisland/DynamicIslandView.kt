@@ -4,6 +4,7 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.Icon
 import android.util.AttributeSet
 import android.view.DisplayCutout
 import android.view.Gravity
@@ -13,8 +14,10 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.LinearLayout
+import android.widget.RelativeLayout
 
 class DynamicIslandView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -22,13 +25,21 @@ class DynamicIslandView @JvmOverloads constructor(
 
     private val backgroundDrawable = GradientDrawable()
     private var currentAnimator: ValueAnimator? = null
-    private val contentText: TextView
+
+    // Notification UI
+    private val notificationContainer: LinearLayout
+    private val iconView: ImageView
+    private val textContainer: LinearLayout
+    private val titleView: TextView
+    private val messageView: TextView
+
+    // Music UI
     private val musicContainer: LinearLayout
     private val musicTitle: TextView
     private val musicArtist: TextView
-    private val musicVisualizer: View // Placeholder for visualizer
+    private val musicWaveform: View // Placeholder for nicer waveform
 
-    // Default dimensions (in pixels) - will be updated by config
+    // Dimensions
     var collapsedWidth = 100
     var collapsedHeight = 50
     var expandedWidth = 600
@@ -44,15 +55,41 @@ class DynamicIslandView @JvmOverloads constructor(
         backgroundDrawable.cornerRadius = cornerRadius
         background = backgroundDrawable
 
-        // Generic Content (Notifications)
-        contentText = TextView(context)
-        contentText.text = "Notification"
-        contentText.setTextColor(Color.WHITE)
-        contentText.gravity = Gravity.CENTER
-        contentText.alpha = 0f
-        addView(contentText, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        // --- Notification Layout ---
+        notificationContainer = LinearLayout(context)
+        notificationContainer.orientation = LinearLayout.HORIZONTAL
+        notificationContainer.gravity = Gravity.CENTER_VERTICAL
+        notificationContainer.alpha = 0f
+        notificationContainer.setPadding(30, 10, 30, 10)
 
-        // Music Content
+        iconView = ImageView(context)
+        val iconParams = LinearLayout.LayoutParams(60, 60)
+        iconParams.rightMargin = 20
+        notificationContainer.addView(iconView, iconParams)
+
+        textContainer = LinearLayout(context)
+        textContainer.orientation = LinearLayout.VERTICAL
+
+        titleView = TextView(context)
+        titleView.setTextColor(Color.WHITE)
+        titleView.textSize = 13f
+        titleView.setSingleLine()
+
+        messageView = TextView(context)
+        messageView.setTextColor(Color.LTGRAY)
+        messageView.textSize = 12f
+        messageView.setSingleLine()
+
+        textContainer.addView(titleView)
+        textContainer.addView(messageView)
+
+        val textParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT)
+        textParams.weight = 1f
+        notificationContainer.addView(textContainer, textParams)
+
+        addView(notificationContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+
+        // --- Music Layout ---
         musicContainer = LinearLayout(context)
         musicContainer.orientation = LinearLayout.VERTICAL
         musicContainer.gravity = Gravity.CENTER
@@ -68,14 +105,25 @@ class DynamicIslandView @JvmOverloads constructor(
         musicArtist.textSize = 12f
         musicArtist.gravity = Gravity.CENTER
 
-        musicVisualizer = View(context)
-        musicVisualizer.setBackgroundColor(Color.GREEN) // Placeholder visualizer
-        val vizParams = LinearLayout.LayoutParams(100, 10)
+        // Cleaner Visualizer Placeholder (e.g. 3 bars)
+        val waveLayout = LinearLayout(context)
+        waveLayout.orientation = LinearLayout.HORIZONTAL
+        waveLayout.gravity = Gravity.CENTER
+        for (i in 0..2) {
+             val bar = View(context)
+             bar.setBackgroundColor(Color.GREEN)
+             val params = LinearLayout.LayoutParams(10, 30)
+             params.setMargins(5, 0, 5, 0)
+             waveLayout.addView(bar, params)
+        }
+        musicWaveform = waveLayout
+
+        val vizParams = LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
         vizParams.topMargin = 20
 
         musicContainer.addView(musicTitle)
         musicContainer.addView(musicArtist)
-        musicContainer.addView(musicVisualizer, vizParams)
+        musicContainer.addView(musicWaveform, vizParams)
 
         addView(musicContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
     }
@@ -90,9 +138,7 @@ class DynamicIslandView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
-        if (isExpanded) {
-            return true
-        }
+        if (isExpanded) { return true }
         return super.onTouchEvent(event)
     }
 
@@ -102,14 +148,11 @@ class DynamicIslandView @JvmOverloads constructor(
              val rects = cutout.boundingRects
              if (rects.isNotEmpty()) {
                  val rect = rects[0]
-
                  collapsedHeight = rect.height() + 10
                  collapsedWidth = rect.width() + 40
 
                  post {
-                     if (!isExpanded) {
-                        updateLayout(collapsedWidth, collapsedHeight)
-                     }
+                     if (!isExpanded) updateLayout(collapsedWidth, collapsedHeight)
                  }
              }
         }
@@ -122,8 +165,10 @@ class DynamicIslandView @JvmOverloads constructor(
         expandedWidth = eW
         expandedHeight = eH
 
-        if (!isExpanded && layoutParams != null) {
-            updateLayout(collapsedWidth, collapsedHeight)
+        post {
+            if (!isExpanded && layoutParams != null) {
+                updateLayout(collapsedWidth, collapsedHeight)
+            }
         }
     }
 
@@ -136,16 +181,31 @@ class DynamicIslandView @JvmOverloads constructor(
         }
     }
 
+    fun updateNotificationInfo(title: String?, text: String?, icon: Icon?) {
+        titleView.text = title ?: "Notification"
+        messageView.text = text ?: "Tap to view"
+        if (icon != null) {
+            iconView.setImageIcon(icon)
+        } else {
+            iconView.setImageResource(android.R.drawable.sym_def_app_icon)
+        }
+
+        musicContainer.alpha = 0f
+        musicContainer.visibility = View.GONE
+        notificationContainer.visibility = View.VISIBLE
+        notificationContainer.animate().alpha(1f).duration = 200
+    }
+
     fun updateMusicInfo(title: String?, artist: String?) {
         musicTitle.text = title ?: "Unknown Title"
         musicArtist.text = artist ?: "Unknown Artist"
     }
 
     fun showMusicVisualizer(show: Boolean) {
-        // Toggle between music view and default view?
-        // For now, if music is playing, we show music container
         if (show) {
-            contentText.alpha = 0f
+            notificationContainer.alpha = 0f
+            notificationContainer.visibility = View.GONE
+            musicContainer.visibility = View.VISIBLE
             musicContainer.animate().alpha(1f).duration = 300
         } else {
             musicContainer.animate().alpha(0f).duration = 300
@@ -155,12 +215,11 @@ class DynamicIslandView @JvmOverloads constructor(
     fun expand() {
         if (isExpanded) return
         isExpanded = true
-
         currentAnimator?.cancel()
 
         val anim = ValueAnimator.ofFloat(0f, 1f)
         anim.duration = 400
-        anim.interpolator = OvershootInterpolator()
+        anim.interpolator = OvershootInterpolator(0.8f)
         anim.addUpdateListener { animation ->
             val fraction = animation.animatedValue as Float
             val currentWidth = (collapsedWidth + (expandedWidth - collapsedWidth) * fraction).toInt()
@@ -174,20 +233,18 @@ class DynamicIslandView @JvmOverloads constructor(
     fun collapse() {
         if (!isExpanded) return
         isExpanded = false
-
         currentAnimator?.cancel()
 
         val anim = ValueAnimator.ofFloat(1f, 0f)
         anim.duration = 300
-        anim.interpolator = OvershootInterpolator()
+        anim.interpolator = OvershootInterpolator(0.8f)
         anim.addUpdateListener { animation ->
             val fraction = animation.animatedValue as Float
             val currentWidth = (collapsedWidth + (expandedWidth - collapsedWidth) * fraction).toInt()
             val currentHeight = (collapsedHeight + (expandedHeight - collapsedHeight) * fraction).toInt()
             updateLayout(currentWidth, currentHeight)
 
-            // Fade out all content
-            contentText.alpha = 0f
+            notificationContainer.alpha = 0f
             musicContainer.alpha = 0f
         }
         currentAnimator = anim

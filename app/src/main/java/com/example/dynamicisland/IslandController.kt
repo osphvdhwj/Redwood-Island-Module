@@ -18,6 +18,9 @@ import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import java.lang.ref.WeakReference
+import android.app.Notification
+import android.graphics.drawable.Icon
+import android.service.notification.StatusBarNotification
 
 object IslandController {
 
@@ -150,7 +153,9 @@ object IslandController {
                     object : XC_MethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {
                             XposedBridge.log("DynamicIsland: [HEADSUP] showNotification called")
-                            onHeadsUpShow()
+
+                            val entry = param.args[0]
+                            onHeadsUpShow(entry)
                         }
                     }
                 )
@@ -183,14 +188,49 @@ object IslandController {
         }
     }
 
-    private fun onHeadsUpShow() {
+    private fun onHeadsUpShow(entry: Any?) {
         val island = islandViewRef?.get() ?: return
         val clock = clockViewRef?.get()
 
-        isExpanding = true
+        var title = "New Notification"
+        var text = "Tap to view"
+        var smallIcon: Icon? = null
+
+        if (entry != null) {
+            try {
+                // Extract notification data from NotificationEntry
+                // Entry has mSbn -> StatusBarNotification -> Notification
+                val sbn = XposedHelpers.getObjectField(entry, "mSbn") as StatusBarNotification
+                val notification = sbn.notification
+                val extras = notification.extras
+
+                title = extras.getString(Notification.EXTRA_TITLE) ?: title
+                text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: text
+                smallIcon = notification.smallIcon // API 23+
+
+                XposedBridge.log("DynamicIsland: [HEADSUP] " + title + ": " + text)
+
+            } catch (e: Throwable) {
+                XposedBridge.log("DynamicIsland: [ERROR] Failed to extract content: " + e)
+            }
+        }
+
+        val finalTitle = title
+        val finalText = text
+        val finalIcon = smallIcon
+
         island.post {
+            island.updateNotificationInfo(finalTitle, finalText, finalIcon)
+            isExpanding = true
             island.expand()
             clock?.animate()?.alpha(0f)?.setDuration(200)?.start()
+
+            // Auto collapse after 5s for notifications
+            island.postDelayed({
+                if (isExpanding && currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
+                    onHeadsUpDismiss()
+                }
+            }, 5000)
         }
     }
 
@@ -212,6 +252,7 @@ object IslandController {
          isExpanding = true
          XposedBridge.log("DynamicIsland: [TEST] Triggering Expand Animation")
          island.post {
+             island.updateNotificationInfo("Test Notification", "This is a test message from Dynamic Island.", null)
              island.expand()
              clock?.animate()?.alpha(0f)?.setDuration(200)?.start()
 
