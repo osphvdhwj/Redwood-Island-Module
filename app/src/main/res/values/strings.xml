@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Dynamic Island</string>
+    <string name="xposed_description">Dynamic Island implementation for Android 15 (crDroid 11.8)</string>
+</resources>
