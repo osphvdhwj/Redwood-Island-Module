@@ -1,6 +1,5 @@
 package com.example.dynamicisland
 
-import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
@@ -12,19 +11,23 @@ import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.View
 import android.view.WindowInsets
-import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
+import androidx.dynamicanimation.animation.SpringAnimation
+import androidx.dynamicanimation.animation.SpringForce
+import androidx.dynamicanimation.animation.FloatValueHolder
 
 class DynamicIslandView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
     private val backgroundDrawable = GradientDrawable()
-    private var currentAnimator: ValueAnimator? = null
+
+    private lateinit var widthSpring: SpringAnimation
+    private lateinit var heightSpring: SpringAnimation
 
     private val notificationContainer: LinearLayout
     private val iconView: ImageView
@@ -126,6 +129,35 @@ class DynamicIslandView @JvmOverloads constructor(
         musicContainer.addView(musicWaveform, vizParams)
 
         addView(musicContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+
+        // Initialize Springs
+        widthSpring = SpringAnimation(FloatValueHolder(0f)).apply {
+            spring = SpringForce().apply {
+                dampingRatio = SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY
+                stiffness = SpringForce.STIFFNESS_LOW
+            }
+            addUpdateListener { _, value, _ ->
+                val params = layoutParams
+                if (params != null) {
+                    params.width = value.toInt()
+                    layoutParams = params
+                }
+            }
+        }
+
+        heightSpring = SpringAnimation(FloatValueHolder(0f)).apply {
+            spring = SpringForce().apply {
+                dampingRatio = SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY
+                stiffness = SpringForce.STIFFNESS_LOW
+            }
+            addUpdateListener { _, value, _ ->
+                val params = layoutParams
+                if (params != null) {
+                    params.height = value.toInt()
+                    layoutParams = params
+                }
+            }
+        }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
@@ -235,41 +267,40 @@ class DynamicIslandView @JvmOverloads constructor(
     fun expand() {
         if (isExpanded) return
         isExpanded = true
-        currentAnimator?.cancel()
 
         this.bringToFront()
 
-        val anim = ValueAnimator.ofFloat(0f, 1f)
-        anim.duration = 400
-        anim.interpolator = OvershootInterpolator(0.8f)
-        anim.addUpdateListener { animation ->
-            val fraction = animation.animatedValue as Float
-            val currentWidth = (collapsedWidth + (expandedWidth - collapsedWidth) * fraction).toInt()
-            val currentHeight = (collapsedHeight + (expandedHeight - collapsedHeight) * fraction).toInt()
-            updateLayout(currentWidth, currentHeight)
+        widthSpring.cancel()
+        widthSpring.setStartValue(width.toFloat())
+        widthSpring.animateToFinalPosition(expandedWidth.toFloat())
+
+        heightSpring.cancel()
+        heightSpring.setStartValue(height.toFloat())
+        heightSpring.animateToFinalPosition(expandedHeight.toFloat())
+
+        // Fade in content
+        if (notificationContainer.visibility == View.VISIBLE) {
+            notificationContainer.animate().alpha(1f).setDuration(150).setStartDelay(50).start()
         }
-        currentAnimator = anim
-        anim.start()
+        if (musicContainer.visibility == View.VISIBLE) {
+            musicContainer.animate().alpha(1f).setDuration(150).setStartDelay(50).start()
+        }
     }
 
     fun collapse() {
         if (!isExpanded) return
         isExpanded = false
-        currentAnimator?.cancel()
 
-        val anim = ValueAnimator.ofFloat(1f, 0f)
-        anim.duration = 300
-        anim.interpolator = OvershootInterpolator(0.8f)
-        anim.addUpdateListener { animation ->
-            val fraction = animation.animatedValue as Float
-            val currentWidth = (collapsedWidth + (expandedWidth - collapsedWidth) * fraction).toInt()
-            val currentHeight = (collapsedHeight + (expandedHeight - collapsedHeight) * fraction).toInt()
-            updateLayout(currentWidth, currentHeight)
+        widthSpring.cancel()
+        widthSpring.setStartValue(width.toFloat())
+        widthSpring.animateToFinalPosition(collapsedWidth.toFloat())
 
-            notificationContainer.alpha = 0f
-            musicContainer.alpha = 0f
-        }
-        currentAnimator = anim
-        anim.start()
+        heightSpring.cancel()
+        heightSpring.setStartValue(height.toFloat())
+        heightSpring.animateToFinalPosition(collapsedHeight.toFloat())
+
+        // Fade out content
+        notificationContainer.animate().alpha(0f).setDuration(100).start()
+        musicContainer.animate().alpha(0f).setDuration(100).start()
     }
 }
