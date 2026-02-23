@@ -178,6 +178,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
 
             IslandController.init(islandView)
             findClock(parentView)
+            findStatusIcons(parentView)
 
         } catch (e: Throwable) {
             log("[ERROR] injectIsland crashed: " + e)
@@ -194,6 +195,23 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
             if (view is ViewGroup) {
                 for (i in 0 until view.childCount) {
                     findClock(view.getChildAt(i))
+                }
+            }
+        } catch (e: Throwable) {
+             // Ignore
+        }
+    }
+
+    private fun findStatusIcons(view: View) {
+        try {
+            val clsName = view.javaClass.name
+            if (clsName == "com.android.systemui.statusbar.phone.StatusIconContainer") {
+                log("[STATUS_ICONS] Found StatusIconContainer")
+                IslandController.setStatusIcons(view)
+            }
+            if (view is ViewGroup) {
+                for (i in 0 until view.childCount) {
+                    findStatusIcons(view.getChildAt(i))
                 }
             }
         } catch (e: Throwable) {

@@ -27,6 +27,7 @@ object IslandController {
 
     private var islandViewRef: WeakReference<DynamicIslandView>? = null
     private var clockViewRef: WeakReference<View>? = null
+    private var statusIconsRef: WeakReference<View>? = null
     private var isExpanding = false
     private var currentController: MediaController? = null
     private var mediaSessionManager: MediaSessionManager? = null
@@ -53,7 +54,7 @@ object IslandController {
 
         // Default click listener (do nothing or collapse)
         view.setOnClickListener {
-            view.collapse()
+            collapse()
         }
     }
 
@@ -61,8 +62,44 @@ object IslandController {
         clockViewRef = WeakReference(view)
     }
 
+    fun setStatusIcons(view: View) {
+        statusIconsRef = WeakReference(view)
+    }
+
     fun isExpanding(): Boolean {
         return isExpanding
+    }
+
+    fun expand() {
+        val island = islandViewRef?.get() ?: return
+        val clock = clockViewRef?.get()
+        val statusIcons = statusIconsRef?.get()
+
+        isExpanding = true
+
+        island.expand()
+
+        // Animate Clock (Fade Out)
+        clock?.animate()?.alpha(0f)?.setDuration(200)?.start()
+
+        // Animate Status Icons (Push Right)
+        statusIcons?.animate()?.translationX(300f)?.setDuration(300)?.start()
+    }
+
+    fun collapse() {
+        val island = islandViewRef?.get() ?: return
+        val clock = clockViewRef?.get()
+        val statusIcons = statusIconsRef?.get()
+
+        isExpanding = false
+
+        island.collapse()
+
+        // Animate Clock (Fade In)
+        clock?.animate()?.alpha(1f)?.setDuration(200)?.start()
+
+        // Animate Status Icons (Restore Position)
+        statusIcons?.animate()?.translationX(0f)?.setDuration(300)?.start()
     }
 
     private fun setupMediaListener(context: Context) {
@@ -105,14 +142,14 @@ object IslandController {
         island.post {
             if (isPlaying) {
                 if (!island.isExpanded) {
-                    island.expand()
+                    expand()
                 }
                 island.showMusicVisualizer(true)
             } else {
                 island.showMusicVisualizer(false)
                 island.postDelayed({
                     if (currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
-                        island.collapse()
+                        collapse()
                     }
                 }, 2000)
             }
@@ -177,7 +214,6 @@ object IslandController {
 
     private fun onHeadsUpShow(entry: Any?) {
         val island = islandViewRef?.get() ?: return
-        val clock = clockViewRef?.get()
 
         var title = "New Notification"
         var text = "Tap to view"
@@ -198,7 +234,7 @@ object IslandController {
                 island.setOnClickListener {
                     try {
                         currentNotificationIntent?.send()
-                        island.collapse()
+                        collapse()
                     } catch (e: Throwable) {
                         XposedBridge.log("DynamicIsland: Intent failed: " + e)
                     }
@@ -213,11 +249,9 @@ object IslandController {
         val fText = text
         val fIcon = smallIcon
 
-        isExpanding = true
         island.post {
             island.updateNotificationInfo(fTitle, fText, fIcon)
-            island.expand()
-            clock?.animate()?.alpha(0f)?.setDuration(200)?.start()
+            expand()
 
             island.postDelayed({
                 if (isExpanding && currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
@@ -229,29 +263,21 @@ object IslandController {
 
     private fun onHeadsUpDismiss() {
          val island = islandViewRef?.get() ?: return
-         val clock = clockViewRef?.get()
 
-         isExpanding = false
          island.post {
-             island.collapse()
-             clock?.animate()?.alpha(1f)?.setDuration(200)?.start()
+             collapse()
          }
     }
 
     fun testExpand() {
          val island = islandViewRef?.get() ?: return
-         val clock = clockViewRef?.get()
 
-         isExpanding = true
          island.post {
              island.updateNotificationInfo("Test Notification", "This is a test message.", null)
-             island.expand()
-             clock?.animate()?.alpha(0f)?.setDuration(200)?.start()
+             expand()
 
              island.postDelayed({
-                 island.collapse()
-                 clock?.animate()?.alpha(1f)?.setDuration(200)?.start()
-                 isExpanding = false
+                 collapse()
              }, 3000)
          }
     }
