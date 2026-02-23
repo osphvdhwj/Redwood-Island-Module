@@ -148,8 +148,13 @@ class DynamicIslandView @JvmOverloads constructor(
              val rects = cutout.boundingRects
              if (rects.isNotEmpty()) {
                  val rect = rects[0]
-                 collapsedHeight = rect.height() + 10
-                 collapsedWidth = rect.width() + 40
+                 // Fix Massive Pill Size: Reduce padding to match hardware cutout
+                 collapsedHeight = rect.height() + 4
+                 collapsedWidth = rect.width() + 4
+
+                 // Ensure corner radius creates a perfect squircle
+                 cornerRadius = collapsedHeight / 2f
+                 backgroundDrawable.cornerRadius = cornerRadius
 
                  post {
                      if (!isExpanded) updateLayout(collapsedWidth, collapsedHeight)
