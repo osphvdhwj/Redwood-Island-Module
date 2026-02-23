@@ -2,7 +2,7 @@ name: Android Build
 
 on:
   push:
-    branches: [ "master", "main", "dynamic-island-visuals-v5-build" ]
+    branches: [ "master", "main", "dynamic-island-visuals-v5-build", "dynamic-island-13903703730149818045" ]
   pull_request:
     branches: [ "master", "main" ]
 
