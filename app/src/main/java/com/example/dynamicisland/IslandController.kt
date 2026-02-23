@@ -144,9 +144,10 @@ object IslandController {
                     "showNotification",
                     entryClass,
                     object : XC_MethodHook() {
-                        override fun afterHookedMethod(param: MethodHookParam) {
+                        override fun beforeHookedMethod(param: MethodHookParam) {
                             val entry = param.args[0]
                             onHeadsUpShow(entry)
+                            param.result = null
                         }
                     }
                 )
