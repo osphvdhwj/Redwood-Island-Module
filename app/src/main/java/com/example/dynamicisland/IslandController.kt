@@ -1,26 +1,27 @@
 package com.example.dynamicisland
 
 import android.animation.ValueAnimator
+import android.app.Notification
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.drawable.Icon
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
+import android.service.notification.StatusBarNotification
 import android.view.View
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import java.lang.ref.WeakReference
-import android.app.Notification
-import android.graphics.drawable.Icon
-import android.service.notification.StatusBarNotification
 
 object IslandController {
 
@@ -29,8 +30,8 @@ object IslandController {
     private var isExpanding = false
     private var currentController: MediaController? = null
     private var mediaSessionManager: MediaSessionManager? = null
+    private var currentNotificationIntent: PendingIntent? = null
 
-    // Callbacks need to be held as strong references?
     private val sessionsListener = object : MediaSessionManager.OnActiveSessionsChangedListener {
         override fun onActiveSessionsChanged(controllers: MutableList<MediaController>?) {
             updateActiveController(controllers)
@@ -49,6 +50,11 @@ object IslandController {
     fun init(view: DynamicIslandView) {
         islandViewRef = WeakReference(view)
         setupMediaListener(view.context)
+
+        // Default click listener (do nothing or collapse)
+        view.setOnClickListener {
+            view.collapse()
+        }
     }
 
     fun setClock(view: View) {
@@ -62,17 +68,10 @@ object IslandController {
     private fun setupMediaListener(context: Context) {
         try {
             mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
-
-            // Register listener for active sessions
-            // Requires permissions usually, but SystemUI has them
             val componentName = ComponentName(context, "com.android.systemui.SystemUIService")
             mediaSessionManager?.addOnActiveSessionsChangedListener(sessionsListener, componentName)
-
-            // Initial check
             val controllers = mediaSessionManager?.getActiveSessions(componentName)
             updateActiveController(controllers)
-
-            XposedBridge.log("DynamicIsland: [MEDIA] Listener setup complete")
         } catch (e: Throwable) {
             XposedBridge.log("DynamicIsland: [ERROR] Media setup failed: " + e)
         }
@@ -80,17 +79,20 @@ object IslandController {
 
     private fun updateActiveController(controllers: List<MediaController>?) {
         if (controllers.isNullOrEmpty()) return
-
-        // Unregister old
         currentController?.unregisterCallback(mediaCallback)
-
-        // Pick first active one
         currentController = controllers.first()
         currentController?.registerCallback(mediaCallback)
 
-        XposedBridge.log("DynamicIsland: [MEDIA] Active controller: " + currentController?.packageName)
+        // Update click listener for media
+        val island = islandViewRef?.get()
+        island?.setOnClickListener {
+            try {
+                currentController?.sessionActivity?.send()
+            } catch (e: Throwable) {
+                // Ignore
+            }
+        }
 
-        // Initial state update
         updateMediaState(currentController?.playbackState)
         updateMetadata(currentController?.metadata)
     }
@@ -98,20 +100,16 @@ object IslandController {
     private fun updateMediaState(state: PlaybackState?) {
         if (state == null) return
         val isPlaying = state.state == PlaybackState.STATE_PLAYING
-
         val island = islandViewRef?.get() ?: return
 
         island.post {
             if (isPlaying) {
                 if (!island.isExpanded) {
-                    XposedBridge.log("DynamicIsland: [MEDIA] Playing -> Expand")
                     island.expand()
                 }
                 island.showMusicVisualizer(true)
             } else {
-                XposedBridge.log("DynamicIsland: [MEDIA] Paused -> Collapse (delayed)")
                 island.showMusicVisualizer(false)
-                // Collapse after 2s delay if paused
                 island.postDelayed({
                     if (currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
                         island.collapse()
@@ -125,7 +123,6 @@ object IslandController {
         if (metadata == null) return
         val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
         val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
-
         val island = islandViewRef?.get() ?: return
         island.post {
             island.updateMusicInfo(title, artist)
@@ -133,13 +130,9 @@ object IslandController {
     }
 
     fun hookHeadsUpManager(lpparam: XC_LoadPackage.LoadPackageParam) {
-        // Attempt to find NotificationEntry class
         val entryClass = try {
             XposedHelpers.findClass("com.android.systemui.statusbar.notification.collection.NotificationEntry", lpparam.classLoader)
-        } catch (e: Throwable) {
-            XposedBridge.log("DynamicIsland: [WARN] Could not find NotificationEntry class")
-            null
-        }
+        } catch (e: Throwable) { null }
 
         val headsUpManagerClass = "com.android.systemui.statusbar.policy.HeadsUpManager"
 
@@ -152,8 +145,6 @@ object IslandController {
                     entryClass,
                     object : XC_MethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {
-                            XposedBridge.log("DynamicIsland: [HEADSUP] showNotification called")
-
                             val entry = param.args[0]
                             onHeadsUpShow(entry)
                         }
@@ -172,17 +163,13 @@ object IslandController {
                         try {
                             val manager = param.thisObject
                             val hasPinned = XposedHelpers.callMethod(manager, "hasPinnedHeadsUp") as Boolean
-
                             if (!hasPinned) {
                                 onHeadsUpDismiss()
                             }
-                        } catch (e: Throwable) {
-                             // Ignore
-                        }
+                        } catch (e: Throwable) {}
                     }
                 }
             )
-
         } catch (e: Throwable) {
              XposedBridge.log("DynamicIsland: [ERROR] Error hooking HeadsUpManager: " + e)
         }
@@ -198,34 +185,40 @@ object IslandController {
 
         if (entry != null) {
             try {
-                // Extract notification data from NotificationEntry
-                // Entry has mSbn -> StatusBarNotification -> Notification
                 val sbn = XposedHelpers.getObjectField(entry, "mSbn") as StatusBarNotification
                 val notification = sbn.notification
                 val extras = notification.extras
 
                 title = extras.getString(Notification.EXTRA_TITLE) ?: title
                 text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: text
-                smallIcon = notification.smallIcon // API 23+
+                smallIcon = notification.smallIcon
 
-                XposedBridge.log("DynamicIsland: [HEADSUP] " + title + ": " + text)
+                // Update Click Listener
+                currentNotificationIntent = notification.contentIntent
+                island.setOnClickListener {
+                    try {
+                        currentNotificationIntent?.send()
+                        island.collapse()
+                    } catch (e: Throwable) {
+                        XposedBridge.log("DynamicIsland: Intent failed: " + e)
+                    }
+                }
 
             } catch (e: Throwable) {
                 XposedBridge.log("DynamicIsland: [ERROR] Failed to extract content: " + e)
             }
         }
 
-        val finalTitle = title
-        val finalText = text
-        val finalIcon = smallIcon
+        val fTitle = title
+        val fText = text
+        val fIcon = smallIcon
 
+        isExpanding = true
         island.post {
-            island.updateNotificationInfo(finalTitle, finalText, finalIcon)
-            isExpanding = true
+            island.updateNotificationInfo(fTitle, fText, fIcon)
             island.expand()
             clock?.animate()?.alpha(0f)?.setDuration(200)?.start()
 
-            // Auto collapse after 5s for notifications
             island.postDelayed({
                 if (isExpanding && currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
                     onHeadsUpDismiss()
@@ -250,13 +243,11 @@ object IslandController {
          val clock = clockViewRef?.get()
 
          isExpanding = true
-         XposedBridge.log("DynamicIsland: [TEST] Triggering Expand Animation")
          island.post {
-             island.updateNotificationInfo("Test Notification", "This is a test message from Dynamic Island.", null)
+             island.updateNotificationInfo("Test Notification", "This is a test message.", null)
              island.expand()
              clock?.animate()?.alpha(0f)?.setDuration(200)?.start()
 
-             // Auto collapse after 3 seconds
              island.postDelayed({
                  island.collapse()
                  clock?.animate()?.alpha(1f)?.setDuration(200)?.start()

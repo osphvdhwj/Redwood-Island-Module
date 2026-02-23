@@ -26,20 +26,17 @@ class DynamicIslandView @JvmOverloads constructor(
     private val backgroundDrawable = GradientDrawable()
     private var currentAnimator: ValueAnimator? = null
 
-    // Notification UI
     private val notificationContainer: LinearLayout
     private val iconView: ImageView
     private val textContainer: LinearLayout
     private val titleView: TextView
     private val messageView: TextView
 
-    // Music UI
     private val musicContainer: LinearLayout
     private val musicTitle: TextView
     private val musicArtist: TextView
-    private val musicWaveform: View // Placeholder for nicer waveform
+    private val musicWaveform: View
 
-    // Dimensions
     var collapsedWidth = 100
     var collapsedHeight = 50
     var expandedWidth = 600
@@ -50,7 +47,6 @@ class DynamicIslandView @JvmOverloads constructor(
         private set
 
     init {
-        // True Black for OLED
         backgroundDrawable.setColor(Color.BLACK)
         backgroundDrawable.cornerRadius = cornerRadius
         background = backgroundDrawable
@@ -60,11 +56,11 @@ class DynamicIslandView @JvmOverloads constructor(
         notificationContainer.orientation = LinearLayout.HORIZONTAL
         notificationContainer.gravity = Gravity.CENTER_VERTICAL
         notificationContainer.alpha = 0f
-        notificationContainer.setPadding(30, 10, 30, 10)
+        notificationContainer.setPadding(35, 15, 35, 15) // Increased padding
 
         iconView = ImageView(context)
         val iconParams = LinearLayout.LayoutParams(60, 60)
-        iconParams.rightMargin = 20
+        iconParams.rightMargin = 25
         notificationContainer.addView(iconView, iconParams)
 
         textContainer = LinearLayout(context)
@@ -94,6 +90,7 @@ class DynamicIslandView @JvmOverloads constructor(
         musicContainer.orientation = LinearLayout.VERTICAL
         musicContainer.gravity = Gravity.CENTER
         musicContainer.alpha = 0f
+        musicContainer.setPadding(20, 20, 20, 20)
 
         musicTitle = TextView(context)
         musicTitle.setTextColor(Color.WHITE)
@@ -105,7 +102,6 @@ class DynamicIslandView @JvmOverloads constructor(
         musicArtist.textSize = 12f
         musicArtist.gravity = Gravity.CENTER
 
-        // Cleaner Visualizer Placeholder (e.g. 3 bars)
         val waveLayout = LinearLayout(context)
         waveLayout.orientation = LinearLayout.HORIZONTAL
         waveLayout.gravity = Gravity.CENTER
@@ -119,7 +115,7 @@ class DynamicIslandView @JvmOverloads constructor(
         musicWaveform = waveLayout
 
         val vizParams = LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
-        vizParams.topMargin = 20
+        vizParams.topMargin = 25
 
         musicContainer.addView(musicTitle)
         musicContainer.addView(musicArtist)
@@ -148,11 +144,17 @@ class DynamicIslandView @JvmOverloads constructor(
              val rects = cutout.boundingRects
              if (rects.isNotEmpty()) {
                  val rect = rects[0]
-                 collapsedHeight = rect.height() + 10
-                 collapsedWidth = rect.width() + 40
+
+                 // Add vertical padding to avoid hugging the top edge too tight
+                 // If the user says it touches the top, let's add a small margin
+                 val safeTop = rect.top
+                 collapsedHeight = rect.height() + 20 // More height buffer
+                 collapsedWidth = rect.width() + 50
 
                  post {
-                     if (!isExpanded) updateLayout(collapsedWidth, collapsedHeight)
+                     if (!isExpanded) {
+                         updateLayout(collapsedWidth, collapsedHeight, safeTop)
+                     }
                  }
              }
         }
@@ -172,11 +174,17 @@ class DynamicIslandView @JvmOverloads constructor(
         }
     }
 
-    private fun updateLayout(width: Int, height: Int) {
+    private fun updateLayout(width: Int, height: Int, topMarginOverride: Int? = null) {
         val params = layoutParams
         if (params != null) {
             params.width = width
             params.height = height
+
+            // If passed a specific top margin (from cutout), apply it
+            if (params is MarginLayoutParams && topMarginOverride != null) {
+                params.topMargin = topMarginOverride
+            }
+
             layoutParams = params
         }
     }
