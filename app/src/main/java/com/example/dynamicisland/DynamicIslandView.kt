@@ -2,6 +2,7 @@ package com.example.dynamicisland
 
 import android.animation.ValueAnimator
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.Icon
@@ -18,6 +19,8 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
+import androidx.palette.graphics.Palette
+import androidx.core.graphics.ColorUtils
 
 class DynamicIslandView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -33,9 +36,12 @@ class DynamicIslandView @JvmOverloads constructor(
     private val messageView: TextView
 
     private val musicContainer: LinearLayout
+    private val albumArtView: ImageView
+    private val musicInfoContainer: LinearLayout
     private val musicTitle: TextView
     private val musicArtist: TextView
     private val musicWaveform: View
+    private val playPauseButton: ImageView
 
     var collapsedWidth = 100
     var collapsedHeight = 50
@@ -60,7 +66,7 @@ class DynamicIslandView @JvmOverloads constructor(
         notificationContainer.orientation = LinearLayout.HORIZONTAL
         notificationContainer.gravity = Gravity.CENTER_VERTICAL
         notificationContainer.alpha = 0f
-        notificationContainer.setPadding(35, 15, 35, 15) // Increased padding
+        notificationContainer.setPadding(35, 15, 35, 15)
 
         iconView = ImageView(context)
         val iconParams = LinearLayout.LayoutParams(60, 60)
@@ -91,39 +97,78 @@ class DynamicIslandView @JvmOverloads constructor(
 
         // --- Music Layout ---
         musicContainer = LinearLayout(context)
-        musicContainer.orientation = LinearLayout.VERTICAL
-        musicContainer.gravity = Gravity.CENTER
+        musicContainer.orientation = LinearLayout.HORIZONTAL
+        musicContainer.gravity = Gravity.CENTER_VERTICAL
         musicContainer.alpha = 0f
-        musicContainer.setPadding(20, 20, 20, 20)
+        musicContainer.setPadding(30, 20, 30, 20)
+
+        // 1. Album Art (Left)
+        albumArtView = ImageView(context)
+        albumArtView.scaleType = ImageView.ScaleType.CENTER_CROP
+        val artParams = LinearLayout.LayoutParams(120, 120)
+        artParams.rightMargin = 25
+
+        albumArtView.clipToOutline = true
+        albumArtView.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 60f
+            setColor(Color.DKGRAY)
+        }
+        albumArtView.outlineProvider = object : android.view.ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: android.graphics.Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, view.width / 2f)
+            }
+        }
+
+        musicContainer.addView(albumArtView, artParams)
+
+        // 2. Info Container (Center)
+        musicInfoContainer = LinearLayout(context)
+        musicInfoContainer.orientation = LinearLayout.VERTICAL
+        musicInfoContainer.gravity = Gravity.CENTER_VERTICAL or Gravity.START
 
         musicTitle = TextView(context)
         musicTitle.setTextColor(Color.WHITE)
         musicTitle.textSize = 14f
-        musicTitle.gravity = Gravity.CENTER
+        musicTitle.setSingleLine()
+        musicTitle.gravity = Gravity.START
 
         musicArtist = TextView(context)
         musicArtist.setTextColor(Color.LTGRAY)
         musicArtist.textSize = 12f
-        musicArtist.gravity = Gravity.CENTER
+        musicArtist.setSingleLine()
+        musicArtist.gravity = Gravity.START
 
         val waveLayout = LinearLayout(context)
         waveLayout.orientation = LinearLayout.HORIZONTAL
-        waveLayout.gravity = Gravity.CENTER
+        waveLayout.gravity = Gravity.START
         for (i in 0..2) {
              val bar = View(context)
              bar.setBackgroundColor(Color.GREEN)
              val params = LinearLayout.LayoutParams(10, 30)
-             params.setMargins(5, 0, 5, 0)
+             params.setMargins(0, 0, 10, 0)
              waveLayout.addView(bar, params)
         }
         musicWaveform = waveLayout
 
         val vizParams = LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
-        vizParams.topMargin = 25
+        vizParams.topMargin = 10
 
-        musicContainer.addView(musicTitle)
-        musicContainer.addView(musicArtist)
-        musicContainer.addView(musicWaveform, vizParams)
+        musicInfoContainer.addView(musicTitle)
+        musicInfoContainer.addView(musicArtist)
+        musicInfoContainer.addView(musicWaveform, vizParams)
+
+        val infoParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT)
+        infoParams.weight = 1f
+        musicContainer.addView(musicInfoContainer, infoParams)
+
+        // 3. Play/Pause Button (Right)
+        playPauseButton = ImageView(context)
+        playPauseButton.setImageResource(R.drawable.ic_play_vector)
+        playPauseButton.scaleType = ImageView.ScaleType.FIT_CENTER
+        val btnParams = LinearLayout.LayoutParams(80, 80)
+        btnParams.leftMargin = 25
+        musicContainer.addView(playPauseButton, btnParams)
 
         addView(musicContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
     }
@@ -148,11 +193,8 @@ class DynamicIslandView @JvmOverloads constructor(
              val rects = cutout.boundingRects
              if (rects.isNotEmpty()) {
                  val rect = rects[0]
-
-                 // Add vertical padding to avoid hugging the top edge too tight
-                 // If the user says it touches the top, let's add a small margin
                  val safeTop = rect.top
-                 collapsedHeight = rect.height() + 20 // More height buffer
+                 collapsedHeight = rect.height() + 20
                  collapsedWidth = rect.width() + 50
 
                  post {
@@ -184,7 +226,6 @@ class DynamicIslandView @JvmOverloads constructor(
             params.width = width
             params.height = height
 
-            // If passed a specific top margin (from cutout), apply it
             if (params is MarginLayoutParams && topMarginOverride != null) {
                 params.topMargin = topMarginOverride
             }
@@ -192,7 +233,6 @@ class DynamicIslandView @JvmOverloads constructor(
             layoutParams = params
         }
 
-        // Force Z-Order on layout update
         this.elevation = 9999f
         this.translationZ = 9999f
         this.bringToFront()
@@ -212,12 +252,43 @@ class DynamicIslandView @JvmOverloads constructor(
         notificationContainer.visibility = View.VISIBLE
         notificationContainer.animate().alpha(1f).duration = 200
 
+        backgroundDrawable.setStroke(0, Color.TRANSPARENT)
+
         this.bringToFront()
     }
 
-    fun updateMusicInfo(title: String?, artist: String?) {
+    fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?) {
         musicTitle.text = title ?: "Unknown Title"
         musicArtist.text = artist ?: "Unknown Artist"
+
+        if (art != null) {
+            albumArtView.setImageBitmap(art)
+
+            Palette.from(art).generate { palette ->
+                val vibrant = palette?.getVibrantColor(Color.BLACK) ?: Color.BLACK
+                val dominant = palette?.getDominantColor(Color.BLACK) ?: Color.BLACK
+
+                var finalColor = if (vibrant != Color.BLACK) vibrant else dominant
+
+                if (ColorUtils.calculateLuminance(finalColor) < 0.1) {
+                    finalColor = Color.LTGRAY
+                }
+
+                backgroundDrawable.setStroke(5, finalColor)
+            }
+        } else {
+            albumArtView.setImageResource(android.R.drawable.ic_menu_gallery)
+            albumArtView.setBackgroundColor(Color.DKGRAY)
+            backgroundDrawable.setStroke(0, Color.TRANSPARENT)
+        }
+    }
+
+    fun updatePlayPauseState(isPlaying: Boolean) {
+        if (isPlaying) {
+            playPauseButton.setImageResource(R.drawable.ic_pause_vector)
+        } else {
+            playPauseButton.setImageResource(R.drawable.ic_play_vector)
+        }
     }
 
     fun showMusicVisualizer(show: Boolean) {
