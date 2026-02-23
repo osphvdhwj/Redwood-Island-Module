@@ -140,6 +140,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
             val islandView = DynamicIslandView(context)
             islandView.id = View.generateViewId()
 
+            // CRITICAL: Use fixed dimensions (WRAP_CONTENT equivalent) instead of MATCH_PARENT.
+            // This ensures the view does not blanket the status bar, allowing touch pass-through.
             val lp = FrameLayout.LayoutParams(
                 islandView.collapsedWidth,
                 islandView.collapsedHeight
