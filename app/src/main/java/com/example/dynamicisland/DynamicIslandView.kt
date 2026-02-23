@@ -51,6 +51,10 @@ class DynamicIslandView @JvmOverloads constructor(
         backgroundDrawable.cornerRadius = cornerRadius
         background = backgroundDrawable
 
+        // Elevation WAR: Set extremely high elevation
+        this.elevation = 9999f
+        this.translationZ = 9999f
+
         // --- Notification Layout ---
         notificationContainer = LinearLayout(context)
         notificationContainer.orientation = LinearLayout.HORIZONTAL
@@ -187,6 +191,11 @@ class DynamicIslandView @JvmOverloads constructor(
 
             layoutParams = params
         }
+
+        // Force Z-Order on layout update
+        this.elevation = 9999f
+        this.translationZ = 9999f
+        this.bringToFront()
     }
 
     fun updateNotificationInfo(title: String?, text: String?, icon: Icon?) {
@@ -202,6 +211,8 @@ class DynamicIslandView @JvmOverloads constructor(
         musicContainer.visibility = View.GONE
         notificationContainer.visibility = View.VISIBLE
         notificationContainer.animate().alpha(1f).duration = 200
+
+        this.bringToFront()
     }
 
     fun updateMusicInfo(title: String?, artist: String?) {
@@ -215,6 +226,7 @@ class DynamicIslandView @JvmOverloads constructor(
             notificationContainer.visibility = View.GONE
             musicContainer.visibility = View.VISIBLE
             musicContainer.animate().alpha(1f).duration = 300
+            this.bringToFront()
         } else {
             musicContainer.animate().alpha(0f).duration = 300
         }
@@ -224,6 +236,8 @@ class DynamicIslandView @JvmOverloads constructor(
         if (isExpanded) return
         isExpanded = true
         currentAnimator?.cancel()
+
+        this.bringToFront()
 
         val anim = ValueAnimator.ofFloat(0f, 1f)
         anim.duration = 400

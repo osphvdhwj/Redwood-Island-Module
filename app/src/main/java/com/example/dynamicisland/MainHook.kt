@@ -88,8 +88,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
 
         IslandController.hookHeadsUpManager(lpparam)
 
-        // AGGRESSIVE GHOST FIX
-        // Hook NotificationStackScrollLayout onChildViewAdded AND onLayout
+        // NUCLEAR GHOST FIX
         try {
             val nsslClass = "com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayout"
 
@@ -105,10 +104,12 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
                             val child = param.args[1] as View
                             if (IslandController.isExpanding()) {
                                 if (child.javaClass.name.contains("ExpandableNotificationRow")) {
-                                    log("[GHOST] Suppressing new notification view during expansion")
+                                    log("[NUCLEAR] Banishing notification off-screen")
+                                    // Move it waaaay off screen
+                                    child.translationX = 9999f
                                     child.alpha = 0f
-                                    child.visibility = View.INVISIBLE
-                                    // Force layout params to 0 height? Might cause bugs
+                                    child.scaleX = 0f
+                                    child.scaleY = 0f
                                 }
                             }
                         } catch (e: Throwable) {
@@ -117,9 +118,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
                     }
                 }
             )
-
-            // Also hook setHeadsUpVisible on NSSL if it exists?
-            // Or HeadsUpAppearanceController
 
         } catch (e: Throwable) {
             log("[WARN] Failed to hook StackScrollLayout: " + e)
@@ -152,9 +150,15 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
             islandView.layoutParams = lp
 
             islandView.visibility = View.VISIBLE
-            islandView.elevation = 2000f
+            // MAX ELEVATION to fight for top layer
+            islandView.elevation = 9999f
+            islandView.translationZ = 9999f
 
-            parentView.addView(islandView)
+            // Add as LAST child to ensure drawing on top
+            parentView.addView(islandView, parentView.childCount)
+
+            islandView.bringToFront()
+
             islandInitialized = true
             log("[UI] SUCCESS: Added Island (Black) to " + parentView.javaClass.simpleName)
 
