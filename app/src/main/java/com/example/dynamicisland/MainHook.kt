@@ -86,7 +86,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
             log("[WARN] StatusBarWindowView not found")
         }
 
-        IslandController.hookHeadsUpManager(lpparam)
+        //         IslandController.hookHeadsUpManager(lpparam)
 
         // NUCLEAR GHOST FIX
         try {
