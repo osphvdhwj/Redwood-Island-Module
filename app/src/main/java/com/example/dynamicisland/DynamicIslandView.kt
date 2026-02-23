@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.Icon
+import android.provider.Settings
 import android.util.AttributeSet
 import android.view.DisplayCutout
 import android.view.Gravity
@@ -42,6 +43,13 @@ class DynamicIslandView @JvmOverloads constructor(
     var expandedWidth = 600
     var expandedHeight = 200
     var cornerRadius = 50f
+
+    // Offsets and Corrections
+    var xOffset = 0
+    var yOffset = 0
+    var widthCorrection = 0
+    var heightCorrection = 0
+    var screenWidth = 0
 
     var isExpanded = false
         private set
@@ -143,17 +151,29 @@ class DynamicIslandView @JvmOverloads constructor(
     }
 
     override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
+        // Read Settings
+        try {
+            val cr = context.contentResolver
+            xOffset = Settings.System.getInt(cr, "redwood_island_x_offset", 0)
+            yOffset = Settings.System.getInt(cr, "redwood_island_y_offset", 0)
+            widthCorrection = Settings.System.getInt(cr, "redwood_island_width_correction", 0)
+            heightCorrection = Settings.System.getInt(cr, "redwood_island_height_correction", 0)
+        } catch (e: Exception) {
+            // Ignore if settings not found or permission denied
+        }
+
+        screenWidth = resources.displayMetrics.widthPixels
+
         val cutout = insets.displayCutout
         if (cutout != null) {
              val rects = cutout.boundingRects
              if (rects.isNotEmpty()) {
                  val rect = rects[0]
 
-                 // Add vertical padding to avoid hugging the top edge too tight
-                 // If the user says it touches the top, let's add a small margin
                  val safeTop = rect.top
-                 collapsedHeight = rect.height() + 20 // More height buffer
-                 collapsedWidth = rect.width() + 50
+                 // Apply corrections
+                 collapsedHeight = rect.height() + heightCorrection
+                 collapsedWidth = rect.width() + widthCorrection
 
                  post {
                      if (!isExpanded) {
@@ -184,9 +204,25 @@ class DynamicIslandView @JvmOverloads constructor(
             params.width = width
             params.height = height
 
-            // If passed a specific top margin (from cutout), apply it
-            if (params is MarginLayoutParams && topMarginOverride != null) {
-                params.topMargin = topMarginOverride
+            if (params is MarginLayoutParams) {
+                // Ensure screen width is set
+                if (screenWidth == 0) screenWidth = resources.displayMetrics.widthPixels
+
+                // 1. Force Gravity to TOP | LEFT to allow absolute X positioning
+                if (params is FrameLayout.LayoutParams) {
+                    params.gravity = Gravity.TOP or Gravity.LEFT
+                }
+
+                // 2. Calculate Left Margin for Centering + Offset
+                // Center = (ScreenW - ViewW) / 2
+                // Final = Center + XOffset
+                val left = (screenWidth - width) / 2 + xOffset
+                params.leftMargin = left
+
+                // 3. Apply Top Margin (Base + Offset)
+                if (topMarginOverride != null) {
+                    params.topMargin = topMarginOverride + yOffset
+                }
             }
 
             layoutParams = params
