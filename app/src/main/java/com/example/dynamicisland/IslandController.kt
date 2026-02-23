@@ -103,6 +103,7 @@ object IslandController {
         val island = islandViewRef?.get() ?: return
 
         island.post {
+            island.updatePlayPauseState(isPlaying)
             if (isPlaying) {
                 if (!island.isExpanded) {
                     island.expand()
@@ -123,9 +124,12 @@ object IslandController {
         if (metadata == null) return
         val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
         val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
+        val albumArt = metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+                       ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
+
         val island = islandViewRef?.get() ?: return
         island.post {
-            island.updateMusicInfo(title, artist)
+            island.updateMusicInfo(title, artist, albumArt)
         }
     }
 
