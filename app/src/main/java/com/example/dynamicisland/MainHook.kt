@@ -64,6 +64,9 @@ class MainHook : IXposedHookLoadPackage {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         try {
                             val child = param.args[1] as View
+                            // Check if child is DynamicIslandView (not needed here since we don't inject into NSSL, but good safety)
+                            if (child is DynamicIslandView) return
+
                             // Only banish if Island is actively showing something
                             if (IslandController.isExpanding()) {
                                 if (child.javaClass.name.contains("ExpandableNotificationRow")) {

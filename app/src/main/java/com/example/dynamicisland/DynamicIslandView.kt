@@ -384,7 +384,13 @@ class DynamicIslandView @JvmOverloads constructor(
         if (isExpanded) return
         isExpanded = true
 
-        // No need to bringToFront() for WindowManager
+        // Touch Toggle: Make interactable (remove NOT_TOUCHABLE, add NOT_TOUCH_MODAL)
+        val wp = windowParams
+        if (wp != null && windowManager != null) {
+            wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+            wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            windowManager?.updateViewLayout(this, wp)
+        }
 
         widthSpring.cancel()
         // Use current window width as start value if available
@@ -409,6 +415,13 @@ class DynamicIslandView @JvmOverloads constructor(
     fun collapse() {
         if (!isExpanded) return
         isExpanded = false
+
+        // Touch Toggle: Make NON-interactable per user request
+        val wp = windowParams
+        if (wp != null && windowManager != null) {
+            wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            windowManager?.updateViewLayout(this, wp)
+        }
 
         widthSpring.cancel()
         val currentWidth = windowParams?.width?.toFloat() ?: width.toFloat()
