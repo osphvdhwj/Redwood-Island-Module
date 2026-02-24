@@ -106,8 +106,8 @@ object IslandController {
         // Animate Clock (Fade Out)
         clock?.animate()?.alpha(0f)?.setDuration(200)?.start()
 
-        // Animate Status Icons (Push Right)
-        statusIcons?.animate()?.translationX(300f)?.setDuration(300)?.start()
+        // Animate Status Icons (Fade Out instead of Translation)
+        statusIcons?.animate()?.alpha(0f)?.setDuration(200)?.start()
     }
 
     fun collapse() {
@@ -122,8 +122,8 @@ object IslandController {
         // Animate Clock (Fade In)
         clock?.animate()?.alpha(1f)?.setDuration(200)?.start()
 
-        // Animate Status Icons (Restore Position)
-        statusIcons?.animate()?.translationX(0f)?.setDuration(300)?.start()
+        // Animate Status Icons (Fade In)
+        statusIcons?.animate()?.alpha(1f)?.setDuration(200)?.start()
     }
 
     private fun setupMediaListener(context: Context) {
@@ -223,6 +223,23 @@ object IslandController {
                     entryClass,
                     object : XC_MethodHook() {
                         override fun beforeHookedMethod(param: MethodHookParam) {
+                            try {
+                                val entry = param.args[0]
+                                val sbn = XposedHelpers.getObjectField(entry, "mSbn") as StatusBarNotification
+                                val notification = sbn.notification
+                                val extras = notification.extras
+
+                                val title = extras.getString(Notification.EXTRA_TITLE)
+                                val text = extras.getString(Notification.EXTRA_TEXT)
+                                val icon = notification.getLargeIcon() ?: notification.getSmallIcon()
+                                val contentIntent = notification.contentIntent
+
+                                XposedBridge.log("DynamicIsland: [DIRECT] Showing notification: $title")
+                                onNotificationShow(title, text, icon, contentIntent)
+                            } catch (e: Throwable) {
+                                XposedBridge.log("DynamicIsland: [ERROR] Failed to extract notification: " + e)
+                            }
+
                              // Suppress System HUN
                             param.result = null
                             XposedBridge.log("DynamicIsland: [SUPPRESS] System HUN suppressed")
@@ -240,6 +257,7 @@ object IslandController {
 
         currentNotificationIntent = contentIntent
 
+        // Interactivity: Ensure click triggers the intent
         island.setOnClickListener {
             try {
                 dismissRunnable?.let { island.removeCallbacks(it) }
