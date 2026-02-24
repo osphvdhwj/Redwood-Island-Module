@@ -13,6 +13,7 @@ import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.View
 import android.view.WindowInsets
+import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
@@ -56,13 +57,17 @@ class DynamicIslandView @JvmOverloads constructor(
     var isExpanded = false
         private set
 
+    // WindowManager support
+    var windowManager: WindowManager? = null
+    var windowParams: WindowManager.LayoutParams? = null
+
     init {
         // True Black for OLED
         backgroundDrawable.setColor(Color.BLACK)
         backgroundDrawable.cornerRadius = cornerRadius
         background = backgroundDrawable
 
-        // Elevation WAR
+        // Elevation WAR (Less critical for Overlay, but good practice)
         this.elevation = 9999f
         this.translationZ = 9999f
 
@@ -184,11 +189,7 @@ class DynamicIslandView @JvmOverloads constructor(
                 stiffness = SpringForce.STIFFNESS_LOW
             }
             addUpdateListener { _, value, _ ->
-                val params = layoutParams
-                if (params != null) {
-                    params.width = value.toInt()
-                    layoutParams = params
-                }
+                updateWindowLayout(width = value.toInt())
             }
         }
 
@@ -198,12 +199,11 @@ class DynamicIslandView @JvmOverloads constructor(
                 stiffness = SpringForce.STIFFNESS_LOW
             }
             addUpdateListener { _, value, _ ->
-                val params = layoutParams
-                if (params != null) {
-                    params.height = value.toInt()
-                    layoutParams = params
-                    // Ensure corner radius is always height / 2 (Perfect Circle/Pill)
-                    cornerRadius = params.height / 2f
+                updateWindowLayout(height = value.toInt())
+
+                // Ensure corner radius is always height / 2 (Perfect Circle/Pill)
+                if (value > 0) {
+                    cornerRadius = value / 2f
                     backgroundDrawable.cornerRadius = cornerRadius
                 }
             }
@@ -216,16 +216,21 @@ class DynamicIslandView @JvmOverloads constructor(
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
         if (ev?.action == MotionEvent.ACTION_DOWN) {
+            // When expanded, we handle touch. When collapsed, maybe ignore?
+            // Actually, FLAG_NOT_TOUCH_MODAL handles outside touches.
+        }
+        // Handle collapse on outside touch if window manager sends ACTION_OUTSIDE
+        if (ev?.action == MotionEvent.ACTION_OUTSIDE) {
             if (isExpanded) {
-                parent?.requestDisallowInterceptTouchEvent(true)
+                collapse()
+                return true
             }
         }
         return super.dispatchTouchEvent(ev)
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
-        // Fix: Allow touch events to propagate so OnClickListener works
-        // Removing "if (isExpanded) { return true }"
+        // Allow touch events to propagate so OnClickListener works
         return super.onTouchEvent(event)
     }
 
@@ -240,7 +245,7 @@ class DynamicIslandView @JvmOverloads constructor(
                  // Fix Massive Pill Size: Reduce padding to match hardware cutout
                  collapsedHeight = rect.height() + 4
                  // Force PERFECT CIRCLE when collapsed
-                 collapsedWidth = collapsedHeight // Was rect.width() + 4
+                 collapsedWidth = collapsedHeight
 
                  // Ensure corner radius creates a perfect squircle
                  cornerRadius = collapsedHeight / 2f
@@ -248,7 +253,8 @@ class DynamicIslandView @JvmOverloads constructor(
 
                  post {
                      if (!isExpanded) {
-                         updateLayout(collapsedWidth, collapsedHeight, safeTop)
+                         // Update Window Layout directly
+                         updateWindowLayout(collapsedWidth, collapsedHeight, safeTop)
                      }
                  }
              }
@@ -258,40 +264,58 @@ class DynamicIslandView @JvmOverloads constructor(
 
     fun setDimensions(cW: Int, cH: Int, eW: Int, eH: Int) {
         collapsedWidth = cW
-        collapsedHeight = cH // Force square if needed, but let caller decide
+        collapsedHeight = cH
         expandedWidth = eW
         expandedHeight = eH
 
         post {
-            if (!isExpanded && layoutParams != null) {
-                updateLayout(collapsedWidth, collapsedHeight)
+            if (!isExpanded) {
+                updateWindowLayout(collapsedWidth, collapsedHeight)
             }
         }
     }
 
-    private fun updateLayout(width: Int, height: Int, topMarginOverride: Int? = null) {
-        val params = layoutParams
-        if (params != null) {
-            params.width = width
-            params.height = height
+    // Helper to update WindowManager layout params
+    private fun updateWindowLayout(width: Int? = null, height: Int? = null, topMarginOverride: Int? = null) {
+        val wm = windowManager
+        val wp = windowParams
 
-            // Use CENTER_HORIZONTAL gravity instead of absolute left margin
-            if (params is FrameLayout.LayoutParams) {
-                params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                // Remove leftMargin logic
-                params.leftMargin = 0
+        if (wm != null && wp != null) {
+            var changed = false
+            if (width != null && wp.width != width) {
+                wp.width = width
+                changed = true
+            }
+            if (height != null && wp.height != height) {
+                wp.height = height
+                changed = true
+            }
+            if (topMarginOverride != null && wp.y != topMarginOverride) {
+                wp.y = topMarginOverride // For Gravity.TOP, y is top margin equivalent
+                changed = true
             }
 
-            if (params is MarginLayoutParams && topMarginOverride != null) {
-                params.topMargin = topMarginOverride
+            if (changed) {
+                try {
+                    wm.updateViewLayout(this, wp)
+                } catch (e: Exception) {
+                    // Handle potential race conditions or detached view
+                }
             }
-
-            layoutParams = params
+        } else {
+            // Fallback for non-WM usage (if any) or initial layout
+            val params = layoutParams
+            if (params != null) {
+                if (width != null) params.width = width
+                if (height != null) params.height = height
+                layoutParams = params
+            }
         }
+    }
 
-        this.elevation = 9999f
-        this.translationZ = 9999f
-        this.bringToFront()
+    // For compatibility, keep updateLayout but delegate
+    private fun updateLayout(width: Int, height: Int, topMarginOverride: Int? = null) {
+        updateWindowLayout(width, height, topMarginOverride)
     }
 
     fun updateNotificationInfo(title: String?, text: String?, icon: Icon?) {
@@ -309,8 +333,6 @@ class DynamicIslandView @JvmOverloads constructor(
         notificationContainer.animate().alpha(1f).duration = 200
 
         backgroundDrawable.setStroke(0, Color.TRANSPARENT)
-
-        this.bringToFront()
     }
 
     fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?) {
@@ -353,7 +375,6 @@ class DynamicIslandView @JvmOverloads constructor(
             notificationContainer.visibility = View.GONE
             musicContainer.visibility = View.VISIBLE
             musicContainer.animate().alpha(1f).duration = 300
-            this.bringToFront()
         } else {
             musicContainer.animate().alpha(0f).duration = 300
         }
@@ -363,17 +384,20 @@ class DynamicIslandView @JvmOverloads constructor(
         if (isExpanded) return
         isExpanded = true
 
-        this.bringToFront()
+        // No need to bringToFront() for WindowManager
 
         widthSpring.cancel()
-        widthSpring.setStartValue(width.toFloat())
+        // Use current window width as start value if available
+        val currentWidth = windowParams?.width?.toFloat() ?: width.toFloat()
+        widthSpring.setStartValue(currentWidth)
         widthSpring.animateToFinalPosition(expandedWidth.toFloat())
 
         heightSpring.cancel()
-        heightSpring.setStartValue(height.toFloat())
+        val currentHeight = windowParams?.height?.toFloat() ?: height.toFloat()
+        heightSpring.setStartValue(currentHeight)
         heightSpring.animateToFinalPosition(expandedHeight.toFloat())
 
-        // Fade in content IMMEDIATELY (Removed startDelay)
+        // Fade in content IMMEDIATELY
         if (notificationContainer.visibility == View.VISIBLE) {
             notificationContainer.animate().alpha(1f).setDuration(150).start()
         }
@@ -387,11 +411,13 @@ class DynamicIslandView @JvmOverloads constructor(
         isExpanded = false
 
         widthSpring.cancel()
-        widthSpring.setStartValue(width.toFloat())
+        val currentWidth = windowParams?.width?.toFloat() ?: width.toFloat()
+        widthSpring.setStartValue(currentWidth)
         widthSpring.animateToFinalPosition(collapsedWidth.toFloat())
 
         heightSpring.cancel()
-        heightSpring.setStartValue(height.toFloat())
+        val currentHeight = windowParams?.height?.toFloat() ?: height.toFloat()
+        heightSpring.setStartValue(currentHeight)
         heightSpring.animateToFinalPosition(collapsedHeight.toFloat())
 
         // Fade out content
