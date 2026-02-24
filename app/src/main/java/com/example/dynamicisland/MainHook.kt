@@ -20,6 +20,7 @@ class MainHook : IXposedHookLoadPackage {
 
     private var islandInitialized = false
     private var windowManager: WindowManager? = null
+    private var headsUpManagerInstance: Any? = null
 
     private fun log(msg: String) {
         XposedBridge.log("DynamicIsland: " + msg)
@@ -46,7 +47,7 @@ class MainHook : IXposedHookLoadPackage {
             log("[ERROR] Failed to hook Application.onCreate: " + e)
         }
 
-        IslandController.hookHeadsUpManager(lpparam)
+        // Removed static hookHeadsUpManager call as we now hook the instance via hookStatusBarViews
 
         // Fix 2: Generic Notification Hiding Hook (Replaces NUCLEAR GHOST FIX)
         try {
@@ -156,6 +157,26 @@ class MainHook : IXposedHookLoadPackage {
                         setupIsland(view.context) // Now has a valid, active display context
                         findClock(view)
                         findStatusIcons(view)
+
+                        // Attempt to find HeadsUpManager via reflection on the parent objects or Dependency
+                        try {
+                            // Try to retrieve HeadsUpManager from SystemUI's Dependency injection
+                            // Note: If "HeadsUpManager" string is obfuscated, this findClass might fail,
+                            // but the user instruction suggests Dependency might work if we find the interface key.
+                            // If this fails, we catch it.
+                            val headsUpManagerClass = XposedHelpers.findClass("com.android.systemui.statusbar.policy.HeadsUpManager", classLoader)
+                            val systemUiProxy = XposedHelpers.callStaticMethod(
+                                XposedHelpers.findClass("com.android.systemui.Dependency", classLoader),
+                                "get",
+                                headsUpManagerClass
+                            )
+                            if (systemUiProxy != null) {
+                                log("[HOOK] Found HeadsUpManager via Dependency Proxy")
+                                IslandController.hookHeadsUpManagerInstance(systemUiProxy, classLoader)
+                            }
+                        } catch (e: Throwable) {
+                            log("[WARN] Dependency lookup for HUN failed: " + e)
+                        }
                     }
                 }
             )
