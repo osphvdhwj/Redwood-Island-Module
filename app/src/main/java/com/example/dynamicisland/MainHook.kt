@@ -48,40 +48,37 @@ class MainHook : IXposedHookLoadPackage {
 
         IslandController.hookHeadsUpManager(lpparam)
 
-        // NUCLEAR GHOST FIX (Retained for notification hiding)
+        // Fix 2: Generic Notification Hiding Hook (Replaces NUCLEAR GHOST FIX)
         try {
-            val nsslClass = "com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayout"
-
             XposedHelpers.findAndHookMethod(
-                nsslClass,
-                lpparam.classLoader,
-                "onChildViewAdded",
-                View::class.java,
-                View::class.java,
+                android.view.ViewGroup::class.java,
+                "addView",
+                android.view.View::class.java,
+                Int::class.javaPrimitiveType,
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         try {
-                            val child = param.args[1] as View
-                            if (child is DynamicIslandView) return
+                            val child = param.args[0] as android.view.View
+                            val className = child.javaClass.name
 
+                            // Target any view that looks like a notification row when Island is active
                             if (IslandController.isExpanding()) {
-                                if (child.javaClass.name.contains("ExpandableNotificationRow")) {
-                                    log("[NUCLEAR] Banishing notification off-screen")
-                                    child.translationX = 9999f
+                                if (className.contains("ExpandableNotificationRow") || className.contains("Notification")) {
                                     child.alpha = 0f
-                                    child.scaleX = 0f
-                                    child.scaleY = 0f
+                                    child.visibility = android.view.View.GONE
+                                    // Move it off-screen just in case
+                                    child.translationX = 9999f
                                 }
                             }
                         } catch (e: Throwable) {
-                             // Ignore
+                            // Ignore
                         }
                     }
                 }
             )
-
+            log("[UI] SUCCESS: Applied resilient notification hiding hook")
         } catch (e: Throwable) {
-            log("[WARN] Failed to hook StackScrollLayout: " + e)
+            log("[ERROR] Generic addView hook failed: " + e)
         }
     }
 
