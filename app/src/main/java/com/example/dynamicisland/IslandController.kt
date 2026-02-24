@@ -207,48 +207,41 @@ object IslandController {
         }
     }
 
-    fun hookHeadsUpManager(lpparam: XC_LoadPackage.LoadPackageParam) {
-        val entryClass = try {
-            XposedHelpers.findClass("com.android.systemui.statusbar.notification.collection.NotificationEntry", lpparam.classLoader)
-        } catch (e: Throwable) { null }
-
-        val headsUpManagerClass = "com.android.systemui.statusbar.policy.HeadsUpManager"
-
+    // Replaces static hookHeadsUpManager with instance-based hook
+    fun hookHeadsUpManagerInstance(instance: Any, classLoader: ClassLoader) {
         try {
-            if (entryClass != null) {
-                XposedHelpers.findAndHookMethod(
-                    headsUpManagerClass,
-                    lpparam.classLoader,
-                    "showNotification",
-                    entryClass,
-                    object : XC_MethodHook() {
-                        override fun beforeHookedMethod(param: MethodHookParam) {
-                            try {
-                                val entry = param.args[0]
-                                val sbn = XposedHelpers.getObjectField(entry, "mSbn") as StatusBarNotification
-                                val notification = sbn.notification
-                                val extras = notification.extras
+            // We hook the instance's class directly so we don't need the string name
+            XposedHelpers.findAndHookMethod(
+                instance.javaClass,
+                "showNotification",
+                "com.android.systemui.statusbar.notification.collection.NotificationEntry",
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        try {
+                            val entry = param.args[0]
+                            val sbn = XposedHelpers.getObjectField(entry, "mSbn") as android.service.notification.StatusBarNotification
+                            val notification = sbn.notification
+                            val extras = notification.extras
 
-                                val title = extras.getString(Notification.EXTRA_TITLE)
-                                val text = extras.getString(Notification.EXTRA_TEXT)
-                                val icon = notification.getLargeIcon() ?: notification.getSmallIcon()
-                                val contentIntent = notification.contentIntent
+                            val title = extras.getString(android.app.Notification.EXTRA_TITLE)
+                            val text = extras.getString(android.app.Notification.EXTRA_TEXT)
+                            val icon = notification.getLargeIcon() ?: notification.getSmallIcon()
+                            val contentIntent = notification.contentIntent
 
-                                XposedBridge.log("DynamicIsland: [DIRECT] Showing notification: $title")
-                                onNotificationShow(title, text, icon, contentIntent)
-                            } catch (e: Throwable) {
-                                XposedBridge.log("DynamicIsland: [ERROR] Failed to extract notification: " + e)
-                            }
+                            XposedBridge.log("DynamicIsland: [DIRECT] Showing notification: $title")
+                            onNotificationShow(title, text, icon, contentIntent)
 
-                             // Suppress System HUN
+                            // Suppress the original Heads-Up display
                             param.result = null
-                            XposedBridge.log("DynamicIsland: [SUPPRESS] System HUN suppressed")
+                        } catch (e: Throwable) {
+                            XposedBridge.log("DynamicIsland: Error extracting entry: $e")
                         }
                     }
-                )
-            }
+                }
+            )
+            XposedBridge.log("DynamicIsland: [SUCCESS] Instance-based HUN hook applied")
         } catch (e: Throwable) {
-             XposedBridge.log("DynamicIsland: [ERROR] Error hooking HeadsUpManager: " + e)
+            XposedBridge.log("DynamicIsland: [ERROR] Failed to hook instance methods: $e")
         }
     }
 

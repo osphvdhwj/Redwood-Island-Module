@@ -246,15 +246,15 @@ class DynamicIslandView @JvmOverloads constructor(
              if (rects.isNotEmpty()) {
                  val rect = rects[0]
                  val safeTop = rect.top
+                 val cutoutHeight = rect.height()
 
-                 // Fix Massive Pill Size: Reduce padding to match hardware cutout
-                 collapsedHeight = rect.height() + 4
-                 // Force PERFECT CIRCLE when collapsed
-                 collapsedWidth = collapsedHeight
-
-                 // Ensure corner radius creates a perfect squircle
-                 cornerRadius = collapsedHeight / 2f
-                 backgroundDrawable.cornerRadius = cornerRadius
+                 // Prevent 0x0 collapse bug if system cutout is not ready
+                 if (cutoutHeight > 10) {
+                     collapsedHeight = cutoutHeight + 4
+                     collapsedWidth = collapsedHeight // Force perfect circle
+                     cornerRadius = collapsedHeight / 2f
+                     backgroundDrawable.cornerRadius = cornerRadius
+                 }
 
                  post {
                      if (!isExpanded) {
