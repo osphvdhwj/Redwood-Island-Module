@@ -31,7 +31,6 @@ class MainHook : IXposedHookLoadPackage {
         log("[LOAD] Hooking SystemUI package: " + lpparam.packageName)
 
         // Hook Application.onCreate ONLY to set up early hooks or logging if needed.
-        // DO NOT use Application Context for UI injection anymore.
         try {
             XposedHelpers.findAndHookMethod(
                 Application::class.java,
@@ -63,10 +62,8 @@ class MainHook : IXposedHookLoadPackage {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         try {
                             val child = param.args[1] as View
-                            // Check if child is DynamicIslandView (not needed here since we don't inject into NSSL, but good safety)
                             if (child is DynamicIslandView) return
 
-                            // Only banish if Island is actively showing something
                             if (IslandController.isExpanding()) {
                                 if (child.javaClass.name.contains("ExpandableNotificationRow")) {
                                     log("[NUCLEAR] Banishing notification off-screen")
@@ -108,11 +105,11 @@ class MainHook : IXposedHookLoadPackage {
             islandView.id = View.generateViewId()
 
             // Configure WindowManager LayoutParams
-            // Use TYPE_APPLICATION_OVERLAY (2038) to bypass Android 15 token security
+            // CRITICAL: TYPE_SECURE_SYSTEM_OVERLAY (2015) for Native SystemUI token bypass
             val params = WindowManager.LayoutParams(
                 120, // Force initial width for Poco X5 Pro cutout
                 120, // Force initial height
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                2015, // Native SystemUI Window Type
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
@@ -150,16 +147,16 @@ class MainHook : IXposedHookLoadPackage {
 
     private fun hookStatusBarViews(classLoader: ClassLoader) {
         try {
-            // Hook PhoneStatusBarView to capture clock/icons AND inject Island with UI Context
+            // CRITICAL: Hook onAttachedToWindow to wait for physical display attachment
              XposedHelpers.findAndHookMethod(
                 "com.android.systemui.statusbar.phone.PhoneStatusBarView",
                 classLoader,
-                "onFinishInflate",
+                "onAttachedToWindow",
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         val view = param.thisObject as ViewGroup
-                        log("[HOOK] PhoneStatusBarView inflated")
-                        setupIsland(view.context) // MUST USE THIS CONTEXT
+                        log("[HOOK] PhoneStatusBarView attached to window")
+                        setupIsland(view.context) // Now has a valid, active display context
                         findClock(view)
                         findStatusIcons(view)
                     }
