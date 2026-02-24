@@ -13,7 +13,6 @@ import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.View
 import android.view.WindowInsets
-import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
@@ -21,13 +20,18 @@ import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import androidx.palette.graphics.Palette
 import androidx.core.graphics.ColorUtils
+import androidx.dynamicanimation.animation.SpringAnimation
+import androidx.dynamicanimation.animation.SpringForce
+import androidx.dynamicanimation.animation.FloatValueHolder
 
 class DynamicIslandView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
     private val backgroundDrawable = GradientDrawable()
-    private var currentAnimator: ValueAnimator? = null
+
+    private lateinit var widthSpring: SpringAnimation
+    private lateinit var heightSpring: SpringAnimation
 
     private val notificationContainer: LinearLayout
     private val iconView: ImageView
@@ -53,11 +57,12 @@ class DynamicIslandView @JvmOverloads constructor(
         private set
 
     init {
+        // True Black for OLED
         backgroundDrawable.setColor(Color.BLACK)
         backgroundDrawable.cornerRadius = cornerRadius
         background = backgroundDrawable
 
-        // Elevation WAR: Set extremely high elevation
+        // Elevation WAR
         this.elevation = 9999f
         this.translationZ = 9999f
 
@@ -102,7 +107,7 @@ class DynamicIslandView @JvmOverloads constructor(
         musicContainer.alpha = 0f
         musicContainer.setPadding(30, 20, 30, 20)
 
-        // 1. Album Art (Left)
+        // 1. Album Art
         albumArtView = ImageView(context)
         albumArtView.scaleType = ImageView.ScaleType.CENTER_CROP
         val artParams = LinearLayout.LayoutParams(120, 120)
@@ -122,7 +127,7 @@ class DynamicIslandView @JvmOverloads constructor(
 
         musicContainer.addView(albumArtView, artParams)
 
-        // 2. Info Container (Center)
+        // 2. Info
         musicInfoContainer = LinearLayout(context)
         musicInfoContainer.orientation = LinearLayout.VERTICAL
         musicInfoContainer.gravity = Gravity.CENTER_VERTICAL or Gravity.START
@@ -162,7 +167,7 @@ class DynamicIslandView @JvmOverloads constructor(
         infoParams.weight = 1f
         musicContainer.addView(musicInfoContainer, infoParams)
 
-        // 3. Play/Pause Button (Right)
+        // 3. Play/Pause
         playPauseButton = ImageView(context)
         playPauseButton.setImageResource(R.drawable.ic_play_vector)
         playPauseButton.scaleType = ImageView.ScaleType.FIT_CENTER
@@ -171,6 +176,35 @@ class DynamicIslandView @JvmOverloads constructor(
         musicContainer.addView(playPauseButton, btnParams)
 
         addView(musicContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+
+        // Initialize Springs
+        widthSpring = SpringAnimation(FloatValueHolder(0f)).apply {
+            spring = SpringForce().apply {
+                dampingRatio = SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY
+                stiffness = SpringForce.STIFFNESS_LOW
+            }
+            addUpdateListener { _, value, _ ->
+                val params = layoutParams
+                if (params != null) {
+                    params.width = value.toInt()
+                    layoutParams = params
+                }
+            }
+        }
+
+        heightSpring = SpringAnimation(FloatValueHolder(0f)).apply {
+            spring = SpringForce().apply {
+                dampingRatio = SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY
+                stiffness = SpringForce.STIFFNESS_LOW
+            }
+            addUpdateListener { _, value, _ ->
+                val params = layoutParams
+                if (params != null) {
+                    params.height = value.toInt()
+                    layoutParams = params
+                }
+            }
+        }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
@@ -194,8 +228,14 @@ class DynamicIslandView @JvmOverloads constructor(
              if (rects.isNotEmpty()) {
                  val rect = rects[0]
                  val safeTop = rect.top
-                 collapsedHeight = rect.height() + 20
-                 collapsedWidth = rect.width() + 50
+
+                 // Fix Massive Pill Size: Reduce padding to match hardware cutout
+                 collapsedHeight = rect.height() + 4
+                 collapsedWidth = rect.width() + 4
+
+                 // Ensure corner radius creates a perfect squircle
+                 cornerRadius = collapsedHeight / 2f
+                 backgroundDrawable.cornerRadius = cornerRadius
 
                  post {
                      if (!isExpanded) {
@@ -306,41 +346,40 @@ class DynamicIslandView @JvmOverloads constructor(
     fun expand() {
         if (isExpanded) return
         isExpanded = true
-        currentAnimator?.cancel()
 
         this.bringToFront()
 
-        val anim = ValueAnimator.ofFloat(0f, 1f)
-        anim.duration = 400
-        anim.interpolator = OvershootInterpolator(0.8f)
-        anim.addUpdateListener { animation ->
-            val fraction = animation.animatedValue as Float
-            val currentWidth = (collapsedWidth + (expandedWidth - collapsedWidth) * fraction).toInt()
-            val currentHeight = (collapsedHeight + (expandedHeight - collapsedHeight) * fraction).toInt()
-            updateLayout(currentWidth, currentHeight)
+        widthSpring.cancel()
+        widthSpring.setStartValue(width.toFloat())
+        widthSpring.animateToFinalPosition(expandedWidth.toFloat())
+
+        heightSpring.cancel()
+        heightSpring.setStartValue(height.toFloat())
+        heightSpring.animateToFinalPosition(expandedHeight.toFloat())
+
+        // Fade in content
+        if (notificationContainer.visibility == View.VISIBLE) {
+            notificationContainer.animate().alpha(1f).setDuration(150).setStartDelay(50).start()
         }
-        currentAnimator = anim
-        anim.start()
+        if (musicContainer.visibility == View.VISIBLE) {
+            musicContainer.animate().alpha(1f).setDuration(150).setStartDelay(50).start()
+        }
     }
 
     fun collapse() {
         if (!isExpanded) return
         isExpanded = false
-        currentAnimator?.cancel()
 
-        val anim = ValueAnimator.ofFloat(1f, 0f)
-        anim.duration = 300
-        anim.interpolator = OvershootInterpolator(0.8f)
-        anim.addUpdateListener { animation ->
-            val fraction = animation.animatedValue as Float
-            val currentWidth = (collapsedWidth + (expandedWidth - collapsedWidth) * fraction).toInt()
-            val currentHeight = (collapsedHeight + (expandedHeight - collapsedHeight) * fraction).toInt()
-            updateLayout(currentWidth, currentHeight)
+        widthSpring.cancel()
+        widthSpring.setStartValue(width.toFloat())
+        widthSpring.animateToFinalPosition(collapsedWidth.toFloat())
 
-            notificationContainer.alpha = 0f
-            musicContainer.alpha = 0f
-        }
-        currentAnimator = anim
-        anim.start()
+        heightSpring.cancel()
+        heightSpring.setStartValue(height.toFloat())
+        heightSpring.animateToFinalPosition(collapsedHeight.toFloat())
+
+        // Fade out content
+        notificationContainer.animate().alpha(0f).setDuration(100).start()
+        musicContainer.animate().alpha(0f).setDuration(100).start()
     }
 }

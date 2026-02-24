@@ -25,12 +25,18 @@ import java.lang.ref.WeakReference
 
 object IslandController {
 
+    private const val ACTION_POST = "com.example.dynamicisland.ACTION_POST"
+    private const val ACTION_REMOVE = "com.example.dynamicisland.ACTION_REMOVE"
+    private const val PERMISSION_TRIGGER = "com.example.dynamicisland.PERMISSION_TRIGGER"
+
     private var islandViewRef: WeakReference<DynamicIslandView>? = null
     private var clockViewRef: WeakReference<View>? = null
+    private var statusIconsRef: WeakReference<View>? = null
     private var isExpanding = false
     private var currentController: MediaController? = null
     private var mediaSessionManager: MediaSessionManager? = null
     private var currentNotificationIntent: PendingIntent? = null
+    private var dismissRunnable: Runnable? = null
 
     private val sessionsListener = object : MediaSessionManager.OnActiveSessionsChangedListener {
         override fun onActiveSessionsChanged(controllers: MutableList<MediaController>?) {
@@ -47,13 +53,32 @@ object IslandController {
         }
     }
 
+    private val notificationReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent == null) return
+            when (intent.action) {
+                ACTION_POST -> {
+                    val title = intent.getStringExtra("title")
+                    val text = intent.getStringExtra("text")
+                    val icon = intent.getParcelableExtra<Icon>("icon")
+                    val contentIntent = intent.getParcelableExtra<PendingIntent>("content_intent")
+                    onNotificationShow(title, text, icon, contentIntent)
+                }
+                ACTION_REMOVE -> {
+                    onNotificationDismiss()
+                }
+            }
+        }
+    }
+
     fun init(view: DynamicIslandView) {
         islandViewRef = WeakReference(view)
         setupMediaListener(view.context)
+        setupReceiver(view.context)
 
         // Default click listener (do nothing or collapse)
         view.setOnClickListener {
-            view.collapse()
+            collapse()
         }
     }
 
@@ -61,8 +86,44 @@ object IslandController {
         clockViewRef = WeakReference(view)
     }
 
+    fun setStatusIcons(view: View) {
+        statusIconsRef = WeakReference(view)
+    }
+
     fun isExpanding(): Boolean {
         return isExpanding
+    }
+
+    fun expand() {
+        val island = islandViewRef?.get() ?: return
+        val clock = clockViewRef?.get()
+        val statusIcons = statusIconsRef?.get()
+
+        isExpanding = true
+
+        island.expand()
+
+        // Animate Clock (Fade Out)
+        clock?.animate()?.alpha(0f)?.setDuration(200)?.start()
+
+        // Animate Status Icons (Push Right)
+        statusIcons?.animate()?.translationX(300f)?.setDuration(300)?.start()
+    }
+
+    fun collapse() {
+        val island = islandViewRef?.get() ?: return
+        val clock = clockViewRef?.get()
+        val statusIcons = statusIconsRef?.get()
+
+        isExpanding = false
+
+        island.collapse()
+
+        // Animate Clock (Fade In)
+        clock?.animate()?.alpha(1f)?.setDuration(200)?.start()
+
+        // Animate Status Icons (Restore Position)
+        statusIcons?.animate()?.translationX(0f)?.setDuration(300)?.start()
     }
 
     private fun setupMediaListener(context: Context) {
@@ -74,6 +135,19 @@ object IslandController {
             updateActiveController(controllers)
         } catch (e: Throwable) {
             XposedBridge.log("DynamicIsland: [ERROR] Media setup failed: " + e)
+        }
+    }
+
+    private fun setupReceiver(context: Context) {
+        try {
+            val filter = IntentFilter().apply {
+                addAction(ACTION_POST)
+                addAction(ACTION_REMOVE)
+            }
+            context.registerReceiver(notificationReceiver, filter, PERMISSION_TRIGGER, null, Context.RECEIVER_EXPORTED)
+            XposedBridge.log("DynamicIsland: [INFO] Receiver registered successfully")
+        } catch (e: Throwable) {
+            XposedBridge.log("DynamicIsland: [ERROR] Receiver registration failed: " + e)
         }
     }
 
@@ -106,14 +180,14 @@ object IslandController {
             island.updatePlayPauseState(isPlaying)
             if (isPlaying) {
                 if (!island.isExpanded) {
-                    island.expand()
+                    expand()
                 }
                 island.showMusicVisualizer(true)
             } else {
                 island.showMusicVisualizer(false)
                 island.postDelayed({
                     if (currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
-                        island.collapse()
+                        collapse()
                     }
                 }, 2000)
             }
@@ -148,114 +222,68 @@ object IslandController {
                     "showNotification",
                     entryClass,
                     object : XC_MethodHook() {
-                        override fun afterHookedMethod(param: MethodHookParam) {
-                            val entry = param.args[0]
-                            onHeadsUpShow(entry)
+                        override fun beforeHookedMethod(param: MethodHookParam) {
+                             // Suppress System HUN
+                            param.result = null
+                            XposedBridge.log("DynamicIsland: [SUPPRESS] System HUN suppressed")
                         }
                     }
                 )
             }
-
-             XposedHelpers.findAndHookMethod(
-                headsUpManagerClass,
-                lpparam.classLoader,
-                "removeNotification",
-                String::class.java,
-                Boolean::class.javaPrimitiveType,
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        try {
-                            val manager = param.thisObject
-                            val hasPinned = XposedHelpers.callMethod(manager, "hasPinnedHeadsUp") as Boolean
-                            if (!hasPinned) {
-                                onHeadsUpDismiss()
-                            }
-                        } catch (e: Throwable) {}
-                    }
-                }
-            )
         } catch (e: Throwable) {
              XposedBridge.log("DynamicIsland: [ERROR] Error hooking HeadsUpManager: " + e)
         }
     }
 
-    private fun onHeadsUpShow(entry: Any?) {
+    private fun onNotificationShow(title: String?, text: String?, icon: Icon?, contentIntent: PendingIntent?) {
         val island = islandViewRef?.get() ?: return
-        val clock = clockViewRef?.get()
 
-        var title = "New Notification"
-        var text = "Tap to view"
-        var smallIcon: Icon? = null
+        currentNotificationIntent = contentIntent
 
-        if (entry != null) {
+        island.setOnClickListener {
             try {
-                val sbn = XposedHelpers.getObjectField(entry, "mSbn") as StatusBarNotification
-                val notification = sbn.notification
-                val extras = notification.extras
+                dismissRunnable?.let { island.removeCallbacks(it) }
 
-                title = extras.getString(Notification.EXTRA_TITLE) ?: title
-                text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: text
-                smallIcon = notification.smallIcon
+                currentNotificationIntent?.send()
+                collapse()
 
-                // Update Click Listener
-                currentNotificationIntent = notification.contentIntent
-                island.setOnClickListener {
-                    try {
-                        currentNotificationIntent?.send()
-                        island.collapse()
-                    } catch (e: Throwable) {
-                        XposedBridge.log("DynamicIsland: Intent failed: " + e)
-                    }
-                }
-
+                isExpanding = false
             } catch (e: Throwable) {
-                XposedBridge.log("DynamicIsland: [ERROR] Failed to extract content: " + e)
+                XposedBridge.log("DynamicIsland: Intent failed: " + e)
             }
         }
 
-        val fTitle = title
-        val fText = text
-        val fIcon = smallIcon
-
-        isExpanding = true
         island.post {
-            island.updateNotificationInfo(fTitle, fText, fIcon)
-            island.expand()
-            clock?.animate()?.alpha(0f)?.setDuration(200)?.start()
+            island.updateNotificationInfo(title ?: "Notification", text ?: "Tap to view", icon)
+            expand()
 
-            island.postDelayed({
+            dismissRunnable?.let { island.removeCallbacks(it) }
+            dismissRunnable = Runnable {
                 if (isExpanding && currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
-                    onHeadsUpDismiss()
+                    onNotificationDismiss()
                 }
-            }, 5000)
+            }
+            island.postDelayed(dismissRunnable, 4000)
         }
     }
 
-    private fun onHeadsUpDismiss() {
+    private fun onNotificationDismiss() {
          val island = islandViewRef?.get() ?: return
-         val clock = clockViewRef?.get()
-
-         isExpanding = false
          island.post {
-             island.collapse()
-             clock?.animate()?.alpha(1f)?.setDuration(200)?.start()
+             dismissRunnable?.let { island.removeCallbacks(it) }
+             collapse()
          }
     }
 
     fun testExpand() {
          val island = islandViewRef?.get() ?: return
-         val clock = clockViewRef?.get()
 
-         isExpanding = true
          island.post {
              island.updateNotificationInfo("Test Notification", "This is a test message.", null)
-             island.expand()
-             clock?.animate()?.alpha(0f)?.setDuration(200)?.start()
+             expand()
 
              island.postDelayed({
-                 island.collapse()
-                 clock?.animate()?.alpha(1f)?.setDuration(200)?.start()
-                 isExpanding = false
+                 collapse()
              }, 3000)
          }
     }

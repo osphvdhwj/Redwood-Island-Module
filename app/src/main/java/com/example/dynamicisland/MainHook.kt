@@ -2,6 +2,7 @@ package com.example.dynamicisland
 
 import android.content.Context
 import android.graphics.Color
+import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -134,8 +135,16 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
         try {
             val context = parentView.context
 
-            val prefs = XSharedPreferences("com.example.dynamicisland", "dynamic_island_prefs")
-            var offsetY = prefs.getInt("offset_y", 0)
+            // Read Settings.System instead of SharedPreferences
+            var offsetY = 0
+            var offsetX = 0
+            try {
+                val cr = context.contentResolver
+                offsetY = Settings.System.getInt(cr, "redwood_island_y_offset", 0)
+                offsetX = Settings.System.getInt(cr, "redwood_island_x_offset", 0)
+            } catch (e: Throwable) {
+                // Ignore errors (permission denied, etc)
+            }
 
             val islandView = DynamicIslandView(context)
             islandView.id = View.generateViewId()
@@ -144,8 +153,21 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
                 islandView.collapsedWidth,
                 islandView.collapsedHeight
             )
-            lp.gravity = Gravity.CENTER_HORIZONTAL or Gravity.TOP
+
+            // Use LEFT gravity + Left Margin for absolute X positioning
+            lp.gravity = Gravity.TOP or Gravity.LEFT
             lp.topMargin = offsetY
+
+            // Calculate center offset
+            try {
+                val dm = context.resources.displayMetrics
+                val screenWidth = dm.widthPixels
+                val left = (screenWidth - islandView.collapsedWidth) / 2 + offsetX
+                lp.leftMargin = left
+            } catch (e: Throwable) {
+                // Fallback if DM fails
+                lp.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            }
 
             islandView.layoutParams = lp
 
@@ -178,6 +200,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
 
             IslandController.init(islandView)
             findClock(parentView)
+            findStatusIcons(parentView)
 
         } catch (e: Throwable) {
             log("[ERROR] injectIsland crashed: " + e)
@@ -194,6 +217,23 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
             if (view is ViewGroup) {
                 for (i in 0 until view.childCount) {
                     findClock(view.getChildAt(i))
+                }
+            }
+        } catch (e: Throwable) {
+             // Ignore
+        }
+    }
+
+    private fun findStatusIcons(view: View) {
+        try {
+            val clsName = view.javaClass.name
+            if (clsName == "com.android.systemui.statusbar.phone.StatusIconContainer") {
+                log("[STATUS_ICONS] Found StatusIconContainer")
+                IslandController.setStatusIcons(view)
+            }
+            if (view is ViewGroup) {
+                for (i in 0 until view.childCount) {
+                    findStatusIcons(view.getChildAt(i))
                 }
             }
         } catch (e: Throwable) {
