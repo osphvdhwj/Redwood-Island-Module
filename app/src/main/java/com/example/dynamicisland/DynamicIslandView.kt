@@ -62,6 +62,11 @@ class DynamicIslandView @JvmOverloads constructor(
     var windowParams: WindowManager.LayoutParams? = null
 
     init {
+        // Hardcode fallback dimensions for Poco X5 Pro visibility
+        collapsedWidth = 120
+        collapsedHeight = 120
+        cornerRadius = 60f
+
         // True Black for OLED
         backgroundDrawable.setColor(Color.BLACK)
         backgroundDrawable.cornerRadius = cornerRadius

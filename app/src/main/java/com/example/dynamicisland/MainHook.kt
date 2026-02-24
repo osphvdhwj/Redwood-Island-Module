@@ -108,15 +108,16 @@ class MainHook : IXposedHookLoadPackage {
             islandView.id = View.generateViewId()
 
             // Configure WindowManager LayoutParams
+            // Use TYPE_APPLICATION_OVERLAY (2038) to bypass Android 15 token security
             val params = WindowManager.LayoutParams(
-                islandView.collapsedWidth,
-                islandView.collapsedHeight,
-                2014, // Fixed Window Type
+                120, // Force initial width for Poco X5 Pro cutout
+                120, // Force initial height
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or // CRITICAL: Pass touches when collapsed
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
                 PixelFormat.TRANSLUCENT
             )
