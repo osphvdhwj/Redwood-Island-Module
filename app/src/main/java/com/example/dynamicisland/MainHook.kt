@@ -137,11 +137,10 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
 
             // Read Settings.System instead of SharedPreferences
             var offsetY = 0
-            var offsetX = 0
+            // Removed offsetX calculation as we are centering
             try {
                 val cr = context.contentResolver
                 offsetY = Settings.System.getInt(cr, "redwood_island_y_offset", 0)
-                offsetX = Settings.System.getInt(cr, "redwood_island_x_offset", 0)
             } catch (e: Throwable) {
                 // Ignore errors (permission denied, etc)
             }
@@ -154,20 +153,11 @@ class MainHook : IXposedHookLoadPackage, IXposedHookInitPackageResources {
                 islandView.collapsedHeight
             )
 
-            // Use LEFT gravity + Left Margin for absolute X positioning
-            lp.gravity = Gravity.TOP or Gravity.LEFT
+            // Fix: Use CENTER_HORIZONTAL gravity for perfect centering
+            lp.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             lp.topMargin = offsetY
 
-            // Calculate center offset
-            try {
-                val dm = context.resources.displayMetrics
-                val screenWidth = dm.widthPixels
-                val left = (screenWidth - islandView.collapsedWidth) / 2 + offsetX
-                lp.leftMargin = left
-            } catch (e: Throwable) {
-                // Fallback if DM fails
-                lp.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            }
+            // Removed leftMargin calculation to avoid offset issues
 
             islandView.layoutParams = lp
 

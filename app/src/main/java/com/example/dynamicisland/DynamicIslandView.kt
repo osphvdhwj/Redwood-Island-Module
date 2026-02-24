@@ -202,9 +202,16 @@ class DynamicIslandView @JvmOverloads constructor(
                 if (params != null) {
                     params.height = value.toInt()
                     layoutParams = params
+                    // Ensure corner radius is always height / 2 (Perfect Circle/Pill)
+                    cornerRadius = params.height / 2f
+                    backgroundDrawable.cornerRadius = cornerRadius
                 }
             }
         }
+
+        // Ensure we are clickable
+        isClickable = true
+        isFocusable = true
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
@@ -217,7 +224,8 @@ class DynamicIslandView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
-        if (isExpanded) { return true }
+        // Fix: Allow touch events to propagate so OnClickListener works
+        // Removing "if (isExpanded) { return true }"
         return super.onTouchEvent(event)
     }
 
@@ -231,7 +239,8 @@ class DynamicIslandView @JvmOverloads constructor(
 
                  // Fix Massive Pill Size: Reduce padding to match hardware cutout
                  collapsedHeight = rect.height() + 4
-                 collapsedWidth = rect.width() + 4
+                 // Force PERFECT CIRCLE when collapsed
+                 collapsedWidth = collapsedHeight // Was rect.width() + 4
 
                  // Ensure corner radius creates a perfect squircle
                  cornerRadius = collapsedHeight / 2f
@@ -249,7 +258,7 @@ class DynamicIslandView @JvmOverloads constructor(
 
     fun setDimensions(cW: Int, cH: Int, eW: Int, eH: Int) {
         collapsedWidth = cW
-        collapsedHeight = cH
+        collapsedHeight = cH // Force square if needed, but let caller decide
         expandedWidth = eW
         expandedHeight = eH
 
@@ -265,6 +274,13 @@ class DynamicIslandView @JvmOverloads constructor(
         if (params != null) {
             params.width = width
             params.height = height
+
+            // Use CENTER_HORIZONTAL gravity instead of absolute left margin
+            if (params is FrameLayout.LayoutParams) {
+                params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                // Remove leftMargin logic
+                params.leftMargin = 0
+            }
 
             if (params is MarginLayoutParams && topMarginOverride != null) {
                 params.topMargin = topMarginOverride
@@ -357,12 +373,12 @@ class DynamicIslandView @JvmOverloads constructor(
         heightSpring.setStartValue(height.toFloat())
         heightSpring.animateToFinalPosition(expandedHeight.toFloat())
 
-        // Fade in content
+        // Fade in content IMMEDIATELY (Removed startDelay)
         if (notificationContainer.visibility == View.VISIBLE) {
-            notificationContainer.animate().alpha(1f).setDuration(150).setStartDelay(50).start()
+            notificationContainer.animate().alpha(1f).setDuration(150).start()
         }
         if (musicContainer.visibility == View.VISIBLE) {
-            musicContainer.animate().alpha(1f).setDuration(150).setStartDelay(50).start()
+            musicContainer.animate().alpha(1f).setDuration(150).start()
         }
     }
 
