@@ -30,16 +30,15 @@ class MainHook : IXposedHookLoadPackage {
 
         log("[LOAD] Hooking SystemUI package: " + lpparam.packageName)
 
-        // Hook Application.onCreate to get Context
+        // Hook Application.onCreate ONLY to set up early hooks or logging if needed.
+        // DO NOT use Application Context for UI injection anymore.
         try {
             XposedHelpers.findAndHookMethod(
                 Application::class.java,
                 "onCreate",
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
-                        val app = param.thisObject as Application
                         log("[HOOK] Application.onCreate called")
-                        setupIsland(app.applicationContext)
                         hookStatusBarViews(lpparam.classLoader)
                     }
                 }
@@ -112,12 +111,13 @@ class MainHook : IXposedHookLoadPackage {
             val params = WindowManager.LayoutParams(
                 islandView.collapsedWidth,
                 islandView.collapsedHeight,
-                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, // User Requested Type
+                2014, // Fixed Window Type
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or // Pass outside touches to underlying window
-                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH, // Detect outside touches
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or // CRITICAL: Pass touches when collapsed
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
                 PixelFormat.TRANSLUCENT
             )
 
@@ -149,7 +149,7 @@ class MainHook : IXposedHookLoadPackage {
 
     private fun hookStatusBarViews(classLoader: ClassLoader) {
         try {
-            // Hook PhoneStatusBarView to capture clock/icons
+            // Hook PhoneStatusBarView to capture clock/icons AND inject Island with UI Context
              XposedHelpers.findAndHookMethod(
                 "com.android.systemui.statusbar.phone.PhoneStatusBarView",
                 classLoader,
@@ -157,6 +157,8 @@ class MainHook : IXposedHookLoadPackage {
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         val view = param.thisObject as ViewGroup
+                        log("[HOOK] PhoneStatusBarView inflated")
+                        setupIsland(view.context) // MUST USE THIS CONTEXT
                         findClock(view)
                         findStatusIcons(view)
                     }
