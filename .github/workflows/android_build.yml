@@ -20,11 +20,22 @@ jobs:
         distribution: "temurin"
         cache: gradle
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 6dd6279 (Polish Media Player UI with Album Art, Colors, and Custom Icons)
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
     - name: Build with Gradle
       run: ./gradlew assembleDebug
+<<<<<<< HEAD
+=======
+    - name: Build with Gradle
+      run: gradle assembleDebug
+>>>>>>> 06ad498 (Fix Massive Pill Size: Reduce padding and ensure squircle shape)
+=======
+>>>>>>> 6dd6279 (Polish Media Player UI with Album Art, Colors, and Custom Icons)
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
