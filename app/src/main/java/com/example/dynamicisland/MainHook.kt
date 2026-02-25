@@ -1,17 +1,14 @@
 package com.example.dynamicisland
 
 import android.annotation.SuppressLint
-import android.app.Application
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Color
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.view.Display
 import android.view.Gravity
 import android.view.View
@@ -36,7 +33,7 @@ class MainHook : IXposedHookLoadPackage {
         if (lpparam.packageName != "com.android.systemui") return
         log("[LOAD] Hooking SystemUI package: ${lpparam.packageName}")
 
-        // 1. Reliable UI Injection via SystemUIService
+        // 1. Reliable UI Injection via SystemUIService (Standard for A12+)
         try {
             XposedHelpers.findAndHookMethod(
                 "com.android.systemui.SystemUIService",
@@ -57,18 +54,17 @@ class MainHook : IXposedHookLoadPackage {
                                     }
                                 }
                             }
-                            // Using Context.RECEIVER_EXPORTED for A14+ compatibility if needed, or default
-                            // Since this is inside SystemUI, permissions are lax for internal broadcasts, but security matters.
-                            // We'll use 0 or EXPORTED if available.
-                            // Simply registering with just intentfilter for now.
+
                             val filter = IntentFilter("com.example.dynamicisland.RELOAD_SETTINGS")
-                            serviceContext.registerReceiver(receiver, filter)
+                            // Android 14+ requires explicit export flag.
+                            // Using Context.RECEIVER_EXPORTED (0x2) for inter-app communication.
+                            serviceContext.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
                         } catch (e: Throwable) {
                             log("[WARN] Failed to register settings receiver: $e")
                         }
 
-                        // Use a layout listener or just a small delay to ensure display is ready,
-                        // but 3000ms is too long. Let's try 500ms which is usually enough for boot.
+                        // Use a layout listener or just a small delay to ensure display is ready.
+                        // 500ms is usually enough for boot on modern devices like Poco X5 Pro.
                         Handler(Looper.getMainLooper()).postDelayed({
                             setupIsland(serviceContext)
                         }, 500)
@@ -77,26 +73,6 @@ class MainHook : IXposedHookLoadPackage {
             )
         } catch (e: Throwable) {
             log("[ERROR] Failed to hook SystemUIService: $e")
-
-            // Fallback to SystemUIApplication (Without receiver for now)
-            try {
-                XposedHelpers.findAndHookMethod(
-                    "com.android.systemui.SystemUIApplication",
-                    lpparam.classLoader,
-                    "onCreate",
-                    object : XC_MethodHook() {
-                        override fun afterHookedMethod(param: MethodHookParam) {
-                            val appContext = param.thisObject as Context
-                            log("[HOOK] SystemUIApplication.onCreate triggered (Fallback)")
-                            Handler(Looper.getMainLooper()).postDelayed({
-                                setupIsland(appContext)
-                            }, 500)
-                        }
-                    }
-                )
-            } catch (e2: Throwable) {
-                log("[ERROR] Fallback hook failed: $e2")
-            }
         }
 
         // 2. Initialize Framework Notification Hooks
@@ -136,7 +112,7 @@ class MainHook : IXposedHookLoadPackage {
         if (islandInitialized) return
 
         try {
-            // A15 requires a WindowContext tied to a Display
+            // Android 15 requires a WindowContext tied to a Display
             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
 
@@ -178,9 +154,8 @@ class MainHook : IXposedHookLoadPackage {
             params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             params.y = offsetY
 
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-            }
+            // Always layout in display cutout mode for Android 15 (P+)
+            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
 
             islandView!!.windowManager = wm
             islandView!!.windowParams = params
