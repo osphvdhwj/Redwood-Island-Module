@@ -41,6 +41,30 @@ object IslandController {
     private var dismissRunnable: Runnable? = null
     private var mediaSessionManager: MediaSessionManager? = null
 
+    // Progress Bar Handling
+    private var mediaDuration: Long = 0L
+    private val progressHandler = Handler(Looper.getMainLooper())
+    private val progressUpdater = object : Runnable {
+        override fun run() {
+            val island = islandViewRef?.get()
+            val state = currentController?.playbackState
+
+            // Only update if expanded and playing
+            if (island != null && island.isExpanded && state != null &&
+               (state.state == PlaybackState.STATE_PLAYING)) {
+
+                // Calculate position based on last update time if possible,
+                // but for simplicity/reliability with Xposed, we rely on controller.playbackState.position
+                // Note: some apps might not update this frequently, causing jumpiness.
+                val currentPosition = state.position
+                island.updateMusicProgress(currentPosition, mediaDuration)
+
+                // Poll every 1000ms (1 second)
+                progressHandler.postDelayed(this, 1000)
+            }
+        }
+    }
+
     private val sessionsListener = object : MediaSessionManager.OnActiveSessionsChangedListener {
         override fun onActiveSessionsChanged(controllers: MutableList<MediaController>?) {
             updateActiveController(controllers)
@@ -49,16 +73,12 @@ object IslandController {
 
     private val mediaCallback = object : MediaController.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackState?) {
-            // Re-evaluate priority when state changes
-            val componentName = ComponentName(islandViewRef?.get()?.context ?: return, "com.android.systemui.SystemUIService")
-            val controllers = mediaSessionManager?.getActiveSessions(componentName)
-            updateActiveController(controllers)
+            updateMediaState(state)
         }
         override fun onMetadataChanged(metadata: MediaMetadata?) {
             updateMetadata(metadata)
         }
         override fun onSessionDestroyed() {
-            // Immediately check for other sessions before giving up
             val componentName = ComponentName(islandViewRef?.get()?.context ?: return, "com.android.systemui.SystemUIService")
             val controllers = mediaSessionManager?.getActiveSessions(componentName)
             if (controllers.isNullOrEmpty()) {
@@ -83,14 +103,20 @@ object IslandController {
         view.onGestureListener = { action ->
             when (action) {
                 DynamicIslandView.GestureAction.SINGLE_TAP -> {
-                    // If playing, maybe open the app?
-                    // For now, toggle expand/collapse as default behavior
+                    // Single Tap = Expand/Collapse Toggle
                     if (view.isExpanded) collapse() else expand()
-
-                    // Or launch pending intent if available
-                    if (view.isExpanded && currentController != null) {
+                }
+                DynamicIslandView.GestureAction.DOUBLE_TAP -> {
+                    // Double Tap = Open App (Launch Pending Intent)
+                    if (currentController != null) {
                         try {
                             currentController?.sessionActivity?.send()
+                            collapse() // Optional: collapse after opening app
+                        } catch (e: Exception) {}
+                    } else if (currentNotificationIntent != null) {
+                        try {
+                            currentNotificationIntent?.send()
+                            collapse()
                         } catch (e: Exception) {}
                     }
                 }
@@ -110,7 +136,6 @@ object IslandController {
     fun isExpanding(): Boolean = isExpanding
 
     private fun handleSwipe(isRight: Boolean) {
-        // Skip tracks if media is playing
         val state = currentController?.playbackState?.state
         if (state == PlaybackState.STATE_PLAYING ||
             state == PlaybackState.STATE_PAUSED ||
@@ -158,11 +183,20 @@ object IslandController {
             it.animate().translationY(0f).setDuration(0).start()
             it.expand()
         }
+
+        // Start Progress Tracking if expanding while playing
+        if (currentController?.playbackState?.state == PlaybackState.STATE_PLAYING) {
+             progressHandler.removeCallbacks(progressUpdater)
+             progressHandler.post(progressUpdater)
+        }
     }
 
     fun collapse() {
         isExpanding = false
         islandViewRef?.get()?.collapse()
+
+        // Stop Progress Tracking
+        progressHandler.removeCallbacks(progressUpdater)
     }
 
     // --- Notification Handling ---
@@ -214,7 +248,6 @@ object IslandController {
 
         currentNotificationIntent = contentIntent
 
-        // Convert Icon to Bitmap for Palette extraction
         var bitmap: Bitmap? = null
         try {
             val drawable = icon?.loadDrawable(context)
@@ -229,11 +262,10 @@ object IslandController {
         } catch (e: Exception) {}
 
         island.post {
-            island.setContextGlow(bitmap) // Apply app-specific color
+            island.setContextGlow(bitmap)
             island.updateNotificationInfo(title, text, icon)
             expand()
 
-            // Auto-collapse after 4 seconds unless it's a Live Activity
             dismissRunnable?.let { island.removeCallbacks(it) }
             dismissRunnable = Runnable {
                 if (activeLiveActivity == null && currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
@@ -258,21 +290,15 @@ object IslandController {
     }
 
     private fun updateActiveController(controllers: List<MediaController>?) {
-        if (controllers == null) return // Don't return if empty, we might need to clear
+        if (controllers == null) return
 
-        // If list is empty, we must clear current controller
         if (controllers.isEmpty()) {
             currentController?.unregisterCallback(mediaCallback)
             currentController = null
-            // Trigger update to clear UI?
             updateMediaState(null)
             return
         }
 
-        // Logic to pick the best controller:
-        // 1. First one that is actively PLAYING or BUFFERING
-        // 2. If none, first one that is PAUSED
-        // 3. Fallback to first in list
         val bestController = controllers.firstOrNull {
             val state = it.playbackState?.state
             state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING
@@ -280,18 +306,13 @@ object IslandController {
             it.playbackState?.state == PlaybackState.STATE_PAUSED
         } ?: controllers.first()
 
-        // If we are already tracking this controller, just ensure state is current
-        // (Use packageName/Tag to compare as objects might be different instances)
         if (currentController != null &&
             currentController?.packageName == bestController.packageName) {
-
-            // Just ensure callback is registered (it should be) and update state
             updateMediaState(bestController.playbackState)
             updateMetadata(bestController.metadata)
             return
         }
 
-        // Switching controller
         currentController?.unregisterCallback(mediaCallback)
         currentController = bestController
         currentController?.registerCallback(mediaCallback)
@@ -301,9 +322,7 @@ object IslandController {
     }
 
     private fun updateMediaState(state: PlaybackState?) {
-        // If state is null, assume stopped/none
         val isPlaying = state?.state == PlaybackState.STATE_PLAYING || state?.state == PlaybackState.STATE_BUFFERING
-
         val island = islandViewRef?.get() ?: return
 
         island.post {
@@ -312,13 +331,16 @@ object IslandController {
                 if (!island.isExpanded) {
                     expand()
                 }
+                // Ensure progress tracking is active
+                progressHandler.removeCallbacks(progressUpdater)
+                progressHandler.post(progressUpdater)
             } else {
-                 // Check if actually paused or stopped
+                 // Stop tracking immediately
+                 progressHandler.removeCallbacks(progressUpdater)
+
                  island.postDelayed({
-                    // Re-check global state
                     val currentState = currentController?.playbackState?.state
                     val stillPlaying = currentState == PlaybackState.STATE_PLAYING || currentState == PlaybackState.STATE_BUFFERING
-
                     if (!stillPlaying && activeLiveActivity == null) {
                         collapse()
                     }
@@ -329,17 +351,21 @@ object IslandController {
 
     private fun updateMetadata(metadata: MediaMetadata?) {
         val island = islandViewRef?.get() ?: return
-        if (metadata == null) {
-            // Optional: clear info?
-            return
-        }
+        if (metadata == null) return
+
         val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
         val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
         val albumArt = metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
                        ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
 
+        // Fetch Duration
+        mediaDuration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
+
         island.post {
             island.updateMusicInfo(title, artist, albumArt)
+            // Initial progress update
+            val pos = currentController?.playbackState?.position ?: 0L
+            island.updateMusicProgress(pos, mediaDuration)
         }
     }
 }
