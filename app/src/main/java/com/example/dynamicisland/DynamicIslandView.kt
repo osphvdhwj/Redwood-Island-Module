@@ -2,7 +2,10 @@ package com.example.dynamicisland
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BlendMode
+import android.graphics.BlendModeColorFilter
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.Icon
 import android.util.AttributeSet
@@ -19,7 +22,8 @@ class DynamicIslandView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
-    enum class GestureAction { SWIPE_LEFT, SWIPE_RIGHT, SWIPE_UP, SWIPE_DOWN, SINGLE_TAP, DOUBLE_TAP }
+    // ADDED: LONG_PRESS
+    enum class GestureAction { SWIPE_LEFT, SWIPE_RIGHT, SWIPE_UP, SWIPE_DOWN, SINGLE_TAP, DOUBLE_TAP, LONG_PRESS }
     var onGestureListener: ((GestureAction) -> Unit)? = null
 
     private val backgroundDrawable = GradientDrawable()
@@ -48,7 +52,7 @@ class DynamicIslandView @JvmOverloads constructor(
     private val musicArtist: TextView
     private val playPauseButton: ImageView
 
-    // New Music Progress Elements
+    // Music Progress Elements
     private val musicCurrentTime: TextView
     private val musicTotalTime: TextView
     private val musicProgressBar: ProgressBar
@@ -67,16 +71,20 @@ class DynamicIslandView @JvmOverloads constructor(
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
 
+    // System Font
+    private val systemFont = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+    private val systemFontRegular = Typeface.create("sans-serif", Typeface.NORMAL)
+
     private fun dpToPx(dp: Int): Int {
         return (dp * resources.displayMetrics.density).toInt()
     }
 
     init {
-        // Initialize Dimensions based on Density
-        collapsedWidth = dpToPx(100) // Pill width
-        collapsedHeight = dpToPx(32) // Thinner pill height
-        expandedWidth = dpToPx(340)  // ~650px on xhdpi
-        expandedHeight = dpToPx(140) // Adjusted for new progress bar row
+        // Optimized Dimensions for Poco X5 Pro
+        collapsedWidth = dpToPx(108)
+        collapsedHeight = dpToPx(34)
+        expandedWidth = dpToPx(350)
+        expandedHeight = dpToPx(146)
 
         // Initialize Gesture Detector
         gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
@@ -84,10 +92,13 @@ class DynamicIslandView @JvmOverloads constructor(
                 onGestureListener?.invoke(GestureAction.SINGLE_TAP)
                 return true
             }
-            // NEW: Double Tap Support
             override fun onDoubleTap(e: MotionEvent): Boolean {
                 onGestureListener?.invoke(GestureAction.DOUBLE_TAP)
                 return true
+            }
+            // ADDED: Long Press Support
+            override fun onLongPress(e: MotionEvent) {
+                onGestureListener?.invoke(GestureAction.LONG_PRESS)
             }
 
             override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
@@ -111,12 +122,11 @@ class DynamicIslandView @JvmOverloads constructor(
             }
         })
 
-        // Initialize Background (Transparent by default as per request)
+        // Initialize Background
         backgroundDrawable.setColor(Color.TRANSPARENT)
-        // Squircle corner radius (starting)
-        backgroundDrawable.cornerRadius = dpToPx(14).toFloat()
+        backgroundDrawable.cornerRadius = dpToPx(16).toFloat()
         background = backgroundDrawable
-        this.elevation = dpToPx(4).toFloat()
+        this.elevation = dpToPx(6).toFloat()
 
         // --- Notification Layout ---
         notificationContainer = LinearLayout(context).apply {
@@ -133,17 +143,18 @@ class DynamicIslandView @JvmOverloads constructor(
         val textLayout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
-                leftMargin = dpToPx(8)
+                leftMargin = dpToPx(10)
             }
         }
         titleView = TextView(context).apply {
             setTextColor(Color.WHITE)
             textSize = 14f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            typeface = systemFont
         }
         messageView = TextView(context).apply {
             setTextColor(Color.LTGRAY)
             textSize = 12f
+            typeface = systemFontRegular
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
         }
@@ -153,12 +164,12 @@ class DynamicIslandView @JvmOverloads constructor(
         notificationContainer.addView(iconView)
         notificationContainer.addView(textLayout)
 
-        // --- Music Layout (Rebuilt for Progress Bar) ---
+        // --- Music Layout ---
         musicContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             alpha = 0f
             visibility = View.GONE
-            setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(12))
+            setPadding(dpToPx(18), dpToPx(14), dpToPx(18), dpToPx(14))
         }
 
         val musicTopRow = LinearLayout(context).apply {
@@ -168,30 +179,31 @@ class DynamicIslandView @JvmOverloads constructor(
         }
 
         albumArtView = ImageView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(dpToPx(48), dpToPx(48))
+            layoutParams = LinearLayout.LayoutParams(dpToPx(50), dpToPx(50))
             scaleType = ImageView.ScaleType.CENTER_CROP
             clipToOutline = true
             outlineProvider = ViewOutlineProvider.BACKGROUND
-            background = GradientDrawable().apply { cornerRadius = dpToPx(8).toFloat(); setColor(Color.DKGRAY) }
+            background = GradientDrawable().apply { cornerRadius = dpToPx(10).toFloat(); setColor(Color.DKGRAY) }
         }
 
         val musicInfoLayout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
-                leftMargin = dpToPx(12)
-                rightMargin = dpToPx(12)
+                leftMargin = dpToPx(14)
+                rightMargin = dpToPx(14)
             }
         }
         musicTitle = TextView(context).apply {
             setTextColor(Color.WHITE)
             textSize = 15f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            typeface = systemFont
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
         }
         musicArtist = TextView(context).apply {
             setTextColor(Color.LTGRAY)
             textSize = 13f
+            typeface = systemFontRegular
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
         }
@@ -199,41 +211,43 @@ class DynamicIslandView @JvmOverloads constructor(
         musicInfoLayout.addView(musicArtist)
 
         playPauseButton = ImageView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(dpToPx(32), dpToPx(32))
-            setImageResource(R.drawable.ic_play_vector) // Use vector if available
+            layoutParams = LinearLayout.LayoutParams(dpToPx(34), dpToPx(34))
+            setImageResource(R.drawable.ic_play_vector)
         }
 
         musicTopRow.addView(albumArtView)
         musicTopRow.addView(musicInfoLayout)
         musicTopRow.addView(playPauseButton)
 
-        // NEW: Progress Bar Row
+        // Progress Bar Row
         val musicBottomRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dpToPx(12)
+                topMargin = dpToPx(14)
             }
         }
 
         musicCurrentTime = TextView(context).apply {
-            setTextColor(Color.WHITE)
-            textSize = 12f
+            setTextColor(Color.LTGRAY)
+            textSize = 11f
+            typeface = systemFontRegular
             text = "0:00"
         }
 
         musicProgressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
             layoutParams = LinearLayout.LayoutParams(0, dpToPx(4), 1f).apply {
-                leftMargin = dpToPx(8)
-                rightMargin = dpToPx(8)
+                leftMargin = dpToPx(10)
+                rightMargin = dpToPx(10)
             }
-            progressDrawable.setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
+            progressDrawable.colorFilter = BlendModeColorFilter(Color.WHITE, BlendMode.SRC_IN)
             max = 1000
         }
 
         musicTotalTime = TextView(context).apply {
-            setTextColor(Color.WHITE)
-            textSize = 12f
+            setTextColor(Color.LTGRAY)
+            textSize = 11f
+            typeface = systemFontRegular
             text = "0:00"
         }
 
@@ -255,15 +269,16 @@ class DynamicIslandView @JvmOverloads constructor(
         liveTitleView = TextView(context).apply {
             setTextColor(Color.CYAN)
             textSize = 14f
+            typeface = systemFont
         }
         liveDataView = TextView(context).apply {
             setTextColor(Color.WHITE)
             textSize = 18f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            typeface = systemFont
         }
         liveProgress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
             layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dpToPx(4))
-            progressDrawable.setColorFilter(Color.CYAN, android.graphics.PorterDuff.Mode.SRC_IN)
+            progressDrawable.colorFilter = BlendModeColorFilter(Color.CYAN, BlendMode.SRC_IN)
         }
         liveActivityContainer.addView(liveTitleView)
         liveActivityContainer.addView(liveDataView)
@@ -292,14 +307,6 @@ class DynamicIslandView @JvmOverloads constructor(
                 updateWindowLayout(height = value.toInt())
 
                 if (value > 0) {
-                    // Update corner radius dynamically during animation if expanding
-                    // Or keep it fixed if user prefers squircle
-                    // For squircle: we keep it relative to height but capped?
-                    // Let's stick to height/2 for pill look, or fixed for squircle look.
-                    // The request asked for "squircle shape". Usually means a superellipse,
-                    // but for Android views, a fixed corner radius that isn't fully height/2 often works.
-                    // Let's keep height/2 for collapsed to match cutout, and fixed for expanded?
-                    // Let's stick to height/2 for smooth transition.
                     cornerRadius = value / 2f
                     backgroundDrawable.cornerRadius = cornerRadius
                 }
@@ -321,14 +328,9 @@ class DynamicIslandView @JvmOverloads constructor(
                  val cutoutHeight = rect.height()
 
                  if (cutoutHeight > 0) {
-                     // Ensure we cover the cutout but respect the "thinner" look
-                     // collapsedHeight = max(dpToPx(32), cutoutHeight + dpToPx(2))
-                     // Actually, if cutout is huge, we must expand to cover it.
-                     val minHeight = dpToPx(32)
+                     val minHeight = dpToPx(34)
                      collapsedHeight = max(minHeight, cutoutHeight)
-
-                     // Keep width pill-shaped
-                     collapsedWidth = dpToPx(100)
+                     collapsedWidth = dpToPx(108)
 
                      cornerRadius = collapsedHeight / 2f
                      backgroundDrawable.cornerRadius = cornerRadius
@@ -348,9 +350,8 @@ class DynamicIslandView @JvmOverloads constructor(
         if (isExpanded) return
         isExpanded = true
 
-        // Use Black background when expanded for visibility
         backgroundDrawable.setColor(Color.BLACK)
-        backgroundDrawable.setStroke(0, 0) // Clear stroke on expand initially
+        backgroundDrawable.setStroke(0, 0)
 
         val wp = windowParams
         if (wp != null && windowManager != null) {
@@ -391,7 +392,6 @@ class DynamicIslandView @JvmOverloads constructor(
         heightSpring.setStartValue(currentHeight)
         heightSpring.animateToFinalPosition(collapsedHeight.toFloat())
 
-        // Revert to Transparent when collapsed after animation
         postDelayed({
             if (!isExpanded) {
                 backgroundDrawable.setColor(Color.TRANSPARENT)
@@ -496,7 +496,7 @@ class DynamicIslandView @JvmOverloads constructor(
         if (progress != null) {
             liveProgress.visibility = View.VISIBLE
             liveProgress.progress = (progress * 100).toInt()
-            liveProgress.progressDrawable.setColorFilter(color, android.graphics.PorterDuff.Mode.SRC_IN)
+            liveProgress.progressDrawable.colorFilter = BlendModeColorFilter(color, BlendMode.SRC_IN)
         } else {
             liveProgress.visibility = View.GONE
         }

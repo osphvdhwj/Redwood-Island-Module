@@ -1,9 +1,13 @@
 package com.example.dynamicisland
 
 import android.app.PendingIntent
+import android.bluetooth.BluetoothDevice
+import android.content.BroadcastReceiver
+import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -13,6 +17,7 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import android.os.BatteryManager
 import android.os.Handler
 import android.os.Looper
 import de.robv.android.xposed.XC_MethodHook
@@ -52,18 +57,19 @@ object IslandController {
             // Only update if expanded and playing
             if (island != null && island.isExpanded && state != null &&
                (state.state == PlaybackState.STATE_PLAYING)) {
-
-                // Calculate position based on last update time if possible,
-                // but for simplicity/reliability with Xposed, we rely on controller.playbackState.position
-                // Note: some apps might not update this frequently, causing jumpiness.
                 val currentPosition = state.position
                 island.updateMusicProgress(currentPosition, mediaDuration)
-
-                // Poll every 1000ms (1 second)
                 progressHandler.postDelayed(this, 1000)
             }
         }
     }
+
+    // Performance Monitor
+    private var performanceMonitorRunnable: Runnable? = null
+    private var isPerformanceMonitorActive = false
+
+    // Temporary Activities
+    private var temporaryActivityRunnable: Runnable? = null
 
     private val sessionsListener = object : MediaSessionManager.OnActiveSessionsChangedListener {
         override fun onActiveSessionsChanged(controllers: MutableList<MediaController>?) {
@@ -98,20 +104,19 @@ object IslandController {
     fun init(view: DynamicIslandView) {
         islandViewRef = WeakReference(view)
         setupMediaListener(view.context)
+        setupSystemMonitors(view.context) // NEW: Initialize System Monitors
 
         // Handle Gestures
         view.onGestureListener = { action ->
             when (action) {
                 DynamicIslandView.GestureAction.SINGLE_TAP -> {
-                    // Single Tap = Expand/Collapse Toggle
                     if (view.isExpanded) collapse() else expand()
                 }
                 DynamicIslandView.GestureAction.DOUBLE_TAP -> {
-                    // Double Tap = Open App (Launch Pending Intent)
                     if (currentController != null) {
                         try {
                             currentController?.sessionActivity?.send()
-                            collapse() // Optional: collapse after opening app
+                            collapse()
                         } catch (e: Exception) {}
                     } else if (currentNotificationIntent != null) {
                         try {
@@ -119,6 +124,9 @@ object IslandController {
                             collapse()
                         } catch (e: Exception) {}
                     }
+                }
+                DynamicIslandView.GestureAction.LONG_PRESS -> {
+                    togglePerformanceMonitor() // NEW: Long press toggles monitor
                 }
                 DynamicIslandView.GestureAction.SWIPE_DOWN -> expand()
                 DynamicIslandView.GestureAction.SWIPE_UP -> forceHide()
@@ -130,6 +138,138 @@ object IslandController {
         // Default click listener (fallback)
         view.setOnClickListener {
              if (view.isExpanded) collapse() else expand()
+        }
+    }
+
+    // --- NEW: System Monitors (Battery, Bluetooth, Clipboard) ---
+    private fun setupSystemMonitors(context: Context) {
+        // 1. Quick-Save / Clipboard Hub
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.addPrimaryClipChangedListener {
+            val clip = clipboard.primaryClip
+            if (clip != null && clip.itemCount > 0) {
+                val text = clip.getItemAt(0).text.toString()
+                val shortText = if (text.length > 18) text.substring(0, 18) + "..." else text
+
+                // Show a yellow pop-up for 3 seconds
+                postTemporaryActivity(
+                    LiveActivityModel("clipboard", "Copied", shortText, Color.parseColor("#FFD700")),
+                    3000
+                )
+            }
+        }
+
+        // 2. Charging & Battery Alerts
+        val powerReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                when (intent.action) {
+                    Intent.ACTION_POWER_CONNECTED -> {
+                        val bm = context.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
+                        val level = bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+                        postTemporaryActivity(
+                            LiveActivityModel("power", "Charging", "$level%", Color.parseColor("#4CAF50")),
+                            4000
+                        )
+                    }
+                    Intent.ACTION_POWER_DISCONNECTED -> {
+                        postTemporaryActivity(
+                            LiveActivityModel("power", "Unplugged", "On Battery", Color.parseColor("#F44336")),
+                            3000
+                        )
+                    }
+                    Intent.ACTION_BATTERY_CHANGED -> {
+                        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                        if (level == 15) {
+                            postTemporaryActivity(
+                                LiveActivityModel("power", "Battery Low", "15% Remaining", Color.RED),
+                                5000
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        val powerFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_POWER_CONNECTED)
+            addAction(Intent.ACTION_POWER_DISCONNECTED)
+            addAction(Intent.ACTION_BATTERY_CHANGED)
+        }
+        // FLAG_RECEIVER_EXPORTED is required in Android 14+
+        context.registerReceiver(powerReceiver, powerFilter, Context.RECEIVER_EXPORTED)
+
+        // 3. Connectivity (Bluetooth)
+        val btReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                val name = try { device?.name ?: "Device" } catch(e: SecurityException) { "BT Device" }
+
+                when (intent.action) {
+                    BluetoothDevice.ACTION_ACL_CONNECTED -> {
+                        postTemporaryActivity(
+                            LiveActivityModel("bt", "Connected", name, Color.parseColor("#007AFF")),
+                            4000
+                        )
+                    }
+                    BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
+                        postTemporaryActivity(
+                            LiveActivityModel("bt", "Disconnected", name, Color.GRAY),
+                            3000
+                        )
+                    }
+                }
+            }
+        }
+        val btFilter = IntentFilter().apply {
+            addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
+            addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
+        }
+        context.registerReceiver(btReceiver, btFilter, Context.RECEIVER_EXPORTED)
+    }
+
+    // --- NEW: Helper to show a LiveActivity for a set amount of time ---
+    private fun postTemporaryActivity(activity: LiveActivityModel, durationMs: Long) {
+        postLiveActivity(activity)
+
+        // Cancel any previous dismissals
+        temporaryActivityRunnable?.let { mainHandler.removeCallbacks(it) }
+
+        temporaryActivityRunnable = Runnable {
+            removeLiveActivity(activity.id)
+        }
+        mainHandler.postDelayed(temporaryActivityRunnable!!, durationMs)
+    }
+
+    // --- NEW: Performance Monitoring Toggle ---
+    fun togglePerformanceMonitor() {
+        isPerformanceMonitorActive = !isPerformanceMonitorActive
+
+        if (isPerformanceMonitorActive) {
+            performanceMonitorRunnable = object : Runnable {
+                override fun run() {
+                    val temp = HardwareMonitors.getCpuTemp()
+                    val freq = HardwareMonitors.getCpuFreq()
+
+                    // Warning color if temp is high (> 45C)
+                    val color = if (temp > 45f) Color.RED else Color.CYAN
+
+                    postLiveActivity(LiveActivityModel(
+                        id = "sys_monitor",
+                        title = "Performance",
+                        dataText = "${"%.1f".format(temp)}ºC | $freq",
+                        accentColor = color
+                    ))
+
+                    // Update every 2 seconds
+                    if (isPerformanceMonitorActive) {
+                        mainHandler.postDelayed(this, 2000)
+                    }
+                }
+            }
+            mainHandler.post(performanceMonitorRunnable!!)
+        } else {
+            performanceMonitorRunnable?.let { mainHandler.removeCallbacks(it) }
+            removeLiveActivity("sys_monitor")
         }
     }
 
@@ -331,11 +471,9 @@ object IslandController {
                 if (!island.isExpanded) {
                     expand()
                 }
-                // Ensure progress tracking is active
                 progressHandler.removeCallbacks(progressUpdater)
                 progressHandler.post(progressUpdater)
             } else {
-                 // Stop tracking immediately
                  progressHandler.removeCallbacks(progressUpdater)
 
                  island.postDelayed({
@@ -358,12 +496,10 @@ object IslandController {
         val albumArt = metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
                        ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
 
-        // Fetch Duration
         mediaDuration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
 
         island.post {
             island.updateMusicInfo(title, artist, albumArt)
-            // Initial progress update
             val pos = currentController?.playbackState?.position ?: 0L
             island.updateMusicProgress(pos, mediaDuration)
         }
