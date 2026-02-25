@@ -15,6 +15,7 @@ import androidx.dynamicanimation.animation.SpringForce
 import androidx.dynamicanimation.animation.FloatValueHolder
 import kotlin.math.abs
 import com.example.dynamicisland.R
+import kotlin.math.max
 
 class DynamicIslandView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -40,18 +41,19 @@ class DynamicIslandView @JvmOverloads constructor(
     // Live Activity Elements
     private val liveTitleView: TextView
     private val liveDataView: TextView
-    private val liveProgressBar: ProgressBar
+    private val liveProgress: ProgressBar
 
     // Music Elements
     private val albumArtView: ImageView
     private val musicTitle: TextView
     private val musicArtist: TextView
     private val playPauseButton: ImageView
+    private val visualizerView: LinearLayout // Placeholder for visualizer
 
-    // Configuration
-    var collapsedWidth = 130
-    var collapsedHeight = 130
-    var expandedWidth = 700
+    // Dimensions
+    var collapsedWidth = 70
+    var collapsedHeight = 70
+    var expandedWidth = 650
     var expandedHeight = 220
     var isExpanded = false
         private set
@@ -62,204 +64,139 @@ class DynamicIslandView @JvmOverloads constructor(
     var windowParams: WindowManager.LayoutParams? = null
 
     init {
-        // OLED True Black Base
-        backgroundDrawable.setColor(Color.BLACK)
+        // Initialize Background (Transparent by default as per request)
+        backgroundDrawable.setColor(Color.TRANSPARENT)
         backgroundDrawable.cornerRadius = collapsedHeight / 2f
         background = backgroundDrawable
-        elevation = 15f
+        this.elevation = 12f
 
-        // --- Container Setups ---
-        notificationContainer = createBaseContainer()
-        musicContainer = createBaseContainer()
-        liveActivityContainer = createBaseContainer()
-
-        // Notification Setup
-        iconView = ImageView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(70, 70).apply { rightMargin = 30 }
+        // --- Notification Layout ---
+        notificationContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            alpha = 0f
+            visibility = View.GONE
+            setPadding(30, 0, 30, 0)
         }
-        val textLayout = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        titleView = TextView(context).apply { setTextColor(Color.WHITE); textSize = 15f; isSingleLine = true; setTypeface(null, android.graphics.Typeface.BOLD) }
-        messageView = TextView(context).apply { setTextColor(Color.LTGRAY); textSize = 13f; isSingleLine = true }
+
+        iconView = ImageView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(60, 60)
+        }
+        val textLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
+                leftMargin = 20
+            }
+        }
+        titleView = TextView(context).apply {
+            setTextColor(Color.WHITE)
+            textSize = 14f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }
+        messageView = TextView(context).apply {
+            setTextColor(Color.LTGRAY)
+            textSize = 12f
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }
         textLayout.addView(titleView)
         textLayout.addView(messageView)
+
         notificationContainer.addView(iconView)
-        notificationContainer.addView(textLayout, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+        notificationContainer.addView(textLayout)
 
-        // Live Activity Setup
-        val liveTextLayout = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f) }
-        liveTitleView = TextView(context).apply { setTextColor(Color.WHITE); textSize = 14f; isSingleLine = true; setTypeface(null, android.graphics.Typeface.BOLD) }
-        liveDataView = TextView(context).apply { setTextColor(Color.parseColor("#FF9800")); textSize = 18f; isSingleLine = true; setTypeface(android.graphics.Typeface.MONOSPACE) }
-        liveProgressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
-            layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 10).apply { topMargin = 10 }
+        // --- Music Layout ---
+        musicContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            alpha = 0f
             visibility = View.GONE
+            setPadding(30, 20, 30, 20)
         }
-        liveTextLayout.addView(liveTitleView)
-        liveTextLayout.addView(liveDataView)
-        liveTextLayout.addView(liveProgressBar)
-        liveActivityContainer.addView(liveTextLayout)
 
-        // Music Setup
         albumArtView = ImageView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(80, 80).apply { rightMargin = 25 }
+            layoutParams = LinearLayout.LayoutParams(90, 90)
             scaleType = ImageView.ScaleType.CENTER_CROP
+            clipToOutline = true
+            outlineProvider = ViewOutlineProvider.BACKGROUND
+            background = GradientDrawable().apply { cornerRadius = 20f; setColor(Color.DKGRAY) }
         }
 
-        val musicInfoLayout = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f) }
-        musicTitle = TextView(context).apply { setTextColor(Color.WHITE); textSize = 14f; isSingleLine = true; setTypeface(null, android.graphics.Typeface.BOLD) }
-        musicArtist = TextView(context).apply { setTextColor(Color.LTGRAY); textSize = 12f; isSingleLine = true }
+        val musicInfoLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
+                leftMargin = 25
+            }
+        }
+        musicTitle = TextView(context).apply {
+            setTextColor(Color.WHITE)
+            textSize = 15f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            isSelected = true // For marquee
+        }
+        musicArtist = TextView(context).apply {
+            setTextColor(Color.GRAY)
+            textSize = 13f
+        }
         musicInfoLayout.addView(musicTitle)
         musicInfoLayout.addView(musicArtist)
 
         playPauseButton = ImageView(context).apply {
-             layoutParams = LinearLayout.LayoutParams(60, 60).apply { leftMargin = 20 }
-             setImageResource(R.drawable.ic_play_vector)
+            layoutParams = LinearLayout.LayoutParams(60, 60)
+            setImageResource(android.R.drawable.ic_media_play)
+        }
+
+        visualizerView = LinearLayout(context).apply {
+            // Placeholder
         }
 
         musicContainer.addView(albumArtView)
         musicContainer.addView(musicInfoLayout)
         musicContainer.addView(playPauseButton)
 
+        // --- Live Activity Layout ---
+        liveActivityContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            alpha = 0f
+            visibility = View.GONE
+            setPadding(40, 20, 40, 20)
+        }
+        liveTitleView = TextView(context).apply {
+            setTextColor(Color.CYAN)
+            textSize = 14f
+        }
+        liveDataView = TextView(context).apply {
+            setTextColor(Color.WHITE)
+            textSize = 18f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }
+        liveProgress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+            layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 10)
+            progressDrawable.setColorFilter(Color.CYAN, android.graphics.PorterDuff.Mode.SRC_IN)
+        }
+        liveActivityContainer.addView(liveTitleView)
+        liveActivityContainer.addView(liveDataView)
+        liveActivityContainer.addView(liveProgress)
+
         addView(notificationContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(musicContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(liveActivityContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
-        setupSprings()
-    }
-
-    private fun createBaseContainer() = LinearLayout(context).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        alpha = 0f
-        setPadding(45, 25, 45, 25)
-        visibility = View.GONE
-    }
-
-    // --- Gesture Detection ---
-    private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
-        private val SWIPE_THRESHOLD = 80
-        private val VELOCITY_THRESHOLD = 100
-
-        override fun onDown(e: MotionEvent): Boolean = true
-
-        override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-            onGestureListener?.invoke(GestureAction.SINGLE_TAP)
-            return true
-        }
-
-        override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
-            if (e1 == null) return false
-            val diffX = e2.x - e1.x
-            val diffY = e2.y - e1.y
-
-            if (abs(diffX) > abs(diffY)) { // Horizontal
-                if (abs(diffX) > SWIPE_THRESHOLD && abs(velocityX) > VELOCITY_THRESHOLD) {
-                    onGestureListener?.invoke(if (diffX > 0) GestureAction.SWIPE_RIGHT else GestureAction.SWIPE_LEFT)
-                    return true
-                }
-            } else { // Vertical
-                if (abs(diffY) > SWIPE_THRESHOLD && abs(velocityY) > VELOCITY_THRESHOLD) {
-                    onGestureListener?.invoke(if (diffY > 0) GestureAction.SWIPE_DOWN else GestureAction.SWIPE_UP)
-                    return true
-                }
-            }
-            return false
-        }
-    })
-
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        return gestureDetector.onTouchEvent(event) || super.onTouchEvent(event)
-    }
-
-    // --- UI Updaters ---
-
-    fun setContextGlow(bitmap: Bitmap?) {
-        if (bitmap == null) {
-            backgroundDrawable.setStroke(0, Color.TRANSPARENT)
-            return
-        }
-        Palette.from(bitmap).generate { palette ->
-            val dominant = palette?.getDominantColor(Color.DKGRAY) ?: Color.DKGRAY
-            val glowColor = ColorUtils.setAlphaComponent(dominant, 180)
-            backgroundDrawable.setStroke(4, glowColor)
-        }
-    }
-
-    fun updateLiveActivity(title: String, dataText: String, progress: Float? = null, tintColor: Int = Color.WHITE) {
-        liveTitleView.text = title
-        liveDataView.text = dataText
-        liveDataView.setTextColor(tintColor)
-
-        if (progress != null) {
-            liveProgressBar.visibility = View.VISIBLE
-            liveProgressBar.progress = (progress * 100).toInt()
-        } else {
-            liveProgressBar.visibility = View.GONE
-        }
-
-        switchContainer(liveActivityContainer)
-    }
-
-    fun updateNotificationInfo(title: String?, text: String?, icon: Icon?) {
-        titleView.text = title ?: "Notification"
-        messageView.text = text ?: ""
-        if (icon != null) {
-            iconView.setImageIcon(icon)
-        } else {
-            iconView.setImageResource(android.R.drawable.sym_def_app_icon)
-        }
-        switchContainer(notificationContainer)
-    }
-
-    fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?) {
-        musicTitle.text = title ?: "Unknown Title"
-        musicArtist.text = artist ?: "Unknown Artist"
-
-        if (art != null) {
-            albumArtView.setImageBitmap(art)
-            setContextGlow(art)
-        } else {
-            albumArtView.setImageResource(android.R.drawable.ic_menu_gallery)
-            setContextGlow(null)
-        }
-        switchContainer(musicContainer)
-    }
-
-    fun updatePlayPauseState(isPlaying: Boolean) {
-        if (isPlaying) {
-            playPauseButton.setImageResource(R.drawable.ic_pause_vector)
-        } else {
-            playPauseButton.setImageResource(R.drawable.ic_play_vector)
-        }
-    }
-
-    private fun switchContainer(target: View) {
-        listOf(notificationContainer, musicContainer, liveActivityContainer).forEach {
-            if (it == target) {
-                it.visibility = View.VISIBLE
-                it.animate().alpha(1f).duration = 200L
-            } else {
-                it.animate().alpha(0f).setDuration(150L).withEndAction { it.visibility = View.GONE }
-            }
-        }
-    }
-
-    // --- Animation & Window Management ---
-
-    private fun setupSprings() {
+        // --- Animations ---
         widthSpring = SpringAnimation(FloatValueHolder(0f)).apply {
             spring = SpringForce().apply {
-                dampingRatio = SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY
-                stiffness = SpringForce.STIFFNESS_LOW
+                dampingRatio = SpringForce.DAMPING_RATIO_LOW_BOUNCY
+                stiffness = SpringForce.STIFFNESS_MEDIUM
             }
             addUpdateListener { _, value, _ ->
                 updateWindowLayout(width = value.toInt())
             }
         }
-
         heightSpring = SpringAnimation(FloatValueHolder(0f)).apply {
             spring = SpringForce().apply {
-                dampingRatio = SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY
-                stiffness = SpringForce.STIFFNESS_LOW
+                dampingRatio = SpringForce.DAMPING_RATIO_LOW_BOUNCY
+                stiffness = SpringForce.STIFFNESS_MEDIUM
             }
             addUpdateListener { _, value, _ ->
                 updateWindowLayout(height = value.toInt())
@@ -282,7 +219,7 @@ class DynamicIslandView @JvmOverloads constructor(
                  val cutoutHeight = rect.height()
 
                  if (cutoutHeight > 10) {
-                     collapsedHeight = cutoutHeight + 4
+                     collapsedHeight = max(70, cutoutHeight + 4) // Ensure at least 70px
                      collapsedWidth = collapsedHeight // Force perfect circle
                      cornerRadius = collapsedHeight / 2f
                      backgroundDrawable.cornerRadius = cornerRadius
@@ -301,6 +238,9 @@ class DynamicIslandView @JvmOverloads constructor(
     fun expand() {
         if (isExpanded) return
         isExpanded = true
+
+        // Use Black background when expanded for visibility
+        backgroundDrawable.setColor(Color.BLACK)
 
         val wp = windowParams
         if (wp != null && windowManager != null) {
@@ -339,6 +279,15 @@ class DynamicIslandView @JvmOverloads constructor(
         val currentHeight = windowParams?.height?.toFloat() ?: height.toFloat()
         heightSpring.setStartValue(currentHeight)
         heightSpring.animateToFinalPosition(collapsedHeight.toFloat())
+
+        // Revert to Transparent when collapsed after animation
+        postDelayed({
+            if (!isExpanded) backgroundDrawable.setColor(Color.TRANSPARENT)
+        }, 300)
+
+        notificationContainer.animate().alpha(0f).setDuration(150).withEndAction { notificationContainer.visibility = View.GONE }
+        musicContainer.animate().alpha(0f).setDuration(150).withEndAction { musicContainer.visibility = View.GONE }
+        liveActivityContainer.animate().alpha(0f).setDuration(150).withEndAction { liveActivityContainer.visibility = View.GONE }
     }
 
     private fun updateWindowLayout(width: Int? = null, height: Int? = null, topMarginOverride: Int? = null) {
@@ -372,6 +321,75 @@ class DynamicIslandView @JvmOverloads constructor(
                  if (height != null) params.height = height
                  layoutParams = params
              }
+        }
+    }
+
+    fun updateNotificationInfo(title: String?, text: String?, icon: Icon?) {
+        titleView.text = title ?: "Notification"
+        messageView.text = text ?: ""
+        iconView.setImageIcon(icon ?: Icon.createWithResource(context, android.R.drawable.sym_def_app_icon))
+
+        musicContainer.visibility = View.GONE
+        liveActivityContainer.visibility = View.GONE
+        notificationContainer.visibility = View.VISIBLE
+        notificationContainer.animate().alpha(1f).duration = 300
+    }
+
+    fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?) {
+        musicTitle.text = title ?: "Unknown Title"
+        musicArtist.text = artist ?: "Unknown Artist"
+        if (art != null) {
+            albumArtView.setImageBitmap(art)
+        } else {
+            albumArtView.setImageResource(android.R.drawable.ic_menu_gallery)
+        }
+
+        notificationContainer.visibility = View.GONE
+        liveActivityContainer.visibility = View.GONE
+        musicContainer.visibility = View.VISIBLE
+        musicContainer.animate().alpha(1f).duration = 300
+    }
+
+    fun updatePlayPauseState(isPlaying: Boolean) {
+        if (isPlaying) {
+            playPauseButton.setImageResource(R.drawable.ic_pause_vector)
+        } else {
+            playPauseButton.setImageResource(R.drawable.ic_play_vector)
+        }
+    }
+
+    fun updateLiveActivity(title: String, data: String, progress: Float?, color: Int) {
+        liveTitleView.text = title
+        liveTitleView.setTextColor(color)
+        liveDataView.text = data
+        if (progress != null) {
+            liveProgress.visibility = View.VISIBLE
+            liveProgress.progress = (progress * 100).toInt()
+            liveProgress.progressDrawable.setColorFilter(color, android.graphics.PorterDuff.Mode.SRC_IN)
+        } else {
+            liveProgress.visibility = View.GONE
+        }
+
+        notificationContainer.visibility = View.GONE
+        musicContainer.visibility = View.GONE
+        liveActivityContainer.visibility = View.VISIBLE
+        liveActivityContainer.animate().alpha(1f).duration = 300
+    }
+
+    fun setContextGlow(bitmap: Bitmap?) {
+        if (bitmap != null) {
+            Palette.from(bitmap).generate { palette ->
+                val color = palette?.getVibrantColor(Color.DKGRAY) ?: Color.DKGRAY
+                // Apply subtle glow or border if needed.
+                // For now, let's tint the background stroke slightly if expanded
+                if (isExpanded) {
+                    backgroundDrawable.setStroke(2, color)
+                } else {
+                    backgroundDrawable.setStroke(0, 0)
+                }
+            }
+        } else {
+            backgroundDrawable.setStroke(0, 0)
         }
     }
 }
