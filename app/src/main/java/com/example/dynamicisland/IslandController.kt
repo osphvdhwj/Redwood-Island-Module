@@ -78,7 +78,10 @@ object IslandController {
 
         // Default click listener (do nothing or collapse)
         view.setOnClickListener {
-            collapse()
+            // Only collapse if nothing else to do
+            if (currentNotificationIntent == null) {
+                collapse()
+            }
         }
     }
 
@@ -162,6 +165,7 @@ object IslandController {
         island?.setOnClickListener {
             try {
                 currentController?.sessionActivity?.send()
+                // Do NOT collapse instantly for media, let user decide or system handle
             } catch (e: Throwable) {
                 // Ignore
             }
@@ -258,6 +262,8 @@ object IslandController {
                 dismissRunnable?.let { island.removeCallbacks(it) }
 
                 currentNotificationIntent?.send()
+                // Only collapse AFTER intent is sent, but maybe delay it slightly?
+                // Actually, standard behavior is instant collapse on action.
                 collapse()
 
                 isExpanding = false
@@ -272,12 +278,13 @@ object IslandController {
 
             dismissRunnable?.let { island.removeCallbacks(it) }
             dismissRunnable = Runnable {
+                // Auto-dismiss logic
                 if (isExpanding && currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
                     onNotificationDismiss()
                 }
             }
-            // Faster collapse time: Reduced from 4000 to 2000ms
-            island.postDelayed(dismissRunnable, 2000)
+            // Increased delay to 5000ms to allow interaction before auto-collapse
+            island.postDelayed(dismissRunnable, 5000)
         }
     }
 
