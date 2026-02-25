@@ -31,25 +31,46 @@ class MainHook : IXposedHookLoadPackage {
         if (lpparam.packageName != "com.android.systemui") return
         log("[LOAD] Hooking SystemUI package: ${lpparam.packageName}")
 
-        // 1. Reliable UI Injection via Application Context
+        // 1. Reliable UI Injection via SystemUIService
         try {
             XposedHelpers.findAndHookMethod(
-                Application::class.java,
+                "com.android.systemui.SystemUIService",
+                lpparam.classLoader,
                 "onCreate",
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
-                        val app = param.thisObject as Application
-                        log("[HOOK] Application.onCreate triggered")
+                        val serviceContext = param.thisObject as Context
+                        log("[HOOK] SystemUIService.onCreate triggered")
 
-                        // Delay injection to ensure Display Manager is ready
+                        // Delay injection to ensure the Display is fully awake
                         Handler(Looper.getMainLooper()).postDelayed({
-                            setupIsland(app)
-                        }, 3000) // Inject 3 seconds after SystemUI starts
+                            setupIsland(serviceContext)
+                        }, 3000)
                     }
                 }
             )
         } catch (e: Throwable) {
-            log("[ERROR] Failed to hook Application.onCreate: $e")
+            log("[ERROR] Failed to hook SystemUIService: $e")
+
+            // Fallback to SystemUIApplication
+            try {
+                XposedHelpers.findAndHookMethod(
+                    "com.android.systemui.SystemUIApplication",
+                    lpparam.classLoader,
+                    "onCreate",
+                    object : XC_MethodHook() {
+                        override fun afterHookedMethod(param: MethodHookParam) {
+                            val appContext = param.thisObject as Context
+                            log("[HOOK] SystemUIApplication.onCreate triggered (Fallback)")
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                setupIsland(appContext)
+                            }, 3000)
+                        }
+                    }
+                )
+            } catch (e2: Throwable) {
+                log("[ERROR] Fallback hook failed: $e2")
+            }
         }
 
         // 2. Initialize Framework Notification Hooks
