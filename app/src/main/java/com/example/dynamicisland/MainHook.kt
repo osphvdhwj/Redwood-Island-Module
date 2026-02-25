@@ -93,7 +93,7 @@ class MainHook : IXposedHookLoadPackage {
                                 if (className.contains("ExpandableNotificationRow") || className.contains("Notification")) {
                                     child.alpha = 0f
                                     child.visibility = View.GONE
-                                    child.translationX = 9999f
+                                    // Removed translationX = 9999f to prevent renderer issues
                                 }
                             }
                         } catch (e: Throwable) { }
