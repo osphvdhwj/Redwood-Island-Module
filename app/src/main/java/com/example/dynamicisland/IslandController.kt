@@ -64,6 +64,11 @@ object IslandController {
     fun expand() = islandViewRef?.get()?.expand()
     fun collapse() = islandViewRef?.get()?.collapse()
 
+    fun isExpanding(): Boolean {
+        val island = islandViewRef?.get()
+        return island?.isExpanded == true
+    }
+
     // Hook for Android 15 Notification IPC
     fun hookFrameworkNotifications(lpparam: XC_LoadPackage.LoadPackageParam) {
         try {
