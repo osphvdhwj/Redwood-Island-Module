@@ -9,12 +9,9 @@ import android.util.AttributeSet
 import android.view.*
 import android.widget.*
 import androidx.palette.graphics.Palette
-import androidx.core.graphics.ColorUtils
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
 import androidx.dynamicanimation.animation.FloatValueHolder
-import kotlin.math.abs
-import com.example.dynamicisland.R
 import kotlin.math.max
 
 class DynamicIslandView @JvmOverloads constructor(
@@ -27,6 +24,7 @@ class DynamicIslandView @JvmOverloads constructor(
     private val backgroundDrawable = GradientDrawable()
     private lateinit var widthSpring: SpringAnimation
     private lateinit var heightSpring: SpringAnimation
+    private val gestureDetector: GestureDetector
 
     // UI Containers
     private val notificationContainer: LinearLayout
@@ -64,6 +62,34 @@ class DynamicIslandView @JvmOverloads constructor(
     var windowParams: WindowManager.LayoutParams? = null
 
     init {
+        // Initialize Gesture Detector
+        gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                onGestureListener?.invoke(GestureAction.SINGLE_TAP)
+                return true
+            }
+
+            override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+                if (e1 == null) return false
+                val diffY = e2.y - e1.y
+                val diffX = e2.x - e1.x
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    if (Math.abs(diffX) > 100 && Math.abs(velocityX) > 100) {
+                        if (diffX > 0) onGestureListener?.invoke(GestureAction.SWIPE_RIGHT)
+                        else onGestureListener?.invoke(GestureAction.SWIPE_LEFT)
+                        return true
+                    }
+                } else {
+                    if (Math.abs(diffY) > 100 && Math.abs(velocityY) > 100) {
+                        if (diffY > 0) onGestureListener?.invoke(GestureAction.SWIPE_DOWN)
+                        else onGestureListener?.invoke(GestureAction.SWIPE_UP)
+                        return true
+                    }
+                }
+                return false
+            }
+        })
+
         // Initialize Background (Transparent by default as per request)
         backgroundDrawable.setColor(Color.TRANSPARENT)
         backgroundDrawable.cornerRadius = collapsedHeight / 2f
@@ -142,8 +168,8 @@ class DynamicIslandView @JvmOverloads constructor(
         musicInfoLayout.addView(musicArtist)
 
         playPauseButton = ImageView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(60, 60)
-            setImageResource(android.R.drawable.ic_media_play)
+            layoutParams = LinearLayout.LayoutParams(70, 70) // Slightly larger touch target
+            setImageResource(R.drawable.ic_play_vector) // Use vector if available
         }
 
         visualizerView = LinearLayout(context).apply {
@@ -209,6 +235,10 @@ class DynamicIslandView @JvmOverloads constructor(
         }
     }
 
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        return gestureDetector.onTouchEvent(event) || super.onTouchEvent(event)
+    }
+
     override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
         val cutout = insets.displayCutout
         if (cutout != null) {
@@ -241,9 +271,12 @@ class DynamicIslandView @JvmOverloads constructor(
 
         // Use Black background when expanded for visibility
         backgroundDrawable.setColor(Color.BLACK)
+        backgroundDrawable.setStroke(0, 0) // Clear stroke on expand initially
 
         val wp = windowParams
         if (wp != null && windowManager != null) {
+            // Enable touches for the island, but allow outside touches to pass through (FLAG_NOT_TOUCH_MODAL)
+            // Remove FLAG_NOT_TOUCHABLE
             wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
             wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
             windowManager?.updateViewLayout(this, wp)
@@ -266,7 +299,13 @@ class DynamicIslandView @JvmOverloads constructor(
 
         val wp = windowParams
         if (wp != null && windowManager != null) {
-            wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            // Keep it touchable so user can tap to expand!
+            // But maybe we want to allow clicks through if it's "transparent" hole?
+            // User requirement: "Touch is not working". This implies they want it to work.
+            // So we MUST NOT set FLAG_NOT_TOUCHABLE.
+            // We keep FLAG_NOT_TOUCH_MODAL
+            wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+            wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
             windowManager?.updateViewLayout(this, wp)
         }
 
@@ -282,7 +321,10 @@ class DynamicIslandView @JvmOverloads constructor(
 
         // Revert to Transparent when collapsed after animation
         postDelayed({
-            if (!isExpanded) backgroundDrawable.setColor(Color.TRANSPARENT)
+            if (!isExpanded) {
+                backgroundDrawable.setColor(Color.TRANSPARENT)
+                backgroundDrawable.setStroke(0, 0)
+            }
         }, 300)
 
         notificationContainer.animate().alpha(0f).setDuration(150).withEndAction { notificationContainer.visibility = View.GONE }

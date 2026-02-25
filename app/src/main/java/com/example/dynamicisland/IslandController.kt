@@ -54,6 +54,17 @@ object IslandController {
         override fun onMetadataChanged(metadata: MediaMetadata?) {
             updateMetadata(metadata)
         }
+        override fun onSessionDestroyed() {
+            // Immediately collapse and clear controller when app is killed/closed
+            currentController = null
+            val island = islandViewRef?.get() ?: return
+            island.post {
+                 // Force collapse logic
+                 if (activeLiveActivity == null) {
+                     island.collapse()
+                 }
+            }
+        }
     }
 
     fun init(view: DynamicIslandView) {
@@ -63,7 +74,18 @@ object IslandController {
         // Handle Gestures
         view.onGestureListener = { action ->
             when (action) {
-                DynamicIslandView.GestureAction.SINGLE_TAP -> if (view.isExpanded) collapse() else expand()
+                DynamicIslandView.GestureAction.SINGLE_TAP -> {
+                    // If playing, maybe open the app?
+                    // For now, toggle expand/collapse as default behavior
+                    if (view.isExpanded) collapse() else expand()
+
+                    // Or launch pending intent if available
+                    if (view.isExpanded && currentController != null) {
+                        try {
+                            currentController?.sessionActivity?.send()
+                        } catch (e: Exception) {}
+                    }
+                }
                 DynamicIslandView.GestureAction.SWIPE_DOWN -> expand()
                 DynamicIslandView.GestureAction.SWIPE_UP -> forceHide()
                 DynamicIslandView.GestureAction.SWIPE_LEFT -> handleSwipe(isRight = false)
@@ -71,7 +93,7 @@ object IslandController {
             }
         }
 
-        // Default click listener for simple interaction if gesture not consumed
+        // Default click listener (fallback)
         view.setOnClickListener {
              if (view.isExpanded) collapse() else expand()
         }
@@ -80,12 +102,12 @@ object IslandController {
     fun isExpanding(): Boolean = isExpanding
 
     private fun handleSwipe(isRight: Boolean) {
-        // Example logic: Skip tracks if media is playing, dismiss notification if showing
-        if (currentController?.playbackState?.state == PlaybackState.STATE_PLAYING) {
+        // Skip tracks if media is playing
+        if (currentController?.playbackState?.state == PlaybackState.STATE_PLAYING ||
+            currentController?.playbackState?.state == PlaybackState.STATE_PAUSED) {
             if (isRight) currentController?.transportControls?.skipToNext()
             else currentController?.transportControls?.skipToPrevious()
         } else {
-            // Dismiss current notification state
             collapse()
         }
     }
@@ -106,7 +128,6 @@ object IslandController {
             island.updateLiveActivity(activity.title, activity.dataText, activity.progress, activity.accentColor)
 
             // ONLY expand if not already expanded.
-            // This prevents the spring animation from restarting every second.
             if (!island.isExpanded) {
                 expand()
             }
@@ -227,8 +248,24 @@ object IslandController {
 
     private fun updateActiveController(controllers: List<MediaController>?) {
         if (controllers.isNullOrEmpty()) return
+
+        // Prioritize Playing Controllers!
+        val active = controllers.firstOrNull {
+            val state = it.playbackState?.state
+            state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING
+        } ?: controllers.first()
+
+        // Avoid switching if we are already attached to the same controller?
+        // No, we might need to update if the priority changed.
+        if (currentController?.packageName == active.packageName && currentController != null) {
+            // Same app, just update state just in case
+            updateMediaState(active.playbackState)
+            updateMetadata(active.metadata)
+            return
+        }
+
         currentController?.unregisterCallback(mediaCallback)
-        currentController = controllers.first()
+        currentController = active
         currentController?.registerCallback(mediaCallback)
 
         updateMediaState(currentController?.playbackState)
@@ -247,8 +284,10 @@ object IslandController {
                     expand()
                 }
             } else {
+                 // Check if actually paused or stopped
                  island.postDelayed({
-                    if (currentController?.playbackState?.state != PlaybackState.STATE_PLAYING && activeLiveActivity == null) {
+                    val currentState = currentController?.playbackState?.state
+                    if (currentState != PlaybackState.STATE_PLAYING && currentState != PlaybackState.STATE_BUFFERING && activeLiveActivity == null) {
                         collapse()
                     }
                 }, 2000)
@@ -257,13 +296,16 @@ object IslandController {
     }
 
     private fun updateMetadata(metadata: MediaMetadata?) {
-        if (metadata == null) return
+        val island = islandViewRef?.get() ?: return
+        if (metadata == null) {
+            // Optional: clear info?
+            return
+        }
         val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
         val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
         val albumArt = metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
                        ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
 
-        val island = islandViewRef?.get() ?: return
         island.post {
             island.updateMusicInfo(title, artist, albumArt)
         }
