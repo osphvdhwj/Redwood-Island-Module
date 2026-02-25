@@ -36,8 +36,9 @@ class DynamicIslandView @JvmOverloads constructor(
     private val musicArtist: TextView
     private val playPauseButton: ImageView
 
-    var collapsedWidth = 120
-    var collapsedHeight = 120
+    // Updated dimensions for better fit
+    var collapsedWidth = 70 // Reduced from 120
+    var collapsedHeight = 70 // Reduced from 120
     var expandedWidth = 650
     var expandedHeight = 220
     var isExpanded = false
@@ -47,8 +48,8 @@ class DynamicIslandView @JvmOverloads constructor(
     var windowParams: WindowManager.LayoutParams? = null
 
     init {
-        // OLED True Black
-        backgroundDrawable.setColor(Color.BLACK)
+        // Transparent when collapsed to blend with punch hole
+        backgroundDrawable.setColor(Color.TRANSPARENT)
         backgroundDrawable.cornerRadius = collapsedHeight / 2f
         background = backgroundDrawable
         this.elevation = 12f
@@ -144,6 +145,9 @@ class DynamicIslandView @JvmOverloads constructor(
         if (isExpanded) return
         isExpanded = true
 
+        // Use Black background when expanded for visibility
+        backgroundDrawable.setColor(Color.BLACK)
+
         val wp = windowParams ?: return
         wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
         windowManager?.updateViewLayout(this, wp)
@@ -158,6 +162,15 @@ class DynamicIslandView @JvmOverloads constructor(
         if (!isExpanded) return
         isExpanded = false
 
+        // Revert to Transparent when collapsed
+        // Delay color change slightly to match animation? No, immediate might be better for "disappearing" effect
+        // but let's do it after animation or during?
+        // Doing it immediately might look like a glitch. Let's do it at end action?
+        // Actually, user wants it "transparent colour (that circle)".
+        // If we make it transparent immediately, the shrinking animation will be invisible.
+        // So we should animate color or switch at end.
+        // For simplicity/performance, let's keep it BLACK during animation and switch to TRANSPARENT at end.
+
         val wp = windowParams ?: return
         wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         windowManager?.updateViewLayout(this, wp)
@@ -166,6 +179,21 @@ class DynamicIslandView @JvmOverloads constructor(
         widthSpring.animateToFinalPosition(collapsedWidth.toFloat())
         heightSpring.cancel()
         heightSpring.animateToFinalPosition(collapsedHeight.toFloat())
+
+        // Add end listener to spring? SpringAnimation doesn't have a simple "withEndAction".
+        // Use OneShotOnEndListener equivalent or simple handler delay?
+        // Since springs settle based on physics, time isn't fixed.
+        // Let's just set it to transparent immediately if the user wants the "circle" to be transparent.
+        // Wait, if it's transparent, it's invisible.
+        // The user said "make that circle same size... in transparent colour".
+        // This implies they want it invisible but present? Or maybe a "hole"?
+        // If I make it transparent immediately, the collapsing view disappears instantly.
+        // I will trust the "transparent" request for the *idle* state.
+
+        // Post a runnable to change color when "likely" done?
+        postDelayed({
+            if (!isExpanded) backgroundDrawable.setColor(Color.TRANSPARENT)
+        }, 300)
 
         notificationContainer.animate().alpha(0f).setDuration(150).withEndAction { notificationContainer.visibility = View.GONE }
         musicContainer.animate().alpha(0f).setDuration(150).withEndAction { musicContainer.visibility = View.GONE }
