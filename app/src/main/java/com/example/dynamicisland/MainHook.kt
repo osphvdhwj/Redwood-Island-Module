@@ -67,10 +67,11 @@ class MainHook : IXposedHookLoadPackage {
                             log("[WARN] Failed to register settings receiver: $e")
                         }
 
-                        // Delay injection to ensure the Display is fully awake
+                        // Use a layout listener or just a small delay to ensure display is ready,
+                        // but 3000ms is too long. Let's try 500ms which is usually enough for boot.
                         Handler(Looper.getMainLooper()).postDelayed({
                             setupIsland(serviceContext)
-                        }, 3000)
+                        }, 500)
                     }
                 }
             )
@@ -89,7 +90,7 @@ class MainHook : IXposedHookLoadPackage {
                             log("[HOOK] SystemUIApplication.onCreate triggered (Fallback)")
                             Handler(Looper.getMainLooper()).postDelayed({
                                 setupIsland(appContext)
-                            }, 3000)
+                            }, 500)
                         }
                     }
                 )
@@ -138,7 +139,9 @@ class MainHook : IXposedHookLoadPackage {
             // A15 requires a WindowContext tied to a Display
             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
-            // Changed to 2024 (TYPE_NAVIGATION_BAR_PANEL) to allow touch interactions
+
+            // Use TYPE_NAVIGATION_BAR_PANEL (2024) to allow touch interaction
+            // and correct Z-ordering above most system UI but below critical overlays.
             val windowContext = context.createDisplayContext(display).createWindowContext(
                 2024, null
             )
@@ -161,7 +164,9 @@ class MainHook : IXposedHookLoadPackage {
             islandView!!.id = View.generateViewId()
 
             val params = WindowManager.LayoutParams(
-                120, 120, 2024, // TYPE_NAVIGATION_BAR_PANEL
+                WindowManager.LayoutParams.WRAP_CONTENT, // Allow dynamic width
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                2024, // TYPE_NAVIGATION_BAR_PANEL
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or

@@ -48,20 +48,31 @@ class DynamicIslandView @JvmOverloads constructor(
     private val playPauseButton: ImageView
     private val visualizerView: LinearLayout // Placeholder for visualizer
 
-    // Dimensions
-    var collapsedWidth = 70
-    var collapsedHeight = 70
-    var expandedWidth = 650
-    var expandedHeight = 220
+    // Dimensions (converted to px in init)
+    var collapsedWidth = 0
+    var collapsedHeight = 0
+    var expandedWidth = 0
+    var expandedHeight = 0
+
     var isExpanded = false
         private set
 
-    private var cornerRadius = collapsedHeight / 2f
+    private var cornerRadius = 0f
 
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
 
+    private fun dpToPx(dp: Int): Int {
+        return (dp * resources.displayMetrics.density).toInt()
+    }
+
     init {
+        // Initialize Dimensions based on Density
+        collapsedWidth = dpToPx(30) // Initial safe minimum, will be overridden by cutout
+        collapsedHeight = dpToPx(30)
+        expandedWidth = dpToPx(240) // ~650px on xhdpi (approx)
+        expandedHeight = dpToPx(80) // ~220px on xhdpi
+
         // Initialize Gesture Detector
         gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
@@ -92,9 +103,9 @@ class DynamicIslandView @JvmOverloads constructor(
 
         // Initialize Background (Transparent by default as per request)
         backgroundDrawable.setColor(Color.TRANSPARENT)
-        backgroundDrawable.cornerRadius = collapsedHeight / 2f
+        // Corner radius set later based on dimensions
         background = backgroundDrawable
-        this.elevation = 12f
+        this.elevation = dpToPx(4).toFloat()
 
         // --- Notification Layout ---
         notificationContainer = LinearLayout(context).apply {
@@ -102,16 +113,16 @@ class DynamicIslandView @JvmOverloads constructor(
             gravity = Gravity.CENTER_VERTICAL
             alpha = 0f
             visibility = View.GONE
-            setPadding(30, 0, 30, 0)
+            setPadding(dpToPx(12), 0, dpToPx(12), 0)
         }
 
         iconView = ImageView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(60, 60)
+            layoutParams = LinearLayout.LayoutParams(dpToPx(24), dpToPx(24))
         }
         val textLayout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
-                leftMargin = 20
+                leftMargin = dpToPx(8)
             }
         }
         titleView = TextView(context).apply {
@@ -137,21 +148,21 @@ class DynamicIslandView @JvmOverloads constructor(
             gravity = Gravity.CENTER_VERTICAL
             alpha = 0f
             visibility = View.GONE
-            setPadding(30, 20, 30, 20)
+            setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8))
         }
 
         albumArtView = ImageView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(90, 90)
+            layoutParams = LinearLayout.LayoutParams(dpToPx(36), dpToPx(36))
             scaleType = ImageView.ScaleType.CENTER_CROP
             clipToOutline = true
             outlineProvider = ViewOutlineProvider.BACKGROUND
-            background = GradientDrawable().apply { cornerRadius = 20f; setColor(Color.DKGRAY) }
+            background = GradientDrawable().apply { cornerRadius = dpToPx(8).toFloat(); setColor(Color.DKGRAY) }
         }
 
         val musicInfoLayout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
-                leftMargin = 25
+                leftMargin = dpToPx(10)
             }
         }
         musicTitle = TextView(context).apply {
@@ -168,7 +179,7 @@ class DynamicIslandView @JvmOverloads constructor(
         musicInfoLayout.addView(musicArtist)
 
         playPauseButton = ImageView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(70, 70) // Slightly larger touch target
+            layoutParams = LinearLayout.LayoutParams(dpToPx(28), dpToPx(28)) // Slightly larger touch target
             setImageResource(R.drawable.ic_play_vector) // Use vector if available
         }
 
@@ -186,7 +197,7 @@ class DynamicIslandView @JvmOverloads constructor(
             gravity = Gravity.CENTER
             alpha = 0f
             visibility = View.GONE
-            setPadding(40, 20, 40, 20)
+            setPadding(dpToPx(16), dpToPx(8), dpToPx(16), dpToPx(8))
         }
         liveTitleView = TextView(context).apply {
             setTextColor(Color.CYAN)
@@ -198,7 +209,7 @@ class DynamicIslandView @JvmOverloads constructor(
             typeface = android.graphics.Typeface.DEFAULT_BOLD
         }
         liveProgress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
-            layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 10)
+            layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dpToPx(4))
             progressDrawable.setColorFilter(Color.CYAN, android.graphics.PorterDuff.Mode.SRC_IN)
         }
         liveActivityContainer.addView(liveTitleView)
@@ -248,9 +259,13 @@ class DynamicIslandView @JvmOverloads constructor(
                  val safeTop = rect.top
                  val cutoutHeight = rect.height()
 
-                 if (cutoutHeight > 10) {
-                     collapsedHeight = max(70, cutoutHeight + 4) // Ensure at least 70px
+                 if (cutoutHeight > 0) {
+                     // Ensure minimum 28dp height to contain status bar icons visually if needed,
+                     // but allow scaling with physical cutout.
+                     val minHeightPx = dpToPx(28)
+                     collapsedHeight = max(minHeightPx, cutoutHeight + dpToPx(2))
                      collapsedWidth = collapsedHeight // Force perfect circle
+
                      cornerRadius = collapsedHeight / 2f
                      backgroundDrawable.cornerRadius = cornerRadius
                  }
@@ -300,10 +315,6 @@ class DynamicIslandView @JvmOverloads constructor(
         val wp = windowParams
         if (wp != null && windowManager != null) {
             // Keep it touchable so user can tap to expand!
-            // But maybe we want to allow clicks through if it's "transparent" hole?
-            // User requirement: "Touch is not working". This implies they want it to work.
-            // So we MUST NOT set FLAG_NOT_TOUCHABLE.
-            // We keep FLAG_NOT_TOUCH_MODAL
             wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
             wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
             windowManager?.updateViewLayout(this, wp)
@@ -425,7 +436,7 @@ class DynamicIslandView @JvmOverloads constructor(
                 // Apply subtle glow or border if needed.
                 // For now, let's tint the background stroke slightly if expanded
                 if (isExpanded) {
-                    backgroundDrawable.setStroke(2, color)
+                    backgroundDrawable.setStroke(dpToPx(1), color)
                 } else {
                     backgroundDrawable.setStroke(0, 0)
                 }
