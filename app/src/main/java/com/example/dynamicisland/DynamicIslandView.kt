@@ -22,7 +22,8 @@ class DynamicIslandView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
-    enum class GestureAction { SWIPE_LEFT, SWIPE_RIGHT, SWIPE_UP, SWIPE_DOWN, SINGLE_TAP, DOUBLE_TAP }
+    // ADDED: LONG_PRESS
+    enum class GestureAction { SWIPE_LEFT, SWIPE_RIGHT, SWIPE_UP, SWIPE_DOWN, SINGLE_TAP, DOUBLE_TAP, LONG_PRESS }
     var onGestureListener: ((GestureAction) -> Unit)? = null
 
     private val backgroundDrawable = GradientDrawable()
@@ -51,7 +52,7 @@ class DynamicIslandView @JvmOverloads constructor(
     private val musicArtist: TextView
     private val playPauseButton: ImageView
 
-    // New Music Progress Elements
+    // Music Progress Elements
     private val musicCurrentTime: TextView
     private val musicTotalTime: TextView
     private val musicProgressBar: ProgressBar
@@ -79,8 +80,7 @@ class DynamicIslandView @JvmOverloads constructor(
     }
 
     init {
-        // Optimized Dimensions for Poco X5 Pro (Centered Punch Hole)
-        // 34dp height covers the camera ring fully (~90px on xxhdpi)
+        // Optimized Dimensions for Poco X5 Pro
         collapsedWidth = dpToPx(108)
         collapsedHeight = dpToPx(34)
         expandedWidth = dpToPx(350)
@@ -95,6 +95,10 @@ class DynamicIslandView @JvmOverloads constructor(
             override fun onDoubleTap(e: MotionEvent): Boolean {
                 onGestureListener?.invoke(GestureAction.DOUBLE_TAP)
                 return true
+            }
+            // ADDED: Long Press Support
+            override fun onLongPress(e: MotionEvent) {
+                onGestureListener?.invoke(GestureAction.LONG_PRESS)
             }
 
             override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
@@ -120,7 +124,6 @@ class DynamicIslandView @JvmOverloads constructor(
 
         // Initialize Background
         backgroundDrawable.setColor(Color.TRANSPARENT)
-        // Squircle corner radius: 16dp for the larger 34dp height
         backgroundDrawable.cornerRadius = dpToPx(16).toFloat()
         background = backgroundDrawable
         this.elevation = dpToPx(6).toFloat()
@@ -226,7 +229,7 @@ class DynamicIslandView @JvmOverloads constructor(
         }
 
         musicCurrentTime = TextView(context).apply {
-            setTextColor(Color.LTGRAY) // Slightly dimmer for timestamps
+            setTextColor(Color.LTGRAY)
             textSize = 11f
             typeface = systemFontRegular
             text = "0:00"
@@ -237,7 +240,6 @@ class DynamicIslandView @JvmOverloads constructor(
                 leftMargin = dpToPx(10)
                 rightMargin = dpToPx(10)
             }
-            // Use BlendModeColorFilter for A15 accuracy
             progressDrawable.colorFilter = BlendModeColorFilter(Color.WHITE, BlendMode.SRC_IN)
             max = 1000
         }
@@ -326,13 +328,8 @@ class DynamicIslandView @JvmOverloads constructor(
                  val cutoutHeight = rect.height()
 
                  if (cutoutHeight > 0) {
-                     // Poco X5 Pro Tuning: Ensure we cover the cutout.
-                     // A15 API is reliable here. We rely on physical metrics + margin.
-                     // 34dp minimum.
                      val minHeight = dpToPx(34)
                      collapsedHeight = max(minHeight, cutoutHeight)
-
-                     // Keep width pill-shaped
                      collapsedWidth = dpToPx(108)
 
                      cornerRadius = collapsedHeight / 2f
