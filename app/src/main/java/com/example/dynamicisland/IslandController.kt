@@ -1,13 +1,13 @@
 package com.example.dynamicisland
 
-import android.animation.ValueAnimator
-import android.app.Notification
 import android.app.PendingIntent
-import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Icon
 import android.media.MediaMetadata
 import android.media.session.MediaController
@@ -15,28 +15,31 @@ import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
-import android.service.notification.StatusBarNotification
-import android.view.View
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import java.lang.ref.WeakReference
 
+// Generic API Model for external modules/hooks to push Live Activities
+data class LiveActivityModel(
+    val id: String,
+    val title: String,
+    val dataText: String,
+    val accentColor: Int = Color.WHITE,
+    val progress: Float? = null
+)
+
 object IslandController {
-
-    private const val ACTION_POST = "com.example.dynamicisland.ACTION_POST"
-    private const val ACTION_REMOVE = "com.example.dynamicisland.ACTION_REMOVE"
-    private const val PERMISSION_TRIGGER = "com.example.dynamicisland.PERMISSION_TRIGGER"
-
     private var islandViewRef: WeakReference<DynamicIslandView>? = null
-    private var clockViewRef: WeakReference<View>? = null
-    private var statusIconsRef: WeakReference<View>? = null
-    private var isExpanding = false
     private var currentController: MediaController? = null
-    private var mediaSessionManager: MediaSessionManager? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private var activeLiveActivity: LiveActivityModel? = null
+    private var isExpanding = false
     private var currentNotificationIntent: PendingIntent? = null
     private var dismissRunnable: Runnable? = null
+    private var mediaSessionManager: MediaSessionManager? = null
 
     private val sessionsListener = object : MediaSessionManager.OnActiveSessionsChangedListener {
         override fun onActiveSessionsChanged(controllers: MutableList<MediaController>?) {
@@ -53,79 +56,163 @@ object IslandController {
         }
     }
 
-    private val notificationReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent == null) return
-            when (intent.action) {
-                ACTION_POST -> {
-                    val title = intent.getStringExtra("title")
-                    val text = intent.getStringExtra("text")
-                    val icon = intent.getParcelableExtra<Icon>("icon")
-                    val contentIntent = intent.getParcelableExtra<PendingIntent>("content_intent")
-                    onNotificationShow(title, text, icon, contentIntent)
-                }
-                ACTION_REMOVE -> {
-                    onNotificationDismiss()
-                }
-            }
-        }
-    }
-
     fun init(view: DynamicIslandView) {
         islandViewRef = WeakReference(view)
         setupMediaListener(view.context)
-        setupReceiver(view.context)
 
-        // Default click listener (do nothing or collapse)
+        // Handle Gestures
+        view.onGestureListener = { action ->
+            when (action) {
+                DynamicIslandView.GestureAction.SINGLE_TAP -> if (view.isExpanded) collapse() else expand()
+                DynamicIslandView.GestureAction.SWIPE_DOWN -> expand()
+                DynamicIslandView.GestureAction.SWIPE_UP -> forceHide()
+                DynamicIslandView.GestureAction.SWIPE_LEFT -> handleSwipe(isRight = false)
+                DynamicIslandView.GestureAction.SWIPE_RIGHT -> handleSwipe(isRight = true)
+            }
+        }
+
+        // Default click listener for simple interaction if gesture not consumed
         view.setOnClickListener {
+             if (view.isExpanded) collapse() else expand()
+        }
+    }
+
+    fun isExpanding(): Boolean = isExpanding
+
+    private fun handleSwipe(isRight: Boolean) {
+        // Example logic: Skip tracks if media is playing, dismiss notification if showing
+        if (currentController?.playbackState?.state == PlaybackState.STATE_PLAYING) {
+            if (isRight) currentController?.transportControls?.skipToNext()
+            else currentController?.transportControls?.skipToPrevious()
+        } else {
+            // Dismiss current notification state
             collapse()
         }
     }
 
-    fun setClock(view: View) {
-        clockViewRef = WeakReference(view)
+    fun forceHide() {
+        val island = islandViewRef?.get() ?: return
+        collapse()
+        island.setContextGlow(null) // Remove border tint
+        island.animate().translationY(-300f).setDuration(300).start() // Slide off screen
     }
 
-    fun setStatusIcons(view: View) {
-        statusIconsRef = WeakReference(view)
+    // --- Live Activities API ---
+    fun postLiveActivity(activity: LiveActivityModel) {
+        activeLiveActivity = activity
+        val island = islandViewRef?.get() ?: return
+
+        island.post {
+            island.updateLiveActivity(activity.title, activity.dataText, activity.progress, activity.accentColor)
+
+            // ONLY expand if not already expanded.
+            // This prevents the spring animation from restarting every second.
+            if (!island.isExpanded) {
+                expand()
+            }
+        }
     }
 
-    fun isExpanding(): Boolean {
-        return isExpanding
+    fun removeLiveActivity(id: String) {
+        if (activeLiveActivity?.id == id) {
+            activeLiveActivity = null
+            collapse()
+        }
     }
 
     fun expand() {
-        val island = islandViewRef?.get() ?: return
-        val clock = clockViewRef?.get()
-        val statusIcons = statusIconsRef?.get()
-
         isExpanding = true
-
-        island.expand()
-
-        // Animate Clock (Fade Out)
-        clock?.animate()?.alpha(0f)?.setDuration(200)?.start()
-
-        // Animate Status Icons (Fade Out instead of Translation)
-        statusIcons?.animate()?.alpha(0f)?.setDuration(200)?.start()
+        islandViewRef?.get()?.let {
+            it.animate().translationY(0f).setDuration(0).start()
+            it.expand()
+        }
     }
 
     fun collapse() {
-        val island = islandViewRef?.get() ?: return
-        val clock = clockViewRef?.get()
-        val statusIcons = statusIconsRef?.get()
-
         isExpanding = false
-
-        island.collapse()
-
-        // Animate Clock (Fade In)
-        clock?.animate()?.alpha(1f)?.setDuration(200)?.start()
-
-        // Animate Status Icons (Fade In)
-        statusIcons?.animate()?.alpha(1f)?.setDuration(200)?.start()
+        islandViewRef?.get()?.collapse()
     }
 
+    // --- Notification Handling ---
+    fun hookFrameworkNotifications(lpparam: XC_LoadPackage.LoadPackageParam) {
+        try {
+            val wrapperClass = XposedHelpers.findClass(
+                "android.service.notification.INotificationListener",
+                lpparam.classLoader
+            )
+
+            XposedBridge.hookAllMethods(wrapperClass, "onNotificationPosted", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    try {
+                        val holder = param.args[0]
+                        val sbn = XposedHelpers.callMethod(holder, "get") as android.service.notification.StatusBarNotification
+                        val notif = sbn.notification
+
+                        // 1. Check for Live Activity Candidates first
+                        val liveActivity = ClockInterceptor.inspect(sbn)
+                        if (liveActivity != null) {
+                            postLiveActivity(liveActivity)
+                            return // Stop here! We handled it as a Live Activity.
+                        }
+
+                        // 2. Fallback to standard Notification handling
+                        if ((notif.flags and android.app.Notification.FLAG_ONGOING_EVENT) == 0) {
+                            val title = notif.extras.getString(android.app.Notification.EXTRA_TITLE)
+                            val text = notif.extras.getString(android.app.Notification.EXTRA_TEXT)
+                            val icon = notif.getLargeIcon() ?: notif.getSmallIcon()
+
+                            val island = islandViewRef?.get()
+                            if (island != null) {
+                                onNotificationShow(title, text, icon, notif.contentIntent, island.context)
+                            }
+                        }
+                    } catch (e: Throwable) {
+                         XposedBridge.log("DynamicIsland: [ERROR] IPC extraction failed: " + e)
+                    }
+                }
+            })
+            XposedBridge.log("DynamicIsland: [SUCCESS] Framework IPC Notification hook applied")
+        } catch (e: Throwable) {
+            XposedBridge.log("DynamicIsland: [FATAL] Framework IPC hook failed: " + e)
+        }
+    }
+
+    private fun onNotificationShow(title: String?, text: String?, icon: Icon?, contentIntent: PendingIntent?, context: Context) {
+        val island = islandViewRef?.get() ?: return
+
+        currentNotificationIntent = contentIntent
+
+        // Convert Icon to Bitmap for Palette extraction
+        var bitmap: Bitmap? = null
+        try {
+            val drawable = icon?.loadDrawable(context)
+            if (drawable is BitmapDrawable) {
+                bitmap = drawable.bitmap
+            } else if (drawable != null) {
+                bitmap = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bitmap)
+                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                drawable.draw(canvas)
+            }
+        } catch (e: Exception) {}
+
+        island.post {
+            island.setContextGlow(bitmap) // Apply app-specific color
+            island.updateNotificationInfo(title, text, icon)
+            expand()
+
+            // Auto-collapse after 4 seconds unless it's a Live Activity
+            dismissRunnable?.let { island.removeCallbacks(it) }
+            dismissRunnable = Runnable {
+                if (activeLiveActivity == null && currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
+                    collapse()
+                }
+            }
+            island.postDelayed(dismissRunnable, 4000)
+        }
+    }
+
+    // --- Media Handling ---
     private fun setupMediaListener(context: Context) {
         try {
             mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
@@ -138,34 +225,11 @@ object IslandController {
         }
     }
 
-    private fun setupReceiver(context: Context) {
-        try {
-            val filter = IntentFilter().apply {
-                addAction(ACTION_POST)
-                addAction(ACTION_REMOVE)
-            }
-            context.registerReceiver(notificationReceiver, filter, PERMISSION_TRIGGER, null, Context.RECEIVER_EXPORTED)
-            XposedBridge.log("DynamicIsland: [INFO] Receiver registered successfully")
-        } catch (e: Throwable) {
-            XposedBridge.log("DynamicIsland: [ERROR] Receiver registration failed: " + e)
-        }
-    }
-
     private fun updateActiveController(controllers: List<MediaController>?) {
         if (controllers.isNullOrEmpty()) return
         currentController?.unregisterCallback(mediaCallback)
         currentController = controllers.first()
         currentController?.registerCallback(mediaCallback)
-
-        // Update click listener for media
-        val island = islandViewRef?.get()
-        island?.setOnClickListener {
-            try {
-                currentController?.sessionActivity?.send()
-            } catch (e: Throwable) {
-                // Ignore
-            }
-        }
 
         updateMediaState(currentController?.playbackState)
         updateMetadata(currentController?.metadata)
@@ -182,11 +246,9 @@ object IslandController {
                 if (!island.isExpanded) {
                     expand()
                 }
-                island.showMusicVisualizer(true)
             } else {
-                island.showMusicVisualizer(false)
-                island.postDelayed({
-                    if (currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
+                 island.postDelayed({
+                    if (currentController?.playbackState?.state != PlaybackState.STATE_PLAYING && activeLiveActivity == null) {
                         collapse()
                     }
                 }, 2000)
@@ -205,99 +267,5 @@ object IslandController {
         island.post {
             island.updateMusicInfo(title, artist, albumArt)
         }
-    }
-
-    fun hookFrameworkNotifications(lpparam: XC_LoadPackage.LoadPackageParam) {
-        try {
-            // Hook the framework's IPC wrapper. This CANNOT be obfuscated by custom ROMs!
-            val wrapperClass = XposedHelpers.findClass(
-                "android.service.notification.INotificationListener",
-                lpparam.classLoader
-            )
-
-            XposedBridge.hookAllMethods(
-                wrapperClass,
-                "onNotificationPosted",
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        try {
-                            // param.args[0] is an IStatusBarNotificationHolder in the framework
-                            val holder = param.args[0]
-                            val sbn = XposedHelpers.callMethod(holder, "get") as android.service.notification.StatusBarNotification
-                            val notification = sbn.notification
-
-                            // Filter out ongoing background services and group summaries
-                            if ((notification.flags and android.app.Notification.FLAG_ONGOING_EVENT) == 0) {
-                                val title = notification.extras.getString(android.app.Notification.EXTRA_TITLE)
-                                val text = notification.extras.getString(android.app.Notification.EXTRA_TEXT)
-                                val icon = notification.getLargeIcon() ?: notification.getSmallIcon()
-
-                                XposedBridge.log("DynamicIsland: [NOTIF] Caught via Framework IPC: $title")
-                                onNotificationShow(title, text, icon, notification.contentIntent)
-                            }
-                        } catch (e: Throwable) {
-                            XposedBridge.log("DynamicIsland: [ERROR] IPC extraction failed: $e")
-                        }
-                    }
-                }
-            )
-            XposedBridge.log("DynamicIsland: [SUCCESS] Framework IPC Notification hook applied")
-        } catch (e: Throwable) {
-            XposedBridge.log("DynamicIsland: [FATAL] Framework IPC hook failed: $e")
-        }
-    }
-
-    private fun onNotificationShow(title: String?, text: String?, icon: Icon?, contentIntent: PendingIntent?) {
-        val island = islandViewRef?.get() ?: return
-
-        currentNotificationIntent = contentIntent
-
-        // Interactivity: Ensure click triggers the intent
-        island.setOnClickListener {
-            try {
-                dismissRunnable?.let { island.removeCallbacks(it) }
-
-                currentNotificationIntent?.send()
-                collapse()
-
-                isExpanding = false
-            } catch (e: Throwable) {
-                XposedBridge.log("DynamicIsland: Intent failed: " + e)
-            }
-        }
-
-        island.post {
-            island.updateNotificationInfo(title ?: "Notification", text ?: "Tap to view", icon)
-            expand()
-
-            dismissRunnable?.let { island.removeCallbacks(it) }
-            dismissRunnable = Runnable {
-                if (isExpanding && currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
-                    onNotificationDismiss()
-                }
-            }
-            island.postDelayed(dismissRunnable, 4000)
-        }
-    }
-
-    private fun onNotificationDismiss() {
-         val island = islandViewRef?.get() ?: return
-         island.post {
-             dismissRunnable?.let { island.removeCallbacks(it) }
-             collapse()
-         }
-    }
-
-    fun testExpand() {
-         val island = islandViewRef?.get() ?: return
-
-         island.post {
-             island.updateNotificationInfo("Test Notification", "This is a test message.", null)
-             expand()
-
-             island.postDelayed({
-                 collapse()
-             }, 3000)
-         }
     }
 }
