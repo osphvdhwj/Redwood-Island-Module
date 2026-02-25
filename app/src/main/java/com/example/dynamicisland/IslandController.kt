@@ -49,20 +49,28 @@ object IslandController {
 
     private val mediaCallback = object : MediaController.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackState?) {
-            updateMediaState(state)
+            // Re-evaluate priority when state changes
+            val componentName = ComponentName(islandViewRef?.get()?.context ?: return, "com.android.systemui.SystemUIService")
+            val controllers = mediaSessionManager?.getActiveSessions(componentName)
+            updateActiveController(controllers)
         }
         override fun onMetadataChanged(metadata: MediaMetadata?) {
             updateMetadata(metadata)
         }
         override fun onSessionDestroyed() {
-            // Immediately collapse and clear controller when app is killed/closed
-            currentController = null
-            val island = islandViewRef?.get() ?: return
-            island.post {
-                 // Force collapse logic
-                 if (activeLiveActivity == null) {
-                     island.collapse()
-                 }
+            // Immediately check for other sessions before giving up
+            val componentName = ComponentName(islandViewRef?.get()?.context ?: return, "com.android.systemui.SystemUIService")
+            val controllers = mediaSessionManager?.getActiveSessions(componentName)
+            if (controllers.isNullOrEmpty()) {
+                currentController = null
+                val island = islandViewRef?.get() ?: return
+                island.post {
+                     if (activeLiveActivity == null) {
+                         island.collapse()
+                     }
+                }
+            } else {
+                updateActiveController(controllers)
             }
         }
     }
@@ -103,8 +111,11 @@ object IslandController {
 
     private fun handleSwipe(isRight: Boolean) {
         // Skip tracks if media is playing
-        if (currentController?.playbackState?.state == PlaybackState.STATE_PLAYING ||
-            currentController?.playbackState?.state == PlaybackState.STATE_PAUSED) {
+        val state = currentController?.playbackState?.state
+        if (state == PlaybackState.STATE_PLAYING ||
+            state == PlaybackState.STATE_PAUSED ||
+            state == PlaybackState.STATE_BUFFERING) {
+
             if (isRight) currentController?.transportControls?.skipToNext()
             else currentController?.transportControls?.skipToPrevious()
         } else {
@@ -247,25 +258,42 @@ object IslandController {
     }
 
     private fun updateActiveController(controllers: List<MediaController>?) {
-        if (controllers.isNullOrEmpty()) return
+        if (controllers == null) return // Don't return if empty, we might need to clear
 
-        // Prioritize Playing Controllers!
-        val active = controllers.firstOrNull {
-            val state = it.playbackState?.state
-            state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING
-        } ?: controllers.first()
-
-        // Avoid switching if we are already attached to the same controller?
-        // No, we might need to update if the priority changed.
-        if (currentController?.packageName == active.packageName && currentController != null) {
-            // Same app, just update state just in case
-            updateMediaState(active.playbackState)
-            updateMetadata(active.metadata)
+        // If list is empty, we must clear current controller
+        if (controllers.isEmpty()) {
+            currentController?.unregisterCallback(mediaCallback)
+            currentController = null
+            // Trigger update to clear UI?
+            updateMediaState(null)
             return
         }
 
+        // Logic to pick the best controller:
+        // 1. First one that is actively PLAYING or BUFFERING
+        // 2. If none, first one that is PAUSED
+        // 3. Fallback to first in list
+        val bestController = controllers.firstOrNull {
+            val state = it.playbackState?.state
+            state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING
+        } ?: controllers.firstOrNull {
+            it.playbackState?.state == PlaybackState.STATE_PAUSED
+        } ?: controllers.first()
+
+        // If we are already tracking this controller, just ensure state is current
+        // (Use packageName/Tag to compare as objects might be different instances)
+        if (currentController != null &&
+            currentController?.packageName == bestController.packageName) {
+
+            // Just ensure callback is registered (it should be) and update state
+            updateMediaState(bestController.playbackState)
+            updateMetadata(bestController.metadata)
+            return
+        }
+
+        // Switching controller
         currentController?.unregisterCallback(mediaCallback)
-        currentController = active
+        currentController = bestController
         currentController?.registerCallback(mediaCallback)
 
         updateMediaState(currentController?.playbackState)
@@ -273,8 +301,9 @@ object IslandController {
     }
 
     private fun updateMediaState(state: PlaybackState?) {
-        if (state == null) return
-        val isPlaying = state.state == PlaybackState.STATE_PLAYING
+        // If state is null, assume stopped/none
+        val isPlaying = state?.state == PlaybackState.STATE_PLAYING || state?.state == PlaybackState.STATE_BUFFERING
+
         val island = islandViewRef?.get() ?: return
 
         island.post {
@@ -286,8 +315,11 @@ object IslandController {
             } else {
                  // Check if actually paused or stopped
                  island.postDelayed({
+                    // Re-check global state
                     val currentState = currentController?.playbackState?.state
-                    if (currentState != PlaybackState.STATE_PLAYING && currentState != PlaybackState.STATE_BUFFERING && activeLiveActivity == null) {
+                    val stillPlaying = currentState == PlaybackState.STATE_PLAYING || currentState == PlaybackState.STATE_BUFFERING
+
+                    if (!stillPlaying && activeLiveActivity == null) {
                         collapse()
                     }
                 }, 2000)
