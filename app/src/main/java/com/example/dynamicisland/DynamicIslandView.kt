@@ -7,18 +7,8 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.Icon
 import android.util.AttributeSet
-import android.view.DisplayCutout
-import android.view.Gravity
-import android.view.MotionEvent
-import android.view.ViewGroup
-import android.view.View
-import android.view.WindowInsets
-import android.view.WindowManager
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.TextView
-import android.widget.LinearLayout
-import android.widget.RelativeLayout
+import android.view.*
+import android.widget.*
 import androidx.palette.graphics.Palette
 import androidx.core.graphics.ColorUtils
 import androidx.dynamicanimation.animation.SpringAnimation
@@ -30,340 +20,179 @@ class DynamicIslandView @JvmOverloads constructor(
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
     private val backgroundDrawable = GradientDrawable()
-
     private lateinit var widthSpring: SpringAnimation
     private lateinit var heightSpring: SpringAnimation
 
+    // Notification UI
     private val notificationContainer: LinearLayout
     private val iconView: ImageView
-    private val textContainer: LinearLayout
     private val titleView: TextView
     private val messageView: TextView
 
+    // Music UI
     private val musicContainer: LinearLayout
     private val albumArtView: ImageView
-    private val musicInfoContainer: LinearLayout
     private val musicTitle: TextView
     private val musicArtist: TextView
-    private val musicWaveform: View
     private val playPauseButton: ImageView
 
-    var collapsedWidth = 100
-    var collapsedHeight = 50
-    var expandedWidth = 600
-    var expandedHeight = 200
-    var cornerRadius = 50f
-
+    var collapsedWidth = 120
+    var collapsedHeight = 120
+    var expandedWidth = 650
+    var expandedHeight = 220
     var isExpanded = false
         private set
 
-    // WindowManager support
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
 
     init {
-        // Hardcode fallback dimensions for Poco X5 Pro visibility
-        collapsedWidth = 120
-        collapsedHeight = 120
-        cornerRadius = 60f
-
-        // True Black for OLED
+        // OLED True Black
         backgroundDrawable.setColor(Color.BLACK)
-        backgroundDrawable.cornerRadius = cornerRadius
+        backgroundDrawable.cornerRadius = collapsedHeight / 2f
         background = backgroundDrawable
-
-        // Remove the 9999f hack to prevent 80000px shadow texture GPU crashes
-        this.elevation = 10f
-        this.translationZ = 10f
+        this.elevation = 12f
 
         // --- Notification Layout ---
-        notificationContainer = LinearLayout(context)
-        notificationContainer.orientation = LinearLayout.HORIZONTAL
-        notificationContainer.gravity = Gravity.CENTER_VERTICAL
-        notificationContainer.alpha = 0f
-        notificationContainer.setPadding(35, 15, 35, 15)
+        notificationContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            alpha = 0f
+            setPadding(40, 20, 40, 20)
+            visibility = View.GONE
+        }
 
         iconView = ImageView(context)
-        val iconParams = LinearLayout.LayoutParams(60, 60)
-        iconParams.rightMargin = 25
+        val iconParams = LinearLayout.LayoutParams(70, 70).apply { rightMargin = 30 }
+
+        val textLayout = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        titleView = TextView(context).apply { setTextColor(Color.WHITE); textSize = 14f; isSingleLine = true }
+        messageView = TextView(context).apply { setTextColor(Color.LTGRAY); textSize = 12f; isSingleLine = true }
+
+        textLayout.addView(titleView)
+        textLayout.addView(messageView)
         notificationContainer.addView(iconView, iconParams)
-
-        textContainer = LinearLayout(context)
-        textContainer.orientation = LinearLayout.VERTICAL
-
-        titleView = TextView(context)
-        titleView.setTextColor(Color.WHITE)
-        titleView.textSize = 13f
-        titleView.setSingleLine()
-
-        messageView = TextView(context)
-        messageView.setTextColor(Color.LTGRAY)
-        messageView.textSize = 12f
-        messageView.setSingleLine()
-
-        textContainer.addView(titleView)
-        textContainer.addView(messageView)
-
-        val textParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT)
-        textParams.weight = 1f
-        notificationContainer.addView(textContainer, textParams)
-
+        notificationContainer.addView(textLayout, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
         addView(notificationContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
         // --- Music Layout ---
-        musicContainer = LinearLayout(context)
-        musicContainer.orientation = LinearLayout.HORIZONTAL
-        musicContainer.gravity = Gravity.CENTER_VERTICAL
-        musicContainer.alpha = 0f
-        musicContainer.setPadding(30, 20, 30, 20)
-
-        // 1. Album Art
-        albumArtView = ImageView(context)
-        albumArtView.scaleType = ImageView.ScaleType.CENTER_CROP
-        val artParams = LinearLayout.LayoutParams(120, 120)
-        artParams.rightMargin = 25
-
-        albumArtView.clipToOutline = true
-        albumArtView.background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = 60f
-            setColor(Color.DKGRAY)
-        }
-        albumArtView.outlineProvider = object : android.view.ViewOutlineProvider() {
-            override fun getOutline(view: View, outline: android.graphics.Outline) {
-                outline.setRoundRect(0, 0, view.width, view.height, view.width / 2f)
-            }
+        musicContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            alpha = 0f
+            setPadding(30, 25, 30, 25)
+            visibility = View.GONE
         }
 
-        musicContainer.addView(albumArtView, artParams)
-
-        // 2. Info
-        musicInfoContainer = LinearLayout(context)
-        musicInfoContainer.orientation = LinearLayout.VERTICAL
-        musicInfoContainer.gravity = Gravity.CENTER_VERTICAL or Gravity.START
-
-        musicTitle = TextView(context)
-        musicTitle.setTextColor(Color.WHITE)
-        musicTitle.textSize = 14f
-        musicTitle.setSingleLine()
-        musicTitle.gravity = Gravity.START
-
-        musicArtist = TextView(context)
-        musicArtist.setTextColor(Color.LTGRAY)
-        musicArtist.textSize = 12f
-        musicArtist.setSingleLine()
-        musicArtist.gravity = Gravity.START
-
-        val waveLayout = LinearLayout(context)
-        waveLayout.orientation = LinearLayout.HORIZONTAL
-        waveLayout.gravity = Gravity.START
-        for (i in 0..2) {
-             val bar = View(context)
-             bar.setBackgroundColor(Color.GREEN)
-             val params = LinearLayout.LayoutParams(10, 30)
-             params.setMargins(0, 0, 10, 0)
-             waveLayout.addView(bar, params)
+        albumArtView = ImageView(context).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            clipToOutline = true
+            outlineProvider = ViewOutlineProvider.BACKGROUND
+            background = GradientDrawable().apply { cornerRadius = 30f; setColor(Color.DKGRAY) }
         }
-        musicWaveform = waveLayout
 
-        val vizParams = LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
-        vizParams.topMargin = 10
+        val musicTextLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        musicTitle = TextView(context).apply { setTextColor(Color.WHITE); textSize = 14f; isSingleLine = true }
+        musicArtist = TextView(context).apply { setTextColor(Color.LTGRAY); textSize = 12f; isSingleLine = true }
 
-        musicInfoContainer.addView(musicTitle)
-        musicInfoContainer.addView(musicArtist)
-        musicInfoContainer.addView(musicWaveform, vizParams)
+        playPauseButton = ImageView(context).apply { scaleType = ImageView.ScaleType.FIT_CENTER }
 
-        val infoParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT)
-        infoParams.weight = 1f
-        musicContainer.addView(musicInfoContainer, infoParams)
-
-        // 3. Play/Pause
-        playPauseButton = ImageView(context)
-        playPauseButton.setImageResource(R.drawable.ic_play_vector)
-        playPauseButton.scaleType = ImageView.ScaleType.FIT_CENTER
-        val btnParams = LinearLayout.LayoutParams(80, 80)
-        btnParams.leftMargin = 25
-        musicContainer.addView(playPauseButton, btnParams)
-
+        musicContainer.addView(albumArtView, LinearLayout.LayoutParams(130, 130).apply { rightMargin = 30 })
+        musicTextLayout.addView(musicTitle)
+        musicTextLayout.addView(musicArtist)
+        musicContainer.addView(musicTextLayout, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+        musicContainer.addView(playPauseButton, LinearLayout.LayoutParams(90, 90))
         addView(musicContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
-        // Initialize Springs
+        setupSprings()
+    }
+
+    private fun setupSprings() {
         widthSpring = SpringAnimation(FloatValueHolder(0f)).apply {
             spring = SpringForce().apply {
-                dampingRatio = SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY
-                stiffness = SpringForce.STIFFNESS_LOW
+                dampingRatio = SpringForce.DAMPING_RATIO_LOW_BOUNCY
+                stiffness = SpringForce.STIFFNESS_MEDIUM
             }
-            addUpdateListener { _, value, _ ->
-                updateWindowLayout(width = value.toInt())
-            }
+            addUpdateListener { _, value, _ -> updateWindowLayout(width = value.toInt()) }
         }
 
         heightSpring = SpringAnimation(FloatValueHolder(0f)).apply {
             spring = SpringForce().apply {
-                dampingRatio = SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY
-                stiffness = SpringForce.STIFFNESS_LOW
+                dampingRatio = SpringForce.DAMPING_RATIO_LOW_BOUNCY
+                stiffness = SpringForce.STIFFNESS_MEDIUM
             }
             addUpdateListener { _, value, _ ->
                 updateWindowLayout(height = value.toInt())
-
-                // Ensure corner radius is always height / 2 (Perfect Circle/Pill)
-                if (value > 0) {
-                    cornerRadius = value / 2f
-                    backgroundDrawable.cornerRadius = cornerRadius
-                }
-            }
-        }
-
-        // Ensure we are clickable
-        isClickable = true
-        isFocusable = true
-    }
-
-    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
-        if (ev?.action == MotionEvent.ACTION_DOWN) {
-            // When expanded, we handle touch. When collapsed, maybe ignore?
-            // Actually, FLAG_NOT_TOUCH_MODAL handles outside touches.
-        }
-        // Handle collapse on outside touch if window manager sends ACTION_OUTSIDE
-        if (ev?.action == MotionEvent.ACTION_OUTSIDE) {
-            if (isExpanded) {
-                collapse()
-                return true
-            }
-        }
-        return super.dispatchTouchEvent(ev)
-    }
-
-    override fun onTouchEvent(event: MotionEvent?): Boolean {
-        // Allow touch events to propagate so OnClickListener works
-        return super.onTouchEvent(event)
-    }
-
-    override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
-        val cutout = insets.displayCutout
-        if (cutout != null) {
-             val rects = cutout.boundingRects
-             if (rects.isNotEmpty()) {
-                 val rect = rects[0]
-                 val safeTop = rect.top
-                 val cutoutHeight = rect.height()
-
-                 // Prevent 0x0 collapse bug if system cutout is not ready
-                 if (cutoutHeight > 10) {
-                     collapsedHeight = cutoutHeight + 4
-                     collapsedWidth = collapsedHeight // Force perfect circle
-                     cornerRadius = collapsedHeight / 2f
-                     backgroundDrawable.cornerRadius = cornerRadius
-                 }
-
-                 post {
-                     if (!isExpanded) {
-                         // Update Window Layout directly
-                         updateWindowLayout(collapsedWidth, collapsedHeight, safeTop)
-                     }
-                 }
-             }
-        }
-        return super.onApplyWindowInsets(insets)
-    }
-
-    fun setDimensions(cW: Int, cH: Int, eW: Int, eH: Int) {
-        collapsedWidth = cW
-        collapsedHeight = cH
-        expandedWidth = eW
-        expandedHeight = eH
-
-        post {
-            if (!isExpanded) {
-                updateWindowLayout(collapsedWidth, collapsedHeight)
+                backgroundDrawable.cornerRadius = value / 2f
             }
         }
     }
 
-    // Helper to update WindowManager layout params
-    private fun updateWindowLayout(width: Int? = null, height: Int? = null, topMarginOverride: Int? = null) {
-        val wm = windowManager
-        val wp = windowParams
-
-        if (wm != null && wp != null) {
-            var changed = false
-            if (width != null && wp.width != width) {
-                wp.width = width
-                changed = true
-            }
-            if (height != null && wp.height != height) {
-                wp.height = height
-                changed = true
-            }
-            if (topMarginOverride != null && wp.y != topMarginOverride) {
-                wp.y = topMarginOverride // For Gravity.TOP, y is top margin equivalent
-                changed = true
-            }
-
-            if (changed) {
-                try {
-                    wm.updateViewLayout(this, wp)
-                } catch (e: Exception) {
-                    // Handle potential race conditions or detached view
-                }
-            }
-        } else {
-            // Fallback for non-WM usage (if any) or initial layout
-            val params = layoutParams
-            if (params != null) {
-                if (width != null) params.width = width
-                if (height != null) params.height = height
-                layoutParams = params
-            }
-        }
+    private fun updateWindowLayout(width: Int? = null, height: Int? = null) {
+        val wm = windowManager ?: return
+        val wp = windowParams ?: return
+        var changed = false
+        if (width != null && wp.width != width) { wp.width = width; changed = true }
+        if (height != null && wp.height != height) { wp.height = height; changed = true }
+        if (changed) wm.updateViewLayout(this, wp)
     }
 
-    // For compatibility, keep updateLayout but delegate
-    private fun updateLayout(width: Int, height: Int, topMarginOverride: Int? = null) {
-        updateWindowLayout(width, height, topMarginOverride)
+    fun expand() {
+        if (isExpanded) return
+        isExpanded = true
+
+        val wp = windowParams ?: return
+        wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+        windowManager?.updateViewLayout(this, wp)
+
+        widthSpring.cancel()
+        widthSpring.setStartValue(wp.width.toFloat()).animateToFinalPosition(expandedWidth.toFloat())
+        heightSpring.cancel()
+        heightSpring.setStartValue(wp.height.toFloat()).animateToFinalPosition(expandedHeight.toFloat())
+    }
+
+    fun collapse() {
+        if (!isExpanded) return
+        isExpanded = false
+
+        val wp = windowParams ?: return
+        wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        windowManager?.updateViewLayout(this, wp)
+
+        widthSpring.cancel()
+        widthSpring.animateToFinalPosition(collapsedWidth.toFloat())
+        heightSpring.cancel()
+        heightSpring.animateToFinalPosition(collapsedHeight.toFloat())
+
+        notificationContainer.animate().alpha(0f).setDuration(150).withEndAction { notificationContainer.visibility = View.GONE }
+        musicContainer.animate().alpha(0f).setDuration(150).withEndAction { musicContainer.visibility = View.GONE }
     }
 
     fun updateNotificationInfo(title: String?, text: String?, icon: Icon?) {
         titleView.text = title ?: "Notification"
-        messageView.text = text ?: "Tap to view"
-        if (icon != null) {
-            iconView.setImageIcon(icon)
-        } else {
-            iconView.setImageResource(android.R.drawable.sym_def_app_icon)
-        }
+        messageView.text = text ?: ""
+        iconView.setImageIcon(icon ?: Icon.createWithResource(context, android.R.drawable.sym_def_app_icon))
 
-        musicContainer.alpha = 0f
         musicContainer.visibility = View.GONE
         notificationContainer.visibility = View.VISIBLE
-        notificationContainer.animate().alpha(1f).duration = 200
-
-        backgroundDrawable.setStroke(0, Color.TRANSPARENT)
+        notificationContainer.animate().alpha(1f).duration = 300
     }
 
     fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?) {
         musicTitle.text = title ?: "Unknown Title"
         musicArtist.text = artist ?: "Unknown Artist"
-
         if (art != null) {
             albumArtView.setImageBitmap(art)
-
-            Palette.from(art).generate { palette ->
-                val vibrant = palette?.getVibrantColor(Color.BLACK) ?: Color.BLACK
-                val dominant = palette?.getDominantColor(Color.BLACK) ?: Color.BLACK
-
-                var finalColor = if (vibrant != Color.BLACK) vibrant else dominant
-
-                if (ColorUtils.calculateLuminance(finalColor) < 0.1) {
-                    finalColor = Color.LTGRAY
-                }
-
-                backgroundDrawable.setStroke(5, finalColor)
-            }
         } else {
             albumArtView.setImageResource(android.R.drawable.ic_menu_gallery)
-            albumArtView.setBackgroundColor(Color.DKGRAY)
-            backgroundDrawable.setStroke(0, Color.TRANSPARENT)
         }
+
+        notificationContainer.visibility = View.GONE
+        musicContainer.visibility = View.VISIBLE
+        musicContainer.animate().alpha(1f).duration = 300
     }
 
     fun updatePlayPauseState(isPlaying: Boolean) {
@@ -376,59 +205,11 @@ class DynamicIslandView @JvmOverloads constructor(
 
     fun showMusicVisualizer(show: Boolean) {
         if (show) {
-            notificationContainer.alpha = 0f
             notificationContainer.visibility = View.GONE
             musicContainer.visibility = View.VISIBLE
             musicContainer.animate().alpha(1f).duration = 300
         } else {
             musicContainer.animate().alpha(0f).duration = 300
         }
-    }
-
-    fun expand() {
-        if (isExpanded) return
-        isExpanded = true
-
-        // Touch Toggle REMOVED as requested for 2024 window type
-
-        widthSpring.cancel()
-        // Use current window width as start value if available
-        val currentWidth = windowParams?.width?.toFloat() ?: width.toFloat()
-        widthSpring.setStartValue(currentWidth)
-        widthSpring.animateToFinalPosition(expandedWidth.toFloat())
-
-        heightSpring.cancel()
-        val currentHeight = windowParams?.height?.toFloat() ?: height.toFloat()
-        heightSpring.setStartValue(currentHeight)
-        heightSpring.animateToFinalPosition(expandedHeight.toFloat())
-
-        // Fade in content IMMEDIATELY
-        if (notificationContainer.visibility == View.VISIBLE) {
-            notificationContainer.animate().alpha(1f).setDuration(150).start()
-        }
-        if (musicContainer.visibility == View.VISIBLE) {
-            musicContainer.animate().alpha(1f).setDuration(150).start()
-        }
-    }
-
-    fun collapse() {
-        if (!isExpanded) return
-        isExpanded = false
-
-        // Touch Toggle REMOVED as requested for 2024 window type
-
-        widthSpring.cancel()
-        val currentWidth = windowParams?.width?.toFloat() ?: width.toFloat()
-        widthSpring.setStartValue(currentWidth)
-        widthSpring.animateToFinalPosition(collapsedWidth.toFloat())
-
-        heightSpring.cancel()
-        val currentHeight = windowParams?.height?.toFloat() ?: height.toFloat()
-        heightSpring.setStartValue(currentHeight)
-        heightSpring.animateToFinalPosition(collapsedHeight.toFloat())
-
-        // Fade out content
-        notificationContainer.animate().alpha(0f).setDuration(100).start()
-        musicContainer.animate().alpha(0f).setDuration(100).start()
     }
 }
