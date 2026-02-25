@@ -4,12 +4,15 @@ import android.app.Application
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.hardware.display.DisplayManager
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
+import android.view.Display
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.FrameLayout
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
@@ -17,69 +20,89 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 class MainHook : IXposedHookLoadPackage {
-
     private var islandInitialized = false
     private var windowManager: WindowManager? = null
-    private var headsUpManagerInstance: Any? = null
 
     private fun log(msg: String) {
-        XposedBridge.log("DynamicIsland: " + msg)
+        XposedBridge.log("DynamicIsland: $msg")
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         if (lpparam.packageName != "com.android.systemui") return
+        log("[LOAD] Hooking SystemUI package: ${lpparam.packageName}")
 
-        log("[LOAD] Hooking SystemUI package: " + lpparam.packageName)
-
-        // Hook Application.onCreate ONLY to set up early hooks or logging if needed.
+        // 1. Reliable UI Injection via SystemUIService
         try {
             XposedHelpers.findAndHookMethod(
-                Application::class.java,
+                "com.android.systemui.SystemUIService",
+                lpparam.classLoader,
                 "onCreate",
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
-                        log("[HOOK] Application.onCreate called")
-                        hookStatusBarViews(lpparam.classLoader)
+                        val serviceContext = param.thisObject as Context
+                        log("[HOOK] SystemUIService.onCreate triggered")
+
+                        // Delay injection to ensure the Display is fully awake
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            setupIsland(serviceContext)
+                        }, 3000)
                     }
                 }
             )
         } catch (e: Throwable) {
-            log("[ERROR] Failed to hook Application.onCreate: " + e)
+            log("[ERROR] Failed to hook SystemUIService: $e")
+
+            // Fallback to SystemUIApplication
+            try {
+                XposedHelpers.findAndHookMethod(
+                    "com.android.systemui.SystemUIApplication",
+                    lpparam.classLoader,
+                    "onCreate",
+                    object : XC_MethodHook() {
+                        override fun afterHookedMethod(param: MethodHookParam) {
+                            val appContext = param.thisObject as Context
+                            log("[HOOK] SystemUIApplication.onCreate triggered (Fallback)")
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                setupIsland(appContext)
+                            }, 3000)
+                        }
+                    }
+                )
+            } catch (e2: Throwable) {
+                log("[ERROR] Fallback hook failed: $e2")
+            }
         }
 
-        // Removed static hookHeadsUpManager call as we now hook the instance via hookStatusBarViews
+        // 2. Initialize Framework Notification Hooks
+        IslandController.hookFrameworkNotifications(lpparam)
 
-        // Fix 2: Generic Notification Hiding Hook (Replaces NUCLEAR GHOST FIX)
+        // 3. Resilient Notification Hiding Hook
         try {
             XposedHelpers.findAndHookMethod(
-                android.view.ViewGroup::class.java,
+                ViewGroup::class.java,
                 "addView",
-                android.view.View::class.java,
+                View::class.java,
                 Int::class.javaPrimitiveType,
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         try {
-                            val child = param.args[0] as android.view.View
+                            val child = param.args[0] as View
                             val className = child.javaClass.name
 
-                            // Target any view that looks like a notification row when Island is active
                             if (IslandController.isExpanding()) {
                                 if (className.contains("ExpandableNotificationRow") || className.contains("Notification")) {
                                     child.alpha = 0f
-                                    child.visibility = android.view.View.GONE
-                                    // Move it off-screen just in case
-                                    child.translationX = 9999f
+                                    child.visibility = View.GONE
+                                    // Removed translationX = 9999f to prevent renderer issues
                                 }
                             }
-                        } catch (e: Throwable) {
-                            // Ignore
-                        }
+                        } catch (e: Throwable) { }
                     }
                 }
             )
             log("[UI] SUCCESS: Applied resilient notification hiding hook")
         } catch (e: Throwable) {
-            log("[ERROR] Generic addView hook failed: " + e)
+            log("[ERROR] Generic addView hook failed: $e")
         }
     }
 
@@ -87,27 +110,26 @@ class MainHook : IXposedHookLoadPackage {
         if (islandInitialized) return
 
         try {
-            val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            // A15 requires a WindowContext tied to a Display
+            val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+            val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+            val windowContext = context.createDisplayContext(display).createWindowContext(
+                2015, null // TYPE_SECURE_SYSTEM_OVERLAY
+            )
+
+            val wm = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             windowManager = wm
 
-            // Read Settings.System
             var offsetY = 0
             try {
-                val cr = context.contentResolver
-                offsetY = Settings.System.getInt(cr, "redwood_island_y_offset", 0)
-            } catch (e: Throwable) {
-                // Ignore errors
-            }
+                offsetY = Settings.System.getInt(context.contentResolver, "redwood_island_y_offset", 0)
+            } catch (e: Throwable) {}
 
-            val islandView = DynamicIslandView(context)
+            val islandView = DynamicIslandView(windowContext)
             islandView.id = View.generateViewId()
 
-            // Configure WindowManager LayoutParams
-            // CRITICAL: TYPE_SECURE_SYSTEM_OVERLAY (2015) for Native SystemUI token bypass
             val params = WindowManager.LayoutParams(
-                120, // Force initial width for Poco X5 Pro cutout
-                120, // Force initial height
-                2015, // Native SystemUI Window Type
+                120, 120, 2015,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
@@ -117,105 +139,23 @@ class MainHook : IXposedHookLoadPackage {
                 PixelFormat.TRANSLUCENT
             )
 
-            // Center Gravity
             params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            params.y = offsetY // Use 'y' for top margin with Gravity.TOP
+            params.y = offsetY
 
-            // Handle Display Cutout Mode (Important for Overlay)
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                 params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
             }
 
-            // Pass WM reference to View
             islandView.windowManager = wm
             islandView.windowParams = params
 
-            // Add View to WindowManager
             wm.addView(islandView, params)
-
             islandInitialized = true
-            log("[UI] SUCCESS: Added Island (Overlay) via WindowManager")
+            log("[UI] SUCCESS: Added Island Overlay via WindowContext")
 
             IslandController.init(islandView)
-
         } catch (e: Throwable) {
-            log("[ERROR] setupIsland crashed: " + e)
-        }
-    }
-
-    private fun hookStatusBarViews(classLoader: ClassLoader) {
-        try {
-            // CRITICAL: Hook onAttachedToWindow to wait for physical display attachment
-             XposedHelpers.findAndHookMethod(
-                "com.android.systemui.statusbar.phone.PhoneStatusBarView",
-                classLoader,
-                "onAttachedToWindow",
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        val view = param.thisObject as ViewGroup
-                        log("[HOOK] PhoneStatusBarView attached to window")
-                        setupIsland(view.context) // Now has a valid, active display context
-                        findClock(view)
-                        findStatusIcons(view)
-
-                        // Attempt to find HeadsUpManager via reflection on the parent objects or Dependency
-                        try {
-                            // Try to retrieve HeadsUpManager from SystemUI's Dependency injection
-                            // Note: If "HeadsUpManager" string is obfuscated, this findClass might fail,
-                            // but the user instruction suggests Dependency might work if we find the interface key.
-                            // If this fails, we catch it.
-                            val headsUpManagerClass = XposedHelpers.findClass("com.android.systemui.statusbar.policy.HeadsUpManager", classLoader)
-                            val systemUiProxy = XposedHelpers.callStaticMethod(
-                                XposedHelpers.findClass("com.android.systemui.Dependency", classLoader),
-                                "get",
-                                headsUpManagerClass
-                            )
-                            if (systemUiProxy != null) {
-                                log("[HOOK] Found HeadsUpManager via Dependency Proxy")
-                                IslandController.hookHeadsUpManagerInstance(systemUiProxy, classLoader)
-                            }
-                        } catch (e: Throwable) {
-                            log("[WARN] Dependency lookup for HUN failed: " + e)
-                        }
-                    }
-                }
-            )
-        } catch (e: Throwable) {
-             log("[WARN] Failed to hook PhoneStatusBarView for finding icons: " + e)
-        }
-    }
-
-    private fun findClock(view: View) {
-        try {
-            val clsName = view.javaClass.name
-            if (clsName.contains("Clock") && !clsName.contains("Desupported")) {
-                log("[CLOCK] Found potential clock: " + clsName)
-                IslandController.setClock(view)
-            }
-            if (view is ViewGroup) {
-                for (i in 0 until view.childCount) {
-                    findClock(view.getChildAt(i))
-                }
-            }
-        } catch (e: Throwable) {
-             // Ignore
-        }
-    }
-
-    private fun findStatusIcons(view: View) {
-        try {
-            val clsName = view.javaClass.name
-            if (clsName == "com.android.systemui.statusbar.phone.StatusIconContainer") {
-                log("[STATUS_ICONS] Found StatusIconContainer")
-                IslandController.setStatusIcons(view)
-            }
-            if (view is ViewGroup) {
-                for (i in 0 until view.childCount) {
-                    findStatusIcons(view.getChildAt(i))
-                }
-            }
-        } catch (e: Throwable) {
-             // Ignore
+            log("[ERROR] setupIsland crashed: $e")
         }
     }
 }

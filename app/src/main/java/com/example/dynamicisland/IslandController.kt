@@ -207,41 +207,43 @@ object IslandController {
         }
     }
 
-    // Replaces static hookHeadsUpManager with instance-based hook
-    fun hookHeadsUpManagerInstance(instance: Any, classLoader: ClassLoader) {
+    fun hookFrameworkNotifications(lpparam: XC_LoadPackage.LoadPackageParam) {
         try {
-            // We hook the instance's class directly so we don't need the string name
-            XposedHelpers.findAndHookMethod(
-                instance.javaClass,
-                "showNotification",
-                "com.android.systemui.statusbar.notification.collection.NotificationEntry",
+            // Hook the framework's IPC wrapper. This CANNOT be obfuscated by custom ROMs!
+            val wrapperClass = XposedHelpers.findClass(
+                "android.service.notification.INotificationListener",
+                lpparam.classLoader
+            )
+
+            XposedBridge.hookAllMethods(
+                wrapperClass,
+                "onNotificationPosted",
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         try {
-                            val entry = param.args[0]
-                            val sbn = XposedHelpers.getObjectField(entry, "mSbn") as android.service.notification.StatusBarNotification
+                            // param.args[0] is an IStatusBarNotificationHolder in the framework
+                            val holder = param.args[0]
+                            val sbn = XposedHelpers.callMethod(holder, "get") as android.service.notification.StatusBarNotification
                             val notification = sbn.notification
-                            val extras = notification.extras
 
-                            val title = extras.getString(android.app.Notification.EXTRA_TITLE)
-                            val text = extras.getString(android.app.Notification.EXTRA_TEXT)
-                            val icon = notification.getLargeIcon() ?: notification.getSmallIcon()
-                            val contentIntent = notification.contentIntent
+                            // Filter out ongoing background services and group summaries
+                            if ((notification.flags and android.app.Notification.FLAG_ONGOING_EVENT) == 0) {
+                                val title = notification.extras.getString(android.app.Notification.EXTRA_TITLE)
+                                val text = notification.extras.getString(android.app.Notification.EXTRA_TEXT)
+                                val icon = notification.getLargeIcon() ?: notification.getSmallIcon()
 
-                            XposedBridge.log("DynamicIsland: [DIRECT] Showing notification: $title")
-                            onNotificationShow(title, text, icon, contentIntent)
-
-                            // Suppress the original Heads-Up display
-                            param.result = null
+                                XposedBridge.log("DynamicIsland: [NOTIF] Caught via Framework IPC: $title")
+                                onNotificationShow(title, text, icon, notification.contentIntent)
+                            }
                         } catch (e: Throwable) {
-                            XposedBridge.log("DynamicIsland: Error extracting entry: $e")
+                            XposedBridge.log("DynamicIsland: [ERROR] IPC extraction failed: $e")
                         }
                     }
                 }
             )
-            XposedBridge.log("DynamicIsland: [SUCCESS] Instance-based HUN hook applied")
+            XposedBridge.log("DynamicIsland: [SUCCESS] Framework IPC Notification hook applied")
         } catch (e: Throwable) {
-            XposedBridge.log("DynamicIsland: [ERROR] Failed to hook instance methods: $e")
+            XposedBridge.log("DynamicIsland: [FATAL] Framework IPC hook failed: $e")
         }
     }
 

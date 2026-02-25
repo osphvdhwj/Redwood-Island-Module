@@ -72,9 +72,9 @@ class DynamicIslandView @JvmOverloads constructor(
         backgroundDrawable.cornerRadius = cornerRadius
         background = backgroundDrawable
 
-        // Elevation WAR (Less critical for Overlay, but good practice)
-        this.elevation = 9999f
-        this.translationZ = 9999f
+        // Remove the 9999f hack to prevent 80000px shadow texture GPU crashes
+        this.elevation = 10f
+        this.translationZ = 10f
 
         // --- Notification Layout ---
         notificationContainer = LinearLayout(context)
