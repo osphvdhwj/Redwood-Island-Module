@@ -276,7 +276,8 @@ object IslandController {
                     onNotificationDismiss()
                 }
             }
-            island.postDelayed(dismissRunnable, 4000)
+            // Faster collapse time: Reduced from 4000 to 2000ms
+            island.postDelayed(dismissRunnable, 2000)
         }
     }
 

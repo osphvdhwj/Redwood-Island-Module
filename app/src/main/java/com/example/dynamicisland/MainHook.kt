@@ -113,8 +113,9 @@ class MainHook : IXposedHookLoadPackage {
             // A15 requires a WindowContext tied to a Display
             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+            // Changed to 2024 (TYPE_NAVIGATION_BAR_PANEL) to allow touch interactions
             val windowContext = context.createDisplayContext(display).createWindowContext(
-                2015, null // TYPE_SECURE_SYSTEM_OVERLAY
+                2024, null
             )
 
             val wm = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -129,13 +130,12 @@ class MainHook : IXposedHookLoadPackage {
             islandView.id = View.generateViewId()
 
             val params = WindowManager.LayoutParams(
-                120, 120, 2015,
+                120, 120, 2024, // TYPE_NAVIGATION_BAR_PANEL
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH, // FLAG_NOT_TOUCHABLE removed!
                 PixelFormat.TRANSLUCENT
             )
 
