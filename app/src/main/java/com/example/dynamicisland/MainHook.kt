@@ -67,7 +67,7 @@ class MainHook : IXposedHookLoadPackage {
                         // 500ms is usually enough for boot on modern devices like Poco X5 Pro.
                         Handler(Looper.getMainLooper()).postDelayed({
                             setupIsland(serviceContext)
-                        }, 500)
+                        }, 2000)
                     }
                 }
             )
@@ -116,10 +116,10 @@ class MainHook : IXposedHookLoadPackage {
             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
 
-            // Use TYPE_NAVIGATION_BAR_PANEL (2024) to allow touch interaction
+            // Use TYPE_NAVIGATION_BAR_PANEL (2017) to allow touch interaction
             // and correct Z-ordering above most system UI but below critical overlays.
             val windowContext = context.createDisplayContext(display).createWindowContext(
-                2024, null
+                2017, null
             )
 
             val wm = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -142,7 +142,7 @@ class MainHook : IXposedHookLoadPackage {
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT, // Allow dynamic width
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                2024, // TYPE_NAVIGATION_BAR_PANEL
+                2017, // TYPE_NAVIGATION_BAR_PANEL
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or

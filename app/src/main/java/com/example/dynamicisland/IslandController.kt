@@ -487,17 +487,15 @@ object IslandController {
     fun hookFrameworkNotifications(lpparam: XC_LoadPackage.LoadPackageParam) {
         try {
             val wrapperClass = XposedHelpers.findClass(
-                "android.service.notification.NotificationListenerService",
+                "android.service.notification.NotificationListenerService\$NotificationListenerWrapper",
                 lpparam.classLoader
             )
 
-            XposedHelpers.findAndHookMethod(wrapperClass, "onNotificationPosted",
-                android.service.notification.StatusBarNotification::class.java,
-                android.service.notification.NotificationListenerService.RankingMap::class.java,
-                object : XC_MethodHook() {
+            XposedBridge.hookAllMethods(wrapperClass, "onNotificationPosted", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     try {
-                        val sbn = param.args[0] as android.service.notification.StatusBarNotification
+                        val holder = param.args[0]
+                        val sbn = XposedHelpers.callMethod(holder, "get") as android.service.notification.StatusBarNotification
                         val notif = sbn.notification
 
                         // 1. Check for Live Activity Candidates first
