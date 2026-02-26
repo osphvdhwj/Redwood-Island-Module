@@ -1,6 +1,8 @@
 package com.example.dynamicisland
 
 import android.annotation.SuppressLint
+import android.app.PendingIntent
+import android.app.RemoteInput
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
@@ -19,8 +21,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -31,13 +40,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -47,12 +60,6 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Warning // Placeholder for pause
-// Note: Material Icons Extended dependency might be needed for SkipPrevious/Next/Pause.
-// I'll use standard drawable resources if Compose Icons aren't available, or simple text/shapes for now.
-// Actually, let's use Android R drawables for simplicity to avoid huge dependencies.
 
 // --- Lifecycle Wrapper for Xposed Compose Injection ---
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
@@ -76,6 +83,13 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
     }
 }
+
+// --- Data Models for Notifications ---
+data class NotificationActionModel(
+    val title: String,
+    val actionIntent: PendingIntent,
+    val remoteInputs: Array<RemoteInput>? // Standard Android RemoteInput
+)
 
 @SuppressLint("ViewConstructor")
 class DynamicIslandView(context: Context) : FrameLayout(context) {
@@ -101,7 +115,14 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     private val liveActivityState = mutableStateOf<LiveActivityData?>(null)
     private val chargingState = mutableStateOf<ChargingData?>(null)
 
-    data class NotificationData(val title: String, val text: String, val icon: Icon?)
+    data class NotificationData(
+        val title: String,
+        val text: String,
+        val icon: Icon?,
+        val category: String? = null,
+        val actions: List<NotificationActionModel> = emptyList()
+    )
+
     data class MusicData(
         val title: String,
         val artist: String,
@@ -124,9 +145,13 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     var onNextClick: (() -> Unit)? = null
     var onPlayPauseClick: (() -> Unit)? = null
 
+    // Notification Callbacks
+    var onActionClick: ((NotificationActionModel) -> Unit)? = null
+    var onReplySend: ((NotificationActionModel, String) -> Unit)? = null
+
     // Swipe Gestures
-    var onSwipeLeft: (() -> Unit)? = null  // Usually Next Track
-    var onSwipeRight: (() -> Unit)? = null // Usually Prev Track
+    var onSwipeLeft: (() -> Unit)? = null
+    var onSwipeRight: (() -> Unit)? = null
 
     private val lifecycleOwner = OverlayLifecycleOwner()
 
@@ -190,25 +215,29 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             IslandState.HIDDEN -> 24.dp
             IslandState.TYPE_1_MINI -> 40.dp
             IslandState.TYPE_2_MID -> 100.dp
-            IslandState.TYPE_3_MAX -> 260.dp
+            IslandState.TYPE_3_MAX -> 260.dp // Max height for notifications
         }
+
+        // Adjust height for Notification Reply (needs more space)
+        val notif = notificationState.value
+        val hasReply = notif?.actions?.any { !it.remoteInputs.isNullOrEmpty() } == true
+        val finalHeight = if (state == IslandState.TYPE_3_MAX && hasReply) 280.dp else targetHeight
 
         val width by animateDpAsState(
             targetValue = targetWidth,
             animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "width"
         )
         val height by animateDpAsState(
-            targetValue = targetHeight,
+            targetValue = finalHeight,
             animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "height"
         )
 
-        // Dynamic Color from Music Art takes priority if expanded/mini music is showing
+        val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
         val music = musicState.value
-        val defaultSurface = MaterialTheme.colorScheme.surfaceVariant
         val targetColor = if (music != null && state != IslandState.HIDDEN) {
-             Color(music.dominantColor).copy(alpha = 1f) // Ensure opaque background
+             Color(music.dominantColor).copy(alpha = 1f)
         } else {
-             defaultSurface
+             surfaceColor
         }
 
         val backgroundColor by animateColorAsState(
@@ -224,7 +253,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 .padding(top = 6.dp),
             contentAlignment = Alignment.TopCenter
         ) {
-            // The Pill Container
             Box(
                 modifier = Modifier
                     .width(width)
@@ -232,18 +260,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     .clip(RoundedCornerShape(cornerRadius))
                     .background(backgroundColor)
                     .pointerInput(Unit) {
-                        // Horizontal Drag Detection (Swipe)
                         detectHorizontalDragGestures { _, dragAmount ->
-                            if (dragAmount < -20) {
-                                onSwipeLeft?.invoke() // Dragging Left -> Next
-                            } else if (dragAmount > 20) {
-                                onSwipeRight?.invoke() // Dragging Right -> Prev
-                            }
+                            if (dragAmount < -20) onSwipeLeft?.invoke()
+                            else if (dragAmount > 20) onSwipeRight?.invoke()
                         }
                     }
                     .pointerInput(Unit) {
-                         // Separate Tap detection to avoid conflict?
-                         // Compose handles multiple pointerInputs well usually.
                         detectTapGestures(
                             onTap = { onSingleTap?.invoke() },
                             onDoubleTap = { onDoubleTap?.invoke() },
@@ -255,7 +277,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 if (state != IslandState.HIDDEN) {
                     when (state) {
                         IslandState.TYPE_1_MINI -> MiniContent()
-                        IslandState.TYPE_2_MID, IslandState.TYPE_3_MAX -> ExpandedContent()
+                        IslandState.TYPE_2_MID -> ExpandedContent() // MID state content
+                        IslandState.TYPE_3_MAX -> ExpandedContent() // MAX state content
                         else -> {}
                     }
                 }
@@ -279,13 +302,13 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 Spacer(Modifier.width(4.dp))
                  Box(Modifier.size(16.dp).background(Color(charging.color), RoundedCornerShape(4.dp)))
             } else if (music != null && music.isPlaying) {
-                 // Mini visualizer or art
                  if (music.art != null) {
                      Image(bitmap = music.art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(20.dp).clip(RoundedCornerShape(4.dp)))
                  } else {
                      Box(Modifier.size(16.dp).background(Color.Green, RoundedCornerShape(4.dp)))
                  }
             } else if (notif != null) {
+                 // Mini Notification Icon
                  Box(Modifier.size(16.dp).background(Color.Blue, RoundedCornerShape(4.dp)))
             }
         }
@@ -303,32 +326,20 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             verticalArrangement = Arrangement.Center
         ) {
             if (charging != null && charging.isCharging) {
+                // Charging UI
                 Text("Charging", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.DarkGray)
-                ) {
-                    WaveLoadingView(
-                        progress = charging.level / 100f,
-                        color = Color(charging.color),
-                        modifier = Modifier.fillMaxSize()
-                    )
+                Box(modifier = Modifier.size(60.dp).clip(RoundedCornerShape(12.dp)).background(Color.DarkGray)) {
+                    WaveLoadingView(progress = charging.level / 100f, color = Color(charging.color), modifier = Modifier.fillMaxSize())
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(text = "${charging.level}%", style = MaterialTheme.typography.headlineMedium, color = Color(charging.color))
 
             } else if (music != null) {
-                // Expanded Music Control UI
+                // Music UI
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (music.art != null) {
-                        Image(
-                            bitmap = music.art.asImageBitmap(),
-                            contentDescription = "Album Art",
-                            modifier = Modifier.size(50.dp).clip(RoundedCornerShape(8.dp))
-                        )
+                        Image(bitmap = music.art.asImageBitmap(), contentDescription = "Album Art", modifier = Modifier.size(50.dp).clip(RoundedCornerShape(8.dp)))
                     } else {
                         Box(Modifier.size(50.dp).background(Color.Gray, RoundedCornerShape(8.dp)))
                     }
@@ -338,44 +349,87 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                         Text(text = music.artist, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
-
                 Spacer(Modifier.height(16.dp))
-
-                // Controls Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Previous
-                    androidx.compose.material3.Icon(
-                        painter = painterResource(android.R.drawable.ic_media_previous),
-                        contentDescription = "Prev",
-                        modifier = Modifier.size(32.dp).clickable { onPrevClick?.invoke() },
-                        tint = Color.White
-                    )
-
-                    // Play/Pause
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_media_previous), contentDescription = "Prev", modifier = Modifier.size(32.dp).clickable { onPrevClick?.invoke() }, tint = Color.White)
                     val playIcon = if (music.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
-                    androidx.compose.material3.Icon(
-                        painter = painterResource(playIcon),
-                        contentDescription = "Play/Pause",
-                        modifier = Modifier.size(48.dp).clickable { onPlayPauseClick?.invoke() },
-                        tint = Color.White
-                    )
-
-                    // Next
-                    androidx.compose.material3.Icon(
-                        painter = painterResource(android.R.drawable.ic_media_next),
-                        contentDescription = "Next",
-                        modifier = Modifier.size(32.dp).clickable { onNextClick?.invoke() },
-                        tint = Color.White
-                    )
+                    androidx.compose.material3.Icon(painter = painterResource(playIcon), contentDescription = "Play/Pause", modifier = Modifier.size(48.dp).clickable { onPlayPauseClick?.invoke() }, tint = Color.White)
+                    androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_media_next), contentDescription = "Next", modifier = Modifier.size(32.dp).clickable { onNextClick?.invoke() }, tint = Color.White)
                 }
 
             } else if (notif != null) {
-                Text(text = notif.title, style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                Text(text = notif.text, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                // Notification UI
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Box(Modifier.size(32.dp).background(Color.Gray, CircleShape)) // Placeholder for Icon
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text(text = notif.title, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                        Text(text = notif.text, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    if (notif.category == android.app.Notification.CATEGORY_MESSAGE) {
+                        Spacer(Modifier.width(8.dp))
+                        androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.sym_action_chat), contentDescription = "Chat", tint = Color.Cyan, modifier = Modifier.size(16.dp))
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Actions & Replies
+                if (notif.actions.isNotEmpty()) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        notif.actions.forEach { action ->
+                            if (!action.remoteInputs.isNullOrEmpty()) {
+                                // Inline Reply Field
+                                var replyText by remember { mutableStateOf("") }
+                                Row(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(40.dp)
+                                        .background(Color.DarkGray, RoundedCornerShape(20.dp))
+                                        .padding(horizontal = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    BasicTextField(
+                                        value = replyText,
+                                        onValueChange = { replyText = it },
+                                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                                        modifier = Modifier.weight(1f),
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                                        keyboardActions = KeyboardActions(onSend = {
+                                            if (replyText.isNotEmpty()) {
+                                                onReplySend?.invoke(action, replyText)
+                                                replyText = ""
+                                            }
+                                        }),
+                                        decorationBox = { innerTextField ->
+                                            if (replyText.isEmpty()) Text("Reply...", color = Color.Gray, fontSize = 14.sp)
+                                            innerTextField()
+                                        }
+                                    )
+                                    IconButton(onClick = {
+                                        if (replyText.isNotEmpty()) {
+                                            onReplySend?.invoke(action, replyText)
+                                            replyText = ""
+                                        }
+                                    }) {
+                                        androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_menu_send), contentDescription = "Send", tint = Color.Cyan)
+                                    }
+                                }
+                            } else {
+                                // Standard Button
+                                Button(
+                                    onClick = { onActionClick?.invoke(action) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                    modifier = Modifier.height(36.dp)
+                                ) {
+                                    Text(action.title, fontSize = 12.sp, color = Color.White)
+                                }
+                            }
+                        }
+                    }
+                }
+
             } else {
                 Text("Dashboard", style = MaterialTheme.typography.titleMedium)
             }
@@ -416,22 +470,26 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     val isExpanded: Boolean get() = islandState.value == IslandState.TYPE_2_MID || islandState.value == IslandState.TYPE_3_MAX
 
     // Data Updates
-    fun updateNotificationInfo(title: String?, text: String?, icon: Icon?) {
-        notificationState.value = NotificationData(title ?: "", text ?: "", icon)
+    fun updateNotificationInfo(title: String?, text: String?, icon: Icon?, category: String?, actions: List<NotificationActionModel>) {
+        notificationState.value = NotificationData(
+            title ?: "",
+            text ?: "",
+            icon,
+            category,
+            actions
+        )
         musicState.value = null
         chargingState.value = null
     }
 
     fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?) {
-        // Extract dominant color if art is present
+        // Extract dominant color logic (same as before)
         var dominantColor = android.graphics.Color.DKGRAY
         if (art != null) {
             Palette.from(art).generate { palette ->
                 dominantColor = palette?.getVibrantColor(
                     palette.getDominantColor(android.graphics.Color.DKGRAY)
                 ) ?: android.graphics.Color.DKGRAY
-
-                // Update State inside extraction callback to ensure color is ready
                 updateMusicStateInternal(title, artist, art, dominantColor)
             }
         } else {

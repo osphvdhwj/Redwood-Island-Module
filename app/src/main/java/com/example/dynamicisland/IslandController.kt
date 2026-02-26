@@ -1,8 +1,9 @@
 package com.example.dynamicisland
 
 import android.app.PendingIntent
-import android.content.ComponentName
+import android.app.RemoteInput
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
@@ -11,6 +12,7 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import de.robv.android.xposed.XC_MethodHook
@@ -50,7 +52,7 @@ object IslandController {
 
     private val progressUpdater = object : Runnable {
         override fun run() {
-            if (!isScreenOn) return // Stop updating if screen is off
+            if (!isScreenOn) return
 
             val controller = currentController ?: return
             val state = controller.playbackState
@@ -93,17 +95,9 @@ object IslandController {
                     DynamicIslandView.IslandState.HIDDEN -> showMini()
                     DynamicIslandView.IslandState.TYPE_1_MINI -> expand()
                     DynamicIslandView.IslandState.TYPE_2_MID -> {
-                        if (currentController != null) {
-                             // Maybe launch app? For now, collapse.
-                             collapse()
-                        } else if (currentNotificationIntent != null) {
-                            try {
-                                currentNotificationIntent?.send()
-                                collapse()
-                            } catch (e: Exception) {}
-                        } else {
-                            collapse()
-                        }
+                        // If it's a notification, just collapse for now unless we want to launch
+                        // If it's music, we might want to launch app
+                        collapse()
                     }
                     DynamicIslandView.IslandState.TYPE_3_MAX -> collapse()
                 }
@@ -125,7 +119,6 @@ object IslandController {
              showDashboard()
         }
 
-        // --- Music Control Callbacks ---
         view.onPrevClick = {
             currentController?.transportControls?.skipToPrevious()
         }
@@ -143,16 +136,63 @@ object IslandController {
             }
         }
 
-        // --- Swipe Callbacks (Mapped to Prev/Next) ---
         view.onSwipeLeft = {
-            // Swipe Left -> Next Track (Logical direction)
-            currentController?.transportControls?.skipToNext()
+            if (isNotificationShowing(view)) {
+                dismissNotification()
+            } else {
+                currentController?.transportControls?.skipToNext()
+            }
         }
 
         view.onSwipeRight = {
-            // Swipe Right -> Prev Track
-            currentController?.transportControls?.skipToPrevious()
+            if (isNotificationShowing(view)) {
+                dismissNotification()
+            } else {
+                currentController?.transportControls?.skipToPrevious()
+            }
         }
+
+        // --- Notification Action Callbacks ---
+        view.onActionClick = { actionModel ->
+            try {
+                actionModel.actionIntent.send()
+                collapse()
+            } catch (e: Exception) {
+                XposedBridge.log("DynamicIsland: Failed to send action: $e")
+            }
+        }
+
+        view.onReplySend = { actionModel, replyText ->
+            val island = islandViewRef?.get()
+            if (island != null && actionModel.remoteInputs != null) {
+                try {
+                    val intent = Intent().addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+                    val bundle = Bundle()
+                    // Assuming first input is the text input usually
+                    val remoteInput = actionModel.remoteInputs.firstOrNull()
+                    if (remoteInput != null) {
+                        bundle.putCharSequence(remoteInput.resultKey, replyText)
+                        RemoteInput.addResultsToIntent(actionModel.remoteInputs, intent, bundle)
+                        actionModel.actionIntent.send(island.context, 0, intent)
+                        collapse()
+                    }
+                } catch (e: Exception) {
+                    XposedBridge.log("DynamicIsland: Failed to send reply: $e")
+                }
+            }
+        }
+    }
+
+    private fun isNotificationShowing(view: DynamicIslandView): Boolean {
+        // Simple check: if not playing music and expanded/mini, likely a notification
+        // Better: Check internal state mapping in View (which we don't strictly expose yet efficiently)
+        // For now, assume if music is NULL, it's a notification
+        return currentController?.playbackState?.state != PlaybackState.STATE_PLAYING
+    }
+
+    private fun dismissNotification() {
+        currentNotificationIntent = null
+        collapse()
     }
 
     fun isExpanding(): Boolean = isExpanding
@@ -176,7 +216,6 @@ object IslandController {
         }
     }
 
-    // --- Live Activities API ---
     fun postLiveActivity(activity: LiveActivityModel) {
         activeLiveActivity = activity
         val island = islandViewRef?.get() ?: return
@@ -194,7 +233,6 @@ object IslandController {
     fun removeLiveActivity(id: String) {
         if (activeLiveActivity?.id == id) {
             activeLiveActivity = null
-
             val state = currentController?.playbackState?.state
             if (state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING) {
                 updateMetadata(currentController?.metadata)
@@ -265,9 +303,12 @@ object IslandController {
                             val text = notif.extras.getString(android.app.Notification.EXTRA_TEXT)
                             val icon = notif.getLargeIcon() ?: notif.getSmallIcon()
 
+                            val actions = notif.actions
+                            val category = notif.category
+
                             val island = islandViewRef?.get()
                             if (island != null) {
-                                onNotificationShow(title, text, icon, notif.contentIntent, island.context)
+                                onNotificationShow(title, text, icon, notif.contentIntent, category, actions, island.context)
                             }
                         }
                     } catch (e: Throwable) {
@@ -281,7 +322,15 @@ object IslandController {
         }
     }
 
-    private fun onNotificationShow(title: String?, text: String?, icon: Icon?, contentIntent: PendingIntent?, context: Context) {
+    private fun onNotificationShow(
+        title: String?,
+        text: String?,
+        icon: Icon?,
+        contentIntent: PendingIntent?,
+        category: String?,
+        actions: Array<android.app.Notification.Action>?,
+        context: Context
+    ) {
         if (!isScreenOn) return
         val island = islandViewRef?.get() ?: return
 
@@ -300,18 +349,29 @@ object IslandController {
             }
         } catch (e: Exception) {}
 
+        // Map actions to model
+        val actionModels = actions?.map { action ->
+            NotificationActionModel(
+                title = action.title.toString(),
+                actionIntent = action.actionIntent,
+                remoteInputs = action.remoteInputs
+            )
+        } ?: emptyList()
+
         island.post {
             island.setContextGlow(bitmap)
-            island.updateNotificationInfo(title, text, icon)
+            island.updateNotificationInfo(title, text, icon, category, actionModels)
             expand()
 
             dismissRunnable?.let { island.removeCallbacks(it) }
             dismissRunnable = Runnable {
+                // Don't auto-dismiss if user might be typing? (Compose handles focus state internally mostly)
+                // We'll rely on simple timeout for now.
                 if (activeLiveActivity == null && currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
                     collapse()
                 }
             }
-            island.postDelayed(dismissRunnable, 4000)
+            island.postDelayed(dismissRunnable, 5000)
         }
     }
 
@@ -319,7 +379,7 @@ object IslandController {
     private fun setupMediaListener(context: Context) {
         try {
             mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
-            val componentName = ComponentName(context, "com.android.systemui.SystemUIService")
+            val componentName = android.content.ComponentName(context, "com.android.systemui.SystemUIService")
             mediaSessionManager?.addOnActiveSessionsChangedListener(sessionsListener, componentName)
             val controllers = mediaSessionManager?.getActiveSessions(componentName)
             updateActiveController(controllers)
