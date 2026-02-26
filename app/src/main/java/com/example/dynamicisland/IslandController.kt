@@ -76,11 +76,19 @@ object IslandController {
                      island.updateChargingInfo(level, isCharging, color)
                      if (isCharging && island.islandState.value == DynamicIslandView.IslandState.HIDDEN) {
                          expand()
+                         // Auto collapse after 3 seconds if charging
                          progressHandler.postDelayed({
                              if (island.islandState.value == DynamicIslandView.IslandState.TYPE_2_MID) {
                                  collapse()
                              }
                          }, 3000)
+                     } else if (!isCharging) {
+                         // Immediate update on disconnect
+                         // If we were showing charging info, this will clear it.
+                         // If expanded only for charging, collapse immediately.
+                         if (island.islandState.value == DynamicIslandView.IslandState.TYPE_2_MID && activeLiveActivity == null && currentController == null) {
+                             collapse()
+                         }
                      }
                  }
              }
@@ -94,11 +102,7 @@ object IslandController {
                 when (island.islandState.value) {
                     DynamicIslandView.IslandState.HIDDEN -> showMini()
                     DynamicIslandView.IslandState.TYPE_1_MINI -> expand()
-                    DynamicIslandView.IslandState.TYPE_2_MID -> {
-                        // If it's a notification, just collapse for now unless we want to launch
-                        // If it's music, we might want to launch app
-                        collapse()
-                    }
+                    DynamicIslandView.IslandState.TYPE_2_MID -> collapse()
                     DynamicIslandView.IslandState.TYPE_3_MAX -> collapse()
                 }
             }
@@ -168,7 +172,6 @@ object IslandController {
                 try {
                     val intent = Intent().addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
                     val bundle = Bundle()
-                    // Assuming first input is the text input usually
                     val remoteInput = actionModel.remoteInputs.firstOrNull()
                     if (remoteInput != null) {
                         bundle.putCharSequence(remoteInput.resultKey, replyText)
@@ -184,9 +187,6 @@ object IslandController {
     }
 
     private fun isNotificationShowing(view: DynamicIslandView): Boolean {
-        // Simple check: if not playing music and expanded/mini, likely a notification
-        // Better: Check internal state mapping in View (which we don't strictly expose yet efficiently)
-        // For now, assume if music is NULL, it's a notification
         return currentController?.playbackState?.state != PlaybackState.STATE_PLAYING
     }
 
@@ -338,16 +338,19 @@ object IslandController {
 
         var bitmap: Bitmap? = null
         try {
+            // FIX: Try loadDrawable first, convert to Bitmap
             val drawable = icon?.loadDrawable(context)
             if (drawable is BitmapDrawable) {
                 bitmap = drawable.bitmap
             } else if (drawable != null) {
-                bitmap = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
+                bitmap = Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bitmap)
                 drawable.setBounds(0, 0, canvas.width, canvas.height)
                 drawable.draw(canvas)
             }
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            XposedBridge.log("DynamicIsland: Failed to load icon: $e")
+        }
 
         // Map actions to model
         val actionModels = actions?.map { action ->
@@ -365,8 +368,6 @@ object IslandController {
 
             dismissRunnable?.let { island.removeCallbacks(it) }
             dismissRunnable = Runnable {
-                // Don't auto-dismiss if user might be typing? (Compose handles focus state internally mostly)
-                // We'll rely on simple timeout for now.
                 if (activeLiveActivity == null && currentController?.playbackState?.state != PlaybackState.STATE_PLAYING) {
                     collapse()
                 }

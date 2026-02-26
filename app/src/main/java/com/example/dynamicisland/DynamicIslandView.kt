@@ -17,6 +17,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -198,30 +199,32 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     // --- Compose UI ---
     @Composable
     fun DynamicIslandTheme(context: Context, content: @Composable () -> Unit) {
+        // Use Dynamic Colors (Material You)
         val colorScheme = dynamicDarkColorScheme(context)
         MaterialTheme(colorScheme = colorScheme, content = content)
     }
 
     @Composable
     fun IslandUI(state: IslandState) {
+        // Updated Dimensions: Wider pills, not taller
         val targetWidth = when (state) {
             IslandState.HIDDEN -> 24.dp
             IslandState.TYPE_1_MINI -> 110.dp
-            IslandState.TYPE_2_MID -> 240.dp
-            IslandState.TYPE_3_MAX -> 260.dp
+            IslandState.TYPE_2_MID -> 300.dp // Wider (was 240)
+            IslandState.TYPE_3_MAX -> 340.dp // Wider (was 260)
         }
 
         val targetHeight = when (state) {
             IslandState.HIDDEN -> 24.dp
-            IslandState.TYPE_1_MINI -> 40.dp
-            IslandState.TYPE_2_MID -> 100.dp
-            IslandState.TYPE_3_MAX -> 260.dp // Max height for notifications
+            IslandState.TYPE_1_MINI -> 36.dp // Slightly shorter
+            IslandState.TYPE_2_MID -> 80.dp  // Shorter (was 100)
+            IslandState.TYPE_3_MAX -> 180.dp // Shorter (was 260)
         }
 
         // Adjust height for Notification Reply (needs more space)
         val notif = notificationState.value
         val hasReply = notif?.actions?.any { !it.remoteInputs.isNullOrEmpty() } == true
-        val finalHeight = if (state == IslandState.TYPE_3_MAX && hasReply) 280.dp else targetHeight
+        val finalHeight = if (state == IslandState.TYPE_3_MAX && hasReply) 220.dp else targetHeight
 
         val width by animateDpAsState(
             targetValue = targetWidth,
@@ -232,8 +235,9 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "height"
         )
 
-        val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
+        // Dynamic Color logic
         val music = musicState.value
+        val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
         val targetColor = if (music != null && state != IslandState.HIDDEN) {
              Color(music.dominantColor).copy(alpha = 1f)
         } else {
@@ -250,15 +254,18 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 6.dp),
+                .padding(top = 40.dp), // Increased top padding to sit BELOW Status Bar
             contentAlignment = Alignment.TopCenter
         ) {
+            // The Pill Container
             Box(
                 modifier = Modifier
                     .width(width)
                     .height(height)
                     .clip(RoundedCornerShape(cornerRadius))
                     .background(backgroundColor)
+                    // If HIDDEN, draw a stroked circle ring if desired
+                    .then(if (state == IslandState.HIDDEN) Modifier.border(1.dp, Color.Gray.copy(alpha=0.5f), CircleShape) else Modifier)
                     .pointerInput(Unit) {
                         detectHorizontalDragGestures { _, dragAmount ->
                             if (dragAmount < -20) onSwipeLeft?.invoke()
@@ -277,8 +284,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 if (state != IslandState.HIDDEN) {
                     when (state) {
                         IslandState.TYPE_1_MINI -> MiniContent()
-                        IslandState.TYPE_2_MID -> ExpandedContent() // MID state content
-                        IslandState.TYPE_3_MAX -> ExpandedContent() // MAX state content
+                        IslandState.TYPE_2_MID -> ExpandedContent()
+                        IslandState.TYPE_3_MAX -> ExpandedContent()
                         else -> {}
                     }
                 }
@@ -308,8 +315,13 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                      Box(Modifier.size(16.dp).background(Color.Green, RoundedCornerShape(4.dp)))
                  }
             } else if (notif != null) {
-                 // Mini Notification Icon
-                 Box(Modifier.size(16.dp).background(Color.Blue, RoundedCornerShape(4.dp)))
+                 // Use extracted Icon
+                 if (notif.icon != null) {
+                     // Need to load drawable, but for now placeholder or generic
+                     Box(Modifier.size(16.dp).background(Color.Blue, RoundedCornerShape(4.dp)))
+                 } else {
+                     Box(Modifier.size(16.dp).background(Color.Blue, RoundedCornerShape(4.dp)))
+                 }
             }
         }
     }
@@ -326,7 +338,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             verticalArrangement = Arrangement.Center
         ) {
             if (charging != null && charging.isCharging) {
-                // Charging UI
                 Text("Charging", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
                 Box(modifier = Modifier.size(60.dp).clip(RoundedCornerShape(12.dp)).background(Color.DarkGray)) {
@@ -336,10 +347,13 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 Text(text = "${charging.level}%", style = MaterialTheme.typography.headlineMedium, color = Color(charging.color))
 
             } else if (music != null) {
-                // Music UI
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (music.art != null) {
-                        Image(bitmap = music.art.asImageBitmap(), contentDescription = "Album Art", modifier = Modifier.size(50.dp).clip(RoundedCornerShape(8.dp)))
+                        Image(
+                            bitmap = music.art.asImageBitmap(),
+                            contentDescription = "Album Art",
+                            modifier = Modifier.size(50.dp).clip(RoundedCornerShape(8.dp))
+                        )
                     } else {
                         Box(Modifier.size(50.dp).background(Color.Gray, RoundedCornerShape(8.dp)))
                     }
@@ -358,9 +372,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 }
 
             } else if (notif != null) {
-                // Notification UI
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Box(Modifier.size(32.dp).background(Color.Gray, CircleShape)) // Placeholder for Icon
+                    Box(Modifier.size(32.dp).background(Color.Gray, CircleShape))
                     Spacer(Modifier.width(8.dp))
                     Column {
                         Text(text = notif.title, style = MaterialTheme.typography.titleMedium, maxLines = 1)
@@ -374,12 +387,10 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
                 Spacer(Modifier.height(12.dp))
 
-                // Actions & Replies
                 if (notif.actions.isNotEmpty()) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         notif.actions.forEach { action ->
                             if (!action.remoteInputs.isNullOrEmpty()) {
-                                // Inline Reply Field
                                 var replyText by remember { mutableStateOf("") }
                                 Row(
                                     modifier = Modifier
@@ -416,7 +427,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                                     }
                                 }
                             } else {
-                                // Standard Button
                                 Button(
                                     onClick = { onActionClick?.invoke(action) },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
@@ -483,7 +493,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     }
 
     fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?) {
-        // Extract dominant color logic (same as before)
         var dominantColor = android.graphics.Color.DKGRAY
         if (art != null) {
             Palette.from(art).generate { palette ->
