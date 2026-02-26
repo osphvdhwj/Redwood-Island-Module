@@ -1,7 +1,10 @@
 package com.example.dynamicisland
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.os.Handler
@@ -38,6 +41,10 @@ class MainHook : IXposedHookLoadPackage {
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         val serviceContext = param.thisObject as Context
+
+                        // Register Screen State Receiver
+                        registerScreenReceiver(serviceContext)
+
                         Handler(Looper.getMainLooper()).postDelayed({
                             setupIsland(serviceContext)
                         }, 2000)
@@ -67,6 +74,38 @@ class MainHook : IXposedHookLoadPackage {
             log("[UI] SUCCESS: Native System Heads-Up Notifications Suppressed")
         } catch (e: Throwable) {
             log("[WARN] Native HUN suppression hook failed (might be different on this crDroid version): $e")
+        }
+    }
+
+    private fun registerScreenReceiver(context: Context) {
+        try {
+            val receiver = object : BroadcastReceiver() {
+                override fun onReceive(ctx: Context, intent: Intent) {
+                    when (intent.action) {
+                        Intent.ACTION_SCREEN_OFF -> {
+                            log("[SCREEN] OFF")
+                            IslandController.onScreenStateChanged(false)
+                        }
+                        Intent.ACTION_SCREEN_ON -> {
+                            log("[SCREEN] ON")
+                            IslandController.onScreenStateChanged(true)
+                        }
+                        Intent.ACTION_USER_PRESENT -> {
+                            // Can be used for unlock events if needed
+                        }
+                    }
+                }
+            }
+
+            val filter = IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_OFF)
+                addAction(Intent.ACTION_SCREEN_ON)
+                addAction(Intent.ACTION_USER_PRESENT)
+            }
+            context.registerReceiver(receiver, filter)
+            log("[SYSTEM] Screen Receiver Registered")
+        } catch (e: Throwable) {
+            log("[ERROR] Failed to register screen receiver: $e")
         }
     }
 

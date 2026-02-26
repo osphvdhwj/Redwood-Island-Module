@@ -31,6 +31,7 @@ object IslandController {
     private var activeLiveActivity: LiveActivityModel? = null
 
     private var isExpanding = false
+    private var isScreenOn = true
 
     // Media Callback
     private val mediaCallback = object : MediaController.Callback() {
@@ -49,6 +50,8 @@ object IslandController {
 
     private val progressUpdater = object : Runnable {
         override fun run() {
+            if (!isScreenOn) return // Stop updating if screen is off
+
             val controller = currentController ?: return
             val state = controller.playbackState
             if (state != null && (state.state == PlaybackState.STATE_PLAYING || state.state == PlaybackState.STATE_BUFFERING)) {
@@ -118,6 +121,28 @@ object IslandController {
 
     fun isExpanding(): Boolean = isExpanding
 
+    fun onScreenStateChanged(isOn: Boolean) {
+        isScreenOn = isOn
+        val island = islandViewRef?.get() ?: return
+
+        // Notify View
+        island.post {
+            island.updateScreenState(isOn)
+        }
+
+        if (isOn) {
+            // Resume updates if playing
+            val state = currentController?.playbackState
+            if (state?.state == PlaybackState.STATE_PLAYING) {
+                progressHandler.removeCallbacks(progressUpdater)
+                progressHandler.post(progressUpdater)
+            }
+        } else {
+            // Stop updates
+            progressHandler.removeCallbacks(progressUpdater)
+        }
+    }
+
     // --- Live Activities API ---
     fun postLiveActivity(activity: LiveActivityModel) {
         activeLiveActivity = activity
@@ -147,11 +172,13 @@ object IslandController {
     }
 
     fun showDashboard() {
+        if (!isScreenOn) return
         isExpanding = true
         islandViewRef?.get()?.showDashboard()
     }
 
     fun expand() {
+        if (!isScreenOn) return
         isExpanding = true
         islandViewRef?.get()?.expand()
 
@@ -163,6 +190,7 @@ object IslandController {
     }
 
     fun showMini() {
+        if (!isScreenOn) return
         isExpanding = false
         islandViewRef?.get()?.showMini()
     }
@@ -226,6 +254,7 @@ object IslandController {
     }
 
     private fun onNotificationShow(title: String?, text: String?, icon: Icon?, contentIntent: PendingIntent?, context: Context) {
+        if (!isScreenOn) return
         val island = islandViewRef?.get() ?: return
 
         currentNotificationIntent = contentIntent
@@ -313,8 +342,10 @@ object IslandController {
                 if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) {
                     showMini()
                 }
-                progressHandler.removeCallbacks(progressUpdater)
-                progressHandler.post(progressUpdater)
+                if (isScreenOn) {
+                    progressHandler.removeCallbacks(progressUpdater)
+                    progressHandler.post(progressUpdater)
+                }
             } else {
                  progressHandler.removeCallbacks(progressUpdater)
 

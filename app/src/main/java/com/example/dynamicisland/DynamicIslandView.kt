@@ -2,6 +2,7 @@ package com.example.dynamicisland
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.drawable.Icon
 import android.os.Bundle
@@ -49,6 +50,14 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
     }
+
+    fun pause() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+    }
+
+    fun resume() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+    }
 }
 
 @SuppressLint("ViewConstructor")
@@ -66,6 +75,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     // Observable states for Compose
     val islandState = mutableStateOf(IslandState.HIDDEN)
+    val isScreenOn = mutableStateOf(true)
+    val isLandscape = mutableStateOf(false)
 
     // Data States
     private val notificationState = mutableStateOf<NotificationData?>(null)
@@ -81,20 +92,57 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     var onDoubleTap: (() -> Unit)? = null
     var onLongPress: (() -> Unit)? = null
 
+    private val lifecycleOwner = OverlayLifecycleOwner()
+
     init {
-        val lifecycleOwner = OverlayLifecycleOwner()
         setViewTreeLifecycleOwner(lifecycleOwner)
         setViewTreeSavedStateRegistryOwner(lifecycleOwner)
 
         val composeView = ComposeView(context).apply {
             setContent {
                 DynamicIslandTheme(context) {
-                    IslandUI(islandState.value)
+                    // Only render UI if Screen is ON and NOT in Landscape (unless specialized landscape support added later)
+                    if (isScreenOn.value && !isLandscape.value) {
+                        IslandUI(islandState.value)
+                    } else {
+                        // When hidden due to screen off or landscape, keep minimal placeholder or nothing?
+                        // If we render nothing, touches might fail?
+                        // Let's render Hidden state equivalent to keep touch target if needed,
+                        // but generally in landscape we might want to hide completely.
+                        // For now, let's just use Hidden UI to keep structure consistent.
+                        IslandUI(IslandState.HIDDEN)
+                    }
                 }
             }
         }
         addView(composeView)
         lifecycleOwner.start()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration?) {
+        super.onConfigurationChanged(newConfig)
+        newConfig?.let {
+            val landscape = it.orientation == Configuration.ORIENTATION_LANDSCAPE
+            if (isLandscape.value != landscape) {
+                isLandscape.value = landscape
+                // If moving to landscape, force collapse/hide visual elements immediately
+                if (landscape) {
+                    // Maybe we want to be completely gone or just small?
+                    // For now, let's rely on the Compose check above to render HIDDEN state.
+                }
+            }
+        }
+    }
+
+    fun updateScreenState(isOn: Boolean) {
+        if (isScreenOn.value != isOn) {
+            isScreenOn.value = isOn
+            if (isOn) {
+                lifecycleOwner.resume()
+            } else {
+                lifecycleOwner.pause()
+            }
+        }
     }
 
     // --- Compose UI ---
@@ -108,23 +156,15 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     @Composable
     fun IslandUI(state: IslandState) {
         // Size mappings (approx 1 cm = 63 dp)
-        // Type 1 (Mini): 1.5-2 cm Width (~94-126 dp) -> ~110.dp
-        // Type 1 (Mini): 0.5-0.8 cm Height (~31-50 dp) -> ~40.dp
-
-        // Type 2 (Mid): 3.6-4.2 cm Width (~226-264 dp) -> ~240.dp
-        // Type 2 (Mid): 1.4-2 cm Height (~88-126 dp) -> ~100.dp
-
-        // Type 3 (Max): 4x4 cm - 4.5x4.5 cm (~252-283 dp) -> ~260.dp sq
-
         val targetWidth = when (state) {
-            IslandState.HIDDEN -> 24.dp      // Camera punch-hole size
+            IslandState.HIDDEN -> 24.dp
             IslandState.TYPE_1_MINI -> 110.dp
             IslandState.TYPE_2_MID -> 240.dp
             IslandState.TYPE_3_MAX -> 260.dp
         }
 
         val targetHeight = when (state) {
-            IslandState.HIDDEN -> 24.dp      // Camera punch-hole size
+            IslandState.HIDDEN -> 24.dp
             IslandState.TYPE_1_MINI -> 40.dp
             IslandState.TYPE_2_MID -> 100.dp
             IslandState.TYPE_3_MAX -> 260.dp
@@ -141,21 +181,19 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         )
 
         // Color Transitions
-        // When Hidden: Transparent circle (invisible but touchable)
-        // When Active: Use Dynamic You (Material You) Surface Variant
         val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
         val backgroundColor by animateColorAsState(
             targetValue = if (state == IslandState.HIDDEN) Color.Transparent else surfaceColor,
             animationSpec = spring(stiffness = Spring.StiffnessLow), label = "color"
         )
 
-        // Corner Radius: 40-45 dp as requested
+        // Corner Radius
         val cornerRadius = 42.dp
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 6.dp), // Adjust for status bar/cutout alignment
+                .padding(top = 6.dp),
             contentAlignment = Alignment.TopCenter
         ) {
             // The Pill Container
@@ -235,10 +273,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
         val wp = windowParams ?: return
         if (newState == IslandState.HIDDEN) {
-            // When hidden, we allow touches to pass through EXCEPT on our view itself?
-            // Actually, if we are completely transparent but want to intercept touches on the "hole",
-            // we should NOT use FLAG_NOT_TOUCHABLE.
-            // We use FLAG_NOT_TOUCH_MODAL so outside touches work.
             wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
         } else {
             wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL.inv()
