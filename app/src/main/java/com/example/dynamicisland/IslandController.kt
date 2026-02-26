@@ -487,7 +487,7 @@ object IslandController {
     fun hookFrameworkNotifications(lpparam: XC_LoadPackage.LoadPackageParam) {
         try {
             val wrapperClass = XposedHelpers.findClass(
-                "android.service.notification.INotificationListener",
+                "android.service.notification.NotificationListenerService\$NotificationListenerWrapper",
                 lpparam.classLoader
             )
 
