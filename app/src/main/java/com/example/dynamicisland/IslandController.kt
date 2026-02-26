@@ -53,12 +53,15 @@ object IslandController {
         override fun run() {
             val island = islandViewRef?.get()
             val state = currentController?.playbackState
+            val isPlaying = state?.state == PlaybackState.STATE_PLAYING
 
-            // Only update if expanded and playing
-            if (island != null && island.isExpanded && state != null &&
-               (state.state == PlaybackState.STATE_PLAYING)) {
-                val currentPosition = state.position
-                island.updateMusicProgress(currentPosition, mediaDuration)
+            if (island != null && island.state != DynamicIslandView.IslandState.HIDDEN && isPlaying) {
+                if (island.state == DynamicIslandView.IslandState.MINI && activeLiveActivity != null) {
+                    // Skip
+                } else {
+                    val currentPosition = state?.position ?: 0L
+                    island.updateMusicProgress(currentPosition, mediaDuration)
+                }
                 progressHandler.postDelayed(this, 1000)
             }
         }
@@ -110,7 +113,11 @@ object IslandController {
         view.onGestureListener = { action ->
             when (action) {
                 DynamicIslandView.GestureAction.SINGLE_TAP -> {
-                    if (view.isExpanded) collapse() else expand()
+                    when (view.state) {
+                         DynamicIslandView.IslandState.HIDDEN -> showMini()
+                         DynamicIslandView.IslandState.MINI -> expand()
+                         DynamicIslandView.IslandState.EXPANDED -> collapse()
+                    }
                 }
                 DynamicIslandView.GestureAction.DOUBLE_TAP -> {
                     if (currentController != null) {
@@ -129,7 +136,13 @@ object IslandController {
                     togglePerformanceMonitor() // NEW: Long press toggles monitor
                 }
                 DynamicIslandView.GestureAction.SWIPE_DOWN -> expand()
-                DynamicIslandView.GestureAction.SWIPE_UP -> forceHide()
+                DynamicIslandView.GestureAction.SWIPE_UP -> {
+                    if (view.state == DynamicIslandView.IslandState.MINI) {
+                        forceHide()
+                    } else {
+                        collapse()
+                    }
+                }
                 DynamicIslandView.GestureAction.SWIPE_LEFT -> handleSwipe(isRight = false)
                 DynamicIslandView.GestureAction.SWIPE_RIGHT -> handleSwipe(isRight = true)
             }
@@ -137,7 +150,9 @@ object IslandController {
 
         // Default click listener (fallback)
         view.setOnClickListener {
-             if (view.isExpanded) collapse() else expand()
+             if (view.state == DynamicIslandView.IslandState.HIDDEN) showMini()
+             else if (view.state == DynamicIslandView.IslandState.MINI) expand()
+             else collapse()
         }
     }
 
@@ -290,9 +305,8 @@ object IslandController {
 
     fun forceHide() {
         val island = islandViewRef?.get() ?: return
-        collapse()
-        island.setContextGlow(null) // Remove border tint
-        island.animate().translationY(-300f).setDuration(300).start() // Slide off screen
+        island.hide()
+        island.setContextGlow(null)
     }
 
     // --- Live Activities API ---
@@ -302,10 +316,10 @@ object IslandController {
 
         island.post {
             island.updateLiveActivity(activity.title, activity.dataText, activity.progress, activity.accentColor)
+            island.updateMiniPillContent(activity.title + ": " + activity.dataText, null, activity.accentColor)
 
-            // ONLY expand if not already expanded.
-            if (!island.isExpanded) {
-                expand()
+            if (island.state == DynamicIslandView.IslandState.HIDDEN) {
+                showMini()
             }
         }
     }
@@ -313,6 +327,12 @@ object IslandController {
     fun removeLiveActivity(id: String) {
         if (activeLiveActivity?.id == id) {
             activeLiveActivity = null
+
+            val state = currentController?.playbackState?.state
+            if (state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING) {
+                updateMetadata(currentController?.metadata)
+            }
+
             collapse()
         }
     }
@@ -329,6 +349,11 @@ object IslandController {
              progressHandler.removeCallbacks(progressUpdater)
              progressHandler.post(progressUpdater)
         }
+    }
+
+    fun showMini() {
+        isExpanding = false
+        islandViewRef?.get()?.showMini()
     }
 
     fun collapse() {
@@ -468,8 +493,8 @@ object IslandController {
         island.post {
             island.updatePlayPauseState(isPlaying)
             if (isPlaying) {
-                if (!island.isExpanded) {
-                    expand()
+                if (island.state == DynamicIslandView.IslandState.HIDDEN) {
+                    showMini()
                 }
                 progressHandler.removeCallbacks(progressUpdater)
                 progressHandler.post(progressUpdater)
@@ -502,6 +527,10 @@ object IslandController {
             island.updateMusicInfo(title, artist, albumArt)
             val pos = currentController?.playbackState?.position ?: 0L
             island.updateMusicProgress(pos, mediaDuration)
+
+            activeLiveActivity?.let { activity ->
+                 island.updateMiniPillContent(activity.title + ": " + activity.dataText, null, activity.accentColor)
+            }
         }
     }
 }

@@ -35,11 +35,17 @@ class DynamicIslandView @JvmOverloads constructor(
     private val notificationContainer: LinearLayout
     private val musicContainer: LinearLayout
     private val liveActivityContainer: LinearLayout
+    private val miniPillContainer: LinearLayout
 
     // Notification Elements
     private val iconView: ImageView
     private val titleView: TextView
     private val messageView: TextView
+
+    // Mini Pill Elements
+    private val miniThumb: ImageView
+    private val miniTitle: TextView
+    private val miniProgress: ProgressBar
 
     // Live Activity Elements
     private val liveTitleView: TextView
@@ -58,13 +64,20 @@ class DynamicIslandView @JvmOverloads constructor(
     private val musicProgressBar: ProgressBar
 
     // Scaled Dimensions
-    var collapsedWidth = 0
-    var collapsedHeight = 0
+    var miniWidth = 0
+    var miniHeight = 0
+    var hiddenWidth = 0
+    var hiddenHeight = 0
     var expandedWidth = 0
     var expandedHeight = 0
 
-    var isExpanded = false
+    enum class IslandState { HIDDEN, MINI, EXPANDED }
+    var state = IslandState.HIDDEN
         private set
+
+    // Alias for compatibility
+    val isExpanded: Boolean
+        get() = state == IslandState.EXPANDED
 
     private var cornerRadius = 0f
 
@@ -80,9 +93,11 @@ class DynamicIslandView @JvmOverloads constructor(
     }
 
     init {
-        // Optimized Dimensions for Poco X5 Pro
-        collapsedWidth = dpToPx(108)
-        collapsedHeight = dpToPx(34)
+        // Optimized Dimensions
+        miniWidth = dpToPx(125) // ~2cm
+        miniHeight = dpToPx(45) // ~0.8cm
+        hiddenWidth = dpToPx(108) // Placeholder, will be updated by insets
+        hiddenHeight = dpToPx(34)
         expandedWidth = dpToPx(350)
         expandedHeight = dpToPx(146)
 
@@ -284,9 +299,54 @@ class DynamicIslandView @JvmOverloads constructor(
         liveActivityContainer.addView(liveDataView)
         liveActivityContainer.addView(liveProgress)
 
+        // --- Mini Pill Layout ---
+        miniPillContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            alpha = 0f
+            visibility = View.GONE
+            setPadding(dpToPx(8), 0, dpToPx(8), 0)
+        }
+
+        miniThumb = ImageView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(dpToPx(24), dpToPx(24))
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            clipToOutline = true
+            outlineProvider = ViewOutlineProvider.BACKGROUND
+            background = GradientDrawable().apply { cornerRadius = dpToPx(12).toFloat(); setColor(Color.DKGRAY) }
+        }
+
+        miniTitle = TextView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
+                leftMargin = dpToPx(8)
+                rightMargin = dpToPx(8)
+            }
+            setTextColor(Color.WHITE)
+            textSize = 12f
+            typeface = systemFont
+            isSingleLine = true
+            ellipsize = android.text.TextUtils.TruncateAt.MARQUEE
+            isSelected = true // For marquee
+        }
+
+        miniPillContainer.addView(miniThumb)
+        miniPillContainer.addView(miniTitle)
+
+        miniProgress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+            layoutParams = FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, dpToPx(2), Gravity.BOTTOM).apply {
+                leftMargin = dpToPx(12)
+                rightMargin = dpToPx(12)
+                bottomMargin = dpToPx(4)
+            }
+            progressDrawable.colorFilter = BlendModeColorFilter(Color.WHITE, BlendMode.SRC_IN)
+            visibility = View.GONE
+        }
+
         addView(notificationContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(musicContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(liveActivityContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(miniPillContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(miniProgress)
 
         // --- Animations ---
         widthSpring = SpringAnimation(FloatValueHolder(0f)).apply {
@@ -328,17 +388,24 @@ class DynamicIslandView @JvmOverloads constructor(
                  val cutoutHeight = rect.height()
 
                  if (cutoutHeight > 0) {
-                     val minHeight = dpToPx(34)
-                     collapsedHeight = max(minHeight, cutoutHeight)
-                     collapsedWidth = dpToPx(108)
+                     hiddenHeight = max(dpToPx(34), cutoutHeight)
+                     hiddenWidth = max(dpToPx(108), rect.width() + dpToPx(20))
 
-                     cornerRadius = collapsedHeight / 2f
-                     backgroundDrawable.cornerRadius = cornerRadius
+                     // Update Mini Height if cutout is huge
+                     if (miniHeight < hiddenHeight) miniHeight = hiddenHeight
                  }
 
                  post {
-                     if (!isExpanded) {
-                         updateWindowLayout(collapsedWidth, collapsedHeight, safeTop)
+                     if (state == IslandState.HIDDEN) {
+                         cornerRadius = hiddenHeight / 2f
+                         backgroundDrawable.cornerRadius = cornerRadius
+                         updateWindowLayout(hiddenWidth, hiddenHeight, safeTop)
+                         backgroundDrawable.setColor(Color.TRANSPARENT)
+                     } else if (state == IslandState.MINI) {
+                         cornerRadius = miniHeight / 2f
+                         backgroundDrawable.cornerRadius = cornerRadius
+                         updateWindowLayout(miniWidth, miniHeight, safeTop)
+                         backgroundDrawable.setColor(Color.BLACK)
                      }
                  }
              }
@@ -347,8 +414,8 @@ class DynamicIslandView @JvmOverloads constructor(
     }
 
     fun expand() {
-        if (isExpanded) return
-        isExpanded = true
+        if (state == IslandState.EXPANDED) return
+        state = IslandState.EXPANDED
 
         backgroundDrawable.setColor(Color.BLACK)
         backgroundDrawable.setStroke(0, 0)
@@ -369,11 +436,18 @@ class DynamicIslandView @JvmOverloads constructor(
         val currentHeight = windowParams?.height?.toFloat() ?: height.toFloat()
         heightSpring.setStartValue(currentHeight)
         heightSpring.animateToFinalPosition(expandedHeight.toFloat())
+
+        // Hide mini elements
+        miniPillContainer.animate().alpha(0f).duration = 150
+        miniProgress.visibility = View.GONE
     }
 
-    fun collapse() {
-        if (!isExpanded) return
-        isExpanded = false
+    fun showMini() {
+        if (state == IslandState.MINI) return
+        state = IslandState.MINI
+
+        backgroundDrawable.setColor(Color.BLACK)
+        backgroundDrawable.setStroke(0, 0)
 
         val wp = windowParams
         if (wp != null && windowManager != null) {
@@ -385,15 +459,40 @@ class DynamicIslandView @JvmOverloads constructor(
         widthSpring.cancel()
         val currentWidth = windowParams?.width?.toFloat() ?: width.toFloat()
         widthSpring.setStartValue(currentWidth)
-        widthSpring.animateToFinalPosition(collapsedWidth.toFloat())
+        widthSpring.animateToFinalPosition(miniWidth.toFloat())
 
         heightSpring.cancel()
         val currentHeight = windowParams?.height?.toFloat() ?: height.toFloat()
         heightSpring.setStartValue(currentHeight)
-        heightSpring.animateToFinalPosition(collapsedHeight.toFloat())
+        heightSpring.animateToFinalPosition(miniHeight.toFloat())
+
+        // Hide expanded elements
+        notificationContainer.animate().alpha(0f).setDuration(150).withEndAction { notificationContainer.visibility = View.GONE }
+        musicContainer.animate().alpha(0f).setDuration(150).withEndAction { musicContainer.visibility = View.GONE }
+        liveActivityContainer.animate().alpha(0f).setDuration(150).withEndAction { liveActivityContainer.visibility = View.GONE }
+
+        // Show mini elements
+        miniPillContainer.visibility = View.VISIBLE
+        miniPillContainer.animate().alpha(1f).duration = 300
+        miniProgress.visibility = View.VISIBLE
+    }
+
+    fun hide() {
+        if (state == IslandState.HIDDEN) return
+        state = IslandState.HIDDEN
+
+        widthSpring.cancel()
+        val currentWidth = windowParams?.width?.toFloat() ?: width.toFloat()
+        widthSpring.setStartValue(currentWidth)
+        widthSpring.animateToFinalPosition(hiddenWidth.toFloat())
+
+        heightSpring.cancel()
+        val currentHeight = windowParams?.height?.toFloat() ?: height.toFloat()
+        heightSpring.setStartValue(currentHeight)
+        heightSpring.animateToFinalPosition(hiddenHeight.toFloat())
 
         postDelayed({
-            if (!isExpanded) {
+            if (state == IslandState.HIDDEN) {
                 backgroundDrawable.setColor(Color.TRANSPARENT)
                 backgroundDrawable.setStroke(0, 0)
             }
@@ -402,6 +501,13 @@ class DynamicIslandView @JvmOverloads constructor(
         notificationContainer.animate().alpha(0f).setDuration(150).withEndAction { notificationContainer.visibility = View.GONE }
         musicContainer.animate().alpha(0f).setDuration(150).withEndAction { musicContainer.visibility = View.GONE }
         liveActivityContainer.animate().alpha(0f).setDuration(150).withEndAction { liveActivityContainer.visibility = View.GONE }
+        miniPillContainer.animate().alpha(0f).setDuration(150).withEndAction { miniPillContainer.visibility = View.GONE }
+        miniProgress.visibility = View.GONE
+    }
+
+    // Alias for controller compatibility (will be deprecated/replaced)
+    fun collapse() {
+        showMini()
     }
 
     private fun updateWindowLayout(width: Int? = null, height: Int? = null, topMarginOverride: Int? = null) {
@@ -450,13 +556,18 @@ class DynamicIslandView @JvmOverloads constructor(
     }
 
     fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?) {
+        // Expanded View Update
         musicTitle.text = title ?: "Unknown"
         musicArtist.text = artist ?: "Unknown"
         if (art != null) {
             albumArtView.setImageBitmap(art)
+            miniThumb.setImageBitmap(art) // Update Mini Thumb
         } else {
             albumArtView.setImageResource(android.R.drawable.ic_menu_gallery)
+            miniThumb.setImageResource(android.R.drawable.ic_menu_gallery)
         }
+
+        miniTitle.text = (title ?: "Unknown") + " • " + (artist ?: "")
 
         notificationContainer.visibility = View.GONE
         liveActivityContainer.visibility = View.GONE
@@ -477,6 +588,7 @@ class DynamicIslandView @JvmOverloads constructor(
 
         val progressPercent = ((positionMs.toFloat() / durationMs.toFloat()) * 1000).toInt()
         musicProgressBar.progress = progressPercent
+        miniProgress.progress = progressPercent // Update Mini Progress
 
         musicCurrentTime.text = formatTime(positionMs)
         musicTotalTime.text = formatTime(durationMs)
@@ -511,7 +623,7 @@ class DynamicIslandView @JvmOverloads constructor(
         if (bitmap != null) {
             Palette.from(bitmap).generate { palette ->
                 val color = palette?.getVibrantColor(Color.DKGRAY) ?: Color.DKGRAY
-                if (isExpanded) {
+                if (state != IslandState.HIDDEN) {
                     backgroundDrawable.setStroke(dpToPx(1), color)
                 } else {
                     backgroundDrawable.setStroke(0, 0)
@@ -520,5 +632,11 @@ class DynamicIslandView @JvmOverloads constructor(
         } else {
             backgroundDrawable.setStroke(0, 0)
         }
+    }
+
+    fun updateMiniPillContent(title: String, icon: Icon?, color: Int) {
+        miniTitle.text = title
+        icon?.loadDrawable(context)?.let { miniThumb.setImageDrawable(it) }
+        miniProgress.progressDrawable.colorFilter = BlendModeColorFilter(color, BlendMode.SRC_IN)
     }
 }
