@@ -66,6 +66,30 @@ object IslandController {
         islandViewRef = WeakReference(view)
         setupMediaListener(view.context)
 
+        // Initialize Battery Plugin
+        BatteryPlugin.onBatteryChanged = { level, isCharging, color ->
+             val island = islandViewRef?.get()
+             if (island != null) {
+                 island.post {
+                     island.updateChargingInfo(level, isCharging, color)
+
+                     // If plugged in (charging started) and not already expanded, expand briefly to show status
+                     if (isCharging && island.islandState.value == DynamicIslandView.IslandState.HIDDEN) {
+                         // Show Mini or Expanded based on preference
+                         expand()
+
+                         // Auto collapse after 3 seconds if it was just a status update
+                         progressHandler.postDelayed({
+                             if (island.islandState.value == DynamicIslandView.IslandState.TYPE_2_MID) { // Only if still just showing charging
+                                 collapse()
+                             }
+                         }, 3000)
+                     }
+                 }
+             }
+        }
+        BatteryPlugin.start(view.context)
+
         // Handle Taps on the Camera Hole / Pill
         view.onSingleTap = {
             val island = islandViewRef?.get()

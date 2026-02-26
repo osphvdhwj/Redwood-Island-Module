@@ -12,6 +12,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -20,14 +21,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -36,6 +43,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import kotlin.math.sin
 
 // --- Lifecycle Wrapper for Xposed Compose Injection ---
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
@@ -82,10 +90,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     private val notificationState = mutableStateOf<NotificationData?>(null)
     private val musicState = mutableStateOf<MusicData?>(null)
     private val liveActivityState = mutableStateOf<LiveActivityData?>(null)
+    private val chargingState = mutableStateOf<ChargingData?>(null)
 
     data class NotificationData(val title: String, val text: String, val icon: Icon?)
     data class MusicData(val title: String, val artist: String, val art: Bitmap?, val isPlaying: Boolean, val progress: Float, val duration: Long)
     data class LiveActivityData(val title: String, val data: String, val progress: Float?, val color: Int)
+    data class ChargingData(val level: Int, val isCharging: Boolean, val color: Int)
 
     // Gesture Callbacks for IslandController
     var onSingleTap: (() -> Unit)? = null
@@ -101,15 +111,9 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         val composeView = ComposeView(context).apply {
             setContent {
                 DynamicIslandTheme(context) {
-                    // Only render UI if Screen is ON and NOT in Landscape (unless specialized landscape support added later)
                     if (isScreenOn.value && !isLandscape.value) {
                         IslandUI(islandState.value)
                     } else {
-                        // When hidden due to screen off or landscape, keep minimal placeholder or nothing?
-                        // If we render nothing, touches might fail?
-                        // Let's render Hidden state equivalent to keep touch target if needed,
-                        // but generally in landscape we might want to hide completely.
-                        // For now, let's just use Hidden UI to keep structure consistent.
                         IslandUI(IslandState.HIDDEN)
                     }
                 }
@@ -125,11 +129,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             val landscape = it.orientation == Configuration.ORIENTATION_LANDSCAPE
             if (isLandscape.value != landscape) {
                 isLandscape.value = landscape
-                // If moving to landscape, force collapse/hide visual elements immediately
-                if (landscape) {
-                    // Maybe we want to be completely gone or just small?
-                    // For now, let's rely on the Compose check above to render HIDDEN state.
-                }
             }
         }
     }
@@ -148,14 +147,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     // --- Compose UI ---
     @Composable
     fun DynamicIslandTheme(context: Context, content: @Composable () -> Unit) {
-        // Dynamic Material You Colors
         val colorScheme = dynamicDarkColorScheme(context)
         MaterialTheme(colorScheme = colorScheme, content = content)
     }
 
     @Composable
     fun IslandUI(state: IslandState) {
-        // Size mappings (approx 1 cm = 63 dp)
         val targetWidth = when (state) {
             IslandState.HIDDEN -> 24.dp
             IslandState.TYPE_1_MINI -> 110.dp
@@ -170,7 +167,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             IslandState.TYPE_3_MAX -> 260.dp
         }
 
-        // Animated Dimensions
         val width by animateDpAsState(
             targetValue = targetWidth,
             animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "width"
@@ -180,14 +176,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "height"
         )
 
-        // Color Transitions
         val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
         val backgroundColor by animateColorAsState(
             targetValue = if (state == IslandState.HIDDEN) Color.Transparent else surfaceColor,
             animationSpec = spring(stiffness = Spring.StiffnessLow), label = "color"
         )
 
-        // Corner Radius
         val cornerRadius = 42.dp
 
         Box(
@@ -212,7 +206,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     },
                 contentAlignment = Alignment.Center
             ) {
-                // Content Rendering (Only when not hidden)
                 if (state != IslandState.HIDDEN) {
                     when (state) {
                         IslandState.TYPE_1_MINI -> MiniContent()
@@ -226,20 +219,24 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     @Composable
     fun MiniContent() {
-        // Priority: Live Activity > Music > Notification
         val music = musicState.value
         val notif = notificationState.value
+        val charging = chargingState.value
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.padding(horizontal = 8.dp)
         ) {
-            if (music != null && music.isPlaying) {
-                 // Mini Music Visualizer (Fake)
+            if (charging != null && charging.isCharging) {
+                // Charging Icon / Wave
+                Text(text = "${charging.level}%", style = MaterialTheme.typography.labelSmall, color = Color(charging.color))
+                Spacer(Modifier.width(4.dp))
+                // Simple Charging Icon Placeholder
+                 Box(Modifier.size(16.dp).background(Color(charging.color), RoundedCornerShape(4.dp)))
+            } else if (music != null && music.isPlaying) {
                  Box(Modifier.size(16.dp).background(Color.Green, RoundedCornerShape(4.dp)))
             } else if (notif != null) {
-                 // Mini Icon
                  Box(Modifier.size(16.dp).background(Color.Blue, RoundedCornerShape(4.dp)))
             }
         }
@@ -249,13 +246,35 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     fun ExpandedContent() {
         val music = musicState.value
         val notif = notificationState.value
+        val charging = chargingState.value
 
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            if (music != null) {
+            if (charging != null && charging.isCharging) {
+                Text("Charging", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(8.dp))
+
+                // Big Wave / Fill Animation
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.DarkGray)
+                ) {
+                    WaveLoadingView(
+                        progress = charging.level / 100f,
+                        color = Color(charging.color),
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                Spacer(Modifier.height(8.dp))
+                Text(text = "${charging.level}%", style = MaterialTheme.typography.headlineMedium, color = Color(charging.color))
+
+            } else if (music != null) {
                 Text(text = music.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(text = music.artist, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             } else if (notif != null) {
@@ -267,10 +286,24 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         }
     }
 
+    @Composable
+    fun WaveLoadingView(progress: Float, color: Color, modifier: Modifier = Modifier) {
+        val infiniteTransition = rememberInfiniteTransition(label = "wave")
+        // Basic static fill for now to ensure stability, can add complex wave later
+        // Just fill height based on progress
+        Canvas(modifier = modifier) {
+            val fillHeight = size.height * progress
+            drawRect(
+                color = color,
+                topLeft = Offset(0f, size.height - fillHeight),
+                size = Size(size.width, fillHeight)
+            )
+        }
+    }
+
     // --- Controller API ---
     fun setState(newState: IslandState) {
         islandState.value = newState
-
         val wp = windowParams ?: return
         if (newState == IslandState.HIDDEN) {
             wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
@@ -293,7 +326,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     // Data Updates
     fun updateNotificationInfo(title: String?, text: String?, icon: Icon?) {
         notificationState.value = NotificationData(title ?: "", text ?: "", icon)
-        musicState.value = null // Clear music priority
+        musicState.value = null
+        chargingState.value = null
     }
 
     fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?) {
@@ -301,6 +335,17 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         musicState.value = current?.copy(title = title ?: "", artist = artist ?: "", art = art)
             ?: MusicData(title ?: "", artist ?: "", art, false, 0f, 0L)
         notificationState.value = null
+        chargingState.value = null
+    }
+
+    fun updateChargingInfo(level: Int, isCharging: Boolean, color: Int) {
+        if (isCharging) {
+            chargingState.value = ChargingData(level, isCharging, color)
+            // Priority: Charging > Music > Notif (Briefly show charging when plugged in?)
+            // Usually we show it only when status changes.
+        } else {
+            chargingState.value = null
+        }
     }
 
     fun updatePlayPauseState(isPlaying: Boolean) {
@@ -318,11 +363,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         liveActivityState.value = LiveActivityData(title, data, progress, color)
     }
 
-    fun setContextGlow(bitmap: Bitmap?) {
-        // Implement glow logic if needed
-    }
+    fun setContextGlow(bitmap: Bitmap?) { }
 
-    fun updateMiniPillContent(title: String, icon: Icon?, color: Int) {
-         // Update mini state
-    }
+    fun updateMiniPillContent(title: String, icon: Icon?, color: Int) { }
 }
