@@ -11,7 +11,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -24,14 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -40,8 +35,6 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-// Note: accompanist might not be available, I will use a simple Bitmap converter or AndroidView if needed.
-// Actually, let's stick to standard Compose. I'll load drawable to bitmap if needed or use AndroidView for Icons.
 
 // --- Lifecycle Wrapper for Xposed Compose Injection ---
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
@@ -85,6 +78,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     // Gesture Callbacks for IslandController
     var onSingleTap: (() -> Unit)? = null
+    var onDoubleTap: (() -> Unit)? = null
     var onLongPress: (() -> Unit)? = null
 
     init {
@@ -113,19 +107,27 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     @Composable
     fun IslandUI(state: IslandState) {
-        // Size mappings (1 cm is roughly 63 dp)
+        // Size mappings (approx 1 cm = 63 dp)
+        // Type 1 (Mini): 1.5-2 cm Width (~94-126 dp) -> ~110.dp
+        // Type 1 (Mini): 0.5-0.8 cm Height (~31-50 dp) -> ~40.dp
+
+        // Type 2 (Mid): 3.6-4.2 cm Width (~226-264 dp) -> ~240.dp
+        // Type 2 (Mid): 1.4-2 cm Height (~88-126 dp) -> ~100.dp
+
+        // Type 3 (Max): 4x4 cm - 4.5x4.5 cm (~252-283 dp) -> ~260.dp sq
+
         val targetWidth = when (state) {
-            IslandState.HIDDEN -> 24.dp
-            IslandState.TYPE_1_MINI -> 120.dp
+            IslandState.HIDDEN -> 24.dp      // Camera punch-hole size
+            IslandState.TYPE_1_MINI -> 110.dp
             IslandState.TYPE_2_MID -> 240.dp
-            IslandState.TYPE_3_MAX -> 300.dp
+            IslandState.TYPE_3_MAX -> 260.dp
         }
 
         val targetHeight = when (state) {
-            IslandState.HIDDEN -> 24.dp
-            IslandState.TYPE_1_MINI -> 36.dp
+            IslandState.HIDDEN -> 24.dp      // Camera punch-hole size
+            IslandState.TYPE_1_MINI -> 40.dp
             IslandState.TYPE_2_MID -> 100.dp
-            IslandState.TYPE_3_MAX -> 200.dp
+            IslandState.TYPE_3_MAX -> 260.dp
         }
 
         // Animated Dimensions
@@ -139,11 +141,16 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         )
 
         // Color Transitions
+        // When Hidden: Transparent circle (invisible but touchable)
+        // When Active: Use Dynamic You (Material You) Surface Variant
         val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
         val backgroundColor by animateColorAsState(
             targetValue = if (state == IslandState.HIDDEN) Color.Transparent else surfaceColor,
             animationSpec = spring(stiffness = Spring.StiffnessLow), label = "color"
         )
+
+        // Corner Radius: 40-45 dp as requested
+        val cornerRadius = 42.dp
 
         Box(
             modifier = Modifier
@@ -156,17 +163,18 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 modifier = Modifier
                     .width(width)
                     .height(height)
-                    .clip(RoundedCornerShape(42.dp))
+                    .clip(RoundedCornerShape(cornerRadius))
                     .background(backgroundColor)
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onTap = { onSingleTap?.invoke() },
+                            onDoubleTap = { onDoubleTap?.invoke() },
                             onLongPress = { onLongPress?.invoke() }
                         )
                     },
                 contentAlignment = Alignment.Center
             ) {
-                // Content Rendering
+                // Content Rendering (Only when not hidden)
                 if (state != IslandState.HIDDEN) {
                     when (state) {
                         IslandState.TYPE_1_MINI -> MiniContent()
@@ -194,7 +202,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                  Box(Modifier.size(16.dp).background(Color.Green, RoundedCornerShape(4.dp)))
             } else if (notif != null) {
                  // Mini Icon
-                 // Use a placeholder or load drawable
                  Box(Modifier.size(16.dp).background(Color.Blue, RoundedCornerShape(4.dp)))
             }
         }
@@ -213,7 +220,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             if (music != null) {
                 Text(text = music.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(text = music.artist, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                // Controls would go here
             } else if (notif != null) {
                 Text(text = notif.title, style = MaterialTheme.typography.titleMedium, maxLines = 1)
                 Text(text = notif.text, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -229,6 +235,10 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
         val wp = windowParams ?: return
         if (newState == IslandState.HIDDEN) {
+            // When hidden, we allow touches to pass through EXCEPT on our view itself?
+            // Actually, if we are completely transparent but want to intercept touches on the "hole",
+            // we should NOT use FLAG_NOT_TOUCHABLE.
+            // We use FLAG_NOT_TOUCH_MODAL so outside touches work.
             wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
         } else {
             wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL.inv()
@@ -275,7 +285,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     }
 
     fun setContextGlow(bitmap: Bitmap?) {
-        // Implement glow logic if needed, or ignore for now
+        // Implement glow logic if needed
     }
 
     fun updateMiniPillContent(title: String, icon: Icon?, color: Int) {

@@ -68,13 +68,15 @@ object IslandController {
             val island = islandViewRef?.get()
             if (island != null) {
                 when (island.islandState.value) {
+                    // Single Tap on Hidden -> Show Mini (Peek)
                     DynamicIslandView.IslandState.HIDDEN -> showMini()
+                    // Single Tap on Mini -> Expand to Mid
                     DynamicIslandView.IslandState.TYPE_1_MINI -> expand()
+                    // Single Tap on Mid -> Collapse or Action
                     DynamicIslandView.IslandState.TYPE_2_MID -> {
                         // Launch intent if available (Music or Notification)
                         if (currentController != null) {
                              // Try to launch music app?
-                             // For now, collapse.
                              collapse()
                         } else if (currentNotificationIntent != null) {
                             try {
@@ -85,16 +87,31 @@ object IslandController {
                             collapse()
                         }
                     }
+                    // Single Tap on Max -> Collapse
                     DynamicIslandView.IslandState.TYPE_3_MAX -> collapse()
+                }
+            }
+        }
+
+        view.onDoubleTap = {
+            val island = islandViewRef?.get()
+            if (island != null) {
+                // Double tap logic - for now, just log or maybe toggle flashlight if we had access?
+                // Let's make Double Tap on Hidden -> Expand to Mid immediately (Quick Access)
+                if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) {
+                     expand()
+                } else {
+                    // Double tap while open -> Close completely
+                    forceHide()
                 }
             }
         }
 
         view.onLongPress = {
             val island = islandViewRef?.get()
-            if (island != null && island.islandState.value == DynamicIslandView.IslandState.HIDDEN) {
-                // Invisible Punch Hole Long-Pressed!
-                showDashboard()
+            if (island != null) {
+                 // Long Press -> Show Dashboard (Max)
+                 showDashboard()
             }
         }
     }
@@ -155,6 +172,12 @@ object IslandController {
         islandViewRef?.get()?.collapse()
 
         // Stop Progress Tracking
+        progressHandler.removeCallbacks(progressUpdater)
+    }
+
+    fun forceHide() {
+        isExpanding = false
+        islandViewRef?.get()?.hide()
         progressHandler.removeCallbacks(progressUpdater)
     }
 
