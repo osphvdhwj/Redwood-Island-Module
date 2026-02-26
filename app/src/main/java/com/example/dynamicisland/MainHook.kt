@@ -1,10 +1,7 @@
 package com.example.dynamicisland
 
 import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.os.Handler
@@ -12,7 +9,6 @@ import android.os.Looper
 import android.view.Display
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
 import android.view.WindowManager
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
@@ -33,7 +29,7 @@ class MainHook : IXposedHookLoadPackage {
         if (lpparam.packageName != "com.android.systemui") return
         log("[LOAD] Hooking SystemUI package: ${lpparam.packageName}")
 
-        // 1. Reliable UI Injection via SystemUIService (Standard for A12+)
+        // 1. UI Injection
         try {
             XposedHelpers.findAndHookMethod(
                 "com.android.systemui.SystemUIService",
@@ -42,29 +38,6 @@ class MainHook : IXposedHookLoadPackage {
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         val serviceContext = param.thisObject as Context
-                        log("[HOOK] SystemUIService.onCreate triggered")
-
-                        // Register Broadcast Receiver for settings reload
-                        try {
-                            val receiver = object : BroadcastReceiver() {
-                                override fun onReceive(context: Context?, intent: Intent?) {
-                                    if (intent?.action == "com.example.dynamicisland.RELOAD_SETTINGS") {
-                                        log("[SETTINGS] Reload requested")
-                                        reloadSettings(serviceContext)
-                                    }
-                                }
-                            }
-
-                            val filter = IntentFilter("com.example.dynamicisland.RELOAD_SETTINGS")
-                            // Android 14+ requires explicit export flag.
-                            // Using Context.RECEIVER_EXPORTED (0x2) for inter-app communication.
-                            serviceContext.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
-                        } catch (e: Throwable) {
-                            log("[WARN] Failed to register settings receiver: $e")
-                        }
-
-                        // Use a layout listener or just a small delay to ensure display is ready.
-                        // 500ms is usually enough for boot on modern devices like Poco X5 Pro.
                         Handler(Looper.getMainLooper()).postDelayed({
                             setupIsland(serviceContext)
                         }, 2000)
@@ -75,35 +48,25 @@ class MainHook : IXposedHookLoadPackage {
             log("[ERROR] Failed to hook SystemUIService: $e")
         }
 
-        // 2. Initialize Framework Notification Hooks
+        // 2. Initialize Island Framework Hooks (Reads the notification data)
         IslandController.hookFrameworkNotifications(lpparam)
 
-        // 3. Resilient Notification Hiding Hook
+        // 3. NEW: Native Heads-Up Notification Suppression
         try {
-            XposedHelpers.findAndHookMethod(
-                ViewGroup::class.java,
-                "addView",
-                View::class.java,
-                Int::class.javaPrimitiveType,
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        try {
-                            val child = param.args[0] as View
-                            val className = child.javaClass.name
-
-                            if (IslandController.isExpanding()) {
-                                if (className.contains("ExpandableNotificationRow") || className.contains("Notification")) {
-                                    child.alpha = 0f
-                                    child.visibility = View.GONE
-                                }
-                            }
-                        } catch (e: Throwable) { }
-                    }
-                }
+            val interruptStateProviderClass = XposedHelpers.findClass(
+                "com.android.systemui.statusbar.notification.interruption.NotificationInterruptStateProviderImpl",
+                lpparam.classLoader
             )
-            log("[UI] SUCCESS: Applied resilient notification hiding hook")
+
+            XposedBridge.hookAllMethods(interruptStateProviderClass, "shouldHeadsUp", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    // Suppress the system heads-up entirely so the Island can take over
+                    param.result = false
+                }
+            })
+            log("[UI] SUCCESS: Native System Heads-Up Notifications Suppressed")
         } catch (e: Throwable) {
-            log("[ERROR] Generic addView hook failed: $e")
+            log("[WARN] Native HUN suppression hook failed (might be different on this crDroid version): $e")
         }
     }
 
@@ -112,37 +75,21 @@ class MainHook : IXposedHookLoadPackage {
         if (islandInitialized) return
 
         try {
-            // Android 15 requires a WindowContext tied to a Display
             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
-
-            // Use TYPE_NAVIGATION_BAR_PANEL (2017) to allow touch interaction
-            // and correct Z-ordering above most system UI but below critical overlays.
-            val windowContext = context.createDisplayContext(display).createWindowContext(
-                2017, null
-            )
+            // Use TYPE_STATUS_BAR_SUB_PANEL (2017)
+            val windowContext = context.createDisplayContext(display).createWindowContext(2017, null)
 
             val wm = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             windowManager = wm
-
-            // Initial load of settings
-            var offsetY = 0
-            try {
-                // Use XSharedPreferences to read from the app's prefs file
-                val prefs = de.robv.android.xposed.XSharedPreferences("com.example.dynamicisland", "dynamic_island_prefs")
-                prefs.makeWorldReadable() // Try to ensure readability
-                offsetY = prefs.getInt("offset_y", 0)
-            } catch (e: Throwable) {
-                // Fallback or ignore
-            }
 
             islandView = DynamicIslandView(windowContext)
             islandView!!.id = View.generateViewId()
 
             val params = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT, // Allow dynamic width
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                2017, // TYPE_NAVIGATION_BAR_PANEL
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                2017,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
@@ -152,9 +99,7 @@ class MainHook : IXposedHookLoadPackage {
             )
 
             params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            params.y = offsetY
-
-            // Always layout in display cutout mode for Android 15 (P+)
+            params.y = 0 // We will handle cutout snapping dynamically now
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
 
             islandView!!.windowManager = wm
@@ -162,30 +107,9 @@ class MainHook : IXposedHookLoadPackage {
 
             wm.addView(islandView, params)
             islandInitialized = true
-            log("[UI] SUCCESS: Added Island Overlay via WindowContext")
-
             IslandController.init(islandView!!)
         } catch (e: Throwable) {
             log("[ERROR] setupIsland crashed: $e")
-        }
-    }
-
-    private fun reloadSettings(context: Context) {
-        try {
-            val prefs = de.robv.android.xposed.XSharedPreferences("com.example.dynamicisland", "dynamic_island_prefs")
-            prefs.reload()
-            val offsetY = prefs.getInt("offset_y", 0)
-
-            if (islandView != null && windowManager != null) {
-                val params = islandView!!.windowParams
-                if (params != null) {
-                    params.y = offsetY
-                    windowManager!!.updateViewLayout(islandView, params)
-                    log("[SETTINGS] Updated Y offset to $offsetY")
-                }
-            }
-        } catch (e: Throwable) {
-            log("[ERROR] Failed to reload settings: $e")
         }
     }
 }

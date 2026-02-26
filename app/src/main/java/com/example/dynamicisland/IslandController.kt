@@ -1,30 +1,17 @@
 package com.example.dynamicisland
 
 import android.app.PendingIntent
-import android.bluetooth.BluetoothDevice
-import android.content.BroadcastReceiver
-import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Icon
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
-import android.os.BatteryManager
 import android.os.Handler
-import android.net.wifi.WifiManager
-import android.hardware.camera2.CameraManager
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.view.Gravity
-import android.view.View
 import android.os.Looper
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
@@ -32,80 +19,42 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import java.lang.ref.WeakReference
 
-// Generic API Model for external modules/hooks to push Live Activities
-data class LiveActivityModel(
-    val id: String,
-    val title: String,
-    val dataText: String,
-    val accentColor: Int = Color.WHITE,
-    val progress: Float? = null
-)
-
 object IslandController {
     private var islandViewRef: WeakReference<DynamicIslandView>? = null
+    private var mediaSessionManager: MediaSessionManager? = null
     private var currentController: MediaController? = null
-    private val mainHandler = Handler(Looper.getMainLooper())
-
-    private var activeLiveActivity: LiveActivityModel? = null
-    private var isExpanding = false
     private var currentNotificationIntent: PendingIntent? = null
     private var dismissRunnable: Runnable? = null
-    private var mediaSessionManager: MediaSessionManager? = null
-
-    // Progress Bar Handling
-    private var mediaDuration: Long = 0L
     private val progressHandler = Handler(Looper.getMainLooper())
-    private val progressUpdater = object : Runnable {
-        override fun run() {
-            val island = islandViewRef?.get()
-            val state = currentController?.playbackState
-            val isPlaying = state?.state == PlaybackState.STATE_PLAYING
+    private var mediaDuration = 0L
 
-            if (island != null && island.state != DynamicIslandView.IslandState.HIDDEN && isPlaying) {
-                if (island.state == DynamicIslandView.IslandState.MINI && activeLiveActivity != null) {
-                    // Skip
-                } else {
-                    val currentPosition = state?.position ?: 0L
-                    island.updateMusicProgress(currentPosition, mediaDuration)
-                }
-                progressHandler.postDelayed(this, 1000)
-            }
-        }
-    }
+    private var activeLiveActivity: LiveActivityModel? = null
 
-    // Performance Monitor
-    private var performanceMonitorRunnable: Runnable? = null
-    private var isPerformanceMonitorActive = false
+    private var isExpanding = false
 
-    // Temporary Activities
-    private var temporaryActivityRunnable: Runnable? = null
-
-    private val sessionsListener = object : MediaSessionManager.OnActiveSessionsChangedListener {
-        override fun onActiveSessionsChanged(controllers: MutableList<MediaController>?) {
-            updateActiveController(controllers)
-        }
-    }
-
+    // Media Callback
     private val mediaCallback = object : MediaController.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackState?) {
             updateMediaState(state)
         }
+
         override fun onMetadataChanged(metadata: MediaMetadata?) {
             updateMetadata(metadata)
         }
-        override fun onSessionDestroyed() {
-            val componentName = ComponentName(islandViewRef?.get()?.context ?: return, "com.android.systemui.SystemUIService")
-            val controllers = mediaSessionManager?.getActiveSessions(componentName)
-            if (controllers.isNullOrEmpty()) {
-                currentController = null
-                val island = islandViewRef?.get() ?: return
-                island.post {
-                     if (activeLiveActivity == null) {
-                         island.collapse()
-                     }
-                }
-            } else {
-                updateActiveController(controllers)
+    }
+
+    private val sessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
+        updateActiveController(controllers)
+    }
+
+    private val progressUpdater = object : Runnable {
+        override fun run() {
+            val controller = currentController ?: return
+            val state = controller.playbackState
+            if (state != null && (state.state == PlaybackState.STATE_PLAYING || state.state == PlaybackState.STATE_BUFFERING)) {
+                val position = state.position + (System.currentTimeMillis() - state.lastPositionUpdateTime)
+                islandViewRef?.get()?.updateMusicProgress(position, mediaDuration)
+                progressHandler.postDelayed(this, 1000)
             }
         }
     }
@@ -113,315 +62,44 @@ object IslandController {
     fun init(view: DynamicIslandView) {
         islandViewRef = WeakReference(view)
         setupMediaListener(view.context)
-        setupSystemMonitors(view.context) // NEW: Initialize System Monitors
-        setupDashboard(view) // NEW: Populate Dashboard
 
-        // Handle Gestures
-        view.onGestureListener = { action ->
-            when (action) {
-                DynamicIslandView.GestureAction.SINGLE_TAP -> {
-                    when (view.state) {
-                         DynamicIslandView.IslandState.HIDDEN -> showMini()
-                         DynamicIslandView.IslandState.MINI -> expand()
-                         DynamicIslandView.IslandState.EXPANDED -> collapse()
-                         DynamicIslandView.IslandState.DASHBOARD -> expand() // Tap on Dashboard -> Back to Expanded (Music)
-                    }
-                }
-                DynamicIslandView.GestureAction.DOUBLE_TAP -> {
-                    if (currentController != null) {
-                        try {
-                            currentController?.sessionActivity?.send()
-                            collapse()
-                        } catch (e: Exception) {}
-                    } else if (currentNotificationIntent != null) {
-                        try {
-                            currentNotificationIntent?.send()
-                            collapse()
-                        } catch (e: Exception) {}
-                    }
-                }
-                DynamicIslandView.GestureAction.LONG_PRESS -> {
-                    togglePerformanceMonitor() // NEW: Long press toggles monitor
-                }
-                DynamicIslandView.GestureAction.SWIPE_DOWN -> {
-                    if (view.state == DynamicIslandView.IslandState.EXPANDED) {
-                        showDashboard()
-                    } else {
-                        expand()
-                    }
-                }
-                DynamicIslandView.GestureAction.SWIPE_UP -> {
-                    when (view.state) {
-                        DynamicIslandView.IslandState.MINI -> forceHide()
-                        DynamicIslandView.IslandState.DASHBOARD -> expand() // Back to Music
-                        else -> collapse()
-                    }
-                }
-                DynamicIslandView.GestureAction.SWIPE_LEFT -> handleSwipe(isRight = false)
-                DynamicIslandView.GestureAction.SWIPE_RIGHT -> handleSwipe(isRight = true)
-            }
-        }
-
-        // Default click listener (fallback)
-        view.setOnClickListener {
-             if (view.state == DynamicIslandView.IslandState.HIDDEN) showMini()
-             else if (view.state == DynamicIslandView.IslandState.MINI) expand()
-             else collapse()
-        }
-    }
-
-    // --- NEW: System Monitors (Battery, Bluetooth, Clipboard) ---
-    private fun setupSystemMonitors(context: Context) {
-        // 1. Quick-Save / Clipboard Hub
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.addPrimaryClipChangedListener {
-            val clip = clipboard.primaryClip
-            if (clip != null && clip.itemCount > 0) {
-                val text = clip.getItemAt(0).text.toString()
-                val shortText = if (text.length > 18) text.substring(0, 18) + "..." else text
-
-                // Show a yellow pop-up for 3 seconds
-                postTemporaryActivity(
-                    LiveActivityModel("clipboard", "Copied", shortText, Color.parseColor("#FFD700")),
-                    3000
-                )
-            }
-        }
-
-        // 2. Charging & Battery Alerts
-        val powerReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                when (intent.action) {
-                    Intent.ACTION_POWER_CONNECTED -> {
-                        val bm = context.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
-                        val level = bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
-                        postTemporaryActivity(
-                            LiveActivityModel("power", "Charging", "$level%", Color.parseColor("#4CAF50")),
-                            4000
-                        )
-                    }
-                    Intent.ACTION_POWER_DISCONNECTED -> {
-                        postTemporaryActivity(
-                            LiveActivityModel("power", "Unplugged", "On Battery", Color.parseColor("#F44336")),
-                            3000
-                        )
-                    }
-                    Intent.ACTION_BATTERY_CHANGED -> {
-                        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                        if (level == 15) {
-                            postTemporaryActivity(
-                                LiveActivityModel("power", "Battery Low", "15% Remaining", Color.RED),
-                                5000
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        val powerFilter = IntentFilter().apply {
-            addAction(Intent.ACTION_POWER_CONNECTED)
-            addAction(Intent.ACTION_POWER_DISCONNECTED)
-            addAction(Intent.ACTION_BATTERY_CHANGED)
-        }
-        // FLAG_RECEIVER_EXPORTED is required in Android 14+
-        context.registerReceiver(powerReceiver, powerFilter, Context.RECEIVER_EXPORTED)
-
-        // 3. Connectivity (Bluetooth)
-        val btReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-                val name = try { device?.name ?: "Device" } catch(e: SecurityException) { "BT Device" }
-
-                when (intent.action) {
-                    BluetoothDevice.ACTION_ACL_CONNECTED -> {
-                        postTemporaryActivity(
-                            LiveActivityModel("bt", "Connected", name, Color.parseColor("#007AFF")),
-                            4000
-                        )
-                    }
-                    BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
-                        postTemporaryActivity(
-                            LiveActivityModel("bt", "Disconnected", name, Color.GRAY),
-                            3000
-                        )
-                    }
-                }
-            }
-        }
-        val btFilter = IntentFilter().apply {
-            addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
-            addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
-        }
-        context.registerReceiver(btReceiver, btFilter, Context.RECEIVER_EXPORTED)
-    }
-
-    // --- NEW: Helper to show a LiveActivity for a set amount of time ---
-    private fun postTemporaryActivity(activity: LiveActivityModel, durationMs: Long) {
-        postLiveActivity(activity)
-
-        // Cancel any previous dismissals
-        temporaryActivityRunnable?.let { mainHandler.removeCallbacks(it) }
-
-        temporaryActivityRunnable = Runnable {
-            removeLiveActivity(activity.id)
-        }
-        mainHandler.postDelayed(temporaryActivityRunnable!!, durationMs)
-    }
-
-    // --- NEW: Performance Monitoring Toggle ---
-    fun togglePerformanceMonitor() {
-        isPerformanceMonitorActive = !isPerformanceMonitorActive
-
-        if (isPerformanceMonitorActive) {
-            performanceMonitorRunnable = object : Runnable {
-                override fun run() {
-                    val temp = HardwareMonitors.getCpuTemp()
-                    val freq = HardwareMonitors.getCpuFreq()
-
-                    // Warning color if temp is high (> 45C)
-                    val color = if (temp > 45f) Color.RED else Color.CYAN
-
-                    postLiveActivity(LiveActivityModel(
-                        id = "sys_monitor",
-                        title = "Performance",
-                        dataText = "${"%.1f".format(temp)}ºC | $freq",
-                        accentColor = color
-                    ))
-
-                    // Update every 2 seconds
-                    if (isPerformanceMonitorActive) {
-                        mainHandler.postDelayed(this, 2000)
-                    }
-                }
-            }
-            mainHandler.post(performanceMonitorRunnable!!)
-        } else {
-            performanceMonitorRunnable?.let { mainHandler.removeCallbacks(it) }
-            removeLiveActivity("sys_monitor")
-        }
-    }
-
-    // --- Dashboard Setup ---
-    private fun setupDashboard(view: DynamicIslandView) {
-        val container = view.dashboardContainer
-        if (container.childCount == 0) return
-        val content = container.getChildAt(0) as? LinearLayout ?: return
-
-        if (content.childCount >= 3) {
-            val qsTab = content.getChildAt(0) as LinearLayout
-            val appsTab = content.getChildAt(1) as LinearLayout
-            // val hiddenTab = content.getChildAt(2) as LinearLayout
-
-            populateQuickSettings(view.context, qsTab)
-            populatePinnedApps(view.context, appsTab)
-        }
-    }
-
-    private fun populateQuickSettings(context: Context, layout: LinearLayout) {
-        // Simple Text Toggles for now
-        val wifiToggle = TextView(context).apply {
-            text = "Wi-Fi: Toggle"
-            setTextColor(Color.WHITE)
-            textSize = 14f
-            setPadding(0, 20, 0, 20)
-            gravity = Gravity.CENTER
-            setOnClickListener {
-                try {
-                    val wm = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
-                    // Note: setWifiEnabled is deprecated/restricted in newer Android, requires permission
-                    // For Xposed, we might need XposedHelpers to call internal methods or just show toast if failed.
-                    @Suppress("DEPRECATION")
-                    wm.isWifiEnabled = !wm.isWifiEnabled
-                    text = "Wi-Fi: " + if (wm.isWifiEnabled) "On" else "Off"
-                } catch (e: Exception) {
-                    text = "Wi-Fi: Error"
-                }
-            }
-        }
-
-        val flashToggle = TextView(context).apply {
-            text = "Flashlight: Toggle"
-            setTextColor(Color.WHITE)
-            textSize = 14f
-            setPadding(0, 20, 0, 20)
-            gravity = Gravity.CENTER
-            setOnClickListener {
-                try {
-                    val cm = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-                    val id = cm.cameraIdList[0]
-                    // We need a way to track state. Simplification: just toggle on click based on assumption or check?
-                    // Accessing flash status is tricky without callback.
-                    // Let's just try to turn ON for now, or toggle global var?
-                    // Implementation skipped for brevity, just a placeholder action
-                } catch (e: Exception) {}
-            }
-        }
-
-        layout.addView(wifiToggle)
-        layout.addView(flashToggle)
-    }
-
-    private fun populatePinnedApps(context: Context, layout: LinearLayout) {
-        val apps = listOf("com.android.settings", "com.android.camera2", "com.android.calculator2")
-        val pm = context.packageManager
-
-        val row = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-        }
-
-        for (pkg in apps) {
-            try {
-                val icon = pm.getApplicationIcon(pkg)
-                val intent = pm.getLaunchIntentForPackage(pkg)
-
-                val img = android.widget.ImageView(context).apply {
-                    setImageDrawable(icon)
-                    layoutParams = LinearLayout.LayoutParams(100, 100).apply {
-                        setMargins(10, 0, 10, 0)
-                    }
-                    setOnClickListener {
-                        if (intent != null) {
-                            context.startActivity(intent)
+        // Handle Taps on the Camera Hole / Pill
+        view.onSingleTap = {
+            val island = islandViewRef?.get()
+            if (island != null) {
+                when (island.islandState.value) {
+                    DynamicIslandView.IslandState.HIDDEN -> showMini()
+                    DynamicIslandView.IslandState.TYPE_1_MINI -> expand()
+                    DynamicIslandView.IslandState.TYPE_2_MID -> {
+                        // Launch intent if available (Music or Notification)
+                        if (currentController != null) {
+                             // Try to launch music app?
+                             // For now, collapse.
+                             collapse()
+                        } else if (currentNotificationIntent != null) {
+                            try {
+                                currentNotificationIntent?.send()
+                                collapse()
+                            } catch (e: Exception) {}
+                        } else {
                             collapse()
                         }
                     }
+                    DynamicIslandView.IslandState.TYPE_3_MAX -> collapse()
                 }
-                row.addView(img)
-            } catch (e: Exception) {}
+            }
         }
-        layout.addView(row)
+
+        view.onLongPress = {
+            val island = islandViewRef?.get()
+            if (island != null && island.islandState.value == DynamicIslandView.IslandState.HIDDEN) {
+                // Invisible Punch Hole Long-Pressed!
+                showDashboard()
+            }
+        }
     }
 
     fun isExpanding(): Boolean = isExpanding
-
-    private fun handleSwipe(isRight: Boolean) {
-        val island = islandViewRef?.get()
-        if (island?.state == DynamicIslandView.IslandState.DASHBOARD) {
-            // Let the ScrollView handle it, or programmatic scroll if needed.
-            // Since ScrollView consumes touch, this gesture listener might not even fire if touched inside.
-            // But if touched on edge, we probably shouldn't change track.
-            return
-        }
-
-        val state = currentController?.playbackState?.state
-        if (state == PlaybackState.STATE_PLAYING ||
-            state == PlaybackState.STATE_PAUSED ||
-            state == PlaybackState.STATE_BUFFERING) {
-
-            if (isRight) currentController?.transportControls?.skipToNext()
-            else currentController?.transportControls?.skipToPrevious()
-        } else {
-            collapse()
-        }
-    }
-
-    fun forceHide() {
-        val island = islandViewRef?.get() ?: return
-        island.hide()
-        island.setContextGlow(null)
-    }
 
     // --- Live Activities API ---
     fun postLiveActivity(activity: LiveActivityModel) {
@@ -432,7 +110,7 @@ object IslandController {
             island.updateLiveActivity(activity.title, activity.dataText, activity.progress, activity.accentColor)
             island.updateMiniPillContent(activity.title + ": " + activity.dataText, null, activity.accentColor)
 
-            if (island.state == DynamicIslandView.IslandState.HIDDEN) {
+            if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) {
                 showMini()
             }
         }
@@ -445,9 +123,9 @@ object IslandController {
             val state = currentController?.playbackState?.state
             if (state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING) {
                 updateMetadata(currentController?.metadata)
+            } else {
+                collapse()
             }
-
-            collapse()
         }
     }
 
@@ -458,10 +136,7 @@ object IslandController {
 
     fun expand() {
         isExpanding = true
-        islandViewRef?.get()?.let {
-            it.animate().translationY(0f).setDuration(0).start()
-            it.expand()
-        }
+        islandViewRef?.get()?.expand()
 
         // Start Progress Tracking if expanding while playing
         if (currentController?.playbackState?.state == PlaybackState.STATE_PLAYING) {
@@ -612,7 +287,7 @@ object IslandController {
         island.post {
             island.updatePlayPauseState(isPlaying)
             if (isPlaying) {
-                if (island.state == DynamicIslandView.IslandState.HIDDEN) {
+                if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) {
                     showMini()
                 }
                 progressHandler.removeCallbacks(progressUpdater)
