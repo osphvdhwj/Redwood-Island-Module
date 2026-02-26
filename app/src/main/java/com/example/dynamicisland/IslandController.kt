@@ -72,15 +72,10 @@ object IslandController {
              if (island != null) {
                  island.post {
                      island.updateChargingInfo(level, isCharging, color)
-
-                     // If plugged in (charging started) and not already expanded, expand briefly to show status
                      if (isCharging && island.islandState.value == DynamicIslandView.IslandState.HIDDEN) {
-                         // Show Mini or Expanded based on preference
                          expand()
-
-                         // Auto collapse after 3 seconds if it was just a status update
                          progressHandler.postDelayed({
-                             if (island.islandState.value == DynamicIslandView.IslandState.TYPE_2_MID) { // Only if still just showing charging
+                             if (island.islandState.value == DynamicIslandView.IslandState.TYPE_2_MID) {
                                  collapse()
                              }
                          }, 3000)
@@ -90,20 +85,16 @@ object IslandController {
         }
         BatteryPlugin.start(view.context)
 
-        // Handle Taps on the Camera Hole / Pill
+        // --- Gesture & Touch Callbacks ---
         view.onSingleTap = {
             val island = islandViewRef?.get()
             if (island != null) {
                 when (island.islandState.value) {
-                    // Single Tap on Hidden -> Show Mini (Peek)
                     DynamicIslandView.IslandState.HIDDEN -> showMini()
-                    // Single Tap on Mini -> Expand to Mid
                     DynamicIslandView.IslandState.TYPE_1_MINI -> expand()
-                    // Single Tap on Mid -> Collapse or Action
                     DynamicIslandView.IslandState.TYPE_2_MID -> {
-                        // Launch intent if available (Music or Notification)
                         if (currentController != null) {
-                             // Try to launch music app?
+                             // Maybe launch app? For now, collapse.
                              collapse()
                         } else if (currentNotificationIntent != null) {
                             try {
@@ -114,7 +105,6 @@ object IslandController {
                             collapse()
                         }
                     }
-                    // Single Tap on Max -> Collapse
                     DynamicIslandView.IslandState.TYPE_3_MAX -> collapse()
                 }
             }
@@ -123,23 +113,45 @@ object IslandController {
         view.onDoubleTap = {
             val island = islandViewRef?.get()
             if (island != null) {
-                // Double tap logic - for now, just log or maybe toggle flashlight if we had access?
-                // Let's make Double Tap on Hidden -> Expand to Mid immediately (Quick Access)
                 if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) {
                      expand()
                 } else {
-                    // Double tap while open -> Close completely
                     forceHide()
                 }
             }
         }
 
         view.onLongPress = {
-            val island = islandViewRef?.get()
-            if (island != null) {
-                 // Long Press -> Show Dashboard (Max)
-                 showDashboard()
+             showDashboard()
+        }
+
+        // --- Music Control Callbacks ---
+        view.onPrevClick = {
+            currentController?.transportControls?.skipToPrevious()
+        }
+
+        view.onNextClick = {
+            currentController?.transportControls?.skipToNext()
+        }
+
+        view.onPlayPauseClick = {
+            val state = currentController?.playbackState?.state
+            if (state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING) {
+                currentController?.transportControls?.pause()
+            } else {
+                currentController?.transportControls?.play()
             }
+        }
+
+        // --- Swipe Callbacks (Mapped to Prev/Next) ---
+        view.onSwipeLeft = {
+            // Swipe Left -> Next Track (Logical direction)
+            currentController?.transportControls?.skipToNext()
+        }
+
+        view.onSwipeRight = {
+            // Swipe Right -> Prev Track
+            currentController?.transportControls?.skipToPrevious()
         }
     }
 
@@ -149,20 +161,17 @@ object IslandController {
         isScreenOn = isOn
         val island = islandViewRef?.get() ?: return
 
-        // Notify View
         island.post {
             island.updateScreenState(isOn)
         }
 
         if (isOn) {
-            // Resume updates if playing
             val state = currentController?.playbackState
             if (state?.state == PlaybackState.STATE_PLAYING) {
                 progressHandler.removeCallbacks(progressUpdater)
                 progressHandler.post(progressUpdater)
             }
         } else {
-            // Stop updates
             progressHandler.removeCallbacks(progressUpdater)
         }
     }
@@ -206,7 +215,6 @@ object IslandController {
         isExpanding = true
         islandViewRef?.get()?.expand()
 
-        // Start Progress Tracking if expanding while playing
         if (currentController?.playbackState?.state == PlaybackState.STATE_PLAYING) {
              progressHandler.removeCallbacks(progressUpdater)
              progressHandler.post(progressUpdater)
@@ -222,8 +230,6 @@ object IslandController {
     fun collapse() {
         isExpanding = false
         islandViewRef?.get()?.collapse()
-
-        // Stop Progress Tracking
         progressHandler.removeCallbacks(progressUpdater)
     }
 
@@ -248,14 +254,12 @@ object IslandController {
                         val sbn = XposedHelpers.callMethod(holder, "get") as android.service.notification.StatusBarNotification
                         val notif = sbn.notification
 
-                        // 1. Check for Live Activity Candidates first
                         val liveActivity = ClockInterceptor.inspect(sbn)
                         if (liveActivity != null) {
                             postLiveActivity(liveActivity)
-                            return // Stop here! We handled it as a Live Activity.
+                            return
                         }
 
-                        // 2. Fallback to standard Notification handling
                         if ((notif.flags and android.app.Notification.FLAG_ONGOING_EVENT) == 0) {
                             val title = notif.extras.getString(android.app.Notification.EXTRA_TITLE)
                             val text = notif.extras.getString(android.app.Notification.EXTRA_TEXT)
