@@ -36,6 +36,7 @@ class DynamicIslandView @JvmOverloads constructor(
     private val musicContainer: LinearLayout
     private val liveActivityContainer: LinearLayout
     private val miniPillContainer: LinearLayout
+    val dashboardContainer: HorizontalScrollView // Public for controller access
 
     // Notification Elements
     private val iconView: ImageView
@@ -70,8 +71,10 @@ class DynamicIslandView @JvmOverloads constructor(
     var hiddenHeight = 0
     var expandedWidth = 0
     var expandedHeight = 0
+    var dashboardWidth = 0
+    var dashboardHeight = 0
 
-    enum class IslandState { HIDDEN, MINI, EXPANDED }
+    enum class IslandState { HIDDEN, MINI, EXPANDED, DASHBOARD }
     var state = IslandState.HIDDEN
         private set
 
@@ -100,6 +103,8 @@ class DynamicIslandView @JvmOverloads constructor(
         hiddenHeight = dpToPx(34)
         expandedWidth = dpToPx(350)
         expandedHeight = dpToPx(146)
+        dashboardWidth = dpToPx(360)
+        dashboardHeight = dpToPx(250)
 
         // Initialize Gesture Detector
         gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
@@ -345,6 +350,78 @@ class DynamicIslandView @JvmOverloads constructor(
         addView(notificationContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(musicContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(liveActivityContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        // --- Dashboard Layout ---
+        dashboardContainer = HorizontalScrollView(context).apply {
+            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+            alpha = 0f
+            visibility = View.GONE
+            isFillViewport = true
+        }
+
+        val dashboardContent = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT)
+        }
+
+        // 1. QS Tab (Left)
+        val qsTab = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(dpToPx(320), LayoutParams.MATCH_PARENT)
+            gravity = Gravity.CENTER
+            setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
+        }
+        val qsTitle = TextView(context).apply {
+            text = "Quick Settings"
+            setTextColor(Color.CYAN)
+            textSize = 16f
+            typeface = systemFont
+            gravity = Gravity.CENTER
+        }
+        qsTab.addView(qsTitle)
+        // (Controller will populate toggles)
+
+        // 2. Pinned Apps Tab (Center)
+        val appsTab = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(dpToPx(320), LayoutParams.MATCH_PARENT)
+            gravity = Gravity.CENTER
+            setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
+        }
+        val appsTitle = TextView(context).apply {
+            text = "Pinned Apps"
+            setTextColor(Color.GREEN)
+            textSize = 16f
+            typeface = systemFont
+            gravity = Gravity.CENTER
+        }
+        appsTab.addView(appsTitle)
+        // (Controller will populate apps)
+
+        // 3. Hidden Apps Tab (Right)
+        val hiddenTab = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(dpToPx(320), LayoutParams.MATCH_PARENT)
+            gravity = Gravity.CENTER
+            setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
+        }
+        val hiddenTitle = TextView(context).apply {
+            text = "Hidden Apps (Locked)"
+            setTextColor(Color.RED)
+            textSize = 16f
+            typeface = systemFont
+            gravity = Gravity.CENTER
+        }
+        hiddenTab.addView(hiddenTitle)
+
+        dashboardContent.addView(qsTab)
+        dashboardContent.addView(appsTab)
+        dashboardContent.addView(hiddenTab)
+        dashboardContainer.addView(dashboardContent)
+
+        addView(notificationContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(musicContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(liveActivityContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(dashboardContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(miniPillContainer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(miniProgress)
 
@@ -374,8 +451,15 @@ class DynamicIslandView @JvmOverloads constructor(
         }
     }
 
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        // Allow gesture detector to see all events first
+        gestureDetector.onTouchEvent(ev)
+        return super.dispatchTouchEvent(ev)
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        return gestureDetector.onTouchEvent(event) || super.onTouchEvent(event)
+        // Fallback if no child handled it
+        return super.onTouchEvent(event)
     }
 
     override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
@@ -413,6 +497,39 @@ class DynamicIslandView @JvmOverloads constructor(
         return super.onApplyWindowInsets(insets)
     }
 
+    fun showDashboard() {
+        if (state == IslandState.DASHBOARD) return
+        state = IslandState.DASHBOARD
+
+        backgroundDrawable.setColor(Color.BLACK)
+        backgroundDrawable.setStroke(0, 0)
+
+        val wp = windowParams
+        if (wp != null && windowManager != null) {
+            wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+            wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            windowManager?.updateViewLayout(this, wp)
+        }
+
+        widthSpring.cancel()
+        val currentWidth = windowParams?.width?.toFloat() ?: width.toFloat()
+        widthSpring.setStartValue(currentWidth)
+        widthSpring.animateToFinalPosition(dashboardWidth.toFloat())
+
+        heightSpring.cancel()
+        val currentHeight = windowParams?.height?.toFloat() ?: height.toFloat()
+        heightSpring.setStartValue(currentHeight)
+        heightSpring.animateToFinalPosition(dashboardHeight.toFloat())
+
+        // Hide others
+        musicContainer.animate().alpha(0f).duration = 150
+        miniPillContainer.animate().alpha(0f).duration = 150
+
+        // Show Dashboard
+        dashboardContainer.visibility = View.VISIBLE
+        dashboardContainer.animate().alpha(1f).duration = 300
+    }
+
     fun expand() {
         if (state == IslandState.EXPANDED) return
         state = IslandState.EXPANDED
@@ -437,9 +554,10 @@ class DynamicIslandView @JvmOverloads constructor(
         heightSpring.setStartValue(currentHeight)
         heightSpring.animateToFinalPosition(expandedHeight.toFloat())
 
-        // Hide mini elements
+        // Hide mini/dashboard elements
         miniPillContainer.animate().alpha(0f).duration = 150
         miniProgress.visibility = View.GONE
+        dashboardContainer.animate().alpha(0f).setDuration(150).withEndAction { dashboardContainer.visibility = View.GONE }
     }
 
     fun showMini() {
@@ -466,10 +584,11 @@ class DynamicIslandView @JvmOverloads constructor(
         heightSpring.setStartValue(currentHeight)
         heightSpring.animateToFinalPosition(miniHeight.toFloat())
 
-        // Hide expanded elements
+        // Hide expanded/dashboard elements
         notificationContainer.animate().alpha(0f).setDuration(150).withEndAction { notificationContainer.visibility = View.GONE }
         musicContainer.animate().alpha(0f).setDuration(150).withEndAction { musicContainer.visibility = View.GONE }
         liveActivityContainer.animate().alpha(0f).setDuration(150).withEndAction { liveActivityContainer.visibility = View.GONE }
+        dashboardContainer.animate().alpha(0f).setDuration(150).withEndAction { dashboardContainer.visibility = View.GONE }
 
         // Show mini elements
         miniPillContainer.visibility = View.VISIBLE
