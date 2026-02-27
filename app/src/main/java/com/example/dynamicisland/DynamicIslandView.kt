@@ -186,22 +186,21 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     @Composable
     fun IslandUI(state: IslandState) {
         val targetWidth = when (state) {
-            IslandState.HIDDEN -> 50.dp // Small Ring ⭕
+            IslandState.HIDDEN -> 42.dp // Slightly smaller ring for punch-hole fit
             IslandState.TYPE_1_MINI -> 180.dp // Wider for scrolling text
             IslandState.TYPE_2_MID -> 320.dp
             IslandState.TYPE_3_MAX -> 360.dp // Expanded player
         }
 
         val targetHeight = when (state) {
-            IslandState.HIDDEN -> 50.dp // Ring
-            IslandState.TYPE_1_MINI -> 50.dp // Match height to ring initially, slightly wider
+            IslandState.HIDDEN -> 42.dp // Ring
+            IslandState.TYPE_1_MINI -> 42.dp // Match height to ring initially
             IslandState.TYPE_2_MID -> 100.dp // Taller pill
             IslandState.TYPE_3_MAX -> 220.dp // Full player
         }
 
-        // Offset Y for the hidden state to position it "below" camera punch hole
-        // Adjust this value (e.g., 50.dp) to physically move it down from top edge of screen
-        val topPadding = if (state == IslandState.HIDDEN) 50.dp else 50.dp
+        // Offset Y: 38dp to place it just below the punch-hole area
+        val topPadding = if (state == IslandState.HIDDEN) 38.dp else 40.dp
 
         val width by animateDpAsState(targetValue = targetWidth, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "width")
         val height by animateDpAsState(targetValue = targetHeight, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "height")
@@ -210,32 +209,30 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             val wp = windowParams
             val wm = windowManager
             if (wp != null && wm != null) {
-                // IMPORTANT: Only expand the Window Layout if truly needed to avoid blocking touches
-                // For HIDDEN, we keep it minimal.
                 val pxWidth = (width.value * context.resources.displayMetrics.density).toInt()
                 val pxHeight = (height.value * context.resources.displayMetrics.density).toInt()
 
-                // Add padding for shadows/glows but keep it tight
-                wp.width = pxWidth + 40
-                wp.height = pxHeight + (topPadding.value * context.resources.displayMetrics.density).toInt() + 40
+                // Keep touch area tight to visual size + minimal padding
+                wp.width = pxWidth + 30
+                wp.height = pxHeight + (topPadding.value * context.resources.displayMetrics.density).toInt() + 30
 
                 try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
             }
         }
 
-        // Visual Style: Square with Round Corners (28.dp)
-        // Hidden State: Transparent Ring
-        val shape = RoundedCornerShape(24.dp)
+        // Visual Style: Squircle with Round Corners (32.dp)
+        // Hidden State: Transparent Ring (1.5dp border)
+        val shape = RoundedCornerShape(32.dp)
         val backgroundColor = if (state == IslandState.HIDDEN) Color.Transparent else Color.Black
         val borderColor = if (state == IslandState.HIDDEN) Color.Gray.copy(alpha = 0.5f) else Color.Transparent
-        val borderWidth = if (state == IslandState.HIDDEN) 2.dp else 0.dp
+        val borderWidth = if (state == IslandState.HIDDEN) 1.5.dp else 0.dp
 
         Box(modifier = Modifier.padding(top = topPadding), contentAlignment = Alignment.TopCenter) {
             Box(
                 modifier = Modifier
                     .width(width)
                     .height(height)
-                    .clip(shape) // Square-ish rounded corners
+                    .clip(shape) // Squircle
                     .background(backgroundColor)
                     .border(borderWidth, borderColor, shape) // Ring effect
                     .pointerInput(Unit) {
@@ -289,7 +286,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)
         ) {
             if (music != null) {
-                // Marquee scrolling text only
                  Text(
                     text = "${music.title} • ${music.artist}",
                     color = Color.White,
@@ -343,7 +339,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         val music = musicState.value ?: return
 
         Box(modifier = Modifier.fillMaxSize()) {
-            // Background Album Art (Darkened)
             if (music.art != null) {
                 Image(
                     bitmap = music.art.asImageBitmap(),
@@ -362,14 +357,10 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 modifier = Modifier.fillMaxSize().padding(16.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Top Row: App Icon & "This phone"
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    // Small Music App Icon placeholder
                     Box(modifier = Modifier.size(28.dp).background(Color(0xFFF2E6E6), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
                         Icon(painterResource(android.R.drawable.ic_media_play), contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
                     }
-
-                    // "This phone" Chip
                     Row(
                         modifier = Modifier.background(Color(0xFFF2E6E6), RoundedCornerShape(16.dp)).padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -380,7 +371,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     }
                 }
 
-                // Middle Row: Titles and Play/Pause Button
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = music.title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -388,7 +378,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     }
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    // Giant Play/Pause Button
                     val playIcon = if (music.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
                     Box(
                         modifier = Modifier
@@ -401,12 +390,10 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     }
                 }
 
-                // Bottom Row: Controls & Scrubber
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Icon(painterResource(android.R.drawable.ic_media_previous), contentDescription = "Prev", tint = Color.White, modifier = Modifier.size(28.dp).clickable { onPrevClick?.invoke() })
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    // Scrubber Bar
                     Box(modifier = Modifier.weight(1f).height(4.dp).background(Color.Gray.copy(alpha = 0.5f), RoundedCornerShape(2.dp))) {
                         Box(modifier = Modifier.fillMaxWidth(music.progress).height(4.dp).background(Color.White, RoundedCornerShape(2.dp)))
                     }
@@ -422,36 +409,13 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         }
     }
 
-    @Composable
-    fun ExpandedContent() {
-        val charging = chargingState.value
-        val liveAct = liveActivityState.value
-
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            if (charging != null && charging.isCharging) {
-                Text("Charging", style = MaterialTheme.typography.titleMedium, color = Color.White)
-                Spacer(Modifier.height(8.dp))
-                Text(text = "${charging.level}%", style = MaterialTheme.typography.headlineMedium, color = Color(charging.color))
-            } else if (liveAct != null) {
-                Text(liveAct.title, style = MaterialTheme.typography.titleMedium, color = Color.White)
-                Spacer(Modifier.height(8.dp))
-                Text(liveAct.data, style = MaterialTheme.typography.headlineMedium, color = Color(liveAct.color))
-            }
-        }
-    }
-
     // --- Controller API ---
     fun setState(newState: IslandState) {
         islandState.value = newState
         val wp = windowParams ?: return
         val wm = windowManager ?: return
 
-        // THE FIX for Keyboard/Recents Blocking:
-        // ALWAYS allow touches to pass through outside (NOT_TOUCH_MODAL).
-        // AND ALSO ALWAYS set FLAG_NOT_FOCUSABLE.
-        // Focusable windows steal input from the system (nav bar, keyboard).
-        // We only need focus if we have an EditText, which we don't anymore.
-
+        // Always allow touches to pass through AND prevent stealing focus
         wp.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
@@ -511,5 +475,4 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     fun setContextGlow(bitmap: Bitmap?) { }
     fun updateMiniPillContent(title: String, icon: android.graphics.drawable.Icon?, color: Int) { }
-    // General Notification API removed safely
 }
