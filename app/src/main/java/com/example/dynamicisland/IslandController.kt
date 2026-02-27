@@ -76,16 +76,12 @@ object IslandController {
                      island.updateChargingInfo(level, isCharging, color)
                      if (isCharging && island.islandState.value == DynamicIslandView.IslandState.HIDDEN) {
                          expand()
-                         // Auto collapse after 3 seconds if charging
                          progressHandler.postDelayed({
                              if (island.islandState.value == DynamicIslandView.IslandState.TYPE_2_MID) {
                                  collapse()
                              }
                          }, 3000)
                      } else if (!isCharging) {
-                         // Immediate update on disconnect
-                         // If we were showing charging info, this will clear it.
-                         // If expanded only for charging, collapse immediately.
                          if (island.islandState.value == DynamicIslandView.IslandState.TYPE_2_MID && activeLiveActivity == null && currentController == null) {
                              collapse()
                          }
@@ -138,6 +134,26 @@ object IslandController {
             } else {
                 currentController?.transportControls?.play()
             }
+        }
+
+        view.onSeekTo = { pos ->
+            currentController?.transportControls?.seekTo(pos)
+        }
+
+        view.onShuffleClick = {
+            // Toggles shuffle. Depending on Android version, you might need to check current state.
+            // Simplified toggle for now (assuming standard behavior)
+            // Ideally check currentController?.shuffleMode
+            // Shuffle not supported on older APIs directly in TransportControls
+        }
+
+        view.onLoopClick = {
+            // Toggles repeat
+            // Repeat not supported on older APIs directly in TransportControls
+        }
+
+        view.onCloseClick = {
+            forceHide()
         }
 
         view.onSwipeLeft = {
@@ -338,7 +354,6 @@ object IslandController {
 
         var bitmap: Bitmap? = null
         try {
-            // FIX: Try loadDrawable first, convert to Bitmap
             val drawable = icon?.loadDrawable(context)
             if (drawable is BitmapDrawable) {
                 bitmap = drawable.bitmap
@@ -352,7 +367,6 @@ object IslandController {
             XposedBridge.log("DynamicIsland: Failed to load icon: $e")
         }
 
-        // Map actions to model
         val actionModels = actions?.map { action ->
             NotificationActionModel(
                 title = action.title.toString(),
@@ -455,8 +469,12 @@ object IslandController {
 
         val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
         val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
-        val albumArt = metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+
+        // FIX: Broaden the search for the thumbnail bitmap
+        val albumArt = metadata.description?.iconBitmap
+                       ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
                        ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
+                       ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
 
         mediaDuration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
 

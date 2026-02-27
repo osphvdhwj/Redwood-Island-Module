@@ -30,11 +30,14 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -44,6 +47,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.compositionContext
@@ -152,6 +156,10 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     var onPrevClick: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
     var onPlayPauseClick: (() -> Unit)? = null
+    var onSeekTo: ((Long) -> Unit)? = null
+    var onShuffleClick: (() -> Unit)? = null
+    var onLoopClick: (() -> Unit)? = null
+    var onCloseClick: (() -> Unit)? = null
 
     // Notification Callbacks
     var onActionClick: ((NotificationActionModel) -> Unit)? = null
@@ -219,6 +227,13 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         }
     }
 
+    fun formatTime(ms: Long): String {
+        val totalSeconds = ms / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return String.format("%d:%02d", minutes, seconds)
+    }
+
     // --- Compose UI ---
     @Composable
     fun DynamicIslandTheme(context: Context, content: @Composable () -> Unit) {
@@ -239,7 +254,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
         val targetHeight = when (state) {
             IslandState.HIDDEN -> 24.dp
-            IslandState.TYPE_1_MINI -> 36.dp // Slightly shorter
+            IslandState.TYPE_1_MINI -> 24.dp // Slightly shorter (was 36/40)
             IslandState.TYPE_2_MID -> 80.dp  // Shorter (was 100)
             IslandState.TYPE_3_MAX -> 180.dp // Shorter (was 260)
         }
@@ -293,10 +308,9 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
         val cornerRadius = 42.dp
 
+        // FIX: Removed .fillMaxWidth() so it doesn't block the CrDroid status bar gestures!
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 40.dp), // Increased top padding to sit BELOW Status Bar
+            modifier = Modifier.padding(top = 40.dp), // Keep top padding
             contentAlignment = Alignment.TopCenter
         ) {
             // The Pill Container
@@ -389,28 +403,97 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 Text(text = "${charging.level}%", style = MaterialTheme.typography.headlineMedium, color = Color(charging.color))
 
             } else if (music != null) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (music.art != null) {
+                // BIGGEST PILL REDESIGN
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // 1. Background Image Layer
+                    if (music.art != null && islandState.value == IslandState.TYPE_3_MAX) {
                         Image(
                             bitmap = music.art.asImageBitmap(),
-                            contentDescription = "Album Art",
-                            modifier = Modifier.size(50.dp).clip(RoundedCornerShape(8.dp))
+                            contentDescription = "Background",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .alpha(0.25f) // Darken so text is readable
                         )
-                    } else {
-                        Box(Modifier.size(50.dp).background(Color.Gray, RoundedCornerShape(8.dp)))
                     }
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = music.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(text = music.artist, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+
+                    // 2. Foreground Content
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Top Row: Info & Close Button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = music.title, style = MaterialTheme.typography.titleMedium, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(text = music.artist, style = MaterialTheme.typography.bodySmall, color = Color.LightGray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            IconButton(onClick = { onCloseClick?.invoke() }, modifier = Modifier.size(24.dp)) {
+                                androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_menu_close_clear_cancel), contentDescription = "Close", tint = Color.White)
+                            }
+                        }
+
+                        if (islandState.value == IslandState.TYPE_3_MAX) {
+                            // Middle Row: Slider & Timers
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                var sliderPos by remember(music.progress) { mutableStateOf(music.progress * music.duration) }
+
+                                Slider(
+                                    value = sliderPos,
+                                    onValueChange = { sliderPos = it },
+                                    onValueChangeFinished = { onSeekTo?.invoke(sliderPos.toLong()) },
+                                    valueRange = 0f..(music.duration.toFloat().coerceAtLeast(1f)),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = Color.White,
+                                        activeTrackColor = Color.White,
+                                        inactiveTrackColor = Color.Gray
+                                    )
+                                )
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(text = formatTime(sliderPos.toLong()), color = Color.LightGray, fontSize = 12.sp)
+                                    Text(text = formatTime(music.duration), color = Color.LightGray, fontSize = 12.sp)
+                                }
+                            }
+                        }
+
+                        // Bottom Row: Media Controls
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (islandState.value == IslandState.TYPE_3_MAX) {
+                                IconButton(onClick = { onShuffleClick?.invoke() }) {
+                                    androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_menu_sort_by_size), contentDescription = "Shuffle", tint = Color.White) // Placeholder icon
+                                }
+                            }
+
+                            IconButton(onClick = { onPrevClick?.invoke() }) {
+                                androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_media_previous), contentDescription = "Prev", tint = Color.White)
+                            }
+
+                            val playIcon = if (music.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+                            IconButton(onClick = { onPlayPauseClick?.invoke() }, modifier = Modifier.size(56.dp)) {
+                                androidx.compose.material3.Icon(painter = painterResource(playIcon), contentDescription = "Play/Pause", tint = Color.White, modifier = Modifier.size(40.dp))
+                            }
+
+                            IconButton(onClick = { onNextClick?.invoke() }) {
+                                androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_media_next), contentDescription = "Next", tint = Color.White)
+                            }
+
+                            if (islandState.value == IslandState.TYPE_3_MAX) {
+                                IconButton(onClick = { onLoopClick?.invoke() }) {
+                                    androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_menu_rotate), contentDescription = "Loop", tint = Color.White) // Placeholder icon
+                                }
+                            }
+                        }
                     }
-                }
-                Spacer(Modifier.height(16.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_media_previous), contentDescription = "Prev", modifier = Modifier.size(32.dp).clickable { onPrevClick?.invoke() }, tint = Color.White)
-                    val playIcon = if (music.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
-                    androidx.compose.material3.Icon(painter = painterResource(playIcon), contentDescription = "Play/Pause", modifier = Modifier.size(48.dp).clickable { onPlayPauseClick?.invoke() }, tint = Color.White)
-                    androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_media_next), contentDescription = "Next", modifier = Modifier.size(32.dp).clickable { onNextClick?.invoke() }, tint = Color.White)
                 }
 
             } else if (notif != null) {
