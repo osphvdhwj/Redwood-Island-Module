@@ -1,3 +1,4 @@
+import androidx.compose.ui.unit.Dp
 package com.example.dynamicisland
 
 import android.annotation.SuppressLint

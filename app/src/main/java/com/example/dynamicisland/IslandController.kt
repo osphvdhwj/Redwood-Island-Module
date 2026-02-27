@@ -196,10 +196,9 @@ object IslandController {
     // --- Hooking Framework ONLY for Clocks/Timers (Removed standard Notifications) ---
     fun hookFrameworkNotifications(lpparam: XC_LoadPackage.LoadPackageParam) {
         try {
-            val wrapperClass = XposedHelpers.findClass(
-                "android.service.notification.NotificationListenerService$NotificationListenerWrapper",
-                lpparam.classLoader
-            )
+            // FIX: Robust string concatenation to avoid Kotlin string template interpolation of '$'
+            val className = "android.service.notification.NotificationListenerService" + "$" + "NotificationListenerWrapper"
+            val wrapperClass = XposedHelpers.findClass(className, lpparam.classLoader)
 
             XposedBridge.hookAllMethods(wrapperClass, "onNotificationPosted", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
