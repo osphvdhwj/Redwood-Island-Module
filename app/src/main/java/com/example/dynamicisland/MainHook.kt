@@ -144,6 +144,49 @@ class MainHook : IXposedHookLoadPackage {
         }
     }
 
+    private class ModuleContextWrapper(base: Context, private val module: Context) : android.content.ContextWrapper(base) {
+        override fun getResources(): android.content.res.Resources = module.resources
+        override fun getTheme(): android.content.res.Resources.Theme = module.theme
+        override fun getAssets(): android.content.res.AssetManager = module.assets
+        override fun getClassLoader(): ClassLoader = module.classLoader
+        override fun getApplicationInfo(): android.content.pm.ApplicationInfo = module.applicationInfo
+        override fun getPackageName(): String = module.packageName
+    }
+
+    private fun createFallbackContext(systemContext: Context): Context? {
+        try {
+            val apkPath = MainHook::class.java.protectionDomain.codeSource.location.path
+            log("[FALLBACK] Attempting to load resources from: $apkPath")
+
+            // Create AssetManager
+            val assetManagerClass = android.content.res.AssetManager::class.java
+            val assetManager = assetManagerClass.newInstance()
+            val addAssetPathMethod = assetManagerClass.getMethod("addAssetPath", String::class.java)
+            addAssetPathMethod.invoke(assetManager, apkPath)
+
+            // Create Resources
+            val resources = android.content.res.Resources(
+                assetManager,
+                systemContext.resources.displayMetrics,
+                systemContext.resources.configuration
+            )
+
+            // Create Theme
+            val theme = resources.newTheme()
+            theme.applyStyle(android.R.style.Theme_DeviceDefault_DayNight, true)
+
+            return object : android.content.ContextWrapper(systemContext) {
+                override fun getResources(): android.content.res.Resources = resources
+                override fun getAssets(): android.content.res.AssetManager = assetManager
+                override fun getTheme(): android.content.res.Resources.Theme = theme
+                override fun getPackageName(): String = "com.example.dynamicisland"
+            }
+        } catch (e: Throwable) {
+            log("[FATAL] Fallback context creation failed: $e")
+            return null
+        }
+    }
+
     @SuppressLint("WrongConstant")
     private fun setupIsland(context: Context) {
         if (islandInitialized) {
@@ -152,35 +195,47 @@ class MainHook : IXposedHookLoadPackage {
         }
 
         try {
-            // FIX: STRICT Context Creation. If this fails, we ABORT.
-            // Using System context for resources causes crashes.
-            val moduleContext = try {
-                context.createPackageContext(
+            // FIX: STRICT Context Creation. If this fails, we try fallback.
+            var moduleContext: Context? = null
+
+            try {
+                moduleContext = context.createPackageContext(
                     "com.example.dynamicisland",
                     Context.CONTEXT_IGNORE_SECURITY or Context.CONTEXT_INCLUDE_CODE
                 )
             } catch (e: Exception) {
-                log("[FATAL] Could not create module context. Aborting to prevent crash: $e")
-                return // EXIT IMMEDIATELY
+                log("[WARN] Standard createPackageContext failed: $e. Trying fallback...")
             }
 
-            // Wrap with theme for Compose Material 3
-            val themedModuleContext = android.view.ContextThemeWrapper(
-                moduleContext,
-                android.R.style.Theme_DeviceDefault_DayNight
-            )
+            if (moduleContext == null) {
+                moduleContext = createFallbackContext(context)
+            }
+
+            if (moduleContext == null) {
+                 log("[FATAL] All context creation attempts failed. Aborting.")
+                 return
+            }
 
             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
             // Use TYPE_STATUS_BAR_SUB_PANEL (2017)
             val windowContext = context.createDisplayContext(display).createWindowContext(2017, null)
 
+            // Combine Window Context (Base) with Module Resources
+            val hybridContext = ModuleContextWrapper(windowContext, moduleContext)
+
+            // Wrap with theme for Compose Material 3 (Extra Safety)
+            val finalContext = android.view.ContextThemeWrapper(
+                hybridContext,
+                android.R.style.Theme_DeviceDefault_DayNight
+            )
+
             val wm = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             windowManager = wm
 
             // Pass THEMED MODULE CONTEXT to View
             try {
-                islandView = DynamicIslandView(themedModuleContext)
+                islandView = DynamicIslandView(finalContext)
                 islandView!!.id = View.generateViewId()
             } catch (e: Throwable) {
                 log("[FATAL] View creation failed. Aborting: $e")
