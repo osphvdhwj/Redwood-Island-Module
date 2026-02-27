@@ -2,9 +2,9 @@ name: Android Build
 
 on:
   push:
-    branches: [ "dynamic-island-compose-refactor-1191512639574268778", "main", "dynamic-island-visuals-v5-build" ]
+    branches: [ "dynamic-island-13903703730149818045", "main", "dynamic-island-visuals-v5-build" ]
   pull_request:
-    branches: [ "dynamic-island-compose-refactor-1191512639574268778", "main" ]
+    branches: [ "dynamic-island-13903703730149818045", "main" ]
 
 jobs:
   build:

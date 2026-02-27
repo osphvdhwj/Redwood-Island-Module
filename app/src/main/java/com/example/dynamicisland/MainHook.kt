@@ -42,31 +42,36 @@ class MainHook : IXposedHookLoadPackage {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         val serviceContext = param.thisObject as Context
 
-                        // CRITICAL FIX: Do NOT initialize immediately. Wait for BOOT_COMPLETED.
-                        // This prevents crashing SystemUI during startup loop.
-                        val bootReceiver = object : BroadcastReceiver() {
-                            override fun onReceive(context: Context, intent: Intent) {
-                                if (Intent.ACTION_BOOT_COMPLETED == intent.action) {
-                                    log("[BOOT] Boot completed. Initializing Island safely...")
-                                    // Additional safety delay to let SystemUI settle
-                                    Handler(Looper.getMainLooper()).postDelayed({
-                                        setupIsland(serviceContext)
-                                    }, 5000)
-                                    try {
-                                        context.unregisterReceiver(this)
-                                    } catch (e: Exception) {}
+                        // Register Screen State Receiver (Safe to do early)
+                        registerScreenReceiver(serviceContext)
+
+                        // Check if boot is already completed (e.g. SystemUI restart)
+                        if (isBootCompleted()) {
+                            log("[BOOT] System is already booted. Initializing Island immediately...")
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                setupIsland(serviceContext)
+                            }, 3000) // Small safety delay for SystemUI restart
+                        } else {
+                            log("[BOOT] Waiting for BOOT_COMPLETED...")
+                            val bootReceiver = object : BroadcastReceiver() {
+                                override fun onReceive(context: Context, intent: Intent) {
+                                    if (Intent.ACTION_BOOT_COMPLETED == intent.action) {
+                                        log("[BOOT] Boot completed event received. Initializing Island...")
+                                        Handler(Looper.getMainLooper()).postDelayed({
+                                            setupIsland(serviceContext)
+                                        }, 5000)
+                                        try {
+                                            context.unregisterReceiver(this)
+                                        } catch (e: Exception) {}
+                                    }
                                 }
                             }
+                            try {
+                                serviceContext.registerReceiver(bootReceiver, IntentFilter(Intent.ACTION_BOOT_COMPLETED))
+                            } catch (e: Throwable) {
+                                log("[ERROR] Failed to register BOOT_COMPLETED receiver: $e")
+                            }
                         }
-
-                        try {
-                            serviceContext.registerReceiver(bootReceiver, IntentFilter(Intent.ACTION_BOOT_COMPLETED))
-                        } catch (e: Throwable) {
-                            log("[ERROR] Failed to register BOOT_COMPLETED receiver: $e")
-                        }
-
-                        // Register Screen State Receiver (Safe to do early, no UI interaction)
-                        registerScreenReceiver(serviceContext)
                     }
                 }
             )
@@ -100,6 +105,17 @@ class MainHook : IXposedHookLoadPackage {
         }
     }
 
+    private fun isBootCompleted(): Boolean {
+        return try {
+            val sysProp = Class.forName("android.os.SystemProperties")
+            val getMethod = sysProp.getMethod("get", String::class.java, String::class.java)
+            val bootState = getMethod.invoke(null, "sys.boot_completed", "0") as String
+            bootState == "1"
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     private fun registerScreenReceiver(context: Context) {
         try {
             val receiver = object : BroadcastReceiver() {
@@ -130,7 +146,10 @@ class MainHook : IXposedHookLoadPackage {
 
     @SuppressLint("WrongConstant")
     private fun setupIsland(context: Context) {
-        if (islandInitialized) return
+        if (islandInitialized) {
+            log("[INFO] Island already initialized, skipping setup.")
+            return
+        }
 
         try {
             // FIX: STRICT Context Creation. If this fails, we ABORT.
