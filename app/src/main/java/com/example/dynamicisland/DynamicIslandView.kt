@@ -184,18 +184,22 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     @Composable
     fun IslandUI(state: IslandState) {
         val targetWidth = when (state) {
-            IslandState.HIDDEN -> 26.dp // Default Camera Hole Size
+            IslandState.HIDDEN -> 12.dp // Smaller circle for cutout look
             IslandState.TYPE_1_MINI -> 150.dp // Wider for scrolling text
             IslandState.TYPE_2_MID -> 300.dp
             IslandState.TYPE_3_MAX -> 360.dp // Expanded player
         }
 
         val targetHeight = when (state) {
-            IslandState.HIDDEN -> 26.dp
+            IslandState.HIDDEN -> 12.dp
             IslandState.TYPE_1_MINI -> 36.dp
             IslandState.TYPE_2_MID -> 80.dp
             IslandState.TYPE_3_MAX -> 200.dp // Expanded player height
         }
+
+        // Offset Y for the hidden state to position it "below" camera punch hole (simulated)
+        // Adjust this value (e.g., 35.dp) to physically move it down from top edge of screen
+        val topPadding = if (state == IslandState.HIDDEN) 35.dp else 40.dp
 
         val width by animateDpAsState(targetValue = targetWidth, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "width")
         val height by animateDpAsState(targetValue = targetHeight, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "height")
@@ -215,12 +219,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         // The background color is solid black for ⭕ Default, Mini, and Mid pills
         val backgroundColor = Color.Black
 
-        Box(modifier = Modifier.padding(top = 40.dp), contentAlignment = Alignment.TopCenter) {
+        Box(modifier = Modifier.padding(top = topPadding), contentAlignment = Alignment.TopCenter) {
             Box(
                 modifier = Modifier
                     .width(width)
                     .height(height)
-                    .clip(RoundedCornerShape(42.dp))
+                    .clip(CircleShape) // Always circular/rounded pill
                     .background(backgroundColor)
                     .pointerInput(Unit) {
                         var dragAccumulationX = 0f
@@ -405,10 +409,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
 
         if (newState == IslandState.HIDDEN || newState == IslandState.TYPE_1_MINI) {
-            wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+            // NOTE: Removed FLAG_NOT_FOCUSABLE for HIDDEN so it can receive taps!
+            // But we must be careful not to steal ALL focus.
+            // Using only NOT_TOUCH_MODAL allows touches outside to pass, but touches inside to capture.
+             wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
         } else {
-            // Only need focus if we ever add typing back, but usually media players don't need focus.
-            wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
+             wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
         }
 
         try { wm.updateViewLayout(this, wp) } catch (e: Exception) { }

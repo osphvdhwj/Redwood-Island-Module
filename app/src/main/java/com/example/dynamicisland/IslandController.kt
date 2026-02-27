@@ -27,12 +27,23 @@ object IslandController {
     private var isExpanding = false
     private var isScreenOn = true
 
+    private fun log(msg: String) {
+        XposedBridge.log("DynamicIsland: $msg")
+    }
+
     private val mediaCallback = object : MediaController.Callback() {
-        override fun onPlaybackStateChanged(state: PlaybackState?) { updateMediaState(state) }
-        override fun onMetadataChanged(metadata: MediaMetadata?) { updateMetadata(metadata) }
+        override fun onPlaybackStateChanged(state: PlaybackState?) {
+            log("[MEDIA] Playback state changed: ${state?.state}")
+            updateMediaState(state)
+        }
+        override fun onMetadataChanged(metadata: MediaMetadata?) {
+            log("[MEDIA] Metadata changed: ${metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)}")
+            updateMetadata(metadata)
+        }
     }
 
     private val sessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
+        log("[MEDIA] Active sessions changed. Count: ${controllers?.size}")
         updateActiveController(controllers)
     }
 
@@ -75,26 +86,31 @@ object IslandController {
 
         // --- Gesture Mappings ---
         view.onSingleTap = {
+            log("[GESTURE] Single Tap")
             val island = islandViewRef?.get()
             if (island != null) {
                 when (island.islandState.value) {
                     DynamicIslandView.IslandState.HIDDEN -> {
                         // Wake up to mini if music is active, else do nothing
-                        if (currentController != null) showMini()
+                        if (currentController != null) showMini() else showDashboard() // Debug: Force open even without music
                     }
-                    DynamicIslandView.IslandState.TYPE_1_MINI -> showDashboard() // Jump straight to max music player
+                    DynamicIslandView.IslandState.TYPE_1_MINI -> showDashboard()
                     DynamicIslandView.IslandState.TYPE_2_MID -> collapse()
                     DynamicIslandView.IslandState.TYPE_3_MAX -> collapse()
                 }
             }
         }
 
-        view.onDoubleTap = { forceHide() }
+        view.onDoubleTap = {
+            log("[GESTURE] Double Tap")
+            forceHide()
+        }
 
         view.onLongPress = {
+            log("[GESTURE] Long Press")
              val island = islandViewRef?.get()
              if (island?.islandState?.value == DynamicIslandView.IslandState.TYPE_1_MINI) {
-                 showDashboard() // Also map Long Press to max pill just to be safe
+                 showDashboard()
              }
         }
 
@@ -207,17 +223,28 @@ object IslandController {
     private fun setupMediaListener(context: Context) {
         try {
             mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
-            val componentName = android.content.ComponentName(context, "com.android.systemui.SystemUIService")
-            mediaSessionManager?.addOnActiveSessionsChangedListener(sessionsListener, componentName)
-            val controllers = mediaSessionManager?.getActiveSessions(componentName)
+            // Use null component name to listen to ALL sessions (more reliable)
+            mediaSessionManager?.addOnActiveSessionsChangedListener(sessionsListener, null)
+            val controllers = mediaSessionManager?.getActiveSessions(null)
+            log("[MEDIA] Initial controllers found: ${controllers?.size}")
             updateActiveController(controllers)
         } catch (e: Throwable) {
             XposedBridge.log("DynamicIsland: [ERROR] Media setup failed: " + e)
+            // Fallback to explicit component name if null fails (though null is usually safer for unrestricted access)
+            try {
+                val componentName = android.content.ComponentName(context, "com.android.systemui.SystemUIService")
+                 mediaSessionManager?.addOnActiveSessionsChangedListener(sessionsListener, componentName)
+                 val controllers = mediaSessionManager?.getActiveSessions(componentName)
+                 updateActiveController(controllers)
+            } catch (e2: Throwable) {
+                 XposedBridge.log("DynamicIsland: [FATAL] Media setup fallback failed: " + e2)
+            }
         }
     }
 
     private fun updateActiveController(controllers: List<MediaController>?) {
         if (controllers.isNullOrEmpty()) {
+            log("[MEDIA] No active controllers.")
             currentController?.unregisterCallback(mediaCallback)
             currentController = null
             updateMediaState(null)
@@ -231,6 +258,8 @@ object IslandController {
         } ?: controllers.firstOrNull {
             it.playbackState?.state == PlaybackState.STATE_PAUSED
         } ?: controllers.first()
+
+        log("[MEDIA] Selected controller: ${bestController.packageName}")
 
         if (currentController != null && currentController?.packageName == bestController.packageName) {
             updateMediaState(bestController.playbackState)
