@@ -91,7 +91,7 @@ object IslandController {
                 when (island.islandState.value) {
                     DynamicIslandView.IslandState.HIDDEN -> showMini()
                     DynamicIslandView.IslandState.TYPE_1_MINI -> expandMid()
-                    DynamicIslandView.IslandState.TYPE_2_MID -> collapse()
+                    DynamicIslandView.IslandState.TYPE_2_MID -> showDashboard() // FIX: Open dashboard (Max) from Mid
                     DynamicIslandView.IslandState.TYPE_3_MAX -> collapse()
                 }
             }

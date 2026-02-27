@@ -223,24 +223,25 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             }
         }
 
-        // Glassmorphism Styles (White water/glass)
+        // Glassmorphism Styles (Water/Glass)
+        // Water is clearer than "White Glass". Less opaque.
         val shape = RoundedCornerShape(32.dp)
 
-        // Active: White Glass (Semi-transparent white)
+        // Active: Water/Glass (More transparent white)
         // Hidden: Transparent
         val backgroundColor = if (state == IslandState.HIDDEN)
             Color.Transparent
         else
-            Color.White.copy(alpha = 0.85f) // White Glass
+            Color.White.copy(alpha = 0.65f) // Water (clearer than 0.85f)
 
         val borderColor = if (state == IslandState.HIDDEN)
             Color.Transparent
         else
-            Color.White.copy(alpha = 0.4f)
+            Color.White.copy(alpha = 0.3f)
 
         val borderWidth = if (state == IslandState.HIDDEN) 0.dp else 1.dp
 
-        // Text Color for White Background
+        // Text Color for Water Background (Dark text is best for contrast)
         val contentColor = Color.Black
 
         Box(modifier = Modifier.padding(top = topPadding), contentAlignment = Alignment.TopCenter) {
@@ -351,9 +352,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     @Composable
     fun MusicMaxContent(textColor: Color) {
         val music = musicState.value ?: return
-
-        // For Max view, we might want a blurred art background or solid glass.
-        // Request said "White like water & glass". Keeping consistent with glass theme.
 
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
