@@ -18,7 +18,6 @@ object IslandController {
     private var islandViewRef: WeakReference<DynamicIslandView>? = null
     private var mediaSessionManager: MediaSessionManager? = null
     private var currentController: MediaController? = null
-    private var dismissRunnable: Runnable? = null
     private val progressHandler = Handler(Looper.getMainLooper())
     private var mediaDuration = 0L
 
@@ -185,7 +184,7 @@ object IslandController {
 
     fun collapse() {
         isExpanding = false
-        islandViewRef?.get()?.hide()
+        islandViewRef?.get()?.collapse()
     }
 
     fun forceHide() {
