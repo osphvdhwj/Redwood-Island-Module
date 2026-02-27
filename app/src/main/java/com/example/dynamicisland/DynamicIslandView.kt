@@ -30,6 +30,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
@@ -185,25 +186,32 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     @Composable
     fun IslandUI(state: IslandState) {
+        // 1. Circle Size: Matches camera punch hole (approx 28-30dp)
         val targetWidth = when (state) {
-            IslandState.HIDDEN -> 42.dp // Slightly smaller ring for punch-hole fit
-            IslandState.TYPE_1_MINI -> 180.dp // Wider for scrolling text
+            IslandState.HIDDEN -> 30.dp
+            IslandState.TYPE_1_MINI -> 180.dp
             IslandState.TYPE_2_MID -> 320.dp
-            IslandState.TYPE_3_MAX -> 360.dp // Expanded player
+            IslandState.TYPE_3_MAX -> 360.dp
         }
 
         val targetHeight = when (state) {
-            IslandState.HIDDEN -> 42.dp // Ring
-            IslandState.TYPE_1_MINI -> 42.dp // Match height to ring initially
-            IslandState.TYPE_2_MID -> 100.dp // Taller pill
-            IslandState.TYPE_3_MAX -> 220.dp // Full player
+            IslandState.HIDDEN -> 30.dp
+            IslandState.TYPE_1_MINI -> 36.dp
+            IslandState.TYPE_2_MID -> 100.dp
+            IslandState.TYPE_3_MAX -> 220.dp
         }
 
-        // Offset Y: 38dp to place it just below the punch-hole area
-        val topPadding = if (state == IslandState.HIDDEN) 38.dp else 40.dp
+        // 2. Place it under camera punch hole + 3. Show below status bar (e.g. 42dp + 2dp)
+        val topPadding = if (state == IslandState.HIDDEN) 42.dp else 44.dp
 
-        val width by animateDpAsState(targetValue = targetWidth, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "width")
-        val height by animateDpAsState(targetValue = targetHeight, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "height")
+        // 4. Add Physics: Bouncy Spring
+        val physicsSpec = spring<Dp>(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        )
+
+        val width by animateDpAsState(targetValue = targetWidth, animationSpec = physicsSpec, label = "width")
+        val height by animateDpAsState(targetValue = targetHeight, animationSpec = physicsSpec, label = "height")
 
         LaunchedEffect(width, height) {
             val wp = windowParams
@@ -212,7 +220,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 val pxWidth = (width.value * context.resources.displayMetrics.density).toInt()
                 val pxHeight = (height.value * context.resources.displayMetrics.density).toInt()
 
-                // Keep touch area tight to visual size + minimal padding
+                // Keep touch area tight to visual size
                 wp.width = pxWidth + 30
                 wp.height = pxHeight + (topPadding.value * context.resources.displayMetrics.density).toInt() + 30
 
@@ -220,21 +228,20 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             }
         }
 
-        // Visual Style: Squircle with Round Corners (32.dp)
-        // Hidden State: Transparent Ring (1.5dp border)
+        // 5. Transparency: Alpha 0.95f for "particularly transparent" glass look
         val shape = RoundedCornerShape(32.dp)
-        val backgroundColor = if (state == IslandState.HIDDEN) Color.Transparent else Color.Black
-        val borderColor = if (state == IslandState.HIDDEN) Color.Gray.copy(alpha = 0.5f) else Color.Transparent
-        val borderWidth = if (state == IslandState.HIDDEN) 1.5.dp else 0.dp
+        val backgroundColor = if (state == IslandState.HIDDEN) Color.Transparent else Color.Black.copy(alpha = 0.92f)
+        val borderColor = if (state == IslandState.HIDDEN) Color.Gray.copy(alpha = 0.3f) else Color.Transparent
+        val borderWidth = if (state == IslandState.HIDDEN) 2.dp else 0.dp
 
         Box(modifier = Modifier.padding(top = topPadding), contentAlignment = Alignment.TopCenter) {
             Box(
                 modifier = Modifier
                     .width(width)
                     .height(height)
-                    .clip(shape) // Squircle
+                    .clip(shape)
                     .background(backgroundColor)
-                    .border(borderWidth, borderColor, shape) // Ring effect
+                    .border(borderWidth, borderColor, shape)
                     .pointerInput(Unit) {
                         var dragAccumulationX = 0f
                         var dragAccumulationY = 0f
@@ -415,7 +422,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         val wp = windowParams ?: return
         val wm = windowManager ?: return
 
-        // Always allow touches to pass through AND prevent stealing focus
         wp.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
@@ -475,4 +481,5 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     fun setContextGlow(bitmap: Bitmap?) { }
     fun updateMiniPillContent(title: String, icon: android.graphics.drawable.Icon?, color: Int) { }
+    // General Notification API removed safely
 }
