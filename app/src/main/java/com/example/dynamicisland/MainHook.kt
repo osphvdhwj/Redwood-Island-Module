@@ -18,6 +18,7 @@ import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import java.lang.reflect.Method
 
 class MainHook : IXposedHookLoadPackage {
     private var islandInitialized = false
@@ -32,7 +33,6 @@ class MainHook : IXposedHookLoadPackage {
         if (lpparam.packageName != "com.android.systemui") return
         log("[LOAD] Hooking SystemUI package: ${lpparam.packageName}")
 
-        // 1. UI Injection - SAFE BOOT STRATEGY
         try {
             XposedHelpers.findAndHookMethod(
                 "com.android.systemui.SystemUIService",
@@ -42,15 +42,13 @@ class MainHook : IXposedHookLoadPackage {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         val serviceContext = param.thisObject as Context
 
-                        // Register Screen State Receiver (Safe to do early)
                         registerScreenReceiver(serviceContext)
 
-                        // Check if boot is already completed (e.g. SystemUI restart)
                         if (isBootCompleted()) {
                             log("[BOOT] System is already booted. Initializing Island immediately...")
                             Handler(Looper.getMainLooper()).postDelayed({
                                 setupIsland(serviceContext)
-                            }, 3000) // Small safety delay for SystemUI restart
+                            }, 3000)
                         } else {
                             log("[BOOT] Waiting for BOOT_COMPLETED...")
                             val bootReceiver = object : BroadcastReceiver() {
@@ -79,14 +77,12 @@ class MainHook : IXposedHookLoadPackage {
             log("[ERROR] Failed to hook SystemUIService: $e")
         }
 
-        // 2. Initialize Island Framework Hooks (Safe logic hooks)
         try {
             IslandController.hookFrameworkNotifications(lpparam)
         } catch (e: Throwable) {
             log("[ERROR] Framework hook init failed: $e")
         }
 
-        // 3. NEW: Native Heads-Up Notification Suppression
         try {
             val interruptStateProviderClass = XposedHelpers.findClass(
                 "com.android.systemui.statusbar.notification.interruption.NotificationInterruptStateProviderImpl",
@@ -95,11 +91,13 @@ class MainHook : IXposedHookLoadPackage {
 
             XposedBridge.hookAllMethods(interruptStateProviderClass, "shouldHeadsUp", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    // Suppress the system heads-up entirely so the Island can take over
-                    param.result = false
+                    val method = param.method as? Method
+                    if (method != null && (method.returnType == Boolean::class.javaPrimitiveType || method.returnType == java.lang.Boolean::class.java)) {
+                        param.result = false
+                    }
                 }
             })
-            log("[UI] SUCCESS: Native System Heads-Up Notifications Suppressed")
+            log("[UI] SUCCESS: Native System Heads-Up Notifications Suppressed (Safe Hook)")
         } catch (e: Throwable) {
             log("[WARN] Native HUN suppression hook failed: $e")
         }
@@ -146,41 +144,28 @@ class MainHook : IXposedHookLoadPackage {
 
     @SuppressLint("WrongConstant")
     private fun setupIsland(context: Context) {
-        if (islandInitialized) {
-            log("[INFO] Island already initialized, skipping setup.")
-            return
-        }
+        if (islandInitialized) return
 
         try {
-            // FIX: STRICT Context Creation. If this fails, we ABORT.
-            // Using System context for resources causes crashes.
             val moduleContext = try {
                 context.createPackageContext(
                     "com.example.dynamicisland",
                     Context.CONTEXT_IGNORE_SECURITY or Context.CONTEXT_INCLUDE_CODE
                 )
             } catch (e: Exception) {
-                log("[FATAL] Could not create module context. Aborting to prevent crash: $e")
-                return // EXIT IMMEDIATELY
+                log("[WARN] Could not create module context. Using system context: $e")
+                context
             }
-
-            // Wrap with theme for Compose Material 3
-            val themedModuleContext = android.view.ContextThemeWrapper(
-                moduleContext,
-                android.R.style.Theme_DeviceDefault_DayNight
-            )
 
             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
-            // Use TYPE_STATUS_BAR_SUB_PANEL (2017)
             val windowContext = context.createDisplayContext(display).createWindowContext(2017, null)
 
             val wm = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             windowManager = wm
 
-            // Pass THEMED MODULE CONTEXT to View
             try {
-                islandView = DynamicIslandView(themedModuleContext)
+                islandView = DynamicIslandView(moduleContext)
                 islandView!!.id = View.generateViewId()
             } catch (e: Throwable) {
                 log("[FATAL] View creation failed. Aborting: $e")
@@ -210,10 +195,9 @@ class MainHook : IXposedHookLoadPackage {
             wm.addView(islandView, params)
             islandInitialized = true
             IslandController.init(islandView!!)
-            log("[SUCCESS] Dynamic Island initialized safely.")
+            log("[SUCCESS] Dynamic Island initialized safely (Standard View).")
         } catch (e: Throwable) {
             log("[FATAL] setupIsland crashed gracefully: $e")
-            // Catch-all to ensure we don't kill SystemUI process
         }
     }
 }
