@@ -32,7 +32,7 @@ class MainHook : IXposedHookLoadPackage {
         if (lpparam.packageName != "com.android.systemui") return
         log("[LOAD] Hooking SystemUI package: ${lpparam.packageName}")
 
-        // 1. UI Injection
+        // 1. UI Injection - SAFE BOOT STRATEGY
         try {
             XposedHelpers.findAndHookMethod(
                 "com.android.systemui.SystemUIService",
@@ -42,12 +42,31 @@ class MainHook : IXposedHookLoadPackage {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         val serviceContext = param.thisObject as Context
 
-                        // Register Screen State Receiver
-                        registerScreenReceiver(serviceContext)
+                        // CRITICAL FIX: Do NOT initialize immediately. Wait for BOOT_COMPLETED.
+                        // This prevents crashing SystemUI during startup loop.
+                        val bootReceiver = object : BroadcastReceiver() {
+                            override fun onReceive(context: Context, intent: Intent) {
+                                if (Intent.ACTION_BOOT_COMPLETED == intent.action) {
+                                    log("[BOOT] Boot completed. Initializing Island safely...")
+                                    // Additional safety delay to let SystemUI settle
+                                    Handler(Looper.getMainLooper()).postDelayed({
+                                        setupIsland(serviceContext)
+                                    }, 5000)
+                                    try {
+                                        context.unregisterReceiver(this)
+                                    } catch (e: Exception) {}
+                                }
+                            }
+                        }
 
-                        Handler(Looper.getMainLooper()).postDelayed({
-                            setupIsland(serviceContext)
-                        }, 2000)
+                        try {
+                            serviceContext.registerReceiver(bootReceiver, IntentFilter(Intent.ACTION_BOOT_COMPLETED))
+                        } catch (e: Throwable) {
+                            log("[ERROR] Failed to register BOOT_COMPLETED receiver: $e")
+                        }
+
+                        // Register Screen State Receiver (Safe to do early, no UI interaction)
+                        registerScreenReceiver(serviceContext)
                     }
                 }
             )
@@ -55,8 +74,12 @@ class MainHook : IXposedHookLoadPackage {
             log("[ERROR] Failed to hook SystemUIService: $e")
         }
 
-        // 2. Initialize Island Framework Hooks (Reads the notification data)
-        IslandController.hookFrameworkNotifications(lpparam)
+        // 2. Initialize Island Framework Hooks (Safe logic hooks)
+        try {
+            IslandController.hookFrameworkNotifications(lpparam)
+        } catch (e: Throwable) {
+            log("[ERROR] Framework hook init failed: $e")
+        }
 
         // 3. NEW: Native Heads-Up Notification Suppression
         try {
@@ -73,7 +96,7 @@ class MainHook : IXposedHookLoadPackage {
             })
             log("[UI] SUCCESS: Native System Heads-Up Notifications Suppressed")
         } catch (e: Throwable) {
-            log("[WARN] Native HUN suppression hook failed (might be different on this crDroid version): $e")
+            log("[WARN] Native HUN suppression hook failed: $e")
         }
     }
 
@@ -90,9 +113,6 @@ class MainHook : IXposedHookLoadPackage {
                             log("[SCREEN] ON")
                             IslandController.onScreenStateChanged(true)
                         }
-                        Intent.ACTION_USER_PRESENT -> {
-                            // Can be used for unlock events if needed
-                        }
                     }
                 }
             }
@@ -100,7 +120,6 @@ class MainHook : IXposedHookLoadPackage {
             val filter = IntentFilter().apply {
                 addAction(Intent.ACTION_SCREEN_OFF)
                 addAction(Intent.ACTION_SCREEN_ON)
-                addAction(Intent.ACTION_USER_PRESENT)
             }
             context.registerReceiver(receiver, filter)
             log("[SYSTEM] Screen Receiver Registered")
@@ -114,15 +133,16 @@ class MainHook : IXposedHookLoadPackage {
         if (islandInitialized) return
 
         try {
-            // FIX: Create Module Context for Resources/ClassLoader
+            // FIX: STRICT Context Creation. If this fails, we ABORT.
+            // Using System context for resources causes crashes.
             val moduleContext = try {
                 context.createPackageContext(
                     "com.example.dynamicisland",
                     Context.CONTEXT_IGNORE_SECURITY or Context.CONTEXT_INCLUDE_CODE
                 )
             } catch (e: Exception) {
-                log("[WARN] Failed to create module context, using system context: $e")
-                context
+                log("[FATAL] Could not create module context. Aborting to prevent crash: $e")
+                return // EXIT IMMEDIATELY
             }
 
             // Wrap with theme for Compose Material 3
@@ -140,8 +160,13 @@ class MainHook : IXposedHookLoadPackage {
             windowManager = wm
 
             // Pass THEMED MODULE CONTEXT to View
-            islandView = DynamicIslandView(themedModuleContext)
-            islandView!!.id = View.generateViewId()
+            try {
+                islandView = DynamicIslandView(themedModuleContext)
+                islandView!!.id = View.generateViewId()
+            } catch (e: Throwable) {
+                log("[FATAL] View creation failed. Aborting: $e")
+                return
+            }
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -152,12 +177,12 @@ class MainHook : IXposedHookLoadPackage {
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, // FIX: Hardware Acceleration
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                 PixelFormat.TRANSLUCENT
             )
 
             params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            params.y = 0 // We will handle cutout snapping dynamically now
+            params.y = 0
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
 
             islandView!!.windowManager = wm
@@ -166,8 +191,10 @@ class MainHook : IXposedHookLoadPackage {
             wm.addView(islandView, params)
             islandInitialized = true
             IslandController.init(islandView!!)
+            log("[SUCCESS] Dynamic Island initialized safely.")
         } catch (e: Throwable) {
-            log("[ERROR] setupIsland crashed: $e")
+            log("[FATAL] setupIsland crashed gracefully: $e")
+            // Catch-all to ensure we don't kill SystemUI process
         }
     }
 }

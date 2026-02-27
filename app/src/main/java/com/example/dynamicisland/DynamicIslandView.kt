@@ -34,6 +34,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -247,7 +248,19 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     // --- Compose UI ---
     @Composable
     fun DynamicIslandTheme(context: Context, content: @Composable () -> Unit) {
-        val colorScheme = dynamicDarkColorScheme(context)
+        // Safe Theme Loading to prevent bootloops if resources are missing
+        val colorScheme = try {
+            dynamicDarkColorScheme(context)
+        } catch (e: Throwable) {
+            // Fallback to a static dark scheme if dynamic fails (common in early boot or Xposed contexts)
+            darkColorScheme(
+                primary = Color.Cyan,
+                secondary = Color.Gray,
+                background = Color.Black,
+                surface = Color.DarkGray,
+                surfaceVariant = Color.DarkGray
+            )
+        }
         MaterialTheme(colorScheme = colorScheme, content = content)
     }
 
@@ -343,8 +356,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                                             if (maxPillMode.value == MaxPillMode.QS_PANEL) {
                                                 maxPillMode.value = MaxPillMode.DEFAULT
                                             } else {
-                                                // If not in QS panel, swipe up usually collapses or does nothing special
-                                                // Let controller handle generic swipe up (collapse)
                                                 onSwipeUp?.invoke()
                                             }
                                         }
