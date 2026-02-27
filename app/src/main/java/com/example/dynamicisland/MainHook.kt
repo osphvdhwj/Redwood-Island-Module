@@ -85,24 +85,6 @@ class MainHook : IXposedHookLoadPackage {
         } catch (e: Throwable) {
             log("[ERROR] Framework hook init failed: $e")
         }
-
-        // 3. NEW: Native Heads-Up Notification Suppression
-        try {
-            val interruptStateProviderClass = XposedHelpers.findClass(
-                "com.android.systemui.statusbar.notification.interruption.NotificationInterruptStateProviderImpl",
-                lpparam.classLoader
-            )
-
-            XposedBridge.hookAllMethods(interruptStateProviderClass, "shouldHeadsUp", object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    // Suppress the system heads-up entirely so the Island can take over
-                    param.result = false
-                }
-            })
-            log("[UI] SUCCESS: Native System Heads-Up Notifications Suppressed")
-        } catch (e: Throwable) {
-            log("[WARN] Native HUN suppression hook failed: $e")
-        }
     }
 
     private fun isBootCompleted(): Boolean {
