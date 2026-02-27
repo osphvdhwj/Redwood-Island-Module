@@ -11,9 +11,7 @@ import android.os.Bundle
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -41,11 +39,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.compositionContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -55,12 +56,18 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.palette.graphics.Palette
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlin.math.sin
 
 // --- Lifecycle Wrapper for Xposed Compose Injection ---
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
@@ -160,6 +167,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         setViewTreeLifecycleOwner(lifecycleOwner)
         setViewTreeSavedStateRegistryOwner(lifecycleOwner)
 
+        // FIX 1: Add the missing ViewModelStoreOwner to prevent crashes
+        val viewModelStoreOwner = object : ViewModelStoreOwner {
+            override val viewModelStore = ViewModelStore()
+        }
+        setViewTreeViewModelStoreOwner(viewModelStoreOwner)
+
         val composeView = ComposeView(context).apply {
             setContent {
                 DynamicIslandTheme(context) {
@@ -171,6 +184,16 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 }
             }
         }
+
+        // FIX 2: Manually start the Compose Engine (Recomposer)
+        val coroutineContext = AndroidUiDispatcher.CurrentThread
+        val runRecomposeScope = CoroutineScope(coroutineContext)
+        val recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
+        composeView.compositionContext = recomposer
+        runRecomposeScope.launch {
+            recomposer.runRecomposeAndApplyChanges()
+        }
+
         addView(composeView)
         lifecycleOwner.start()
     }
@@ -234,6 +257,25 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             targetValue = finalHeight,
             animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "height"
         )
+
+        // FIX 3: Sync Compose Animation with WindowManager Bounds
+        LaunchedEffect(width, height) {
+            val wp = windowParams
+            val wm = windowManager
+            if (wp != null && wm != null) {
+                // Convert Dp to Px
+                val pxWidth = (width.value * context.resources.displayMetrics.density).toInt()
+                val pxHeight = (height.value * context.resources.displayMetrics.density).toInt()
+
+                // Add a small buffer to prevent clipping during bouncy springs
+                wp.width = pxWidth + 50
+                wp.height = pxHeight + 100 // Add space for bottom padding
+
+                try {
+                    wm.updateViewLayout(this@DynamicIslandView, wp)
+                } catch (e: Exception) {}
+            }
+        }
 
         // Dynamic Color logic
         val music = musicState.value
@@ -448,14 +490,40 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     @Composable
     fun WaveLoadingView(progress: Float, color: Color, modifier: Modifier = Modifier) {
-        val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "wave")
+        val infiniteTransition = rememberInfiniteTransition(label = "wave")
+        val phase by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 2f * Math.PI.toFloat(),
+            animationSpec = infiniteRepeatable(
+                animation = tween(1500, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ), label = "phase"
+        )
+
         Canvas(modifier = modifier) {
-            val fillHeight = size.height * progress
-            drawRect(
-                color = color,
-                topLeft = Offset(0f, size.height - fillHeight),
-                size = Size(size.width, fillHeight)
-            )
+            val canvasWidth = size.width
+            val canvasHeight = size.height
+            val waterLevel = canvasHeight * (1f - progress)
+            val waveAmplitude = 12f // Height of the ripples
+
+            val path = Path().apply {
+                moveTo(0f, canvasHeight)
+                lineTo(0f, waterLevel)
+
+                // Draw the sine wave
+                val step = 5f
+                var x = 0f
+                while (x <= canvasWidth + step) {
+                    val angularFreq = (2f * Math.PI.toFloat() * 1.5f) / canvasWidth
+                    val y = waterLevel + waveAmplitude * sin((x * angularFreq) + phase)
+                    lineTo(x, y)
+                    x += step
+                }
+
+                lineTo(canvasWidth, canvasHeight)
+                close()
+            }
+            drawPath(path = path, color = color)
         }
     }
 
