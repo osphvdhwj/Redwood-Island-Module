@@ -54,4 +54,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.activity:activity-compose:1.8.2")
+
+    // Wavy Slider
+    implementation("ir.mahozad.multiplatform:wavy-slider:1.0.0")
 }
