@@ -17,7 +17,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -71,6 +71,7 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.sin
 
 // --- Lifecycle Wrapper for Xposed Compose Injection ---
@@ -116,8 +117,11 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         TYPE_3_MAX   // 4.0 - 4.5 cm High
     }
 
+    enum class MaxPillMode { DEFAULT, QS_PANEL }
+
     // Observable states for Compose
     val islandState = mutableStateOf(IslandState.HIDDEN)
+    val maxPillMode = mutableStateOf(MaxPillMode.DEFAULT)
     val isScreenOn = mutableStateOf(true)
     val isLandscape = mutableStateOf(false)
 
@@ -168,6 +172,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     // Swipe Gestures
     var onSwipeLeft: (() -> Unit)? = null
     var onSwipeRight: (() -> Unit)? = null
+    var onSwipeDown: (() -> Unit)? = null
+    var onSwipeUp: (() -> Unit)? = null
 
     private val lifecycleOwner = OverlayLifecycleOwner()
 
@@ -234,32 +240,33 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         return String.format("%d:%02d", minutes, seconds)
     }
 
+    fun clearMusicState() {
+        musicState.value = null
+    }
+
     // --- Compose UI ---
     @Composable
     fun DynamicIslandTheme(context: Context, content: @Composable () -> Unit) {
-        // Use Dynamic Colors (Material You)
         val colorScheme = dynamicDarkColorScheme(context)
         MaterialTheme(colorScheme = colorScheme, content = content)
     }
 
     @Composable
     fun IslandUI(state: IslandState) {
-        // Updated Dimensions: Wider pills, not taller
         val targetWidth = when (state) {
             IslandState.HIDDEN -> 24.dp
             IslandState.TYPE_1_MINI -> 110.dp
-            IslandState.TYPE_2_MID -> 300.dp // Wider (was 240)
-            IslandState.TYPE_3_MAX -> 340.dp // Wider (was 260)
+            IslandState.TYPE_2_MID -> 300.dp
+            IslandState.TYPE_3_MAX -> 340.dp
         }
 
         val targetHeight = when (state) {
             IslandState.HIDDEN -> 24.dp
-            IslandState.TYPE_1_MINI -> 24.dp // Slightly shorter (was 36/40)
-            IslandState.TYPE_2_MID -> 80.dp  // Shorter (was 100)
-            IslandState.TYPE_3_MAX -> 180.dp // Shorter (was 260)
+            IslandState.TYPE_1_MINI -> 24.dp
+            IslandState.TYPE_2_MID -> 80.dp
+            IslandState.TYPE_3_MAX -> 180.dp
         }
 
-        // Adjust height for Notification Reply (needs more space)
         val notif = notificationState.value
         val hasReply = notif?.actions?.any { !it.remoteInputs.isNullOrEmpty() } == true
         val finalHeight = if (state == IslandState.TYPE_3_MAX && hasReply) 220.dp else targetHeight
@@ -273,18 +280,15 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "height"
         )
 
-        // FIX 3: Sync Compose Animation with WindowManager Bounds
         LaunchedEffect(width, height) {
             val wp = windowParams
             val wm = windowManager
             if (wp != null && wm != null) {
-                // Convert Dp to Px
                 val pxWidth = (width.value * context.resources.displayMetrics.density).toInt()
                 val pxHeight = (height.value * context.resources.displayMetrics.density).toInt()
 
-                // Add a small buffer to prevent clipping during bouncy springs
                 wp.width = pxWidth + 50
-                wp.height = pxHeight + 100 // Add space for bottom padding
+                wp.height = pxHeight + 100
 
                 try {
                     wm.updateViewLayout(this@DynamicIslandView, wp)
@@ -292,7 +296,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             }
         }
 
-        // Dynamic Color logic
         val music = musicState.value
         val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
         val targetColor = if (music != null && state != IslandState.HIDDEN) {
@@ -308,25 +311,53 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
         val cornerRadius = 42.dp
 
-        // FIX: Removed .fillMaxWidth() so it doesn't block the CrDroid status bar gestures!
         Box(
-            modifier = Modifier.padding(top = 40.dp), // Keep top padding
+            modifier = Modifier
+                .padding(top = 40.dp),
             contentAlignment = Alignment.TopCenter
         ) {
-            // The Pill Container
             Box(
                 modifier = Modifier
                     .width(width)
                     .height(height)
                     .clip(RoundedCornerShape(cornerRadius))
                     .background(backgroundColor)
-                    // If HIDDEN, draw a stroked circle ring if desired
                     .then(if (state == IslandState.HIDDEN) Modifier.border(1.dp, Color.Gray.copy(alpha=0.5f), CircleShape) else Modifier)
                     .pointerInput(Unit) {
-                        detectHorizontalDragGestures { _, dragAmount ->
-                            if (dragAmount < -20) onSwipeLeft?.invoke()
-                            else if (dragAmount > 20) onSwipeRight?.invoke()
-                        }
+                        var dragAccumulationX = 0f
+                        var dragAccumulationY = 0f
+                        detectDragGestures(
+                            onDragStart = { dragAccumulationX = 0f; dragAccumulationY = 0f },
+                            onDragEnd = {
+                                if (abs(dragAccumulationX) > abs(dragAccumulationY)) {
+                                    if (dragAccumulationX < -40) onSwipeLeft?.invoke()
+                                    else if (dragAccumulationX > 40) onSwipeRight?.invoke()
+                                } else {
+                                    if (dragAccumulationY > 40) {
+                                        // Swipe Down
+                                        if (state == IslandState.TYPE_3_MAX) maxPillMode.value = MaxPillMode.QS_PANEL
+                                        else onSwipeDown?.invoke()
+                                    } else if (dragAccumulationY < -40) {
+                                        // Swipe Up
+                                        if (state == IslandState.TYPE_3_MAX) {
+                                            if (maxPillMode.value == MaxPillMode.QS_PANEL) {
+                                                maxPillMode.value = MaxPillMode.DEFAULT
+                                            } else {
+                                                // If not in QS panel, swipe up usually collapses or does nothing special
+                                                // Let controller handle generic swipe up (collapse)
+                                                onSwipeUp?.invoke()
+                                            }
+                                        }
+                                        else onSwipeUp?.invoke()
+                                    }
+                                }
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                dragAccumulationX += dragAmount.x
+                                dragAccumulationY += dragAmount.y
+                            }
+                        )
                     }
                     .pointerInput(Unit) {
                         detectTapGestures(
@@ -371,9 +402,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                      Box(Modifier.size(16.dp).background(Color.Green, RoundedCornerShape(4.dp)))
                  }
             } else if (notif != null) {
-                 // Use extracted Icon
                  if (notif.icon != null) {
-                     // Need to load drawable, but for now placeholder or generic
                      Box(Modifier.size(16.dp).background(Color.Blue, RoundedCornerShape(4.dp)))
                  } else {
                      Box(Modifier.size(16.dp).background(Color.Blue, RoundedCornerShape(4.dp)))
@@ -384,6 +413,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     @Composable
     fun ExpandedContent() {
+        // Routing Logic
+        if (islandState.value == IslandState.TYPE_3_MAX && maxPillMode.value == MaxPillMode.QS_PANEL) {
+            QSPanelContent()
+            return
+        }
+
         val music = musicState.value
         val notif = notificationState.value
         val charging = chargingState.value
@@ -403,28 +438,20 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 Text(text = "${charging.level}%", style = MaterialTheme.typography.headlineMedium, color = Color(charging.color))
 
             } else if (music != null) {
-                // BIGGEST PILL REDESIGN
                 Box(modifier = Modifier.fillMaxSize()) {
-                    // 1. Background Image Layer
                     if (music.art != null && islandState.value == IslandState.TYPE_3_MAX) {
                         Image(
                             bitmap = music.art.asImageBitmap(),
                             contentDescription = "Background",
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .alpha(0.25f) // Darken so text is readable
+                            modifier = Modifier.fillMaxSize().alpha(0.25f)
                         )
                     }
 
-                    // 2. Foreground Content
                     Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
+                        modifier = Modifier.fillMaxSize().padding(16.dp),
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // Top Row: Info & Close Button
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -440,20 +467,14 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                         }
 
                         if (islandState.value == IslandState.TYPE_3_MAX) {
-                            // Middle Row: Slider & Timers
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 var sliderPos by remember(music.progress) { mutableStateOf(music.progress * music.duration) }
-
                                 Slider(
                                     value = sliderPos,
                                     onValueChange = { sliderPos = it },
                                     onValueChangeFinished = { onSeekTo?.invoke(sliderPos.toLong()) },
                                     valueRange = 0f..(music.duration.toFloat().coerceAtLeast(1f)),
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = Color.White,
-                                        activeTrackColor = Color.White,
-                                        inactiveTrackColor = Color.Gray
-                                    )
+                                    colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = Color.Gray)
                                 )
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text(text = formatTime(sliderPos.toLong()), color = Color.LightGray, fontSize = 12.sp)
@@ -462,7 +483,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                             }
                         }
 
-                        // Bottom Row: Media Controls
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -470,26 +490,22 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                         ) {
                             if (islandState.value == IslandState.TYPE_3_MAX) {
                                 IconButton(onClick = { onShuffleClick?.invoke() }) {
-                                    androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_menu_sort_by_size), contentDescription = "Shuffle", tint = Color.White) // Placeholder icon
+                                    androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_menu_sort_by_size), contentDescription = "Shuffle", tint = Color.White)
                                 }
                             }
-
                             IconButton(onClick = { onPrevClick?.invoke() }) {
                                 androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_media_previous), contentDescription = "Prev", tint = Color.White)
                             }
-
                             val playIcon = if (music.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
                             IconButton(onClick = { onPlayPauseClick?.invoke() }, modifier = Modifier.size(56.dp)) {
                                 androidx.compose.material3.Icon(painter = painterResource(playIcon), contentDescription = "Play/Pause", tint = Color.White, modifier = Modifier.size(40.dp))
                             }
-
                             IconButton(onClick = { onNextClick?.invoke() }) {
                                 androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_media_next), contentDescription = "Next", tint = Color.White)
                             }
-
                             if (islandState.value == IslandState.TYPE_3_MAX) {
                                 IconButton(onClick = { onLoopClick?.invoke() }) {
-                                    androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_menu_rotate), contentDescription = "Loop", tint = Color.White) // Placeholder icon
+                                    androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_menu_rotate), contentDescription = "Loop", tint = Color.White)
                                 }
                             }
                         }
@@ -497,6 +513,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 }
 
             } else if (notif != null) {
+                // Notif UI
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Box(Modifier.size(32.dp).background(Color.Gray, CircleShape))
                     Spacer(Modifier.width(8.dp))
@@ -509,45 +526,24 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                         androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.sym_action_chat), contentDescription = "Chat", tint = Color.Cyan, modifier = Modifier.size(16.dp))
                     }
                 }
-
                 Spacer(Modifier.height(12.dp))
-
                 if (notif.actions.isNotEmpty()) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         notif.actions.forEach { action ->
                             if (!action.remoteInputs.isNullOrEmpty()) {
                                 var replyText by remember { mutableStateOf("") }
                                 Row(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(40.dp)
-                                        .background(Color.DarkGray, RoundedCornerShape(20.dp))
-                                        .padding(horizontal = 12.dp),
+                                    modifier = Modifier.weight(1f).height(40.dp).background(Color.DarkGray, RoundedCornerShape(20.dp)).padding(horizontal = 12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     BasicTextField(
-                                        value = replyText,
-                                        onValueChange = { replyText = it },
-                                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
-                                        modifier = Modifier.weight(1f),
+                                        value = replyText, onValueChange = { replyText = it },
+                                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp), modifier = Modifier.weight(1f),
                                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                                        keyboardActions = KeyboardActions(onSend = {
-                                            if (replyText.isNotEmpty()) {
-                                                onReplySend?.invoke(action, replyText)
-                                                replyText = ""
-                                            }
-                                        }),
-                                        decorationBox = { innerTextField ->
-                                            if (replyText.isEmpty()) Text("Reply...", color = Color.Gray, fontSize = 14.sp)
-                                            innerTextField()
-                                        }
+                                        keyboardActions = KeyboardActions(onSend = { if (replyText.isNotEmpty()) { onReplySend?.invoke(action, replyText); replyText = "" } }),
+                                        decorationBox = { innerTextField -> if (replyText.isEmpty()) Text("Reply...", color = Color.Gray, fontSize = 14.sp); innerTextField() }
                                     )
-                                    IconButton(onClick = {
-                                        if (replyText.isNotEmpty()) {
-                                            onReplySend?.invoke(action, replyText)
-                                            replyText = ""
-                                        }
-                                    }) {
+                                    IconButton(onClick = { if (replyText.isNotEmpty()) { onReplySend?.invoke(action, replyText); replyText = "" } }) {
                                         androidx.compose.material3.Icon(painter = painterResource(android.R.drawable.ic_menu_send), contentDescription = "Send", tint = Color.Cyan)
                                     }
                                 }
@@ -564,10 +560,84 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                         }
                     }
                 }
-
             } else {
-                Text("Dashboard", style = MaterialTheme.typography.titleMedium)
+                // Fallback: Pinned Apps
+                PinnedAppsContent()
             }
+        }
+    }
+
+    @Composable
+    fun QSPanelContent() {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            verticalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Text("Quick Settings", color = Color.Cyan, style = MaterialTheme.typography.titleMedium, modifier = Modifier.align(Alignment.CenterHorizontally))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                QSToggle(android.R.drawable.ic_menu_compass, "Wi-Fi", Color.White)
+                QSToggle(android.R.drawable.ic_menu_share, "Bluetooth", Color.White)
+                QSToggle(android.R.drawable.ic_menu_camera, "Flashlight", Color.White)
+                QSToggle(android.R.drawable.ic_lock_silent_mode_off, "DND", Color.Gray)
+            }
+        }
+    }
+
+    @Composable
+    fun QSToggle(iconRes: Int, label: String, tint: Color) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .clip(CircleShape)
+                    .background(Color.DarkGray)
+                    .clickable { /* TODO: Execute QS Action */ },
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.material3.Icon(painter = painterResource(iconRes), contentDescription = label, tint = tint, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(text = label, color = Color.White, fontSize = 10.sp)
+        }
+    }
+
+    @Composable
+    fun PinnedAppsContent() {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            verticalArrangement = Arrangement.SpaceEvenly,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Pinned Apps", color = Color.White, style = MaterialTheme.typography.titleMedium)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                AppIconPlaceholder(Color.Red, "YouTube")
+                AppIconPlaceholder(Color.Green, "WhatsApp")
+                AppIconPlaceholder(Color.Blue, "Chrome")
+                AppIconPlaceholder(Color.Magenta, "Settings")
+            }
+        }
+    }
+
+    @Composable
+    fun AppIconPlaceholder(color: Color, name: String) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(color)
+                    .clickable { /* TODO: Launch App Intent */ }
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(text = name, color = Color.LightGray, fontSize = 10.sp)
         }
     }
 
@@ -587,13 +657,11 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             val canvasWidth = size.width
             val canvasHeight = size.height
             val waterLevel = canvasHeight * (1f - progress)
-            val waveAmplitude = 12f // Height of the ripples
+            val waveAmplitude = 12f
 
             val path = Path().apply {
                 moveTo(0f, canvasHeight)
                 lineTo(0f, waterLevel)
-
-                // Draw the sine wave
                 val step = 5f
                 var x = 0f
                 while (x <= canvasWidth + step) {
@@ -602,7 +670,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     lineTo(x, y)
                     x += step
                 }
-
                 lineTo(canvasWidth, canvasHeight)
                 close()
             }
@@ -616,14 +683,17 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         val wp = windowParams ?: return
         val wm = windowManager ?: return
 
+        // Reset Mode if leaving Max
+        if (newState != IslandState.TYPE_3_MAX) {
+            maxPillMode.value = MaxPillMode.DEFAULT
+        }
+
         when (newState) {
             IslandState.HIDDEN, IslandState.TYPE_1_MINI -> {
-                // Pass touches through, NO keyboard focus
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
             }
             IslandState.TYPE_2_MID, IslandState.TYPE_3_MAX -> {
-                // Intercept touches outside, ALLOW keyboard focus for replies
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL.inv()
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
             }
@@ -631,9 +701,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
         try {
             wm.updateViewLayout(this, wp)
-        } catch (e: Exception) {
-            // Ignore layout update errors during fast transitions
-        }
+        } catch (e: Exception) { }
     }
 
     fun showMini() = setState(IslandState.TYPE_1_MINI)

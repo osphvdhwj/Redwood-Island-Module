@@ -141,14 +141,10 @@ object IslandController {
         }
 
         view.onShuffleClick = {
-            // Toggles shuffle. Depending on Android version, you might need to check current state.
-            // Simplified toggle for now (assuming standard behavior)
-            // Ideally check currentController?.shuffleMode
             // Shuffle not supported on older APIs directly in TransportControls
         }
 
         view.onLoopClick = {
-            // Toggles repeat
             // Repeat not supported on older APIs directly in TransportControls
         }
 
@@ -171,6 +167,9 @@ object IslandController {
                 currentController?.transportControls?.skipToPrevious()
             }
         }
+
+        // Wire up new swipe up/down if needed, or handle in view
+        // The view handles state changes for these directly
 
         // --- Notification Action Callbacks ---
         view.onActionClick = { actionModel ->
@@ -410,6 +409,11 @@ object IslandController {
             currentController?.unregisterCallback(mediaCallback)
             currentController = null
             updateMediaState(null)
+
+            // FIX: Explicitly clear view state on UI thread to remove "ghost" media
+            islandViewRef?.get()?.post {
+                islandViewRef?.get()?.clearMusicState()
+            }
             return
         }
 
@@ -470,7 +474,6 @@ object IslandController {
         val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
         val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
 
-        // FIX: Broaden the search for the thumbnail bitmap
         val albumArt = metadata.description?.iconBitmap
                        ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
                        ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
