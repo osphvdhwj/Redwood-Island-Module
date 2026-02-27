@@ -84,17 +84,26 @@ object IslandController {
         }
         BatteryPlugin.start(view.context)
 
-        // --- Gesture Mappings ---
+        // --- NEW GESTURE NAVIGATION LOGIC ---
+        // a. Single click opens 1st (smallest) pill if position is equal to Ring/circle.
+        // b. Double check opens 2nd (big) pill if position is equal to Ring/circle.
+        // c. Long press/hold opens 3rd (biggest) pill if position is equal to Ring/circle.
+
         view.onSingleTap = {
             log("[GESTURE] Single Tap")
             val island = islandViewRef?.get()
             if (island != null) {
                 when (island.islandState.value) {
                     DynamicIslandView.IslandState.HIDDEN -> {
-                        // Wake up to mini if music is active, else do nothing
-                        if (currentController != null) showMini() else showDashboard() // Debug: Force open even without music
+                        // Open 1st (Smallest) Pill
+                        showMini()
                     }
-                    DynamicIslandView.IslandState.TYPE_1_MINI -> showDashboard()
+                    DynamicIslandView.IslandState.TYPE_1_MINI -> {
+                        // If already mini, maybe expand to mid or collapse?
+                        // Logic says "travel between pills", so let's cycle forward or expand.
+                        // Common UX: Tap on mini -> Open App (or Expand). Here we expand to Mid.
+                        expandMid()
+                    }
                     DynamicIslandView.IslandState.TYPE_2_MID -> collapse()
                     DynamicIslandView.IslandState.TYPE_3_MAX -> collapse()
                 }
@@ -103,14 +112,30 @@ object IslandController {
 
         view.onDoubleTap = {
             log("[GESTURE] Double Tap")
-            forceHide()
+            val island = islandViewRef?.get()
+            if (island != null) {
+                when (island.islandState.value) {
+                    DynamicIslandView.IslandState.HIDDEN -> {
+                        // Open 2nd (Big) Pill
+                        expandMid()
+                    }
+                    else -> collapse()
+                }
+            }
         }
 
         view.onLongPress = {
             log("[GESTURE] Long Press")
              val island = islandViewRef?.get()
-             if (island?.islandState?.value == DynamicIslandView.IslandState.TYPE_1_MINI) {
-                 showDashboard()
+             if (island != null) {
+                 when (island.islandState.value) {
+                     DynamicIslandView.IslandState.HIDDEN -> {
+                         // Open 3rd (Biggest) Pill
+                         showDashboard()
+                     }
+                     DynamicIslandView.IslandState.TYPE_1_MINI -> showDashboard() // Long press mini -> Max
+                     else -> {}
+                 }
              }
         }
 
@@ -128,9 +153,10 @@ object IslandController {
         view.onSeekTo = { pos -> currentController?.transportControls?.seekTo(pos) }
         view.onCloseClick = { forceHide() }
 
-        // Swipe gestures (used on mini pill)
+        // Swipe gestures
         view.onSwipeLeft = { currentController?.transportControls?.skipToNext() }
         view.onSwipeRight = { currentController?.transportControls?.skipToPrevious() }
+        view.onSwipeUp = { collapse() }
     }
 
     fun onScreenStateChanged(isOn: Boolean) {
@@ -177,11 +203,10 @@ object IslandController {
 
     fun collapse() {
         isExpanding = false
-        if (currentController != null) {
-            islandViewRef?.get()?.showMini() // Drop down to mini if media exists
-        } else {
-            islandViewRef?.get()?.hide()
-        }
+        // Return to Hidden Ring by default unless actively playing?
+        // User requested navigation logic between ring and pills.
+        // Usually collapse goes back to base state.
+        islandViewRef?.get()?.hide()
     }
 
     fun forceHide() {
@@ -230,7 +255,7 @@ object IslandController {
             updateActiveController(controllers)
         } catch (e: Throwable) {
             XposedBridge.log("DynamicIsland: [ERROR] Media setup failed: " + e)
-            // Fallback to explicit component name if null fails (though null is usually safer for unrestricted access)
+            // Fallback to explicit component name if null fails
             try {
                 val componentName = android.content.ComponentName(context, "com.android.systemui.SystemUIService")
                  mediaSessionManager?.addOnActiveSessionsChangedListener(sessionsListener, componentName)
@@ -282,20 +307,15 @@ object IslandController {
         island.post {
             island.updatePlayPauseState(isPlaying)
             if (isPlaying) {
-                if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) showMini()
+                // Keep playing state logic separate from navigation logic
+                // If it was hidden, we might want to peek mini, but user wants explicit control
+                // so we won't auto-expand unless it's a new event
                 if (isScreenOn) {
                     progressHandler.removeCallbacks(progressUpdater)
                     progressHandler.post(progressUpdater)
                 }
             } else {
                  progressHandler.removeCallbacks(progressUpdater)
-                 island.postDelayed({
-                    val currentState = currentController?.playbackState?.state
-                    val stillPlaying = currentState == PlaybackState.STATE_PLAYING || currentState == PlaybackState.STATE_BUFFERING
-                    if (!stillPlaying && activeLiveActivity == null) {
-                        collapse()
-                    }
-                }, 2000)
             }
         }
     }

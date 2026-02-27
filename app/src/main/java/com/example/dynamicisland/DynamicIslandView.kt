@@ -15,6 +15,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -84,10 +85,10 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     var windowParams: WindowManager.LayoutParams? = null
 
     enum class IslandState {
-        HIDDEN,      // The default Camera Punch-Hole ⭕
-        TYPE_1_MINI, // Playing Music Pill (Marquee)
-        TYPE_2_MID,  // Timer / Battery Pill
-        TYPE_3_MAX   // Expanded iOS Screenshot Music Player
+        HIDDEN,      // Transparent Ring ⭕
+        TYPE_1_MINI, // Small Pill (Artist/Song Marquee)
+        TYPE_2_MID,  // Medium Pill (Album Art + Controls)
+        TYPE_3_MAX   // Full Player
     }
 
     val islandState = mutableStateOf(IslandState.HIDDEN)
@@ -126,6 +127,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     var onSwipeLeft: (() -> Unit)? = null
     var onSwipeRight: (() -> Unit)? = null
+    var onSwipeUp: (() -> Unit)? = null
 
     private val lifecycleOwner = OverlayLifecycleOwner()
 
@@ -184,22 +186,22 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     @Composable
     fun IslandUI(state: IslandState) {
         val targetWidth = when (state) {
-            IslandState.HIDDEN -> 12.dp // Smaller circle for cutout look
-            IslandState.TYPE_1_MINI -> 150.dp // Wider for scrolling text
-            IslandState.TYPE_2_MID -> 300.dp
+            IslandState.HIDDEN -> 50.dp // Small Ring ⭕
+            IslandState.TYPE_1_MINI -> 180.dp // Wider for scrolling text
+            IslandState.TYPE_2_MID -> 320.dp
             IslandState.TYPE_3_MAX -> 360.dp // Expanded player
         }
 
         val targetHeight = when (state) {
-            IslandState.HIDDEN -> 12.dp
-            IslandState.TYPE_1_MINI -> 36.dp
-            IslandState.TYPE_2_MID -> 80.dp
-            IslandState.TYPE_3_MAX -> 200.dp // Expanded player height
+            IslandState.HIDDEN -> 50.dp // Ring
+            IslandState.TYPE_1_MINI -> 50.dp // Match height to ring initially, slightly wider
+            IslandState.TYPE_2_MID -> 100.dp // Taller pill
+            IslandState.TYPE_3_MAX -> 220.dp // Full player
         }
 
-        // Offset Y for the hidden state to position it "below" camera punch hole (simulated)
-        // Adjust this value (e.g., 35.dp) to physically move it down from top edge of screen
-        val topPadding = if (state == IslandState.HIDDEN) 35.dp else 40.dp
+        // Offset Y for the hidden state to position it "below" camera punch hole
+        // Adjust this value (e.g., 50.dp) to physically move it down from top edge of screen
+        val topPadding = if (state == IslandState.HIDDEN) 50.dp else 50.dp
 
         val width by animateDpAsState(targetValue = targetWidth, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "width")
         val height by animateDpAsState(targetValue = targetHeight, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "height")
@@ -208,37 +210,51 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             val wp = windowParams
             val wm = windowManager
             if (wp != null && wm != null) {
+                // IMPORTANT: Only expand the Window Layout if truly needed to avoid blocking touches
+                // For HIDDEN, we keep it minimal.
                 val pxWidth = (width.value * context.resources.displayMetrics.density).toInt()
                 val pxHeight = (height.value * context.resources.displayMetrics.density).toInt()
-                wp.width = pxWidth + 50
-                wp.height = pxHeight + 100
+
+                // Add padding for shadows/glows but keep it tight
+                wp.width = pxWidth + 40
+                wp.height = pxHeight + (topPadding.value * context.resources.displayMetrics.density).toInt() + 40
+
                 try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
             }
         }
 
-        // The background color is solid black for ⭕ Default, Mini, and Mid pills
-        val backgroundColor = Color.Black
+        // Visual Style: Square with Round Corners (28.dp)
+        // Hidden State: Transparent Ring
+        val shape = RoundedCornerShape(24.dp)
+        val backgroundColor = if (state == IslandState.HIDDEN) Color.Transparent else Color.Black
+        val borderColor = if (state == IslandState.HIDDEN) Color.Gray.copy(alpha = 0.5f) else Color.Transparent
+        val borderWidth = if (state == IslandState.HIDDEN) 2.dp else 0.dp
 
         Box(modifier = Modifier.padding(top = topPadding), contentAlignment = Alignment.TopCenter) {
             Box(
                 modifier = Modifier
                     .width(width)
                     .height(height)
-                    .clip(CircleShape) // Always circular/rounded pill
+                    .clip(shape) // Square-ish rounded corners
                     .background(backgroundColor)
+                    .border(borderWidth, borderColor, shape) // Ring effect
                     .pointerInput(Unit) {
                         var dragAccumulationX = 0f
+                        var dragAccumulationY = 0f
                         detectDragGestures(
-                            onDragStart = { dragAccumulationX = 0f },
+                            onDragStart = { dragAccumulationX = 0f; dragAccumulationY = 0f },
                             onDragEnd = {
-                                if (abs(dragAccumulationX) > 40) {
+                                if (abs(dragAccumulationX) > abs(dragAccumulationY)) {
                                     if (dragAccumulationX < -40) onSwipeLeft?.invoke()
                                     else if (dragAccumulationX > 40) onSwipeRight?.invoke()
+                                } else {
+                                    if (dragAccumulationY < -40) onSwipeUp?.invoke()
                                 }
                             },
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 dragAccumulationX += dragAmount.x
+                                dragAccumulationY += dragAmount.y
                             }
                         )
                     }
@@ -253,9 +269,9 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             ) {
                 if (state != IslandState.HIDDEN) {
                     when (state) {
-                        IslandState.TYPE_1_MINI -> MiniContent()
-                        IslandState.TYPE_2_MID -> ExpandedContent()
-                        IslandState.TYPE_3_MAX -> MusicPlayerScreenshotUI()
+                        IslandState.TYPE_1_MINI -> MusicMiniContent()
+                        IslandState.TYPE_2_MID -> MusicMidContent()
+                        IslandState.TYPE_3_MAX -> MusicMaxContent()
                         else -> {}
                     }
                 }
@@ -265,40 +281,65 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
-    fun MiniContent() {
+    fun MusicMiniContent() {
         val music = musicState.value
-        val charging = chargingState.value
-
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start,
-            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)
         ) {
-            if (charging != null && charging.isCharging) {
-                Text(text = "${charging.level}%", style = MaterialTheme.typography.labelSmall, color = Color(charging.color))
-                Spacer(Modifier.width(8.dp))
-                Box(Modifier.size(16.dp).background(Color(charging.color), RoundedCornerShape(4.dp)))
-            } else if (music != null) {
-                if (music.art != null) {
-                    Image(bitmap = music.art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(24.dp).clip(CircleShape))
-                } else {
-                    Box(Modifier.size(24.dp).background(Color.DarkGray, CircleShape))
-                }
-                Spacer(Modifier.width(8.dp))
-                // Marquee scrolling text for song title
-                Text(
-                    text = music.title,
+            if (music != null) {
+                // Marquee scrolling text only
+                 Text(
+                    text = "${music.title} • ${music.artist}",
                     color = Color.White,
                     fontSize = 14.sp,
                     maxLines = 1,
                     modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
+                )
+            } else {
+                 Text("No Media", color = Color.Gray, fontSize = 12.sp)
+            }
+        }
+    }
+
+    @Composable
+    fun MusicMidContent() {
+        val music = musicState.value
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
+        ) {
+            if (music != null) {
+                if (music.art != null) {
+                    Image(bitmap = music.art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)))
+                } else {
+                    Box(Modifier.size(48.dp).background(Color.DarkGray, RoundedCornerShape(8.dp)))
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                     Text(text = music.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                     Text(text = music.artist, color = Color.LightGray, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                val playIcon = if (music.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+                Icon(
+                    painterResource(playIcon),
+                    contentDescription = "Play/Pause",
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp).clickable { onPlayPauseClick?.invoke() }
                 )
             }
         }
     }
 
     @Composable
-    fun MusicPlayerScreenshotUI() {
+    fun MusicMaxContent() {
         val music = musicState.value ?: return
 
         Box(modifier = Modifier.fillMaxSize()) {
@@ -405,17 +446,18 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         val wp = windowParams ?: return
         val wm = windowManager ?: return
 
-        // THE FIX: ALWAYS allow touches to pass through to the screen behind!
-        wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+        // THE FIX for Keyboard/Recents Blocking:
+        // ALWAYS allow touches to pass through outside (NOT_TOUCH_MODAL).
+        // AND ALSO ALWAYS set FLAG_NOT_FOCUSABLE.
+        // Focusable windows steal input from the system (nav bar, keyboard).
+        // We only need focus if we have an EditText, which we don't anymore.
 
-        if (newState == IslandState.HIDDEN || newState == IslandState.TYPE_1_MINI) {
-            // NOTE: Removed FLAG_NOT_FOCUSABLE for HIDDEN so it can receive taps!
-            // But we must be careful not to steal ALL focus.
-            // Using only NOT_TOUCH_MODAL allows touches outside to pass, but touches inside to capture.
-             wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
-        } else {
-             wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
-        }
+        wp.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                   WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                   WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                   WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                   WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                   WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
 
         try { wm.updateViewLayout(this, wp) } catch (e: Exception) { }
     }
