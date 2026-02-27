@@ -531,12 +531,26 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     fun setState(newState: IslandState) {
         islandState.value = newState
         val wp = windowParams ?: return
-        if (newState == IslandState.HIDDEN) {
-            wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-        } else {
-            wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL.inv()
+        val wm = windowManager ?: return
+
+        when (newState) {
+            IslandState.HIDDEN, IslandState.TYPE_1_MINI -> {
+                // Pass touches through, NO keyboard focus
+                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+            }
+            IslandState.TYPE_2_MID, IslandState.TYPE_3_MAX -> {
+                // Intercept touches outside, ALLOW keyboard focus for replies
+                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL.inv()
+                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
+            }
         }
-        windowManager?.updateViewLayout(this, wp)
+
+        try {
+            wm.updateViewLayout(this, wp)
+        } catch (e: Exception) {
+            // Ignore layout update errors during fast transitions
+        }
     }
 
     fun showMini() = setState(IslandState.TYPE_1_MINI)

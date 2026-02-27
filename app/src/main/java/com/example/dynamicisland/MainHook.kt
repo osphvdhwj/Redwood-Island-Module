@@ -114,6 +114,23 @@ class MainHook : IXposedHookLoadPackage {
         if (islandInitialized) return
 
         try {
+            // FIX: Create Module Context for Resources/ClassLoader
+            val moduleContext = try {
+                context.createPackageContext(
+                    "com.example.dynamicisland",
+                    Context.CONTEXT_IGNORE_SECURITY or Context.CONTEXT_INCLUDE_CODE
+                )
+            } catch (e: Exception) {
+                log("[WARN] Failed to create module context, using system context: $e")
+                context
+            }
+
+            // Wrap with theme for Compose Material 3
+            val themedModuleContext = android.view.ContextThemeWrapper(
+                moduleContext,
+                android.R.style.Theme_DeviceDefault_DayNight
+            )
+
             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
             // Use TYPE_STATUS_BAR_SUB_PANEL (2017)
@@ -122,7 +139,8 @@ class MainHook : IXposedHookLoadPackage {
             val wm = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             windowManager = wm
 
-            islandView = DynamicIslandView(windowContext)
+            // Pass THEMED MODULE CONTEXT to View
+            islandView = DynamicIslandView(themedModuleContext)
             islandView!!.id = View.generateViewId()
 
             val params = WindowManager.LayoutParams(
@@ -133,7 +151,8 @@ class MainHook : IXposedHookLoadPackage {
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, // FIX: Hardware Acceleration
                 PixelFormat.TRANSLUCENT
             )
 
