@@ -97,6 +97,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     // Callbacks
     var onSingleTap: (() -> Unit)? = null
     var onSwipeUp: (() -> Unit)? = null
+    var onSwipeLeft: (() -> Unit)? = null
+    var onSwipeRight: (() -> Unit)? = null
     var onPlayPauseClick: (() -> Unit)? = null
     var onPrevClick: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
@@ -134,7 +136,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             addAction("com.example.dynamicisland.UPDATE_CONFIG")
             addAction("com.example.dynamicisland.TEST_RING")
         }
-        context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            context.registerReceiver(receiver, filter)
+        }
 
         setViewTreeLifecycleOwner(lifecycleOwner)
         setViewTreeSavedStateRegistryOwner(lifecycleOwner)
@@ -239,22 +246,40 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 )
             }
 
-            // The main black pill
-            Box(
-                modifier = Modifier
-                    .width(width)
-                    .height(height)
-                    .clip(RoundedCornerShape(percent = 50)) // Perfect pill shape
-                    .background(backgroundColor)
-                    .border(if (state == IslandState.HIDDEN) 0.dp else 1.dp, borderColor, RoundedCornerShape(percent = 50))
-                    .pointerInput(Unit) {
-                        var dy = 0f
-                        detectDragGestures(
-                            onDragEnd = { if (dy < -30) onSwipeUp?.invoke() },
-                            onDrag = { change, dragAmount -> change.consume(); dy += dragAmount.y }
-                        )
-                    }
-                    .pointerInput(Unit) { detectTapGestures(onTap = { onSingleTap?.invoke() }) },
+        // The Ice Cube Shape Logic
+        val targetCornerRadius = when (state) {
+            IslandState.HIDDEN -> (camHeight.value / 2).dp
+            IslandState.TYPE_1_MINI -> 18.dp
+            IslandState.TYPE_2_MID -> 32.dp
+            IslandState.TYPE_3_MAX -> 42.dp
+        }
+        val cornerRadius by animateDpAsState(targetValue = targetCornerRadius, animationSpec = physicsSpec, label = "cornerRadius")
+
+        // The main black pill
+        Box(
+            modifier = Modifier
+                .width(width)
+                .height(height)
+                .clip(RoundedCornerShape(cornerRadius)) // Replaced 50% with exact DP
+                .background(backgroundColor)
+                .border(if (state == IslandState.HIDDEN) 0.dp else 1.dp, borderColor, RoundedCornerShape(cornerRadius))
+                .pointerInput(Unit) {
+                    var dx = 0f
+                    var dy = 0f
+                    detectDragGestures(
+                        onDragEnd = {
+                            if (dy < -40) onSwipeUp?.invoke()
+                            else if (dx > 50) onSwipeRight?.invoke()
+                            else if (dx < -50) onSwipeLeft?.invoke()
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            dx += dragAmount.x
+                            dy += dragAmount.y
+                        }
+                    )
+                }
+                .pointerInput(Unit) { detectTapGestures(onTap = { onSingleTap?.invoke() }) },
                 contentAlignment = Alignment.Center
             ) {
                 if (state != IslandState.HIDDEN) {
@@ -397,8 +422,9 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 }
             }
             Column(modifier = Modifier.fillMaxWidth()) {
+                val safeProgress = if (music.progress.isNaN() || music.progress.isInfinite()) 0f else music.progress.coerceIn(0f, 1f)
                 WavySlider(
-                    value = music.progress,
+                    value = safeProgress,
                     onValueChange = { newProgress -> onSeekTo?.invoke((newProgress * music.duration).toLong()) },
                     waveLength = 20.dp, waveHeight = 4.dp,
                     waveVelocity = if (music.isPlaying) 15.dp to WaveDirection.HEAD else 0.dp to WaveDirection.HEAD,

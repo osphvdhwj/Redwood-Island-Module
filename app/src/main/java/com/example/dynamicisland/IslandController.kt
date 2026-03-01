@@ -80,6 +80,12 @@ object IslandController {
         }
 
         view.onSwipeUp = { forceHide() }
+        view.onSwipeLeft = {
+            currentController?.transportControls?.skipToNext()
+        }
+        view.onSwipeRight = {
+            currentController?.transportControls?.skipToPrevious()
+        }
         view.onCloseClick = { forceHide() }
         view.onPlayPauseClick = {
             val state = currentController?.playbackState?.state

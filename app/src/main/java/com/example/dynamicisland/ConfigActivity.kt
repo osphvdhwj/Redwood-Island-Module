@@ -27,7 +27,6 @@ class ConfigActivity : ComponentActivity() {
 
         // Standard Xposed trick: Make the prefs file readable by SystemUI
         prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
-        makePrefsWorldReadable()
 
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
@@ -38,14 +37,7 @@ class ConfigActivity : ComponentActivity() {
         }
     }
 
-    private fun makePrefsWorldReadable() {
-        val prefsDir = File(applicationInfo.dataDir, "shared_prefs")
-        val prefsFile = File(prefsDir, "island_prefs.xml")
-        if (prefsFile.exists()) {
-            prefsFile.setReadable(true, false)
-            prefsDir.setExecutable(true, false)
-        }
-    }
+
 
     private fun broadcastUpdate(x: Int, y: Int, w: Int, h: Int) {
         val intent = Intent("com.example.dynamicisland.UPDATE_CONFIG")
@@ -102,7 +94,6 @@ class ConfigActivity : ComponentActivity() {
             .putInt("camWidth", w.toInt())
             .putInt("camHeight", h.toInt())
             .apply()
-        makePrefsWorldReadable()
         broadcastUpdate(x.toInt(), y.toInt(), w.toInt(), h.toInt())
     }
 

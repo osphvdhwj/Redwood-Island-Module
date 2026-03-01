@@ -132,7 +132,7 @@ class MainHook : IXposedHookLoadPackage {
 
             // Create AssetManager
             val assetManagerClass = android.content.res.AssetManager::class.java
-            val assetManager = assetManagerClass.newInstance()
+            val assetManager = assetManagerClass.getDeclaredConstructor().newInstance()
             val addAssetPathMethod = assetManagerClass.getMethod("addAssetPath", String::class.java)
             addAssetPathMethod.invoke(assetManager, apkPath)
 
