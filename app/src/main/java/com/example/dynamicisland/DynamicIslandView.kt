@@ -95,7 +95,11 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     // Callbacks
     var onSingleTap: (() -> Unit)? = null
+    var onDoubleTap: (() -> Unit)? = null
+    var onSwipeDown: (() -> Unit)? = null
     var onSwipeUp: (() -> Unit)? = null
+    var onSwipeLeft: (() -> Unit)? = null
+    var onSwipeRight: (() -> Unit)? = null
     var onPlayPauseClick: (() -> Unit)? = null
     var onPrevClick: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
@@ -198,7 +202,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             IslandState.TYPE_SPLIT -> 36.dp * pillScaleY.value
         }
 
-        val physicsSpec = spring<Dp>(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow)
+        val physicsSpec = spring<Dp>(dampingRatio = 0.65f, stiffness = 400f)
 
         val width by animateDpAsState(targetValue = targetWidth, animationSpec = physicsSpec, label = "width")
         val height by animateDpAsState(targetValue = targetHeight, animationSpec = physicsSpec, label = "height")
@@ -237,14 +241,14 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             }
         }
 
-        val backgroundColor = if (state == IslandState.HIDDEN) {
+        val backgroundColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_SPLIT) {
             Color.Transparent
         } else if (musicState.value != null && musicState.value!!.isPlaying) {
             musicBackgroundColor
         } else {
             Color.Black.copy(alpha = 0.75f)
         }
-        val borderColor = if (state == IslandState.HIDDEN) Color.Transparent else Color.White.copy(alpha = 0.15f)
+        val borderColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_SPLIT) Color.Transparent else Color.White.copy(alpha = 0.15f)
         val contentColor = Color.White // White text on OLED Black
 
         // The Master Container
@@ -273,14 +277,33 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     .clip(RoundedCornerShape(percent = 50)) // Perfect pill shape
                     .background(backgroundColor)
                     .border(if (state == IslandState.HIDDEN) 0.dp else 1.dp, borderColor, RoundedCornerShape(percent = 50))
-                    .pointerInput(Unit) {
-                        var dy = 0f
-                        detectDragGestures(
-                            onDragEnd = { if (dy < -30) onSwipeUp?.invoke() },
-                            onDrag = { change, dragAmount -> change.consume(); dy += dragAmount.y }
-                        )
-                    }
-                    .pointerInput(Unit) { detectTapGestures(onTap = { onSingleTap?.invoke() }) },
+                                    .pointerInput(Unit) {
+                    var totalDx = 0f
+                    var totalDy = 0f
+                    detectDragGestures(
+                        onDragStart = { totalDx = 0f; totalDy = 0f },
+                        onDragEnd = {
+                            if (totalDy < -50) {
+                                onSwipeUp?.invoke()
+                            } else if (totalDy > 50) {
+                                onSwipeDown?.invoke()
+                            } else if (kotlin.math.abs(totalDx) > 100) {
+                                if (totalDx > 0) onSwipeRight?.invoke() else onSwipeLeft?.invoke()
+                            }
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            totalDx += dragAmount.x
+                            totalDy += dragAmount.y
+                        }
+                    )
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = { onSingleTap?.invoke() },
+                        onDoubleTap = { onDoubleTap?.invoke() }
+                    )
+                },
                 contentAlignment = Alignment.Center
             ) {
                 if (state != IslandState.HIDDEN) {
@@ -324,29 +347,46 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     @Composable
     private fun SplitPill(textColor: Color, primary: LiveActivityData, secondary: LiveActivityData?) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left Pill (Primary)
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(Color.Black.copy(alpha=0.5f), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 6.dp)) {
+            // LEFT PILL (Primary Activity)
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(36.dp)
+                    .background(Color.Black.copy(alpha=0.75f), RoundedCornerShape(50))
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 if (primary.type == ActivityType.MEDIA && musicState.value?.art != null) {
                     val art = musicState.value?.art
                     if (art != null && !art.isRecycled) {
                         Image(bitmap = art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(20.dp).clip(RoundedCornerShape(10.dp)))
                     }
                 } else {
-                    Icon(painterResource(getIconForType(primary.type)), contentDescription = null, tint = Color(primary.color), modifier = Modifier.size(20.dp))
+                    Icon(painterResource(getIconForType(primary.type)), contentDescription = null, tint = Color(primary.color), modifier = Modifier.size(16.dp))
                 }
+                Spacer(Modifier.width(8.dp))
+                Text(primary.title, color = textColor, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
 
-            // Right Pill (Secondary)
+            // THE CAMERA GAP
+            Spacer(modifier = Modifier.width(camWidth.value.dp + 16.dp))
+
+            // RIGHT PILL (Secondary Activity)
             if (secondary != null) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(Color.Black.copy(alpha=0.5f), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 6.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(Color.Black.copy(alpha=0.75f), RoundedCornerShape(50)),
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(painterResource(getIconForType(secondary.type)), contentDescription = null, tint = Color(secondary.color), modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = secondary.data, color = textColor, fontSize = 12.sp, maxLines = 1)
                 }
+            } else {
+                Spacer(modifier = Modifier.size(36.dp))
             }
         }
     }

@@ -57,6 +57,7 @@ object IslandController {
     fun init(view: DynamicIslandView) {
         islandViewRef = WeakReference(view)
         setupMediaListener(view.context)
+        setupSystemReceivers(view.context)
 
         BatteryPlugin.onBatteryChanged = { level, isCharging, color ->
              if (isCharging) {
@@ -263,6 +264,45 @@ object IslandController {
 
     private fun handleNotificationRemoved(sbn: android.service.notification.StatusBarNotification) {
         removeActivity(sbn.key)
+    }
+
+    private fun setupSystemReceivers(context: Context) {
+        val ringerReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(ctx: Context, intent: android.content.Intent) {
+                val am = ctx.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+                val mode = when (am.ringerMode) {
+                    android.media.AudioManager.RINGER_MODE_SILENT -> "Silent"
+                    android.media.AudioManager.RINGER_MODE_VIBRATE -> "Vibrate"
+                    else -> "Ringing"
+                }
+                val color = if (mode == "Silent") android.graphics.Color.RED else android.graphics.Color.LTGRAY
+                postActivity(LiveActivityModel(
+                    id = "sys_ringer", type = ActivityType.GENERAL,
+                    title = "Ringer", dataText = mode,
+                    accentColor = color, isTransient = true
+                ))
+            }
+        }
+        val headsetReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(ctx: Context, intent: android.content.Intent) {
+                val state = intent.getIntExtra("state", -1)
+                if (state == 1) { // Plugged in
+                    postActivity(LiveActivityModel(
+                        id = "sys_headset", type = ActivityType.GENERAL,
+                        title = "Headphones", dataText = "Connected",
+                        accentColor = android.graphics.Color.CYAN, isTransient = true
+                    ))
+                }
+            }
+        }
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(ringerReceiver, android.content.IntentFilter(android.media.AudioManager.RINGER_MODE_CHANGED_ACTION), Context.RECEIVER_NOT_EXPORTED)
+            context.registerReceiver(headsetReceiver, android.content.IntentFilter(android.content.Intent.ACTION_HEADSET_PLUG), Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(ringerReceiver, android.content.IntentFilter(android.media.AudioManager.RINGER_MODE_CHANGED_ACTION))
+            context.registerReceiver(headsetReceiver, android.content.IntentFilter(android.content.Intent.ACTION_HEADSET_PLUG))
+        }
     }
 
     private fun setupMediaListener(context: Context, retries: Int = 3) {
