@@ -209,16 +209,18 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         val width by animateDpAsState(targetValue = targetWidth, animationSpec = physicsSpec, label = "width")
         val height by animateDpAsState(targetValue = targetHeight, animationSpec = physicsSpec, label = "height")
 
-        LaunchedEffect(width, height) {
+        // Replace your LaunchedEffect block with this optimized version:
+        LaunchedEffect(state) { // ONLY trigger when the state changes, NOT on every frame of the animation
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
 
-            // FIX 4: MASSIVE Padding increase.
-            // The MAX state requires heavy vertical padding so touches aren't cut off by the Window bounds.
             val density = context.resources.displayMetrics.density
-            wp.width = (width.value * density).toInt() + (120 * density).toInt()
-            wp.height = (height.value * density).toInt() + (150 * density).toInt()
+
+            // Instantly jump the Window to the max size needed for the CURRENT state
+            // This prevents the Window Manager from spamming SurfaceFlinger at 60fps
+            wp.width = (targetWidth.value * density).toInt() + (120 * density).toInt()
+            wp.height = (targetHeight.value * density).toInt() + (150 * density).toInt()
 
             wp.x = camOffsetX.value
             wp.y = camOffsetY.value
@@ -394,7 +396,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         val music = musicState.value ?: return
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             if (music.art != null) {
-                Image(bitmap = music.art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)))
+                if (!music.art.isRecycled) { Image(bitmap = music.art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))) }
             } else {
                 Box(Modifier.size(48.dp).background(Color.DarkGray, RoundedCornerShape(8.dp)))
             }
@@ -403,7 +405,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                  Text(text = music.title, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                  Text(text = music.artist, color = textColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            val playIcon = if (music.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+            val playIcon = if (music.isPlaying) R.drawable.ic_pause_vector else R.drawable.ic_play_vector
             Icon(painterResource(playIcon), contentDescription = "Play/Pause", tint = textColor, modifier = Modifier.size(32.dp).clickable { onPlayPauseClick?.invoke() })
         }
     }
@@ -414,7 +416,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 if (music.art != null) {
-                    Image(bitmap = music.art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)))
+                    if (!music.art.isRecycled) { Image(bitmap = music.art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp))) }
                 } else {
                     Box(Modifier.size(64.dp).background(Color.DarkGray, RoundedCornerShape(12.dp)))
                 }
@@ -439,12 +441,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-                    Icon(painterResource(android.R.drawable.ic_media_previous), contentDescription = "Prev", tint = textColor, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
-                    val playIcon = if (music.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+                    Icon(painterResource(R.drawable.ic_prev_vector), contentDescription = "Prev", tint = textColor, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
+                    val playIcon = if (music.isPlaying) R.drawable.ic_pause_vector else R.drawable.ic_play_vector
                     Box(modifier = Modifier.size(56.dp).background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(28.dp)).clickable { onPlayPauseClick?.invoke() }, contentAlignment = Alignment.Center) {
                         Icon(painterResource(playIcon), contentDescription = "Play/Pause", tint = textColor, modifier = Modifier.size(32.dp))
                     }
-                    Icon(painterResource(android.R.drawable.ic_media_next), contentDescription = "Next", tint = textColor, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
+                    Icon(painterResource(R.drawable.ic_next_vector), contentDescription = "Next", tint = textColor, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
                 }
             }
         }

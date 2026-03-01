@@ -41,6 +41,8 @@ class ConfigActivity : ComponentActivity() {
 
     private fun broadcastUpdate(x: Int, y: Int, w: Int, h: Int) {
         val intent = Intent("com.example.dynamicisland.UPDATE_CONFIG")
+        // Target SystemUI explicitly so Android 14+ allows the broadcast
+        intent.setPackage("com.android.systemui")
         intent.putExtra("offsetX", x)
         intent.putExtra("offsetY", y)
         intent.putExtra("camWidth", w)
