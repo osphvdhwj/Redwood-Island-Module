@@ -204,11 +204,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
 
-            // INCREASED PADDING: Gives the Ring and shadows room to render without being cut off
-            wp.width = (width.value * context.resources.displayMetrics.density).toInt() + 100
-            wp.height = (height.value * context.resources.displayMetrics.density).toInt() + 100
+            // FIX 4: MASSIVE Padding increase.
+            // The MAX state requires heavy vertical padding so touches aren't cut off by the Window bounds.
+            val density = context.resources.displayMetrics.density
+            wp.width = (width.value * density).toInt() + (120 * density).toInt()
+            wp.height = (height.value * density).toInt() + (150 * density).toInt()
 
-            // Set dynamic X/Y offsets
             wp.x = camOffsetX.value
             wp.y = camOffsetY.value
 

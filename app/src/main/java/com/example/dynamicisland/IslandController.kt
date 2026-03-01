@@ -211,7 +211,9 @@ object IslandController {
     private fun handleNotificationPosted(sbn: android.service.notification.StatusBarNotification) {
         try {
             val notification = sbn.notification
-            val extras = notification.extras
+            // FIX 2: Strict Null Safety for Extras (This caused the song download crash)
+            val extras = notification.extras ?: return
+
             val category = notification.category ?: ""
             val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
             val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
@@ -224,13 +226,20 @@ object IslandController {
                 else -> {
                     val progress = extras.getInt(Notification.EXTRA_PROGRESS, -1)
                     val max = extras.getInt(Notification.EXTRA_PROGRESS_MAX, -1)
+
                     if (max > 0 && progress >= 0) {
-                        // MATH CRASH FIX: Protect against NaN and Infinite floats
-                        val percent = progress.toFloat() / max.toFloat()
-                        val safePercent = if (percent.isNaN() || percent.isInfinite()) 0f else percent.coerceIn(0f, 1f)
-                        postActivity(LiveActivityModel(sbn.key, ActivityType.DOWNLOAD, if (title.isBlank()) "Downloading" else title, "${(safePercent * 100).toInt()}%", safePercent, android.graphics.Color.CYAN))
+                        // FIX 3: Bulletproof Math Check
+                        val percent = try {
+                            (progress.toFloat() / max.toFloat()).coerceIn(0f, 1f)
+                        } catch (e: Exception) { 0f }
+
+                        val finalPercent = if (percent.isNaN() || percent.isInfinite()) 0f else percent
+                        postActivity(LiveActivityModel(sbn.key, ActivityType.DOWNLOAD, if (title.isBlank()) "Downloading" else title, "${(finalPercent * 100).toInt()}%", finalPercent, android.graphics.Color.CYAN))
                     } else if (progress < 0 || max <= 0) {
-                        removeActivity(sbn.key)
+                        // Only remove if it was actually a download completing, don't accidentally kill standard notifications
+                        if (activeActivities.containsKey(sbn.key)) {
+                            removeActivity(sbn.key)
+                        }
                     }
                 }
             }

@@ -238,10 +238,11 @@ class MainHook : IXposedHookLoadPackage {
                 return
             }
 
+            // FIX 1: Change Window Type to 2024 (Navigation Bar Panel) to stop crashes and fix touch boundaries
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                2017,
+                2024, // TYPE_NAVIGATION_BAR_PANEL
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
@@ -251,8 +252,6 @@ class MainHook : IXposedHookLoadPackage {
                 PixelFormat.TRANSLUCENT
             )
 
-            // VERY IMPORTANT: Center gravity so X=0 is perfectly centered.
-            // Y is absolute from the top.
             params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             params.x = initX
             params.y = initY
@@ -264,7 +263,7 @@ class MainHook : IXposedHookLoadPackage {
             wm.addView(islandView, params)
             islandInitialized = true
             IslandController.init(islandView!!)
-            log("[SUCCESS] Dynamic Island initialized safely.")
+            log("[SUCCESS] Dynamic Island initialized safely with Window Type 2024.")
         } catch (e: Throwable) {
             log("[FATAL] setupIsland crashed gracefully: $e")
             // Catch-all to ensure we don't kill SystemUI process
