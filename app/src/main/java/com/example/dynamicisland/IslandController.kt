@@ -80,6 +80,17 @@ object IslandController {
         }
 
         view.onSwipeUp = { forceHide() }
+
+        // WIRE THE HORIZONTAL GESTURES TO NEXT/PREV SONG
+        view.onSwipeLeft = {
+            log("Swiped Left - Next Song")
+            currentController?.transportControls?.skipToNext()
+        }
+        view.onSwipeRight = {
+            log("Swiped Right - Prev Song")
+            currentController?.transportControls?.skipToPrevious()
+        }
+
         view.onCloseClick = { forceHide() }
         view.onPlayPauseClick = {
             val state = currentController?.playbackState?.state

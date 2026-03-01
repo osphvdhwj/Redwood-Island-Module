@@ -97,6 +97,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     // Callbacks
     var onSingleTap: (() -> Unit)? = null
     var onSwipeUp: (() -> Unit)? = null
+    var onSwipeLeft: (() -> Unit)? = null
+    var onSwipeRight: (() -> Unit)? = null
     var onPlayPauseClick: (() -> Unit)? = null
     var onPrevClick: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
@@ -194,10 +196,19 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             IslandState.TYPE_3_MAX -> 200.dp
         }
 
+        // FIX 1: The "Ice Cube" Shape Logic
+        val targetCornerRadius = when (state) {
+            IslandState.HIDDEN -> (camHeight.value / 2).dp
+            IslandState.TYPE_1_MINI -> 18.dp // Perfect pill (36/2)
+            IslandState.TYPE_2_MID -> 32.dp  // Round ice cube
+            IslandState.TYPE_3_MAX -> 42.dp  // Round ice cube
+        }
+
         val physicsSpec = spring<Dp>(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow)
 
         val width by animateDpAsState(targetValue = targetWidth, animationSpec = physicsSpec, label = "width")
         val height by animateDpAsState(targetValue = targetHeight, animationSpec = physicsSpec, label = "height")
+        val cornerRadius by animateDpAsState(targetValue = targetCornerRadius, animationSpec = physicsSpec, label = "cornerRadius")
 
         LaunchedEffect(width, height) {
             if (!isAttachedToWindow) return@LaunchedEffect
@@ -244,14 +255,25 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 modifier = Modifier
                     .width(width)
                     .height(height)
-                    .clip(RoundedCornerShape(percent = 50)) // Perfect pill shape
+                    // USE DP INSTEAD OF 50% FOR THE ICE CUBE SHAPE
+                    .clip(RoundedCornerShape(cornerRadius))
                     .background(backgroundColor)
-                    .border(if (state == IslandState.HIDDEN) 0.dp else 1.dp, borderColor, RoundedCornerShape(percent = 50))
+                    .border(if (state == IslandState.HIDDEN) 0.dp else 1.dp, borderColor, RoundedCornerShape(cornerRadius))
+                    // FIX 2: Add Horizontal Swipe Gestures
                     .pointerInput(Unit) {
+                        var dx = 0f
                         var dy = 0f
                         detectDragGestures(
-                            onDragEnd = { if (dy < -30) onSwipeUp?.invoke() },
-                            onDrag = { change, dragAmount -> change.consume(); dy += dragAmount.y }
+                            onDragEnd = {
+                                if (dy < -40) onSwipeUp?.invoke()
+                                else if (dx > 50) onSwipeRight?.invoke()
+                                else if (dx < -50) onSwipeLeft?.invoke()
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                dx += dragAmount.x
+                                dy += dragAmount.y
+                            }
                         )
                     }
                     .pointerInput(Unit) { detectTapGestures(onTap = { onSingleTap?.invoke() }) },
@@ -397,8 +419,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 }
             }
             Column(modifier = Modifier.fillMaxWidth()) {
+
+                // FIX 3: Prevent WavySlider NaN/Infinite crash
+                val safeProgress = if (music.progress.isNaN() || music.progress.isInfinite()) 0f else music.progress.coerceIn(0f, 1f)
+
                 WavySlider(
-                    value = music.progress,
+                    value = safeProgress,
                     onValueChange = { newProgress -> onSeekTo?.invoke((newProgress * music.duration).toLong()) },
                     waveLength = 20.dp, waveHeight = 4.dp,
                     waveVelocity = if (music.isPlaying) 15.dp to WaveDirection.HEAD else 0.dp to WaveDirection.HEAD,
