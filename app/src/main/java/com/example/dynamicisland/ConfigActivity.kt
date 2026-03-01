@@ -11,8 +11,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import java.io.File
+import android.widget.Toast
 
 class ConfigActivity : ComponentActivity() {
 
@@ -83,6 +86,7 @@ class ConfigActivity : ComponentActivity() {
                     // Send a dummy test notification to show the ring
                     val dummyIntent = Intent("com.example.dynamicisland.TEST_RING")
                     sendBroadcast(dummyIntent)
+                    Toast.makeText(this@ConfigActivity, "Progress Ring Test Broadcasted", Toast.LENGTH_SHORT).show()
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -109,7 +113,12 @@ class ConfigActivity : ComponentActivity() {
                 Text(label)
                 Text(value.toInt().toString())
             }
-            Slider(value = value, onValueChange = onValueChange, valueRange = min..max)
+            Slider(
+                value = value,
+                onValueChange = onValueChange,
+                valueRange = min..max,
+                modifier = Modifier.semantics { contentDescription = "Adjust $label" }
+            )
         }
     }
 }
