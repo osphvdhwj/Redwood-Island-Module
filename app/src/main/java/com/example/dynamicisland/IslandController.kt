@@ -24,7 +24,6 @@ object IslandController {
 
     // The Smart Tracker
     private val activeActivities = ConcurrentHashMap<String, LiveActivityModel>()
-    private val dismissalRunnables = ConcurrentHashMap<String, Runnable>()
     private var isScreenOn = true
 
     private fun log(msg: String) {
@@ -81,12 +80,6 @@ object IslandController {
         }
 
         view.onSwipeUp = { forceHide() }
-        view.onSwipeLeft = {
-            currentController?.transportControls?.skipToNext()
-        }
-        view.onSwipeRight = {
-            currentController?.transportControls?.skipToPrevious()
-        }
         view.onCloseClick = { forceHide() }
         view.onPlayPauseClick = {
             val state = currentController?.playbackState?.state
@@ -123,7 +116,6 @@ object IslandController {
     }
 
     private fun removeActivity(id: String) {
-        dismissalRunnables.remove(id)?.let { mainHandler.removeCallbacks(it) }
         if (activeActivities.remove(id) != null) {
             resolveHighestPriority()
         }
@@ -218,16 +210,6 @@ object IslandController {
 
     private fun handleNotificationPosted(sbn: android.service.notification.StatusBarNotification) {
         try {
-            // Check for Google Clock timers/stopwatches before normal processing
-            val clockData = ClockInterceptor.inspect(sbn)
-            if (clockData != null) {
-                // Determine whether it's a timer or stopwatch based on the presence of stopwatch-specific info
-                // If ClockInterceptor is doing it right, we just pass the info. The current code assumes ClockInterceptor does this.
-                // Assuming clockData is a LiveActivityModel
-                postActivity(clockData)
-                return
-            }
-
             val notification = sbn.notification
             // FIX 2: Strict Null Safety for Extras (This caused the song download crash)
             val extras = notification.extras ?: return
@@ -273,12 +255,10 @@ object IslandController {
             mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
             try {
                 val componentName = android.content.ComponentName("com.android.systemui", "com.android.systemui.SystemUIService")
-                // FIX: Remove old listener to prevent memory leaks on hot-reloads
-                mediaSessionManager?.removeOnActiveSessionsChangedListener(sessionsListener)
                 mediaSessionManager?.addOnActiveSessionsChangedListener(sessionsListener, componentName)
                 updateActiveController(mediaSessionManager?.getActiveSessions(componentName))
             } catch (e: SecurityException) {
-                mediaSessionManager?.removeOnActiveSessionsChangedListener(sessionsListener)
+                // Fallback if component name is restricted
                 mediaSessionManager?.addOnActiveSessionsChangedListener(sessionsListener, null)
                 updateActiveController(mediaSessionManager?.getActiveSessions(null))
             }

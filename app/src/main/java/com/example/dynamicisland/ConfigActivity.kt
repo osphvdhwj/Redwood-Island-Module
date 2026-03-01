@@ -11,11 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import java.io.File
-import android.widget.Toast
 
 class ConfigActivity : ComponentActivity() {
 
@@ -27,6 +24,7 @@ class ConfigActivity : ComponentActivity() {
 
         // Standard Xposed trick: Make the prefs file readable by SystemUI
         prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+        makePrefsWorldReadable()
 
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
@@ -37,12 +35,17 @@ class ConfigActivity : ComponentActivity() {
         }
     }
 
-
+    private fun makePrefsWorldReadable() {
+        val prefsDir = File(applicationInfo.dataDir, "shared_prefs")
+        val prefsFile = File(prefsDir, "island_prefs.xml")
+        if (prefsFile.exists()) {
+            prefsFile.setReadable(true, false)
+            prefsDir.setExecutable(true, false)
+        }
+    }
 
     private fun broadcastUpdate(x: Int, y: Int, w: Int, h: Int) {
         val intent = Intent("com.example.dynamicisland.UPDATE_CONFIG")
-        // Target SystemUI explicitly so Android 14+ allows the broadcast
-        intent.setPackage("com.android.systemui")
         intent.putExtra("offsetX", x)
         intent.putExtra("offsetY", y)
         intent.putExtra("camWidth", w)
@@ -80,7 +83,6 @@ class ConfigActivity : ComponentActivity() {
                     // Send a dummy test notification to show the ring
                     val dummyIntent = Intent("com.example.dynamicisland.TEST_RING")
                     sendBroadcast(dummyIntent)
-                    Toast.makeText(this@ConfigActivity, "Progress Ring Test Broadcasted", Toast.LENGTH_SHORT).show()
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -96,6 +98,7 @@ class ConfigActivity : ComponentActivity() {
             .putInt("camWidth", w.toInt())
             .putInt("camHeight", h.toInt())
             .apply()
+        makePrefsWorldReadable()
         broadcastUpdate(x.toInt(), y.toInt(), w.toInt(), h.toInt())
     }
 
@@ -106,12 +109,7 @@ class ConfigActivity : ComponentActivity() {
                 Text(label)
                 Text(value.toInt().toString())
             }
-            Slider(
-                value = value,
-                onValueChange = onValueChange,
-                valueRange = min..max,
-                modifier = Modifier.semantics { contentDescription = "Adjust $label" }
-            )
+            Slider(value = value, onValueChange = onValueChange, valueRange = min..max)
         }
     }
 }

@@ -14,20 +14,21 @@ object BatteryPlugin {
     var onBatteryChanged: ((level: Int, isCharging: Boolean, color: Int) -> Unit)? = null
     private var isRegistered = false
 
+    private var lastChargingState: Boolean? = null
+
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Intent.ACTION_BATTERY_CHANGED) {
-                val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
                 val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
 
-                val percent = (level * 100) / scale.toFloat()
-                val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                               status == BatteryManager.BATTERY_STATUS_FULL
-
-                val color = getBatteryColor(percent.toInt())
-
-                onBatteryChanged?.invoke(percent.toInt(), isCharging, color)
+                if (isCharging != lastChargingState) {
+                    lastChargingState = isCharging
+                    val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                    val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                    val percent = if (scale > 0) (level * 100) / scale.toFloat() else 0f
+                    onBatteryChanged?.invoke(percent.toInt(), isCharging, getBatteryColor(percent.toInt()))
+                }
             }
         }
     }

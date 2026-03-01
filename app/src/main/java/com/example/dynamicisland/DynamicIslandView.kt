@@ -68,7 +68,6 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
 
 @SuppressLint("ViewConstructor")
 class DynamicIslandView(context: Context) : FrameLayout(context) {
-    private lateinit var recomposer: androidx.compose.runtime.Recomposer
 
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
@@ -98,8 +97,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     // Callbacks
     var onSingleTap: (() -> Unit)? = null
     var onSwipeUp: (() -> Unit)? = null
-    var onSwipeLeft: (() -> Unit)? = null
-    var onSwipeRight: (() -> Unit)? = null
     var onPlayPauseClick: (() -> Unit)? = null
     var onPrevClick: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
@@ -137,12 +134,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             addAction("com.example.dynamicisland.UPDATE_CONFIG")
             addAction("com.example.dynamicisland.TEST_RING")
         }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
-        } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            context.registerReceiver(receiver, filter)
-        }
+        context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
 
         setViewTreeLifecycleOwner(lifecycleOwner)
         setViewTreeSavedStateRegistryOwner(lifecycleOwner)
@@ -163,7 +155,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
         val coroutineContext = AndroidUiDispatcher.CurrentThread
         val runRecomposeScope = CoroutineScope(coroutineContext)
-        recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
+        val recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
         composeView.compositionContext = recomposer
         runRecomposeScope.launch { recomposer.runRecomposeAndApplyChanges() }
 
@@ -183,8 +175,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         // Added standard cleanup per user feedback in earlier steps
         windowManager = null
         IslandController.forceHide()
-        // Kills the memory leak
-        recomposer.cancel()
     }
 
     @OptIn(ExperimentalAnimationApi::class)
@@ -209,18 +199,16 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         val width by animateDpAsState(targetValue = targetWidth, animationSpec = physicsSpec, label = "width")
         val height by animateDpAsState(targetValue = targetHeight, animationSpec = physicsSpec, label = "height")
 
-        // Replace your LaunchedEffect block with this optimized version:
-        LaunchedEffect(state) { // ONLY trigger when the state changes, NOT on every frame of the animation
+        LaunchedEffect(width, height) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
 
+            // FIX 4: MASSIVE Padding increase.
+            // The MAX state requires heavy vertical padding so touches aren't cut off by the Window bounds.
             val density = context.resources.displayMetrics.density
-
-            // Instantly jump the Window to the max size needed for the CURRENT state
-            // This prevents the Window Manager from spamming SurfaceFlinger at 60fps
-            wp.width = (targetWidth.value * density).toInt() + (120 * density).toInt()
-            wp.height = (targetHeight.value * density).toInt() + (150 * density).toInt()
+            wp.width = (width.value * density).toInt() + (120 * density).toInt()
+            wp.height = (height.value * density).toInt() + (150 * density).toInt()
 
             wp.x = camOffsetX.value
             wp.y = camOffsetY.value
@@ -251,40 +239,22 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 )
             }
 
-        // The Ice Cube Shape Logic
-        val targetCornerRadius = when (state) {
-            IslandState.HIDDEN -> (camHeight.value / 2).dp
-            IslandState.TYPE_1_MINI -> 18.dp
-            IslandState.TYPE_2_MID -> 32.dp
-            IslandState.TYPE_3_MAX -> 42.dp
-        }
-        val cornerRadius by animateDpAsState(targetValue = targetCornerRadius, animationSpec = physicsSpec, label = "cornerRadius")
-
-        // The main black pill
-        Box(
-            modifier = Modifier
-                .width(width)
-                .height(height)
-                .clip(RoundedCornerShape(cornerRadius)) // Replaced 50% with exact DP
-                .background(backgroundColor)
-                .border(if (state == IslandState.HIDDEN) 0.dp else 1.dp, borderColor, RoundedCornerShape(cornerRadius))
-                .pointerInput(Unit) {
-                    var dx = 0f
-                    var dy = 0f
-                    detectDragGestures(
-                        onDragEnd = {
-                            if (dy < -40) onSwipeUp?.invoke()
-                            else if (dx > 50) onSwipeRight?.invoke()
-                            else if (dx < -50) onSwipeLeft?.invoke()
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            dx += dragAmount.x
-                            dy += dragAmount.y
-                        }
-                    )
-                }
-                .pointerInput(Unit) { detectTapGestures(onTap = { onSingleTap?.invoke() }) },
+            // The main black pill
+            Box(
+                modifier = Modifier
+                    .width(width)
+                    .height(height)
+                    .clip(RoundedCornerShape(percent = 50)) // Perfect pill shape
+                    .background(backgroundColor)
+                    .border(if (state == IslandState.HIDDEN) 0.dp else 1.dp, borderColor, RoundedCornerShape(percent = 50))
+                    .pointerInput(Unit) {
+                        var dy = 0f
+                        detectDragGestures(
+                            onDragEnd = { if (dy < -30) onSwipeUp?.invoke() },
+                            onDrag = { change, dragAmount -> change.consume(); dy += dragAmount.y }
+                        )
+                    }
+                    .pointerInput(Unit) { detectTapGestures(onTap = { onSingleTap?.invoke() }) },
                 contentAlignment = Alignment.Center
             ) {
                 if (state != IslandState.HIDDEN) {
@@ -396,7 +366,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         val music = musicState.value ?: return
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             if (music.art != null) {
-                if (!music.art.isRecycled) { Image(bitmap = music.art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))) }
+                Image(bitmap = music.art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)))
             } else {
                 Box(Modifier.size(48.dp).background(Color.DarkGray, RoundedCornerShape(8.dp)))
             }
@@ -405,7 +375,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                  Text(text = music.title, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                  Text(text = music.artist, color = textColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            val playIcon = if (music.isPlaying) R.drawable.ic_pause_vector else R.drawable.ic_play_vector
+            val playIcon = if (music.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
             Icon(painterResource(playIcon), contentDescription = "Play/Pause", tint = textColor, modifier = Modifier.size(32.dp).clickable { onPlayPauseClick?.invoke() })
         }
     }
@@ -416,7 +386,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 if (music.art != null) {
-                    if (!music.art.isRecycled) { Image(bitmap = music.art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp))) }
+                    Image(bitmap = music.art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)))
                 } else {
                     Box(Modifier.size(64.dp).background(Color.DarkGray, RoundedCornerShape(12.dp)))
                 }
@@ -427,9 +397,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 }
             }
             Column(modifier = Modifier.fillMaxWidth()) {
-                val safeProgress = if (music.progress.isNaN() || music.progress.isInfinite()) 0f else music.progress.coerceIn(0f, 1f)
                 WavySlider(
-                    value = safeProgress,
+                    value = music.progress,
                     onValueChange = { newProgress -> onSeekTo?.invoke((newProgress * music.duration).toLong()) },
                     waveLength = 20.dp, waveHeight = 4.dp,
                     waveVelocity = if (music.isPlaying) 15.dp to WaveDirection.HEAD else 0.dp to WaveDirection.HEAD,
@@ -441,12 +410,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-                    Icon(painterResource(R.drawable.ic_prev_vector), contentDescription = "Prev", tint = textColor, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
-                    val playIcon = if (music.isPlaying) R.drawable.ic_pause_vector else R.drawable.ic_play_vector
+                    Icon(painterResource(android.R.drawable.ic_media_previous), contentDescription = "Prev", tint = textColor, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
+                    val playIcon = if (music.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
                     Box(modifier = Modifier.size(56.dp).background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(28.dp)).clickable { onPlayPauseClick?.invoke() }, contentAlignment = Alignment.Center) {
                         Icon(painterResource(playIcon), contentDescription = "Play/Pause", tint = textColor, modifier = Modifier.size(32.dp))
                     }
-                    Icon(painterResource(R.drawable.ic_next_vector), contentDescription = "Next", tint = textColor, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
+                    Icon(painterResource(android.R.drawable.ic_media_next), contentDescription = "Next", tint = textColor, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
                 }
             }
         }

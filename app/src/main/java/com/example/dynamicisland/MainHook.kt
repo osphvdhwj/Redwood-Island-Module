@@ -132,7 +132,7 @@ class MainHook : IXposedHookLoadPackage {
 
             // Create AssetManager
             val assetManagerClass = android.content.res.AssetManager::class.java
-            val assetManager = assetManagerClass.getDeclaredConstructor().newInstance()
+            val assetManager = assetManagerClass.newInstance()
             val addAssetPathMethod = assetManagerClass.getMethod("addAssetPath", String::class.java)
             addAssetPathMethod.invoke(assetManager, apkPath)
 
@@ -191,7 +191,7 @@ class MainHook : IXposedHookLoadPackage {
             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
             // Use TYPE_STATUS_BAR_SUB_PANEL (2017)
-            val windowContext = context.createDisplayContext(display).createWindowContext(2024, null)
+            val windowContext = context.createDisplayContext(display).createWindowContext(2017, null)
 
             // Combine Window Context (Base) with Module Resources
             val hybridContext = ModuleContextWrapper(windowContext, moduleContext)
