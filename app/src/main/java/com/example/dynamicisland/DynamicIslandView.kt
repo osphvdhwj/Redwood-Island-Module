@@ -68,6 +68,7 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
 
 @SuppressLint("ViewConstructor")
 class DynamicIslandView(context: Context) : FrameLayout(context) {
+    private lateinit var recomposer: androidx.compose.runtime.Recomposer
 
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
@@ -162,7 +163,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
         val coroutineContext = AndroidUiDispatcher.CurrentThread
         val runRecomposeScope = CoroutineScope(coroutineContext)
-        val recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
+        recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
         composeView.compositionContext = recomposer
         runRecomposeScope.launch { recomposer.runRecomposeAndApplyChanges() }
 
@@ -182,6 +183,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         // Added standard cleanup per user feedback in earlier steps
         windowManager = null
         IslandController.forceHide()
+        // Kills the memory leak
+        recomposer.cancel()
     }
 
     @OptIn(ExperimentalAnimationApi::class)
