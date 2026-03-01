@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.compositionContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.palette.graphics.Palette
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,16 +72,15 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     var windowParams: WindowManager.LayoutParams? = null
 
     enum class IslandState {
-        HIDDEN,      // Transparent/invisible
-        TYPE_1_MINI, // Compact pill
-        TYPE_2_MID,  // Expanded notification
-        TYPE_3_MAX   // Full control center
+        HIDDEN, TYPE_1_MINI, TYPE_2_MID, TYPE_3_MAX, TYPE_SPLIT
     }
 
     var camOffsetX = mutableStateOf(0)
     var camOffsetY = mutableStateOf(48)
     var camWidth = mutableStateOf(24)
     var camHeight = mutableStateOf(24)
+    var pillScaleX = mutableStateOf(1f)
+    var pillScaleY = mutableStateOf(1f)
 
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val isScreenOn = mutableStateOf(true)
@@ -88,6 +88,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     private val musicState = mutableStateOf<MusicData?>(null)
     private val liveActivityState = mutableStateOf<LiveActivityData?>(null)
+    private val secondaryActivityState = mutableStateOf<LiveActivityData?>(null)
 
     data class MusicData(val title: String, val artist: String, val art: Bitmap?, val isPlaying: Boolean, val progress: Float, val duration: Long, val currentPosition: Long)
     data class LiveActivityData(val title: String, val data: String, val progress: Float?, val color: Int, val type: ActivityType)
@@ -112,6 +113,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     camOffsetY.value = intent.getIntExtra("offsetY", 48)
                     camWidth.value = intent.getIntExtra("camWidth", 24)
                     camHeight.value = intent.getIntExtra("camHeight", 24)
+                    pillScaleX.value = intent.getFloatExtra("pillScaleX", 1f)
+                    pillScaleY.value = intent.getFloatExtra("pillScaleY", 1f)
 
                     // Force a layout update
                     val wp = windowParams ?: return
@@ -131,6 +134,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         val filter = android.content.IntentFilter().apply {
             addAction("com.example.dynamicisland.UPDATE_CONFIG")
             addAction("com.example.dynamicisland.TEST_RING")
+            addAction("com.example.dynamicisland.TOGGLE_PREVIEW")
         }
         context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
 
@@ -181,15 +185,17 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         // Physical dimensions matching Apple's standard specs
         val targetWidth = when (state) {
             IslandState.HIDDEN -> camWidth.value.dp // Shrink exactly to camera width
-            IslandState.TYPE_1_MINI -> 180.dp
-            IslandState.TYPE_2_MID -> 320.dp
-            IslandState.TYPE_3_MAX -> 360.dp
+            IslandState.TYPE_1_MINI -> 180.dp * pillScaleX.value
+            IslandState.TYPE_2_MID -> 320.dp * pillScaleX.value
+            IslandState.TYPE_3_MAX -> 360.dp * pillScaleX.value
+            IslandState.TYPE_SPLIT -> 340.dp * pillScaleX.value
         }
         val targetHeight = when (state) {
             IslandState.HIDDEN -> camHeight.value.dp // Shrink exactly to camera height
-            IslandState.TYPE_1_MINI -> 36.dp
-            IslandState.TYPE_2_MID -> 80.dp // Sleeker mid state
-            IslandState.TYPE_3_MAX -> 200.dp
+            IslandState.TYPE_1_MINI -> 36.dp * pillScaleY.value
+            IslandState.TYPE_2_MID -> 80.dp * pillScaleY.value // Sleeker mid state
+            IslandState.TYPE_3_MAX -> 200.dp * pillScaleY.value
+            IslandState.TYPE_SPLIT -> 36.dp * pillScaleY.value
         }
 
         val physicsSpec = spring<Dp>(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow)
@@ -217,7 +223,27 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         }
 
         // OLED Black Design for perfect camera blending
-        val backgroundColor = if (state == IslandState.HIDDEN) Color.Transparent else Color.Black
+        var musicBackgroundColor by remember { mutableStateOf(Color.Black.copy(alpha = 0.75f)) }
+
+        LaunchedEffect(musicState.value?.art) {
+            val art = musicState.value?.art
+            if (art != null && !art.isRecycled) {
+                Palette.from(art).generate { palette ->
+                    val dominant = palette?.getDominantColor(android.graphics.Color.BLACK) ?: android.graphics.Color.BLACK
+                    musicBackgroundColor = Color(dominant).copy(alpha = 0.85f)
+                }
+            } else {
+                musicBackgroundColor = Color.Black.copy(alpha = 0.75f)
+            }
+        }
+
+        val backgroundColor = if (state == IslandState.HIDDEN) {
+            Color.Transparent
+        } else if (musicState.value != null && musicState.value!!.isPlaying) {
+            musicBackgroundColor
+        } else {
+            Color.Black.copy(alpha = 0.75f)
+        }
         val borderColor = if (state == IslandState.HIDDEN) Color.Transparent else Color.White.copy(alpha = 0.15f)
         val contentColor = Color.White // White text on OLED Black
 
@@ -273,6 +299,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                                     IslandState.TYPE_1_MINI -> UniversalMini(contentColor, activity)
                                     IslandState.TYPE_2_MID -> UniversalMid(contentColor, activity)
                                     IslandState.TYPE_3_MAX -> UniversalMax(contentColor, activity)
+                                    IslandState.TYPE_SPLIT -> if (activity != null) SplitPill(contentColor, activity, secondaryActivityState.value)
                                     else -> {}
                                 }
                             } else {
@@ -280,6 +307,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                                     IslandState.TYPE_1_MINI -> MusicMini(contentColor)
                                     IslandState.TYPE_2_MID -> MusicMid(contentColor)
                                     IslandState.TYPE_3_MAX -> MusicMax(contentColor)
+                                    IslandState.TYPE_SPLIT -> if (activity != null) SplitPill(contentColor, activity, secondaryActivityState.value)
                                     else -> {}
                                 }
                             }
@@ -292,6 +320,38 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     // --- Universal App Composables ---
     @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
+    @Composable
+    private fun SplitPill(textColor: Color, primary: LiveActivityData, secondary: LiveActivityData?) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left Pill (Primary)
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(Color.Black.copy(alpha=0.5f), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 6.dp)) {
+                if (primary.type == ActivityType.MEDIA && musicState.value?.art != null) {
+                    val art = musicState.value?.art
+                    if (art != null && !art.isRecycled) {
+                        Image(bitmap = art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(20.dp).clip(RoundedCornerShape(10.dp)))
+                    }
+                } else {
+                    Icon(painterResource(getIconForType(primary.type)), contentDescription = null, tint = Color(primary.color), modifier = Modifier.size(20.dp))
+                }
+            }
+
+            // Right Pill (Secondary)
+            if (secondary != null) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(Color.Black.copy(alpha=0.5f), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    Icon(painterResource(getIconForType(secondary.type)), contentDescription = null, tint = Color(secondary.color), modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = secondary.data, color = textColor, fontSize = 12.sp, maxLines = 1)
+                }
+            }
+        }
+    }
+
+    @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
     @Composable
     fun UniversalMini(textColor: Color, activity: LiveActivityData) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
@@ -302,6 +362,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         }
     }
 
+    @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
     @Composable
     fun UniversalMid(textColor: Color, activity: LiveActivityData) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
@@ -327,6 +388,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         }
     }
 
+    @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
     @Composable
     fun UniversalMax(textColor: Color, activity: LiveActivityData) {
         // For MAX state on general apps, we center a larger version of MID

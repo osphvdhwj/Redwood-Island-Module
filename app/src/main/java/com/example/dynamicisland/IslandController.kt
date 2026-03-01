@@ -24,6 +24,8 @@ object IslandController {
 
     // The Smart Tracker
     private val activeActivities = ConcurrentHashMap<String, LiveActivityModel>()
+    private val dismissalRunnables = ConcurrentHashMap<String, Runnable>()
+    private val dismissedActivities = mutableSetOf<String>()
     private var isScreenOn = true
 
     private fun log(msg: String) {
@@ -110,12 +112,17 @@ object IslandController {
     fun postActivity(activity: LiveActivityModel) {
         activeActivities[activity.id] = activity
         resolveHighestPriority()
+
         if (activity.isTransient) {
-            mainHandler.postDelayed({ removeActivity(activity.id) }, 5000)
+            dismissalRunnables[activity.id]?.let { mainHandler.removeCallbacks(it) }
+            val task = Runnable { removeActivity(activity.id) }
+            dismissalRunnables[activity.id] = task
+            mainHandler.postDelayed(task, 5000)
         }
     }
 
     private fun removeActivity(id: String) {
+        dismissalRunnables.remove(id)?.let { mainHandler.removeCallbacks(it) }
         if (activeActivities.remove(id) != null) {
             resolveHighestPriority()
         }
@@ -150,7 +157,15 @@ object IslandController {
         }
     }
 
-    fun forceHide() { islandViewRef?.get()?.setState(DynamicIslandView.IslandState.HIDDEN) }
+    fun forceHide() {
+        val highest = activeActivities.values.maxByOrNull { it.type.priority }
+        if (highest != null) {
+            dismissedActivities.add(highest.id)
+        } else if (currentController != null) {
+            dismissedActivities.add("sys_media")
+        }
+        islandViewRef?.get()?.setState(DynamicIslandView.IslandState.HIDDEN)
+    }
 
     // --- PUNCH-HOLE SAFE SYSTEM UI HOOKS ---
     fun hookFrameworkNotifications(lpparam: XC_LoadPackage.LoadPackageParam) {

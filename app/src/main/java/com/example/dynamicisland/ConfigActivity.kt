@@ -59,25 +59,40 @@ class ConfigActivity : ComponentActivity() {
         var offsetY by remember { mutableStateOf(prefs.getInt("offsetY", 48).toFloat()) }
         var camWidth by remember { mutableStateOf(prefs.getInt("camWidth", 24).toFloat()) }
         var camHeight by remember { mutableStateOf(prefs.getInt("camHeight", 24).toFloat()) }
+        var pillScaleX by remember { mutableStateOf(prefs.getFloat("pillScaleX", 1f)) }
+        var pillScaleY by remember { mutableStateOf(prefs.getFloat("pillScaleY", 1f)) }
 
         Column(modifier = Modifier.padding(24.dp)) {
             Text("Dynamic Island Configuration", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(32.dp))
 
             ConfigSlider("X Offset (Left/Right)", offsetX, -100f, 100f) {
-                offsetX = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight)
+                offsetX = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight, pillScaleX, pillScaleY)
             }
-            ConfigSlider("Y Offset (Up/Down)", offsetY, 0f, 150f) {
-                offsetY = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight)
+            ConfigSlider("Y Offset (Up/Down)", offsetY, -100f, 200f) {
+                offsetY = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight, pillScaleX, pillScaleY)
             }
             ConfigSlider("Camera Width", camWidth, 10f, 80f) {
-                camWidth = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight)
+                camWidth = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight, pillScaleX, pillScaleY)
             }
             ConfigSlider("Camera Height", camHeight, 10f, 80f) {
-                camHeight = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight)
+                camHeight = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+            }
+            ConfigSlider("Pill Width Scale", pillScaleX, 0.5f, 2.0f) {
+                pillScaleX = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+            }
+            ConfigSlider("Pill Height Scale", pillScaleY, 0.5f, 2.0f) {
+                pillScaleY = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight, pillScaleX, pillScaleY)
             }
 
             Spacer(modifier = Modifier.height(32.dp))
+            Button(
+                onClick = { sendBroadcast(Intent("com.example.dynamicisland.TOGGLE_PREVIEW")) },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+            ) {
+                Text("Toggle Visual Preview")
+            }
+
             Button(
                 onClick = {
                     // Send a dummy test notification to show the ring
@@ -91,7 +106,7 @@ class ConfigActivity : ComponentActivity() {
         }
     }
 
-    private fun saveAndBroadcast(x: Float, y: Float, w: Float, h: Float) {
+    private fun saveAndBroadcast(x: Float, y: Float, w: Float, h: Float, scaleX: Float, scaleY: Float) {
         prefs.edit()
             .putInt("offsetX", x.toInt())
             .putInt("offsetY", y.toInt())
