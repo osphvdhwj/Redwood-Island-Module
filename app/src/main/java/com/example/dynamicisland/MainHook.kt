@@ -34,49 +34,48 @@ class MainHook : IXposedHookLoadPackage {
 
         // 1. UI Injection - SAFE BOOT STRATEGY
         try {
-            XposedHelpers.findAndHookMethod(
-                "com.android.systemui.SystemUIService",
-                lpparam.classLoader,
-                "onCreate",
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        val serviceContext = param.thisObject as Context
+            // Try hooking CentralSurfacesImpl (Android 13+)
+            val centralSurfacesClass = try {
+                XposedHelpers.findClass("com.android.systemui.statusbar.phone.CentralSurfacesImpl", lpparam.classLoader)
+            } catch (e: XposedHelpers.ClassNotFoundError) {
+                // Fallback to StatusBar (Android 12 and below)
+                try {
+                    XposedHelpers.findClass("com.android.systemui.statusbar.phone.StatusBar", lpparam.classLoader)
+                } catch (e2: XposedHelpers.ClassNotFoundError) {
+                    log("[ERROR] Could not find CentralSurfacesImpl or StatusBar classes.")
+                    null
+                }
+            }
 
-                        // Register Screen State Receiver (Safe to do early)
-                        registerScreenReceiver(serviceContext)
-
-                        // Check if boot is already completed (e.g. SystemUI restart)
-                        if (isBootCompleted()) {
-                            log("[BOOT] System is already booted. Initializing Island immediately...")
-                            Handler(Looper.getMainLooper()).postDelayed({
-                                setupIsland(serviceContext)
-                            }, 3000) // Small safety delay for SystemUI restart
-                        } else {
-                            log("[BOOT] Waiting for BOOT_COMPLETED...")
-                            val bootReceiver = object : BroadcastReceiver() {
-                                override fun onReceive(context: Context, intent: Intent) {
-                                    if (Intent.ACTION_BOOT_COMPLETED == intent.action) {
-                                        log("[BOOT] Boot completed event received. Initializing Island...")
-                                        Handler(Looper.getMainLooper()).postDelayed({
-                                            setupIsland(serviceContext)
-                                        }, 5000)
-                                        try {
-                                            context.unregisterReceiver(this)
-                                        } catch (e: Exception) {}
-                                    }
-                                }
-                            }
-                            try {
-                                serviceContext.registerReceiver(bootReceiver, IntentFilter(Intent.ACTION_BOOT_COMPLETED))
+            if (centralSurfacesClass != null) {
+                XposedHelpers.findAndHookMethod(
+                    centralSurfacesClass.name,
+                    lpparam.classLoader,
+                    "start",
+                    object : XC_MethodHook() {
+                        override fun afterHookedMethod(param: MethodHookParam) {
+                            val serviceContext = try {
+                                XposedHelpers.getObjectField(param.thisObject, "mContext") as Context
                             } catch (e: Throwable) {
-                                log("[ERROR] Failed to register BOOT_COMPLETED receiver: $e")
+                                log("[ERROR] Could not find mContext in ${centralSurfacesClass.name}")
+                                return
+                            }
+
+                            log("[BOOT] ${centralSurfacesClass.simpleName}.start() hooked. Initializing Island...")
+
+                            // Register Screen State Receiver
+                            registerScreenReceiver(serviceContext)
+
+                            // Post to main thread just to be safe, but no huge delay needed anymore
+                            Handler(Looper.getMainLooper()).post {
+                                setupIsland(serviceContext)
                             }
                         }
                     }
-                }
-            )
+                )
+            }
         } catch (e: Throwable) {
-            log("[ERROR] Failed to hook SystemUIService: $e")
+            log("[ERROR] Failed to hook start method: $e")
         }
 
         // 2. Initialize Island Framework Hooks (Safe logic hooks)
@@ -87,16 +86,6 @@ class MainHook : IXposedHookLoadPackage {
         }
     }
 
-    private fun isBootCompleted(): Boolean {
-        return try {
-            val sysProp = Class.forName("android.os.SystemProperties")
-            val getMethod = sysProp.getMethod("get", String::class.java, String::class.java)
-            val bootState = getMethod.invoke(null, "sys.boot_completed", "0") as String
-            bootState == "1"
-        } catch (e: Exception) {
-            false
-        }
-    }
 
     private fun registerScreenReceiver(context: Context) {
         try {
