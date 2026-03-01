@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.WindowManager
 import android.widget.FrameLayout
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -25,11 +26,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.compositionContext
@@ -39,26 +38,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
-import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.lifecycle.setViewTreeViewModelStoreOwner
-import androidx.palette.graphics.Palette
-import androidx.savedstate.SavedStateRegistry
-import androidx.savedstate.SavedStateRegistryController
-import androidx.savedstate.SavedStateRegistryOwner
-import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import androidx.lifecycle.*
+import androidx.savedstate.*
 import ir.mahozad.multiplatform.wavyslider.material3.WavySlider
 import ir.mahozad.multiplatform.wavyslider.WaveDirection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 import java.util.concurrent.TimeUnit
 import java.util.Locale
+import kotlin.math.abs
 
+// ... [Keep OverlayLifecycleOwner exact same as before] ...
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
@@ -82,62 +72,42 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     var windowParams: WindowManager.LayoutParams? = null
 
     enum class IslandState {
-        HIDDEN,      // Transparent Ring
-        TYPE_1_MINI, // Small Pill
-        TYPE_2_MID,  // Medium Pill
-        TYPE_3_MAX   // Full Player
+        HIDDEN,      // Transparent/invisible
+        TYPE_1_MINI, // Compact pill
+        TYPE_2_MID,  // Expanded notification
+        TYPE_3_MAX   // Full control center
     }
 
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val isScreenOn = mutableStateOf(true)
-    val isLandscape = mutableStateOf(false)
+    val isLandscape = mutableStateOf(context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
 
     private val musicState = mutableStateOf<MusicData?>(null)
     private val liveActivityState = mutableStateOf<LiveActivityData?>(null)
-    private val chargingState = mutableStateOf<ChargingData?>(null)
 
-    data class MusicData(
-        val title: String,
-        val artist: String,
-        val art: Bitmap?,
-        val isPlaying: Boolean,
-        val progress: Float,
-        val duration: Long,
-        val currentPosition: Long,
-        val dominantColor: Int = android.graphics.Color.DKGRAY
-    )
-    data class LiveActivityData(val title: String, val data: String, val progress: Float?, val color: Int)
-    data class ChargingData(val level: Int, val isCharging: Boolean, val color: Int)
+    data class MusicData(val title: String, val artist: String, val art: Bitmap?, val isPlaying: Boolean, val progress: Float, val duration: Long, val currentPosition: Long)
+    data class LiveActivityData(val title: String, val data: String, val progress: Float?, val color: Int, val type: ActivityType)
 
-    // Gesture Callbacks
+    // Callbacks
     var onSingleTap: (() -> Unit)? = null
-    var onDoubleTap: (() -> Unit)? = null
-    var onLongPress: (() -> Unit)? = null
-
-    // Media Actions
+    var onSwipeUp: (() -> Unit)? = null
+    var onPlayPauseClick: (() -> Unit)? = null
     var onPrevClick: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
-    var onPlayPauseClick: (() -> Unit)? = null
     var onSeekTo: ((Long) -> Unit)? = null
-    var onLoopClick: (() -> Unit)? = null
     var onCloseClick: (() -> Unit)? = null
-
-    var onSwipeLeft: (() -> Unit)? = null
-    var onSwipeRight: (() -> Unit)? = null
-    var onSwipeUp: (() -> Unit)? = null
 
     private val lifecycleOwner = OverlayLifecycleOwner()
 
     init {
         setViewTreeLifecycleOwner(lifecycleOwner)
         setViewTreeSavedStateRegistryOwner(lifecycleOwner)
-
-        val viewModelStoreOwner = object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() }
-        setViewTreeViewModelStoreOwner(viewModelStoreOwner)
+        setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
 
         val composeView = ComposeView(context).apply {
             setContent {
-                DynamicIslandTheme {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    // Orientation Check: Hide completely if in Landscape
                     if (isScreenOn.value && !isLandscape.value) {
                         IslandUI(islandState.value)
                     } else {
@@ -160,134 +130,98 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     override fun onConfigurationChanged(newConfig: Configuration?) {
         super.onConfigurationChanged(newConfig)
         newConfig?.let {
-            val landscape = it.orientation == Configuration.ORIENTATION_LANDSCAPE
-            if (isLandscape.value != landscape) isLandscape.value = landscape
+            isLandscape.value = it.orientation == Configuration.ORIENTATION_LANDSCAPE
         }
     }
 
-    fun updateScreenState(isOn: Boolean) {
-        if (isScreenOn.value != isOn) {
-            isScreenOn.value = isOn
-            if (isOn) lifecycleOwner.resume() else lifecycleOwner.pause()
-        }
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        // Added standard cleanup per user feedback in earlier steps
+        windowManager = null
+        IslandController.forceHide()
     }
 
-    fun clearMusicState() { musicState.value = null }
-
-    @Composable
-    fun DynamicIslandTheme(content: @Composable () -> Unit) {
-        MaterialTheme(colorScheme = darkColorScheme(), content = content)
-    }
-
+    @OptIn(ExperimentalAnimationApi::class)
     @Composable
     fun IslandUI(state: IslandState) {
-        // Dimensions matching visual requirements
+        // Physical dimensions matching Apple's standard specs
         val targetWidth = when (state) {
-            IslandState.HIDDEN -> 10.dp
+            IslandState.HIDDEN -> 12.dp
             IslandState.TYPE_1_MINI -> 180.dp
             IslandState.TYPE_2_MID -> 320.dp
             IslandState.TYPE_3_MAX -> 360.dp
         }
-
         val targetHeight = when (state) {
-            IslandState.HIDDEN -> 10.dp
+            IslandState.HIDDEN -> 12.dp
             IslandState.TYPE_1_MINI -> 36.dp
-            IslandState.TYPE_2_MID -> 100.dp
-            IslandState.TYPE_3_MAX -> 220.dp
+            IslandState.TYPE_2_MID -> 80.dp // Sleeker mid state
+            IslandState.TYPE_3_MAX -> 200.dp
         }
 
-        // Push it down to be UNDER the camera (approx 48dp)
-        val topPadding = 48.dp
-
-        val physicsSpec = spring<Dp>(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        )
+        val topPadding = 48.dp // Position under hardware camera
+        val physicsSpec = spring<Dp>(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow)
 
         val width by animateDpAsState(targetValue = targetWidth, animationSpec = physicsSpec, label = "width")
         val height by animateDpAsState(targetValue = targetHeight, animationSpec = physicsSpec, label = "height")
 
         LaunchedEffect(width, height) {
-            if (!isAttachedToWindow) return@LaunchedEffect // CRASH FIX
-
-            val wp = windowParams
-            val wm = windowManager
-            if (wp != null && wm != null) {
-                val pxWidth = (width.value * context.resources.displayMetrics.density).toInt()
-                val pxHeight = (height.value * context.resources.displayMetrics.density).toInt()
-
-                wp.width = pxWidth + 30
-                wp.height = pxHeight + (topPadding.value * context.resources.displayMetrics.density).toInt() + 30
-
-                try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
-            }
+            if (!isAttachedToWindow) return@LaunchedEffect
+            val wp = windowParams ?: return@LaunchedEffect
+            val wm = windowManager ?: return@LaunchedEffect
+            wp.width = (width.value * context.resources.displayMetrics.density).toInt() + 30
+            wp.height = (height.value * context.resources.displayMetrics.density).toInt() + (topPadding.value * context.resources.displayMetrics.density).toInt() + 30
+            try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
         }
 
-        // Glassmorphism Styles (Water/Glass)
-        // Water is clearer than "White Glass". Less opaque.
-        val shape = RoundedCornerShape(32.dp)
-
-        // Active: Water/Glass (More transparent white)
-        // Hidden: Transparent
-        val backgroundColor = if (state == IslandState.HIDDEN)
-            Color.Transparent
-        else
-            Color.White.copy(alpha = 0.65f) // Water (clearer than 0.85f)
-
-        val borderColor = if (state == IslandState.HIDDEN)
-            Color.Transparent
-        else
-            Color.White.copy(alpha = 0.3f)
-
-        val borderWidth = if (state == IslandState.HIDDEN) 0.dp else 1.dp
-
-        // Text Color for Water Background (Dark text is best for contrast)
-        val contentColor = Color.Black
+        // OLED Black Design for perfect camera blending
+        val backgroundColor = if (state == IslandState.HIDDEN) Color.Transparent else Color.Black
+        val borderColor = if (state == IslandState.HIDDEN) Color.Transparent else Color.White.copy(alpha = 0.15f)
+        val contentColor = Color.White // White text on OLED Black
 
         Box(modifier = Modifier.padding(top = topPadding), contentAlignment = Alignment.TopCenter) {
             Box(
                 modifier = Modifier
                     .width(width)
                     .height(height)
-                    .clip(shape)
+                    .clip(RoundedCornerShape(percent = 50)) // Perfect pill shape
                     .background(backgroundColor)
-                    .border(borderWidth, borderColor, shape)
+                    .border(if (state == IslandState.HIDDEN) 0.dp else 1.dp, borderColor, RoundedCornerShape(percent = 50))
                     .pointerInput(Unit) {
-                        var dragAccumulationX = 0f
-                        var dragAccumulationY = 0f
+                        var dy = 0f
                         detectDragGestures(
-                            onDragStart = { dragAccumulationX = 0f; dragAccumulationY = 0f },
-                            onDragEnd = {
-                                if (abs(dragAccumulationX) > abs(dragAccumulationY)) {
-                                    if (dragAccumulationX < -40) onSwipeLeft?.invoke()
-                                    else if (dragAccumulationX > 40) onSwipeRight?.invoke()
-                                } else {
-                                    if (dragAccumulationY < -40) onSwipeUp?.invoke()
-                                }
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                dragAccumulationX += dragAmount.x
-                                dragAccumulationY += dragAmount.y
-                            }
+                            onDragEnd = { if (dy < -30) onSwipeUp?.invoke() },
+                            onDrag = { change, dragAmount -> change.consume(); dy += dragAmount.y }
                         )
                     }
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = { onSingleTap?.invoke() },
-                            onDoubleTap = { onDoubleTap?.invoke() },
-                            onLongPress = { onLongPress?.invoke() }
-                        )
-                    },
+                    .pointerInput(Unit) { detectTapGestures(onTap = { onSingleTap?.invoke() }) },
                 contentAlignment = Alignment.Center
             ) {
                 if (state != IslandState.HIDDEN) {
                     CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides contentColor) {
-                        when (state) {
-                            IslandState.TYPE_1_MINI -> MusicMiniContent(contentColor)
-                            IslandState.TYPE_2_MID -> MusicMidContent(contentColor)
-                            IslandState.TYPE_3_MAX -> MusicMaxContent(contentColor)
-                            else -> {}
+                        val activity = liveActivityState.value
+                        val isLive = activity != null
+
+                        // Smooth morphing between states and apps
+                        AnimatedContent(
+                            targetState = Pair(state, if (isLive) "live" else "music"),
+                            transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
+                            label = "content_morph"
+                        ) { (currentState, layoutType) ->
+                            if (layoutType == "live" && activity != null) {
+                                when (currentState) {
+                                    IslandState.TYPE_1_MINI -> UniversalMini(contentColor, activity)
+                                    IslandState.TYPE_2_MID -> UniversalMid(contentColor, activity)
+                                    IslandState.TYPE_3_MAX -> UniversalMax(contentColor, activity)
+                                    else -> {}
+                                }
+                            } else {
+                                when (currentState) {
+                                    IslandState.TYPE_1_MINI -> MusicMini(contentColor)
+                                    IslandState.TYPE_2_MID -> MusicMid(contentColor)
+                                    IslandState.TYPE_3_MAX -> MusicMax(contentColor)
+                                    else -> {}
+                                }
+                            }
                         }
                     }
                 }
@@ -295,209 +229,170 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         }
     }
 
+    // --- Universal App Composables ---
     @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
     @Composable
-    fun MusicMiniContent(textColor: Color) {
-        val music = musicState.value
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)
-        ) {
-            if (music != null) {
-                 Text(
-                    text = "${music.title} • ${music.artist}",
-                    color = textColor,
-                    fontSize = 14.sp,
-                    maxLines = 1,
-                    modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
-                )
+    fun UniversalMini(textColor: Color, activity: LiveActivityData) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            val iconRes = getIconForType(activity.type)
+            Icon(painterResource(iconRes), contentDescription = null, tint = Color(activity.color), modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(text = "${activity.title} • ${activity.data}", color = textColor, fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
+        }
+    }
+
+    @Composable
+    fun UniversalMid(textColor: Color, activity: LiveActivityData) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+            // Left Icon/Progress
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) {
+                if (activity.progress != null) {
+                    androidx.compose.material3.CircularProgressIndicator(progress = { activity.progress }, color = Color(activity.color), trackColor = textColor.copy(alpha = 0.2f), modifier = Modifier.fillMaxSize())
+                }
+                Icon(painterResource(getIconForType(activity.type)), contentDescription = null, tint = Color(activity.color), modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.width(16.dp))
+            // Text Details
+            Column(modifier = Modifier.weight(1f)) {
+                 Text(text = activity.title, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                 Text(text = activity.data, color = textColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            // Right Action Button (e.g. End Call)
+            if (activity.type == ActivityType.CALL || activity.type == ActivityType.ALARM) {
+                Box(modifier = Modifier.size(40.dp).background(Color.Red.copy(alpha=0.2f), RoundedCornerShape(20.dp)).clickable { onCloseClick?.invoke() }, contentAlignment = Alignment.Center) {
+                    Icon(painterResource(android.R.drawable.ic_menu_close_clear_cancel), contentDescription="Close", tint=Color.Red)
+                }
             }
         }
     }
 
     @Composable
-    fun MusicMidContent(textColor: Color) {
+    fun UniversalMax(textColor: Color, activity: LiveActivityData) {
+        // For MAX state on general apps, we center a larger version of MID
+        Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(painterResource(getIconForType(activity.type)), contentDescription = null, tint = Color(activity.color), modifier = Modifier.size(48.dp))
+            Spacer(Modifier.height(16.dp))
+            Text(text = activity.title, color = textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Spacer(Modifier.height(8.dp))
+            Text(text = activity.data, color = textColor.copy(alpha = 0.7f), fontSize = 16.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        }
+    }
+
+    private fun getIconForType(type: ActivityType): Int {
+        return when(type) {
+            ActivityType.CALL -> android.R.drawable.ic_menu_call
+            ActivityType.NAVIGATION -> android.R.drawable.ic_menu_mapmode
+            ActivityType.TIMER -> android.R.drawable.ic_menu_recent_history
+            ActivityType.MESSAGE -> android.R.drawable.ic_dialog_email
+            ActivityType.ALARM -> android.R.drawable.ic_lock_idle_alarm
+            ActivityType.CHARGING -> android.R.drawable.ic_lock_idle_charging
+            else -> android.R.drawable.stat_sys_download
+        }
+    }
+
+    // --- Music Composables ---
+    @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+    @Composable
+    fun MusicMini(textColor: Color) {
         val music = musicState.value ?: return
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
-        ) {
-             if (music.art != null) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            Text(text = "${music.title} • ${music.artist}", color = textColor, fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
+        }
+    }
+
+    @Composable
+    fun MusicMid(textColor: Color) {
+        val music = musicState.value ?: return
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+            if (music.art != null) {
                 Image(bitmap = music.art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)))
             } else {
-                Box(Modifier.size(48.dp).background(Color.Gray, RoundedCornerShape(8.dp)))
+                Box(Modifier.size(48.dp).background(Color.DarkGray, RoundedCornerShape(8.dp)))
             }
-
-            Spacer(Modifier.width(12.dp))
-
+            Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                  Text(text = music.title, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                 Text(text = music.artist, color = textColor.copy(alpha = 0.7f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                 Text(text = music.artist, color = textColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-
-            Spacer(Modifier.width(12.dp))
-
             val playIcon = if (music.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
-            Icon(
-                painterResource(playIcon),
-                contentDescription = "Play/Pause",
-                tint = textColor,
-                modifier = Modifier.size(32.dp).clickable { onPlayPauseClick?.invoke() }
-            )
+            Icon(painterResource(playIcon), contentDescription = "Play/Pause", tint = textColor, modifier = Modifier.size(32.dp).clickable { onPlayPauseClick?.invoke() })
         }
     }
 
     @Composable
-    fun MusicMaxContent(textColor: Color) {
+    fun MusicMax(textColor: Color) {
         val music = musicState.value ?: return
-
-        Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Top Row: Source Info
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(28.dp).background(Color.Black.copy(alpha = 0.1f), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-                        Icon(painterResource(android.R.drawable.ic_media_play), contentDescription = null, tint = textColor, modifier = Modifier.size(16.dp))
-                }
-                Row(
-                    modifier = Modifier.background(Color.Black.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("This phone", color = textColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                }
-            }
-
-            // Middle Row: Titles & Main Action
+        Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                if (music.art != null) {
+                    Image(bitmap = music.art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)))
+                } else {
+                    Box(Modifier.size(64.dp).background(Color.DarkGray, RoundedCornerShape(12.dp)))
+                }
+                Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = music.title, color = textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(text = music.artist, color = textColor.copy(alpha = 0.7f), fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Spacer(modifier = Modifier.width(16.dp))
-
-                val playIcon = if (music.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .background(Color.Black.copy(alpha = 0.1f), RoundedCornerShape(28.dp))
-                        .clickable { onPlayPauseClick?.invoke() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(painterResource(playIcon), contentDescription = "Play/Pause", tint = textColor, modifier = Modifier.size(32.dp))
-                }
             }
-
-            // Bottom Row: Wavy Slider & Controls
             Column(modifier = Modifier.fillMaxWidth()) {
-                // Wavy Slider
                 WavySlider(
                     value = music.progress,
-                    onValueChange = { newProgress ->
-                         // Calculate time from progress fraction
-                         val newTime = (newProgress * music.duration).toLong()
-                         onSeekTo?.invoke(newTime)
-                    },
-                    waveLength = 20.dp,
-                    waveHeight = 4.dp,
-                    // FIX: waveVelocity expects a Pair<Dp, WaveDirection>
+                    onValueChange = { newProgress -> onSeekTo?.invoke((newProgress * music.duration).toLong()) },
+                    waveLength = 20.dp, waveHeight = 4.dp,
                     waveVelocity = if (music.isPlaying) 15.dp to WaveDirection.HEAD else 0.dp to WaveDirection.HEAD,
-                    waveThickness = 4.dp,
-                    trackThickness = 4.dp,
-                    modifier = Modifier.fillMaxWidth().height(24.dp)
+                    waveThickness = 4.dp, trackThickness = 4.dp, modifier = Modifier.fillMaxWidth().height(24.dp)
                 )
-
-                // Time Indicators
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(formatTime(music.currentPosition), color = textColor.copy(alpha = 0.6f), fontSize = 12.sp)
                     Text(formatTime(music.duration), color = textColor.copy(alpha = 0.6f), fontSize = 12.sp)
                 }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Icon(painterResource(android.R.drawable.ic_media_previous), contentDescription = "Prev", tint = textColor, modifier = Modifier.size(32.dp).clickable { onPrevClick?.invoke() })
-                    Icon(painterResource(android.R.drawable.ic_media_next), contentDescription = "Next", tint = textColor, modifier = Modifier.size(32.dp).clickable { onNextClick?.invoke() })
-                    Icon(painterResource(android.R.drawable.ic_menu_close_clear_cancel), contentDescription = "Close", tint = textColor, modifier = Modifier.size(28.dp).clickable { onCloseClick?.invoke() })
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+                    Icon(painterResource(android.R.drawable.ic_media_previous), contentDescription = "Prev", tint = textColor, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
+                    val playIcon = if (music.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+                    Box(modifier = Modifier.size(56.dp).background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(28.dp)).clickable { onPlayPauseClick?.invoke() }, contentAlignment = Alignment.Center) {
+                        Icon(painterResource(playIcon), contentDescription = "Play/Pause", tint = textColor, modifier = Modifier.size(32.dp))
+                    }
+                    Icon(painterResource(android.R.drawable.ic_media_next), contentDescription = "Next", tint = textColor, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
                 }
             }
         }
     }
 
-    private fun formatTime(ms: Long): String {
-        return String.format(Locale.getDefault(), "%02d:%02d",
-            TimeUnit.MILLISECONDS.toMinutes(ms),
-            TimeUnit.MILLISECONDS.toSeconds(ms) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(ms))
-        )
-    }
+    private fun formatTime(ms: Long): String = String.format(Locale.getDefault(), "%02d:%02d", TimeUnit.MILLISECONDS.toMinutes(ms), TimeUnit.MILLISECONDS.toSeconds(ms) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(ms)))
 
-    // --- Controller API ---
-    fun setState(newState: IslandState) {
-        if (!isAttachedToWindow && newState != IslandState.HIDDEN) return // Prevent zombie updates
-
-        islandState.value = newState
-        val wp = windowParams ?: return
-        val wm = windowManager ?: return
-
-        wp.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                   WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                   WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                   WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                   WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-                   WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
-
-        try { wm.updateViewLayout(this, wp) } catch (e: Exception) { }
-    }
-
-    fun showMini() = setState(IslandState.TYPE_1_MINI)
-    fun expand() = setState(IslandState.TYPE_2_MID)
-    fun showDashboard() = setState(IslandState.TYPE_3_MAX)
-    fun hide() = setState(IslandState.HIDDEN)
-    fun collapse() = showMini()
-
-    val isExpanded: Boolean get() = islandState.value == IslandState.TYPE_2_MID || islandState.value == IslandState.TYPE_3_MAX
-
-    // Data Updates
-    fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?) {
-        var dominantColor = android.graphics.Color.DKGRAY
-        if (art != null) {
-            Palette.from(art).generate { palette ->
-                dominantColor = palette?.getVibrantColor(palette.getDominantColor(android.graphics.Color.DKGRAY)) ?: android.graphics.Color.DKGRAY
-                updateMusicStateInternal(title, artist, art, dominantColor)
-            }
-        } else {
-            updateMusicStateInternal(title, artist, art, dominantColor)
+    // --- Data Updates ---
+    fun updateScreenState(isOn: Boolean) {
+        if (isScreenOn.value != isOn) {
+            isScreenOn.value = isOn
+            if (isOn) lifecycleOwner.resume() else lifecycleOwner.pause()
         }
     }
 
-    private fun updateMusicStateInternal(title: String?, artist: String?, art: Bitmap?, color: Int) {
+    fun setState(newState: IslandState) {
+        if (!isAttachedToWindow && newState != IslandState.HIDDEN) return
+        islandState.value = newState
+        val wp = windowParams ?: return
+        val wm = windowManager ?: return
+        wp.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+        try { wm.updateViewLayout(this, wp) } catch (e: Exception) { }
+    }
+
+    fun updateLiveActivity(title: String, data: String, progress: Float?, color: Int, type: ActivityType) {
+        liveActivityState.value = LiveActivityData(title, data, progress, color, type)
+    }
+
+    fun clearLiveActivityUI() { liveActivityState.value = null }
+    fun clearMusicState() { musicState.value = null }
+
+    fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?) {
         val current = musicState.value
-        musicState.value = current?.copy(title = title ?: "", artist = artist ?: "", art = art, dominantColor = color)
-            ?: MusicData(title ?: "", artist ?: "", art, false, 0f, 0L, 0L, color)
-        chargingState.value = null
+        musicState.value = current?.copy(title = title ?: "", artist = artist ?: "", art = art) ?: MusicData(title ?: "", artist ?: "", art, false, 0f, 0L, 0L)
     }
-
-    fun updateChargingInfo(level: Int, isCharging: Boolean, color: Int) {
-        if (isCharging) chargingState.value = ChargingData(level, isCharging, color) else chargingState.value = null
-    }
-
-    fun updatePlayPauseState(isPlaying: Boolean) {
-        val current = musicState.value ?: return
-        musicState.value = current.copy(isPlaying = isPlaying)
-    }
-
+    fun updatePlayPauseState(isPlaying: Boolean) { musicState.value = musicState.value?.copy(isPlaying = isPlaying) }
     fun updateMusicProgress(positionMs: Long, durationMs: Long) {
-        val current = musicState.value ?: return
         val progress = if (durationMs > 0) positionMs.toFloat() / durationMs.toFloat() else 0f
-        musicState.value = current.copy(progress = progress, duration = durationMs, currentPosition = positionMs)
-    }
-
-    fun updateLiveActivity(title: String, data: String, progress: Float?, color: Int) {
-        liveActivityState.value = LiveActivityData(title, data, progress, color)
+        musicState.value = musicState.value?.copy(progress = progress, duration = durationMs, currentPosition = positionMs)
     }
 }

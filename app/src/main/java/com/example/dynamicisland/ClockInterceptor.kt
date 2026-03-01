@@ -24,6 +24,7 @@ object ClockInterceptor {
         if (notification.channelId == "Stopwatch" || title.contains("Stopwatch", ignoreCase = true)) {
             return LiveActivityModel(
                 id = "system_stopwatch",
+                type = ActivityType.TIMER,
                 title = "Stopwatch",
                 dataText = text.ifEmpty { title }, // The ticking time is usually here
                 accentColor = Color.parseColor("#FF9800"), // Orange for Stopwatch
@@ -37,6 +38,7 @@ object ClockInterceptor {
             // but we can definitely show the countdown text.
             return LiveActivityModel(
                 id = "system_timer",
+                type = ActivityType.TIMER,
                 title = "Timer",
                 dataText = text.ifEmpty { title },
                 accentColor = Color.parseColor("#4CAF50"), // Green for Timer
@@ -48,6 +50,7 @@ object ClockInterceptor {
         if (notification.channelId == "Alarm" || notification.category == Notification.CATEGORY_ALARM) {
              return LiveActivityModel(
                 id = "system_alarm",
+                type = ActivityType.ALARM,
                 title = "Upcoming Alarm",
                 dataText = text,
                 accentColor = Color.LTGRAY
