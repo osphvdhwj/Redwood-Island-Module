@@ -41,8 +41,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.*
 import androidx.savedstate.*
-import ir.mahozad.multiplatform.wavyslider.material3.WavySlider
-import ir.mahozad.multiplatform.wavyslider.WaveDirection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
@@ -204,11 +202,13 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
 
-            // FIX 4: MASSIVE Padding increase.
-            // The MAX state requires heavy vertical padding so touches aren't cut off by the Window bounds.
+            // Fix the touch-eating invisible window
             val density = context.resources.displayMetrics.density
-            wp.width = (width.value * density).toInt() + (120 * density).toInt()
-            wp.height = (height.value * density).toInt() + (150 * density).toInt()
+            val padW = if (state == IslandState.HIDDEN) 16 else 120
+            val padH = if (state == IslandState.HIDDEN) 16 else 150
+
+            wp.width = (width.value * density).toInt() + (padW * density).toInt()
+            wp.height = (height.value * density).toInt() + (padH * density).toInt()
 
             wp.x = camOffsetX.value
             wp.y = camOffsetY.value
@@ -397,12 +397,23 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 }
             }
             Column(modifier = Modifier.fillMaxWidth()) {
-                WavySlider(
-                    value = music.progress,
+                // 1. Calculate a completely crash-proof progress value
+                val safeProgress = if (music.progress.isNaN() || music.progress.isInfinite()) {
+                    0f
+                } else {
+                    music.progress.coerceIn(0f, 1f)
+                }
+
+                // 2. Use the standard Material 3 Slider instead of WavySlider
+                androidx.compose.material3.Slider(
+                    value = safeProgress,
                     onValueChange = { newProgress -> onSeekTo?.invoke((newProgress * music.duration).toLong()) },
-                    waveLength = 20.dp, waveHeight = 4.dp,
-                    waveVelocity = if (music.isPlaying) 15.dp to WaveDirection.HEAD else 0.dp to WaveDirection.HEAD,
-                    waveThickness = 4.dp, trackThickness = 4.dp, modifier = Modifier.fillMaxWidth().height(24.dp)
+                    modifier = Modifier.fillMaxWidth().height(24.dp),
+                    colors = androidx.compose.material3.SliderDefaults.colors(
+                        thumbColor = textColor,
+                        activeTrackColor = textColor,
+                        inactiveTrackColor = textColor.copy(alpha = 0.3f)
+                    )
                 )
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(formatTime(music.currentPosition), color = textColor.copy(alpha = 0.6f), fontSize = 12.sp)
