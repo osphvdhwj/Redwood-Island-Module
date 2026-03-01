@@ -3,6 +3,7 @@ package com.example.dynamicisland
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Configuration
+import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.WindowManager
@@ -78,6 +79,11 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         TYPE_3_MAX   // Full control center
     }
 
+    var camOffsetX = mutableStateOf(0)
+    var camOffsetY = mutableStateOf(48)
+    var camWidth = mutableStateOf(24)
+    var camHeight = mutableStateOf(24)
+
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val isScreenOn = mutableStateOf(true)
     val isLandscape = mutableStateOf(context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
@@ -100,6 +106,36 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     private val lifecycleOwner = OverlayLifecycleOwner()
 
     init {
+        // Listen for live config updates from your app
+        val receiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(ctx: Context, intent: Intent) {
+                if (intent.action == "com.example.dynamicisland.UPDATE_CONFIG") {
+                    camOffsetX.value = intent.getIntExtra("offsetX", 0)
+                    camOffsetY.value = intent.getIntExtra("offsetY", 48)
+                    camWidth.value = intent.getIntExtra("camWidth", 24)
+                    camHeight.value = intent.getIntExtra("camHeight", 24)
+
+                    // Force a layout update
+                    val wp = windowParams ?: return
+                    wp.x = camOffsetX.value
+                    wp.y = camOffsetY.value
+                    try { windowManager?.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
+                } else if (intent.action == "com.example.dynamicisland.TEST_RING") {
+                    // Trigger a fake download to test the ring
+                    IslandController.postActivity(LiveActivityModel(
+                        id = "test_ring", type = ActivityType.DOWNLOAD,
+                        title = "Test Ring", dataText = "50%", progress = 0.5f,
+                        accentColor = android.graphics.Color.CYAN, isTransient = true
+                    ))
+                }
+            }
+        }
+        val filter = android.content.IntentFilter().apply {
+            addAction("com.example.dynamicisland.UPDATE_CONFIG")
+            addAction("com.example.dynamicisland.TEST_RING")
+        }
+        context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+
         setViewTreeLifecycleOwner(lifecycleOwner)
         setViewTreeSavedStateRegistryOwner(lifecycleOwner)
         setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
@@ -146,19 +182,18 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     fun IslandUI(state: IslandState) {
         // Physical dimensions matching Apple's standard specs
         val targetWidth = when (state) {
-            IslandState.HIDDEN -> 12.dp
+            IslandState.HIDDEN -> camWidth.value.dp // Shrink exactly to camera width
             IslandState.TYPE_1_MINI -> 180.dp
             IslandState.TYPE_2_MID -> 320.dp
             IslandState.TYPE_3_MAX -> 360.dp
         }
         val targetHeight = when (state) {
-            IslandState.HIDDEN -> 12.dp
+            IslandState.HIDDEN -> camHeight.value.dp // Shrink exactly to camera height
             IslandState.TYPE_1_MINI -> 36.dp
             IslandState.TYPE_2_MID -> 80.dp // Sleeker mid state
             IslandState.TYPE_3_MAX -> 200.dp
         }
 
-        val topPadding = 48.dp // Position under hardware camera
         val physicsSpec = spring<Dp>(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow)
 
         val width by animateDpAsState(targetValue = targetWidth, animationSpec = physicsSpec, label = "width")
@@ -168,8 +203,15 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
-            wp.width = (width.value * context.resources.displayMetrics.density).toInt() + 30
-            wp.height = (height.value * context.resources.displayMetrics.density).toInt() + (topPadding.value * context.resources.displayMetrics.density).toInt() + 30
+
+            // Apply physical padding so shadows/rings don't get cut off
+            wp.width = (width.value * context.resources.displayMetrics.density).toInt() + 40
+            wp.height = (height.value * context.resources.displayMetrics.density).toInt() + 40
+
+            // Set dynamic X/Y offsets
+            wp.x = camOffsetX.value
+            wp.y = camOffsetY.value
+
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
         }
 
@@ -178,7 +220,22 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         val borderColor = if (state == IslandState.HIDDEN) Color.Transparent else Color.White.copy(alpha = 0.15f)
         val contentColor = Color.White // White text on OLED Black
 
-        Box(modifier = Modifier.padding(top = topPadding), contentAlignment = Alignment.TopCenter) {
+        // Draw the main container
+        Box(modifier = Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
+
+            // --- THE GLOWING PROGRESS RING ---
+            val activity = liveActivityState.value
+            if (state == IslandState.HIDDEN && activity != null && activity.progress != null) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    progress = { activity.progress },
+                    modifier = Modifier.size(camWidth.value.dp + 6.dp, camHeight.value.dp + 6.dp),
+                    color = Color(activity.color),
+                    trackColor = Color(activity.color).copy(alpha = 0.2f),
+                    strokeWidth = 3.dp
+                )
+            }
+
+            // The main black pill
             Box(
                 modifier = Modifier
                     .width(width)

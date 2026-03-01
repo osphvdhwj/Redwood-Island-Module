@@ -1,48 +1,115 @@
 package com.example.dynamicisland
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
-import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import java.io.File
 
-class ConfigActivity : AppCompatActivity() {
+class ConfigActivity : ComponentActivity() {
+
+    private lateinit var prefs: SharedPreferences
+
+    @SuppressLint("WorldReadableFiles")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_config)
 
-        val prefs = getSharedPreferences("dynamic_island_prefs", Context.MODE_PRIVATE)
-        val sbY = findViewById<SeekBar>(R.id.seekBarYOffset)
-        val btn = findViewById<Button>(R.id.btnSave)
+        // Standard Xposed trick: Make the prefs file readable by SystemUI
+        prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+        makePrefsWorldReadable()
 
-        // Read or default to 0
-        sbY.progress = prefs.getInt("offset_y", 0)
-
-        btn.setOnClickListener {
-            // Make file world readable (deprecated but often needed for Xposed pre-A11,
-            // though MainHook uses XSharedPreferences which handles permissions via root usually.
-            // For modern Android, we rely on the prefs being in a standard location readable by XSharedPreferences)
-            val editor = prefs.edit()
-            editor.putInt("offset_y", sbY.progress)
-            editor.commit() // commit() is synchronous, ensuring write before broadcast
-
-            // Fix file permissions manually if needed (often required for Xposed modules)
-            try {
-                val file = java.io.File(applicationInfo.dataDir + "/shared_prefs/dynamic_island_prefs.xml")
-                if (file.exists()) {
-                    file.setReadable(true, false)
+        setContent {
+            MaterialTheme(colorScheme = darkColorScheme()) {
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    ConfigUI()
                 }
-            } catch (e: Exception) {}
+            }
+        }
+    }
 
-            // Broadcast to SystemUI to reload
-            val intent = Intent("com.example.dynamicisland.RELOAD_SETTINGS")
-            // Sending without explicit package might be safer if receiver is registered globally,
-            // but for security we can target SystemUI if we knew the exact package receiver context.
-            // Since we registered in SystemUI via code, it's inside "android" or "com.android.systemui".
-            // Let's try sending to both or just general.
-            sendBroadcast(intent)
+    private fun makePrefsWorldReadable() {
+        val prefsDir = File(applicationInfo.dataDir, "shared_prefs")
+        val prefsFile = File(prefsDir, "island_prefs.xml")
+        if (prefsFile.exists()) {
+            prefsFile.setReadable(true, false)
+            prefsDir.setExecutable(true, false)
+        }
+    }
 
-            Toast.makeText(this, "Settings Applied Successfully", Toast.LENGTH_SHORT).show()
+    private fun broadcastUpdate(x: Int, y: Int, w: Int, h: Int) {
+        val intent = Intent("com.example.dynamicisland.UPDATE_CONFIG")
+        intent.putExtra("offsetX", x)
+        intent.putExtra("offsetY", y)
+        intent.putExtra("camWidth", w)
+        intent.putExtra("camHeight", h)
+        sendBroadcast(intent)
+    }
+
+    @Composable
+    fun ConfigUI() {
+        var offsetX by remember { mutableStateOf(prefs.getInt("offsetX", 0).toFloat()) }
+        var offsetY by remember { mutableStateOf(prefs.getInt("offsetY", 48).toFloat()) }
+        var camWidth by remember { mutableStateOf(prefs.getInt("camWidth", 24).toFloat()) }
+        var camHeight by remember { mutableStateOf(prefs.getInt("camHeight", 24).toFloat()) }
+
+        Column(modifier = Modifier.padding(24.dp)) {
+            Text("Dynamic Island Configuration", style = MaterialTheme.typography.headlineSmall)
+            Spacer(modifier = Modifier.height(32.dp))
+
+            ConfigSlider("X Offset (Left/Right)", offsetX, -100f, 100f) {
+                offsetX = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight)
+            }
+            ConfigSlider("Y Offset (Up/Down)", offsetY, 0f, 150f) {
+                offsetY = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight)
+            }
+            ConfigSlider("Camera Width", camWidth, 10f, 80f) {
+                camWidth = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight)
+            }
+            ConfigSlider("Camera Height", camHeight, 10f, 80f) {
+                camHeight = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight)
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+            Button(
+                onClick = {
+                    // Send a dummy test notification to show the ring
+                    val dummyIntent = Intent("com.example.dynamicisland.TEST_RING")
+                    sendBroadcast(dummyIntent)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Test Progress Ring")
+            }
+        }
+    }
+
+    private fun saveAndBroadcast(x: Float, y: Float, w: Float, h: Float) {
+        prefs.edit()
+            .putInt("offsetX", x.toInt())
+            .putInt("offsetY", y.toInt())
+            .putInt("camWidth", w.toInt())
+            .putInt("camHeight", h.toInt())
+            .apply()
+        makePrefsWorldReadable()
+        broadcastUpdate(x.toInt(), y.toInt(), w.toInt(), h.toInt())
+    }
+
+    @Composable
+    fun ConfigSlider(label: String, value: Float, min: Float, max: Float, onValueChange: (Float) -> Unit) {
+        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(label)
+                Text(value.toInt().toString())
+            }
+            Slider(value = value, onValueChange = onValueChange, valueRange = min..max)
         }
     }
 }

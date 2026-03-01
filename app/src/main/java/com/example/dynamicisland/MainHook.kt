@@ -17,6 +17,7 @@ import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
+import de.robv.android.xposed.XSharedPreferences
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 class MainHook : IXposedHookLoadPackage {
@@ -204,10 +205,34 @@ class MainHook : IXposedHookLoadPackage {
             val wm = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             windowManager = wm
 
+            // Load saved offsets via XSharedPreferences
+            var initX = 0
+            var initY = 48
+            var initW = 24
+            var initH = 24
+
+            try {
+                val prefs = XSharedPreferences("com.example.dynamicisland", "island_prefs")
+                prefs.makeWorldReadable()
+                prefs.reload()
+                initX = prefs.getInt("offsetX", 0)
+                initY = prefs.getInt("offsetY", 48)
+                initW = prefs.getInt("camWidth", 24)
+                initH = prefs.getInt("camHeight", 24)
+            } catch (e: Throwable) {
+                log("[WARN] Failed to read XSharedPreferences: $e")
+            }
+
             // Pass THEMED MODULE CONTEXT to View
             try {
                 islandView = DynamicIslandView(finalContext)
                 islandView!!.id = View.generateViewId()
+
+                // Set initial camera values
+                islandView!!.camOffsetX.value = initX
+                islandView!!.camOffsetY.value = initY
+                islandView!!.camWidth.value = initW
+                islandView!!.camHeight.value = initH
             } catch (e: Throwable) {
                 log("[FATAL] View creation failed. Aborting: $e")
                 return
@@ -226,8 +251,11 @@ class MainHook : IXposedHookLoadPackage {
                 PixelFormat.TRANSLUCENT
             )
 
+            // VERY IMPORTANT: Center gravity so X=0 is perfectly centered.
+            // Y is absolute from the top.
             params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            params.y = 0
+            params.x = initX
+            params.y = initY
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
 
             islandView!!.windowManager = wm
