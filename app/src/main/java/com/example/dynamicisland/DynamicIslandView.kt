@@ -204,9 +204,9 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
 
-            // Apply physical padding so shadows/rings don't get cut off
-            wp.width = (width.value * context.resources.displayMetrics.density).toInt() + 40
-            wp.height = (height.value * context.resources.displayMetrics.density).toInt() + 40
+            // INCREASED PADDING: Gives the Ring and shadows room to render without being cut off
+            wp.width = (width.value * context.resources.displayMetrics.density).toInt() + 100
+            wp.height = (height.value * context.resources.displayMetrics.density).toInt() + 100
 
             // Set dynamic X/Y offsets
             wp.x = camOffsetX.value
@@ -220,14 +220,17 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         val borderColor = if (state == IslandState.HIDDEN) Color.Transparent else Color.White.copy(alpha = 0.15f)
         val contentColor = Color.White // White text on OLED Black
 
-        // Draw the main container
-        Box(modifier = Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
+        // The Master Container
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
 
-            // --- THE GLOWING PROGRESS RING ---
+            // 1. THE GLOWING PROGRESS RING
             val activity = liveActivityState.value
             if (state == IslandState.HIDDEN && activity != null && activity.progress != null) {
+                // UI CRASH FIX: Absolute safety check against Compose NaN crashes
+                val safeProgress = if (activity.progress.isNaN() || activity.progress.isInfinite()) 0f else activity.progress.coerceIn(0f, 1f)
+
                 androidx.compose.material3.CircularProgressIndicator(
-                    progress = { activity.progress },
+                    progress = { safeProgress },
                     modifier = Modifier.size(camWidth.value.dp + 6.dp, camHeight.value.dp + 6.dp),
                     color = Color(activity.color),
                     trackColor = Color(activity.color).copy(alpha = 0.2f),
