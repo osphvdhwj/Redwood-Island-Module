@@ -16,6 +16,9 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 
 object IslandController {
     private var islandViewRef: WeakReference<DynamicIslandView>? = null
@@ -483,27 +486,29 @@ object IslandController {
         val packageName = currentController?.packageName ?: ""
 
         // Process the App Icon in the background to prevent Compose UI stutter
-        var appIconBitmap: android.graphics.Bitmap? = null
-        if (packageName.isNotEmpty()) {
-            try {
-                val pm = island.context.packageManager
-                val drawable = pm.getApplicationIcon(packageName)
-                // Convert Drawable to Bitmap safely
-                val width = drawable.intrinsicWidth.coerceAtLeast(1)
-                val height = drawable.intrinsicHeight.coerceAtLeast(1)
-                appIconBitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
-                val canvas = android.graphics.Canvas(appIconBitmap)
-                drawable.setBounds(0, 0, canvas.width, canvas.height)
-                drawable.draw(canvas)
-            } catch (e: Exception) {
-                // App not found or failed to load icon, appIconBitmap remains null
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            var appIconBitmap: android.graphics.Bitmap? = null
+            if (packageName.isNotEmpty()) {
+                try {
+                    val pm = island.context.packageManager
+                    val drawable = pm.getApplicationIcon(packageName)
+                    // Convert Drawable to Bitmap safely
+                    val width = drawable.intrinsicWidth.coerceAtLeast(1)
+                    val height = drawable.intrinsicHeight.coerceAtLeast(1)
+                    appIconBitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+                    val canvas = android.graphics.Canvas(appIconBitmap)
+                    drawable.setBounds(0, 0, canvas.width, canvas.height)
+                    drawable.draw(canvas)
+                } catch (e: Exception) {
+                    // App not found or failed to load icon, appIconBitmap remains null
+                }
             }
-        }
 
-        // Post the fully prepared data to the UI thread
-        island.post {
-            island.updateMusicInfo(title, artist, albumArt, packageName, appIconBitmap)
-            island.updateMusicProgress(currentController?.playbackState?.position ?: 0L, mediaDuration)
+            // Post the fully prepared data to the UI thread
+            island.post {
+                island.updateMusicInfo(title, artist, albumArt, packageName, appIconBitmap)
+                island.updateMusicProgress(currentController?.playbackState?.position ?: 0L, mediaDuration)
+            }
         }
     }
 }

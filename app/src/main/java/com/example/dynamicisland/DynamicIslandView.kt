@@ -140,6 +140,7 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     }
     fun pause() { lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE) }
     fun resume() { lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME) }
+    fun destroy() { lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY) }
 }
 
 @SuppressLint("ViewConstructor")
@@ -260,6 +261,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         windowManager = null
         IslandController.forceHide()
         recomposer.cancel()
+        lifecycleOwner.destroy()
+        BatteryPlugin.stop(context)
         try {
             context.unregisterReceiver(configReceiver)
         } catch (e: Exception) {

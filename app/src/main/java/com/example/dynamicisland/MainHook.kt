@@ -211,14 +211,35 @@ class MainHook : IXposedHookLoadPackage {
             var initW = 24
             var initH = 24
 
+            var scaleX = 1f
+            var scaleY = 1f
             try {
+                // Try to grab real hardware cutout metrics dynamically
+                var autoY = 24
+                var autoW = 24
+                var autoH = 24
+                try {
+                    val cutout = wm.defaultDisplay.cutout
+                    val rect = cutout?.boundingRects?.firstOrNull()
+                    if (rect != null) {
+                        val density = windowContext.resources.displayMetrics.density
+                        autoW = (rect.width() / density).toInt()
+                        autoH = (rect.height() / density).toInt()
+                        autoY = (rect.top / density).toInt()
+                    }
+                } catch (e: Exception) {}
+
                 val prefs = XSharedPreferences("com.example.dynamicisland", "island_prefs")
                 prefs.makeWorldReadable()
                 prefs.reload()
                 initX = prefs.getInt("offsetX", 0)
-                initY = prefs.getInt("offsetY", 48)
-                initW = prefs.getInt("camWidth", 24)
-                initH = prefs.getInt("camHeight", 24)
+                initY = prefs.getInt("offsetY", autoY)
+                initW = prefs.getInt("camWidth", autoW)
+                initH = prefs.getInt("camHeight", autoH)
+
+                // Add default scale reading to handle pill dimensions correctly
+                scaleX = prefs.getFloat("pillScaleX", 1f)
+                scaleY = prefs.getFloat("pillScaleY", 1f)
             } catch (e: Throwable) {
                 log("[WARN] Failed to read XSharedPreferences: $e")
             }
@@ -233,6 +254,8 @@ class MainHook : IXposedHookLoadPackage {
                 islandView!!.camOffsetY.value = initY
                 islandView!!.camWidth.value = initW
                 islandView!!.camHeight.value = initH
+                islandView!!.pillScaleX.value = scaleX
+                islandView!!.pillScaleY.value = scaleY
             } catch (e: Throwable) {
                 log("[FATAL] View creation failed. Aborting: $e")
                 return
