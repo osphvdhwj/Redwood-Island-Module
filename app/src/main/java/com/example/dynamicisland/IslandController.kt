@@ -2,6 +2,8 @@ package com.example.dynamicisland
 
 import android.app.Notification
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
@@ -22,24 +24,19 @@ object IslandController {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var mediaDuration = 0L
 
-    // The Smart Tracker
     private val activeActivities = ConcurrentHashMap<String, LiveActivityModel>()
     private val dismissalRunnables = ConcurrentHashMap<String, Runnable>()
     private val dismissedActivities = mutableSetOf<String>()
     private var isScreenOn = true
 
-    private fun log(msg: String) {
-        XposedBridge.log("DynamicIsland: $msg")
-    }
+    private fun log(msg: String) { XposedBridge.log("DynamicIsland: $msg") }
 
     private val mediaCallback = object : MediaController.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackState?) { updateMediaState(state) }
         override fun onMetadataChanged(metadata: MediaMetadata?) { updateMetadata(metadata) }
     }
 
-    private val sessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
-        updateActiveController(controllers)
-    }
+    private val sessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { updateActiveController(it) }
 
     private val progressUpdater = object : Runnable {
         override fun run() {
@@ -47,7 +44,9 @@ object IslandController {
             val controller = currentController ?: return
             val state = controller.playbackState
             if (state != null && (state.state == PlaybackState.STATE_PLAYING || state.state == PlaybackState.STATE_BUFFERING)) {
-                val position = state.position + (System.currentTimeMillis() - state.lastPositionUpdateTime)
+                // FIXED: Android 50-year offset bug. Must use elapsedRealtime!
+                val timeDelta = android.os.SystemClock.elapsedRealtime() - state.lastPositionUpdateTime
+                val position = state.position + (timeDelta * state.playbackSpeed).toLong()
                 islandViewRef?.get()?.updateMusicProgress(position, mediaDuration)
                 mainHandler.postDelayed(this, 1000)
             }
@@ -61,42 +60,65 @@ object IslandController {
 
         BatteryPlugin.onBatteryChanged = { level, isCharging, color ->
              if (isCharging) {
+                 // Remove from dismissed if it was manually dismissed before
+                 dismissedActivities.remove("sys_battery")
                  postActivity(LiveActivityModel(
                      id = "sys_battery", type = ActivityType.CHARGING,
-                     title = "Charging", dataText = "$level%",
-                     progress = level / 100f, accentColor = color, isTransient = true
+                     title = "Charging", dataText = "$level%", progress = level / 100f, accentColor = color, isTransient = true
                  ))
              }
         }
         BatteryPlugin.start(view.context)
 
+        // CENTRALIZED GESTURE MACHINE
         view.onSingleTap = {
             val island = islandViewRef?.get()
             if (island != null) {
                 when (island.islandState.value) {
                     DynamicIslandView.IslandState.TYPE_1_MINI -> island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
                     DynamicIslandView.IslandState.TYPE_2_MID -> island.setState(DynamicIslandView.IslandState.TYPE_3_MAX)
+                    DynamicIslandView.IslandState.TYPE_SPLIT -> island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
                     DynamicIslandView.IslandState.TYPE_3_MAX -> island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
                     else -> {}
                 }
             }
         }
 
-        view.onSwipeUp = { forceHide() }
+        view.onSwipeDown = {
+            val island = islandViewRef?.get()
+            if (island != null) {
+                when (island.islandState.value) {
+                    DynamicIslandView.IslandState.TYPE_1_MINI -> island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
+                    DynamicIslandView.IslandState.TYPE_2_MID -> island.setState(DynamicIslandView.IslandState.TYPE_3_MAX)
+                    DynamicIslandView.IslandState.TYPE_SPLIT -> island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
+                    else -> {}
+                }
+            }
+        }
+
+        view.onSwipeUp = {
+            val island = islandViewRef?.get()
+            if (island != null) {
+                when (island.islandState.value) {
+                    DynamicIslandView.IslandState.TYPE_3_MAX -> island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
+                    DynamicIslandView.IslandState.TYPE_2_MID -> island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
+                    else -> forceHide()
+                }
+            }
+        }
+
+        view.onSwipeLeft = { currentController?.transportControls?.skipToPrevious(); forceHide() }
+        view.onSwipeRight = { currentController?.transportControls?.skipToNext(); forceHide() }
+
         view.onCloseClick = { forceHide() }
         view.onPlayPauseClick = {
             val state = currentController?.playbackState?.state
-            if (state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING) {
-                currentController?.transportControls?.pause()
-            } else {
-                currentController?.transportControls?.play()
-            }
+            if (state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING) currentController?.transportControls?.pause() else currentController?.transportControls?.play()
         }
         view.onPrevClick = { currentController?.transportControls?.skipToPrevious() }
         view.onNextClick = { currentController?.transportControls?.skipToNext() }
         view.onSeekTo = { pos -> currentController?.transportControls?.seekTo(pos) }
 
-        // Refresh UI in case activities arrived during the 6-second boot delay
         resolveHighestPriority()
     }
 
@@ -111,6 +133,7 @@ object IslandController {
     }
 
     fun postActivity(activity: LiveActivityModel) {
+        dismissedActivities.remove(activity.id) // Ensure new triggers wake it up
         activeActivities[activity.id] = activity
         resolveHighestPriority()
 
@@ -124,78 +147,80 @@ object IslandController {
 
     private fun removeActivity(id: String) {
         dismissalRunnables.remove(id)?.let { mainHandler.removeCallbacks(it) }
-        if (activeActivities.remove(id) != null) {
-            resolveHighestPriority()
-        }
+        if (activeActivities.remove(id) != null) resolveHighestPriority()
     }
 
     private fun resolveHighestPriority() {
         val island = islandViewRef?.get() ?: return
-        val highest = activeActivities.values.maxByOrNull { it.type.priority }
+
+        // Filter out anything the user swiped up to dismiss
+        val available = activeActivities.values.filter { !dismissedActivities.contains(it.id) }
+        val sorted = available.sortedByDescending { it.type.priority }
 
         island.post {
-            if (highest != null) {
-                if (highest.type == ActivityType.MEDIA && currentController != null) {
-                    island.clearLiveActivityUI()
-                    if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) {
-                        island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
-                    }
+            val primary = sorted.getOrNull(0)
+            val secondary = sorted.getOrNull(1)
+
+            island.clearLiveActivityUI()
+            island.clearSecondaryActivityUI()
+
+            if (primary != null && secondary != null) {
+                // MULTIPLE ACTIVITIES = SPLIT PILL
+                island.updateActivities(primary, secondary)
+                if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) island.setState(DynamicIslandView.IslandState.TYPE_SPLIT)
+
+            } else if (primary != null && currentController != null && primary.type != ActivityType.MEDIA && !dismissedActivities.contains("sys_media")) {
+                // MEDIA ACTIVE + NOTIFICATION = SPLIT PILL
+                island.updateActivities(LiveActivityModel("sys_media", ActivityType.MEDIA, "Media", "Playing", accentColor = android.graphics.Color.MAGENTA), primary)
+                if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) island.setState(DynamicIslandView.IslandState.TYPE_SPLIT)
+
+            } else if (primary != null) {
+                // SINGLE NOTIFICATION
+                if (primary.type == ActivityType.MEDIA && currentController != null) {
+                    if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
                 } else {
-                    island.updateLiveActivity(highest.title, highest.dataText, highest.progress, highest.accentColor, highest.type)
-                    val targetState = if (highest.type == ActivityType.MESSAGE || highest.type == ActivityType.CALL)
-                                      DynamicIslandView.IslandState.TYPE_2_MID else DynamicIslandView.IslandState.TYPE_1_MINI
-                    if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) {
-                        island.setState(targetState)
-                    }
+                    island.updateLiveActivity(primary.title, primary.dataText, primary.progress, primary.accentColor, primary.type)
+                    val targetState = if (primary.type == ActivityType.MESSAGE || primary.type == ActivityType.CALL) DynamicIslandView.IslandState.TYPE_2_MID else DynamicIslandView.IslandState.TYPE_1_MINI
+                    if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) island.setState(targetState)
                 }
             } else {
-                if (currentController == null) {
+                // NOTHING ACTIVE
+                if (currentController == null || dismissedActivities.contains("sys_media")) {
                     island.setState(DynamicIslandView.IslandState.HIDDEN)
-                } else {
-                    island.clearLiveActivityUI()
                 }
             }
         }
     }
 
     fun forceHide() {
-        val highest = activeActivities.values.maxByOrNull { it.type.priority }
+        val available = activeActivities.values.filter { !dismissedActivities.contains(it.id) }.sortedByDescending { it.type.priority }
+        val highest = available.getOrNull(0)
+
         if (highest != null) {
             dismissedActivities.add(highest.id)
         } else if (currentController != null) {
             dismissedActivities.add("sys_media")
         }
         islandViewRef?.get()?.setState(DynamicIslandView.IslandState.HIDDEN)
+        resolveHighestPriority() // Recalculate to see if something else should pop up
     }
 
-    // --- PUNCH-HOLE SAFE SYSTEM UI HOOKS ---
     fun hookFrameworkNotifications(lpparam: XC_LoadPackage.LoadPackageParam) {
         try {
-            // Hook 1: Earliest reliable notification intercept (NotificationListener)
             val listenerClass = XposedHelpers.findClassIfExists("com.android.systemui.statusbar.NotificationListener", lpparam.classLoader)
             if (listenerClass != null) {
                 XposedBridge.hookAllMethods(listenerClass, "onNotificationPosted", object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        param.args.forEach { arg -> processNotificationArg(arg, ::handleNotificationPosted) }
-                    }
+                    override fun afterHookedMethod(param: MethodHookParam) { param.args.forEach { arg -> processNotificationArg(arg, ::handleNotificationPosted) } }
                 })
             }
-
-            // Hook 2: Modern Android 12+ Intercept (NotifCollection)
             val collectionClass = XposedHelpers.findClassIfExists("com.android.systemui.statusbar.notification.collection.NotifCollection", lpparam.classLoader)
             if (collectionClass != null) {
                 XposedBridge.hookAllMethods(collectionClass, "postNotification", object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        param.args.forEach { arg -> processNotificationArg(arg, ::handleNotificationPosted) }
-                    }
+                    override fun afterHookedMethod(param: MethodHookParam) { param.args.forEach { arg -> processNotificationArg(arg, ::handleNotificationPosted) } }
                 })
-
-                val removeMethods = arrayOf("tryRemoveNotification", "onNotificationRemoved")
-                removeMethods.forEach { methodName ->
+                arrayOf("tryRemoveNotification", "onNotificationRemoved").forEach { methodName ->
                     XposedBridge.hookAllMethods(collectionClass, methodName, object : XC_MethodHook() {
-                        override fun afterHookedMethod(param: MethodHookParam) {
-                            param.args.forEach { arg -> processNotificationArg(arg, ::handleNotificationRemoved) }
-                        }
+                        override fun afterHookedMethod(param: MethodHookParam) { param.args.forEach { arg -> processNotificationArg(arg, ::handleNotificationRemoved) } }
                     })
                 }
             }
@@ -206,17 +231,11 @@ object IslandController {
     private fun processNotificationArg(arg: Any?, action: (android.service.notification.StatusBarNotification) -> Unit) {
         if (arg == null) return
         try {
-            if (arg.javaClass.name.contains("StatusBarNotification")) {
-                action(arg as android.service.notification.StatusBarNotification)
+            if (arg.javaClass.name.contains("StatusBarNotification")) { action(arg as android.service.notification.StatusBarNotification)
             } else if (arg.javaClass.name.contains("NotificationEntry")) {
-                var currentClass: Class<*>? = arg.javaClass
-                var sbnField: java.lang.reflect.Field? = null
+                var currentClass: Class<*>? = arg.javaClass; var sbnField: java.lang.reflect.Field? = null
                 while (currentClass != null) {
-                    try {
-                        sbnField = currentClass.getDeclaredField("mSbn")
-                        sbnField.isAccessible = true
-                        break
-                    } catch (e: Exception) { currentClass = currentClass.superclass }
+                    try { sbnField = currentClass.getDeclaredField("mSbn"); sbnField.isAccessible = true; break } catch (e: Exception) { currentClass = currentClass.superclass }
                 }
                 val sbn = sbnField?.get(arg) as? android.service.notification.StatusBarNotification
                 if (sbn != null) action(sbn)
@@ -227,9 +246,7 @@ object IslandController {
     private fun handleNotificationPosted(sbn: android.service.notification.StatusBarNotification) {
         try {
             val notification = sbn.notification
-            // FIX 2: Strict Null Safety for Extras (This caused the song download crash)
             val extras = notification.extras ?: return
-
             val category = notification.category ?: ""
             val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
             val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
@@ -244,58 +261,34 @@ object IslandController {
                     val max = extras.getInt(Notification.EXTRA_PROGRESS_MAX, -1)
 
                     if (max > 0 && progress >= 0) {
-                        // FIX 3: Bulletproof Math Check
-                        val percent = try {
-                            (progress.toFloat() / max.toFloat()).coerceIn(0f, 1f)
-                        } catch (e: Exception) { 0f }
-
+                        val percent = try { (progress.toFloat() / max.toFloat()).coerceIn(0f, 1f) } catch (e: Exception) { 0f }
                         val finalPercent = if (percent.isNaN() || percent.isInfinite()) 0f else percent
                         postActivity(LiveActivityModel(sbn.key, ActivityType.DOWNLOAD, if (title.isBlank()) "Downloading" else title, "${(finalPercent * 100).toInt()}%", finalPercent, android.graphics.Color.CYAN))
                     } else if (progress < 0 || max <= 0) {
-                        // Only remove if it was actually a download completing, don't accidentally kill standard notifications
-                        if (activeActivities.containsKey(sbn.key)) {
-                            removeActivity(sbn.key)
-                        }
+                        if (activeActivities.containsKey(sbn.key)) removeActivity(sbn.key)
                     }
                 }
             }
         } catch (e: Throwable) { log("[ERROR] Parse posted failed: $e") }
     }
 
-    private fun handleNotificationRemoved(sbn: android.service.notification.StatusBarNotification) {
-        removeActivity(sbn.key)
-    }
+    private fun handleNotificationRemoved(sbn: android.service.notification.StatusBarNotification) { removeActivity(sbn.key) }
 
     private fun setupSystemReceivers(context: Context) {
         val ringerReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: android.content.Intent) {
                 val am = ctx.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
                 val mode = when (am.ringerMode) {
-                    android.media.AudioManager.RINGER_MODE_SILENT -> "Silent"
-                    android.media.AudioManager.RINGER_MODE_VIBRATE -> "Vibrate"
-                    else -> "Ringing"
+                    android.media.AudioManager.RINGER_MODE_SILENT -> "Silent"; android.media.AudioManager.RINGER_MODE_VIBRATE -> "Vibrate"; else -> "Ringing"
                 }
-                val color = if (mode == "Silent") android.graphics.Color.RED else android.graphics.Color.LTGRAY
-                postActivity(LiveActivityModel(
-                    id = "sys_ringer", type = ActivityType.GENERAL,
-                    title = "Ringer", dataText = mode,
-                    accentColor = color, isTransient = true
-                ))
+                postActivity(LiveActivityModel(id = "sys_ringer", type = ActivityType.GENERAL, title = "Ringer", dataText = mode, accentColor = if (mode == "Silent") android.graphics.Color.RED else android.graphics.Color.LTGRAY, isTransient = true))
             }
         }
         val headsetReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: android.content.Intent) {
-                val state = intent.getIntExtra("state", -1)
-                if (state == 1) { // Plugged in
-                    postActivity(LiveActivityModel(
-                        id = "sys_headset", type = ActivityType.GENERAL,
-                        title = "Headphones", dataText = "Connected",
-                        accentColor = android.graphics.Color.CYAN, isTransient = true
-                    ))
-                }
+                if (intent.getIntExtra("state", -1) == 1) postActivity(LiveActivityModel(id = "sys_headset", type = ActivityType.GENERAL, title = "Headphones", dataText = "Connected", accentColor = android.graphics.Color.CYAN, isTransient = true))
             }
         }
-
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(ringerReceiver, android.content.IntentFilter(android.media.AudioManager.RINGER_MODE_CHANGED_ACTION), Context.RECEIVER_NOT_EXPORTED)
             context.registerReceiver(headsetReceiver, android.content.IntentFilter(android.content.Intent.ACTION_HEADSET_PLUG), Context.RECEIVER_NOT_EXPORTED)
@@ -313,61 +306,39 @@ object IslandController {
                 mediaSessionManager?.addOnActiveSessionsChangedListener(sessionsListener, componentName)
                 updateActiveController(mediaSessionManager?.getActiveSessions(componentName))
             } catch (e: SecurityException) {
-                // Fallback if component name is restricted
                 mediaSessionManager?.addOnActiveSessionsChangedListener(sessionsListener, null)
                 updateActiveController(mediaSessionManager?.getActiveSessions(null))
             }
             log("[SUCCESS] MediaSessionManager initialized safely.")
         } catch (e: Throwable) {
-            log("[WARN] Media setup failed, retries left $retries: $e")
-            if (retries > 0) {
-                mainHandler.postDelayed({ setupMediaListener(context, retries - 1) }, 5000)
-            }
+            if (retries > 0) mainHandler.postDelayed({ setupMediaListener(context, retries - 1) }, 5000)
         }
     }
 
     private fun updateActiveController(controllers: List<MediaController>?) {
         if (controllers.isNullOrEmpty()) {
-            currentController?.unregisterCallback(mediaCallback)
-            currentController = null
-            updateMediaState(null)
-            islandViewRef?.get()?.post { islandViewRef?.get()?.clearMusicState() }
+            currentController?.unregisterCallback(mediaCallback); currentController = null
+            updateMediaState(null); islandViewRef?.get()?.post { islandViewRef?.get()?.clearMusicState() }
             return
         }
-
         val bestController = controllers.firstOrNull {
-            val state = it.playbackState?.state
-            state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING
+            val state = it.playbackState?.state; state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING
         } ?: controllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PAUSED } ?: controllers.first()
 
         if (currentController != null && currentController?.packageName == bestController.packageName) {
-            updateMediaState(bestController.playbackState)
-            updateMetadata(bestController.metadata)
-            return
+            updateMediaState(bestController.playbackState); updateMetadata(bestController.metadata); return
         }
-
-        currentController?.unregisterCallback(mediaCallback)
-        currentController = bestController
+        currentController?.unregisterCallback(mediaCallback); currentController = bestController
         currentController?.registerCallback(mediaCallback)
-        updateMediaState(currentController?.playbackState)
-        updateMetadata(currentController?.metadata)
+        updateMediaState(currentController?.playbackState); updateMetadata(currentController?.metadata)
     }
 
     private fun updateMediaState(state: PlaybackState?) {
         val isPlaying = state?.state == PlaybackState.STATE_PLAYING || state?.state == PlaybackState.STATE_BUFFERING
-        if (isPlaying) {
-            postActivity(LiveActivityModel("sys_media", ActivityType.MEDIA, "Media", "Playing", accentColor = android.graphics.Color.MAGENTA))
-        } else {
-            removeActivity("sys_media")
-        }
+        if (isPlaying) postActivity(LiveActivityModel("sys_media", ActivityType.MEDIA, "Media", "Playing", accentColor = android.graphics.Color.MAGENTA)) else removeActivity("sys_media")
         islandViewRef?.get()?.post {
             islandViewRef?.get()?.updatePlayPauseState(isPlaying)
-            if (isPlaying && isScreenOn) {
-                mainHandler.removeCallbacks(progressUpdater)
-                mainHandler.post(progressUpdater)
-            } else {
-                mainHandler.removeCallbacks(progressUpdater)
-            }
+            if (isPlaying && isScreenOn) { mainHandler.removeCallbacks(progressUpdater); mainHandler.post(progressUpdater) } else { mainHandler.removeCallbacks(progressUpdater) }
         }
     }
 
@@ -380,8 +351,7 @@ object IslandController {
         mediaDuration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
         island.post {
             island.updateMusicInfo(title, artist, albumArt)
-            val pos = currentController?.playbackState?.position ?: 0L
-            island.updateMusicProgress(pos, mediaDuration)
+            island.updateMusicProgress(currentController?.playbackState?.position ?: 0L, mediaDuration)
         }
     }
 }
