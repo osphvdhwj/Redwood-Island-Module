@@ -99,6 +99,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     var onPlayPauseClick: (() -> Unit)? = null
     var onPrevClick: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
+    var onLikeClick: (() -> Unit)? = null
+    var onLoopClick: (() -> Unit)? = null
     var onSeekTo: ((Long) -> Unit)? = null
     var onCloseClick: (() -> Unit)? = null
 
@@ -458,14 +460,14 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
                     // ADVANCED MEDIA CONTROLS
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                        Icon(painterResource(R.drawable.ic_sync_vector), contentDescription = "Shuffle", tint = textColor.copy(alpha=0.5f), modifier = Modifier.size(24.dp))
+                        Icon(painterResource(R.drawable.ic_sync_vector), contentDescription = "Loop", tint = textColor.copy(alpha=0.6f), modifier = Modifier.size(24.dp).clickable { onLoopClick?.invoke() })
                         Icon(painterResource(R.drawable.ic_prev_vector), contentDescription = "Prev", tint = textColor, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
                         val playIcon = if (music.isPlaying) R.drawable.ic_pause_vector else R.drawable.ic_play_vector
                         Box(modifier = Modifier.size(64.dp).background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(32.dp)).clickable { onPlayPauseClick?.invoke() }, contentAlignment = Alignment.Center) {
                             Icon(painterResource(playIcon), contentDescription = "Play/Pause", tint = textColor, modifier = Modifier.size(36.dp))
                         }
                         Icon(painterResource(R.drawable.ic_next_vector), contentDescription = "Next", tint = textColor, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
-                        Icon(painterResource(R.drawable.ic_map_vector), contentDescription = "Favorite", tint = textColor.copy(alpha=0.5f), modifier = Modifier.size(24.dp))
+                        Icon(painterResource(R.drawable.ic_alarm_vector), contentDescription = "Like", tint = textColor.copy(alpha=0.6f), modifier = Modifier.size(24.dp).clickable { onLikeClick?.invoke() })
                     }
                 }
             }

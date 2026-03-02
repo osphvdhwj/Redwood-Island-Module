@@ -119,6 +119,43 @@ object IslandController {
         view.onNextClick = { currentController?.transportControls?.skipToNext() }
         view.onSeekTo = { pos -> currentController?.transportControls?.seekTo(pos) }
 
+        // Connect the Loop/Shuffle Button
+        view.onLoopClick = {
+            val transport = currentController?.transportControls
+            if (transport != null) {
+                // In native Android, repeat modes aren't directly in PlaybackState, so we use common extras
+                val currentMode = currentController?.playbackState?.extras?.getInt("android.media.session.extra.REPEAT_MODE") ?: 0
+                val REPEAT_MODE_NONE = 0
+                val REPEAT_MODE_ALL = 2
+                val nextMode = if (currentMode == REPEAT_MODE_NONE) REPEAT_MODE_ALL else REPEAT_MODE_NONE
+
+                try {
+                    // Requires API 29+
+                    val setRepeatModeMethod = transport.javaClass.getMethod("setRepeatMode", Int::class.java)
+                    setRepeatModeMethod.invoke(transport, nextMode)
+                } catch (e: Exception) {
+                    // Fallback for older APIs or if method is hidden
+                    val b = android.os.Bundle().apply { putInt("android.media.session.extra.REPEAT_MODE", nextMode) }
+                    transport.sendCustomAction("android.media.session.action.SET_REPEAT_MODE", b)
+                }
+            }
+        }
+
+        // Connect the Heart/Like Button
+        view.onLikeClick = {
+            val transport = currentController?.transportControls
+            if (transport != null) {
+                transport.setRating(android.media.Rating.newHeartRating(true))
+                /*
+                currentController?.playbackState?.customActions?.firstOrNull {
+                    it.action.contains("like", ignoreCase = true) || it.action.contains("thumb", ignoreCase = true)
+                }?.let { customAction ->
+                    transport.sendCustomAction(customAction, null)
+                }
+                */
+            }
+        }
+
         resolveHighestPriority()
     }
 
