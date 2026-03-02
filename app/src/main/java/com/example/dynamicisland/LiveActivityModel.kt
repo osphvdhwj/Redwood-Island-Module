@@ -20,5 +20,6 @@ data class LiveActivityModel(
     val progress: Float? = null,
     val accentColor: Int = android.graphics.Color.WHITE,
     val isTransient: Boolean = false, // If true, it auto-dismisses after a few seconds
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val packageName: String = "" // Added to track the source app
 )
