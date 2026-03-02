@@ -184,22 +184,24 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     private val lifecycleOwner = OverlayLifecycleOwner()
     private lateinit var recomposer: androidx.compose.runtime.Recomposer
 
-    init {
-        val receiver = object : android.content.BroadcastReceiver() {
-            override fun onReceive(ctx: Context, intent: Intent) {
-                if (intent.action == "com.example.dynamicisland.UPDATE_CONFIG") {
+    private val configReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent) {
+            when (intent.action) {
+                "com.example.dynamicisland.UPDATE_CONFIG" -> {
                     camOffsetX.value = intent.getIntExtra("offsetX", 0)
                     camOffsetY.value = intent.getIntExtra("offsetY", 48)
                     camWidth.value = intent.getIntExtra("camWidth", 24)
                     camHeight.value = intent.getIntExtra("camHeight", 24)
                     pillScaleX.value = intent.getFloatExtra("pillScaleX", 1f)
                     pillScaleY.value = intent.getFloatExtra("pillScaleY", 1f)
-                } else if (intent.action == "com.example.dynamicisland.TEST_RING") {
+                }
+                "com.example.dynamicisland.TEST_RING" -> {
                     IslandController.postActivity(LiveActivityModel(
                         id = "test_ring", type = ActivityType.DOWNLOAD, title = "Test Ring",
                         dataText = "50%", progress = 0.5f, accentColor = android.graphics.Color.CYAN, isTransient = true
                     ))
-                } else if (intent.action == "com.example.dynamicisland.TOGGLE_PREVIEW") {
+                }
+                "com.example.dynamicisland.TOGGLE_PREVIEW" -> {
                     IslandController.postActivity(LiveActivityModel(
                         id = "preview", type = ActivityType.GENERAL, title = "Preview Mode",
                         dataText = "Adjusting...", accentColor = android.graphics.Color.WHITE, isTransient = true
@@ -207,6 +209,9 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 }
             }
         }
+    }
+
+    init {
         val filter = android.content.IntentFilter().apply {
             addAction("com.example.dynamicisland.UPDATE_CONFIG")
             addAction("com.example.dynamicisland.TEST_RING")
@@ -214,10 +219,10 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         }
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+            context.registerReceiver(configReceiver, filter, Context.RECEIVER_EXPORTED)
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
-            context.registerReceiver(receiver, filter)
+            context.registerReceiver(configReceiver, filter)
         }
 
         setViewTreeLifecycleOwner(lifecycleOwner)
@@ -252,6 +257,11 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         windowManager = null
         IslandController.forceHide()
         recomposer.cancel()
+        try {
+            context.unregisterReceiver(configReceiver)
+        } catch (e: Exception) {
+            // Receiver was already unregistered or not registered
+        }
     }
 
     @OptIn(ExperimentalAnimationApi::class)

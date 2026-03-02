@@ -28,6 +28,7 @@ object IslandController {
     private val dismissalRunnables = ConcurrentHashMap<String, Runnable>()
     private val dismissedActivities = mutableSetOf<String>()
     private var isScreenOn = true
+    private var resolveRunnable: Runnable? = null
 
     private fun log(msg: String) { XposedBridge.log("DynamicIsland: $msg") }
 
@@ -187,7 +188,7 @@ object IslandController {
     fun postActivity(activity: LiveActivityModel) {
         dismissedActivities.remove(activity.id) // Ensure new triggers wake it up
         activeActivities[activity.id] = activity
-        resolveHighestPriority()
+        resolveHighestPriorityDebounced() // Updated
 
         if (activity.isTransient) {
             dismissalRunnables[activity.id]?.let { mainHandler.removeCallbacks(it) }
@@ -199,7 +200,13 @@ object IslandController {
 
     private fun removeActivity(id: String) {
         dismissalRunnables.remove(id)?.let { mainHandler.removeCallbacks(it) }
-        if (activeActivities.remove(id) != null) resolveHighestPriority()
+        if (activeActivities.remove(id) != null) resolveHighestPriorityDebounced() // Updated
+    }
+
+    private fun resolveHighestPriorityDebounced() {
+        resolveRunnable?.let { mainHandler.removeCallbacks(it) }
+        resolveRunnable = Runnable { resolveHighestPriority() }
+        mainHandler.postDelayed(resolveRunnable!!, 250) // Wait 250ms for the dust to settle before changing the UI
     }
 
     private fun resolveHighestPriority() {
