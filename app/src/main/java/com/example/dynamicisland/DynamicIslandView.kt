@@ -422,7 +422,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             // Right Action Button (e.g. End Call)
             if (activity.type == ActivityType.CALL || activity.type == ActivityType.ALARM) {
                 Box(modifier = Modifier.size(40.dp).background(Color.Red.copy(alpha=0.2f), RoundedCornerShape(20.dp)).clickable { onCloseClick?.invoke() }, contentAlignment = Alignment.Center) {
-                    Icon(painterResource(android.R.drawable.ic_menu_close_clear_cancel), contentDescription="Close", tint=Color.Red)
+                    Icon(painterResource(R.drawable.ic_close_vector), contentDescription="Close", tint=Color.Red)
                 }
             }
         }
@@ -443,13 +443,13 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     private fun getIconForType(type: ActivityType): Int {
         return when(type) {
-            ActivityType.CALL -> android.R.drawable.ic_menu_call
-            ActivityType.NAVIGATION -> android.R.drawable.ic_menu_mapmode
-            ActivityType.TIMER -> android.R.drawable.ic_menu_recent_history
-            ActivityType.MESSAGE -> android.R.drawable.ic_dialog_email
-            ActivityType.ALARM -> android.R.drawable.ic_lock_idle_alarm
-            ActivityType.CHARGING -> android.R.drawable.ic_lock_idle_charging
-            else -> android.R.drawable.stat_sys_download
+            ActivityType.CALL -> R.drawable.ic_call_vector
+            ActivityType.NAVIGATION -> R.drawable.ic_map_vector
+            ActivityType.TIMER -> R.drawable.ic_timer_vector
+            ActivityType.MESSAGE -> R.drawable.ic_mail_vector
+            ActivityType.ALARM -> R.drawable.ic_alarm_vector
+            ActivityType.CHARGING -> R.drawable.ic_charging_vector
+            else -> R.drawable.ic_sync_vector
         }
     }
 
