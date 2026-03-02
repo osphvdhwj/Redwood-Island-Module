@@ -153,6 +153,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     var camOffsetX = mutableStateOf(0)
     var camOffsetY = mutableStateOf(48)
+    var ringOffsetY = mutableStateOf(48)
     var camWidth = mutableStateOf(24)
     var camHeight = mutableStateOf(24)
     var pillScaleX = mutableStateOf(1f)
@@ -194,10 +195,16 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 "com.example.dynamicisland.UPDATE_CONFIG" -> {
                     camOffsetX.value = intent.getIntExtra("offsetX", 0)
                     camOffsetY.value = intent.getIntExtra("offsetY", 48)
+                    ringOffsetY.value = intent.getIntExtra("ringOffsetY", 48)
                     camWidth.value = intent.getIntExtra("camWidth", 24)
                     camHeight.value = intent.getIntExtra("camHeight", 24)
                     pillScaleX.value = intent.getFloatExtra("pillScaleX", 1f)
                     pillScaleY.value = intent.getFloatExtra("pillScaleY", 1f)
+                }
+                "com.example.dynamicisland.SHOW_RING_PREVIEW" -> {
+                    IslandController.forceHide()
+                    updateMusicInfo("Preview", "Ring", null, "", null, Color.Cyan)
+                    updateMusicProgress(5000L, 10000L) // 50% progress to show the wavy ring
                 }
                 "com.example.dynamicisland.TEST_RING" -> {
                     IslandController.postActivity(LiveActivityModel(

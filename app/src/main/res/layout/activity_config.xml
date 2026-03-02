@@ -23,6 +23,19 @@
         android:max="100"
         android:progress="0" />
 
+    <TextView
+        android:id="@+id/tvRingOffsetY"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ring Y Offset"
+        android:layout_marginTop="16dp"/>
+    <SeekBar
+        android:id="@+id/seekBarRingOffsetY"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="200"
+        android:progress="148" />
+
     <Button
         android:id="@+id/btnSave"
         android:layout_width="match_parent"

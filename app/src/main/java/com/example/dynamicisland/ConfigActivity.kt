@@ -44,19 +44,13 @@ class ConfigActivity : ComponentActivity() {
         }
     }
 
-    private fun broadcastUpdate(x: Int, y: Int, w: Int, h: Int) {
-        val intent = Intent("com.example.dynamicisland.UPDATE_CONFIG")
-        intent.putExtra("offsetX", x)
-        intent.putExtra("offsetY", y)
-        intent.putExtra("camWidth", w)
-        intent.putExtra("camHeight", h)
-        sendBroadcast(intent)
-    }
+
 
     @Composable
     fun ConfigUI() {
         var offsetX by remember { mutableStateOf(prefs.getInt("offsetX", 0).toFloat()) }
         var offsetY by remember { mutableStateOf(prefs.getInt("offsetY", 48).toFloat()) }
+        var ringOffsetY by remember { mutableStateOf(prefs.getInt("ringOffsetY", 48).toFloat()) }
         var camWidth by remember { mutableStateOf(prefs.getInt("camWidth", 24).toFloat()) }
         var camHeight by remember { mutableStateOf(prefs.getInt("camHeight", 24).toFloat()) }
         var pillScaleX by remember { mutableStateOf(prefs.getFloat("pillScaleX", 1f)) }
@@ -66,23 +60,26 @@ class ConfigActivity : ComponentActivity() {
             Text("Dynamic Island Configuration", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(32.dp))
 
-            ConfigSlider("X Offset (Left/Right)", offsetX, -100f, 100f) {
-                offsetX = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+            ConfigSlider("Pill X Offset (Left/Right)", offsetX, -100f, 100f) {
+                offsetX = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
             }
-            ConfigSlider("Y Offset (Up/Down)", offsetY, -100f, 200f) {
-                offsetY = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+            ConfigSlider("Pill Y Offset (Up/Down)", offsetY, -100f, 200f) {
+                offsetY = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+            }
+            ConfigSlider("Ring Y Offset", ringOffsetY, -100f, 200f) {
+                ringOffsetY = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY, isRing = true)
             }
             ConfigSlider("Camera Width", camWidth, 10f, 80f) {
-                camWidth = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+                camWidth = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
             }
             ConfigSlider("Camera Height", camHeight, 10f, 80f) {
-                camHeight = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+                camHeight = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
             }
             ConfigSlider("Pill Width Scale", pillScaleX, 0.5f, 2.0f) {
-                pillScaleX = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+                pillScaleX = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
             }
             ConfigSlider("Pill Height Scale", pillScaleY, 0.5f, 2.0f) {
-                pillScaleY = it; saveAndBroadcast(offsetX, offsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+                pillScaleY = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -106,15 +103,33 @@ class ConfigActivity : ComponentActivity() {
         }
     }
 
-    private fun saveAndBroadcast(x: Float, y: Float, w: Float, h: Float, scaleX: Float, scaleY: Float) {
+    private fun saveAndBroadcast(x: Float, y: Float, ringY: Float, w: Float, h: Float, scaleX: Float, scaleY: Float, isRing: Boolean = false) {
         prefs.edit()
             .putInt("offsetX", x.toInt())
             .putInt("offsetY", y.toInt())
+            .putInt("ringOffsetY", ringY.toInt())
             .putInt("camWidth", w.toInt())
             .putInt("camHeight", h.toInt())
+            .putFloat("pillScaleX", scaleX)
+            .putFloat("pillScaleY", scaleY)
             .apply()
         makePrefsWorldReadable()
-        broadcastUpdate(x.toInt(), y.toInt(), w.toInt(), h.toInt())
+
+        val intent = Intent("com.example.dynamicisland.UPDATE_CONFIG")
+        intent.putExtra("offsetX", x.toInt())
+        intent.putExtra("offsetY", y.toInt())
+        intent.putExtra("ringOffsetY", ringY.toInt())
+        intent.putExtra("camWidth", w.toInt())
+        intent.putExtra("camHeight", h.toInt())
+        intent.putExtra("pillScaleX", scaleX)
+        intent.putExtra("pillScaleY", scaleY)
+        sendBroadcast(intent)
+
+        if (isRing) {
+            sendBroadcast(Intent("com.example.dynamicisland.SHOW_RING_PREVIEW"))
+        } else {
+            sendBroadcast(Intent("com.example.dynamicisland.TOGGLE_PREVIEW"))
+        }
     }
 
     @Composable
