@@ -19,27 +19,30 @@ class ConfigActivity : AppCompatActivity() {
         sbY.progress = prefs.getInt("offset_y", 0)
 
         btn.setOnClickListener {
-            // Make file world readable (deprecated but often needed for Xposed pre-A11,
-            // though MainHook uses XSharedPreferences which handles permissions via root usually.
-            // For modern Android, we rely on the prefs being in a standard location readable by XSharedPreferences)
+            val progress = sbY.progress
             val editor = prefs.edit()
-            editor.putInt("offset_y", sbY.progress)
+            editor.putInt("offset_y", progress)
             editor.commit() // commit() is synchronous, ensuring write before broadcast
 
-            // Fix file permissions manually if needed (often required for Xposed modules)
+            // Fix file permissions manually for Xposed (XSharedPreferences requirement)
             try {
-                val file = java.io.File(applicationInfo.dataDir + "/shared_prefs/dynamic_island_prefs.xml")
-                if (file.exists()) {
-                    file.setReadable(true, false)
+                val dataDir = applicationInfo.dataDir
+                val prefsDir = java.io.File(dataDir, "shared_prefs")
+                val prefsFile = java.io.File(prefsDir, "dynamic_island_prefs.xml")
+
+                if (prefsDir.exists()) {
+                    prefsDir.setExecutable(true, false)
+                    prefsDir.setReadable(true, false)
+                }
+                if (prefsFile.exists()) {
+                    prefsFile.setReadable(true, false)
                 }
             } catch (e: Exception) {}
 
-            // Broadcast to SystemUI to reload
-            val intent = Intent("com.example.dynamicisland.RELOAD_SETTINGS")
-            // Sending without explicit package might be safer if receiver is registered globally,
-            // but for security we can target SystemUI if we knew the exact package receiver context.
-            // Since we registered in SystemUI via code, it's inside "android" or "com.android.systemui".
-            // Let's try sending to both or just general.
+            // Broadcast to SystemUI to reload real-time
+            val intent = Intent("com.example.dynamicisland.UPDATE_CONFIG")
+            intent.putExtra("offset_y", progress)
+            // Use explicit exported flag if needed, but here we just send
             sendBroadcast(intent)
 
             Toast.makeText(this, "Settings Applied Successfully", Toast.LENGTH_SHORT).show()

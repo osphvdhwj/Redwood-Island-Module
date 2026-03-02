@@ -12,6 +12,7 @@ import android.view.View
 import android.view.WindowManager
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XSharedPreferences
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
@@ -20,6 +21,7 @@ class MainHook : IXposedHookLoadPackage {
     private var islandInitialized = false
     private var windowManager: WindowManager? = null
     private var islandView: DynamicIslandView? = null
+    private var prefs: XSharedPreferences? = null
 
     private fun log(msg: String) {
         XposedBridge.log("DynamicIsland: $msg")
@@ -29,23 +31,44 @@ class MainHook : IXposedHookLoadPackage {
         if (lpparam.packageName != "com.android.systemui") return
         log("[LOAD] Hooking SystemUI package: ${lpparam.packageName}")
 
-        // 1. UI Injection
+        // Load Prefs
+        prefs = XSharedPreferences("com.example.dynamicisland", "dynamic_island_prefs")
+        prefs?.makeWorldReadable()
+
+        // 1. UI Injection - Using CentralSurfacesImpl.start() for Android 13+ Stability
         try {
             XposedHelpers.findAndHookMethod(
-                "com.android.systemui.SystemUIService",
+                "com.android.systemui.statusbar.phone.CentralSurfacesImpl",
                 lpparam.classLoader,
-                "onCreate",
+                "start",
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
-                        val serviceContext = param.thisObject as Context
+                        val context = XposedHelpers.getObjectField(param.thisObject, "mContext") as Context
                         Handler(Looper.getMainLooper()).postDelayed({
-                            setupIsland(serviceContext)
-                        }, 2000)
+                            setupIsland(context)
+                        }, 1000)
                     }
                 }
             )
         } catch (e: Throwable) {
-            log("[ERROR] Failed to hook SystemUIService: $e")
+            log("[WARN] CentralSurfacesImpl not found, falling back to StatusBar: $e")
+            try {
+                XposedHelpers.findAndHookMethod(
+                    "com.android.systemui.statusbar.phone.StatusBar",
+                    lpparam.classLoader,
+                    "start",
+                    object : XC_MethodHook() {
+                        override fun afterHookedMethod(param: MethodHookParam) {
+                            val context = XposedHelpers.getObjectField(param.thisObject, "mContext") as Context
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                setupIsland(context)
+                            }, 1000)
+                        }
+                    }
+                )
+            } catch (e2: Throwable) {
+                log("[ERROR] Failed to hook any UI entry point: $e2")
+            }
         }
 
         // 2. Initialize Island Framework Hooks (Reads the notification data)
@@ -77,8 +100,8 @@ class MainHook : IXposedHookLoadPackage {
         try {
             val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
-            // Use TYPE_STATUS_BAR_SUB_PANEL (2017)
-            val windowContext = context.createDisplayContext(display).createWindowContext(2017, null)
+            // Use TYPE_NAVIGATION_BAR_PANEL (2024) for Android 12+ touch reliability
+            val windowContext = context.createDisplayContext(display).createWindowContext(2024, null)
 
             val wm = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             windowManager = wm
@@ -86,10 +109,12 @@ class MainHook : IXposedHookLoadPackage {
             islandView = DynamicIslandView(windowContext)
             islandView!!.id = View.generateViewId()
 
+            val initialY = prefs?.run { reload(); getInt("offset_y", 0) } ?: 0
+
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                2017,
+                2024,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
@@ -99,7 +124,7 @@ class MainHook : IXposedHookLoadPackage {
             )
 
             params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            params.y = 0 // We will handle cutout snapping dynamically now
+            params.y = initialY
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
 
             islandView!!.windowManager = wm

@@ -1,7 +1,10 @@
 package com.example.dynamicisland
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.drawable.Icon
 import android.os.Bundle
@@ -87,6 +90,15 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     var onSingleTap: (() -> Unit)? = null
     var onLongPress: (() -> Unit)? = null
 
+    private val configReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.example.dynamicisland.UPDATE_CONFIG") {
+                val newY = intent.getIntExtra("offset_y", 0)
+                updateWindowPosition(newY)
+            }
+        }
+    }
+
     init {
         val lifecycleOwner = OverlayLifecycleOwner()
         setViewTreeLifecycleOwner(lifecycleOwner)
@@ -101,6 +113,29 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         }
         addView(composeView)
         lifecycleOwner.start()
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        val filter = IntentFilter("com.example.dynamicisland.UPDATE_CONFIG")
+        // Use RECEIVER_EXPORTED (0x2) for Android 14+ to allow broadcasts from other processes
+        context.registerReceiver(configReceiver, filter, 2)
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        try {
+            context.unregisterReceiver(configReceiver)
+        } catch (e: Exception) {}
+    }
+
+    private fun updateWindowPosition(y: Int) {
+        val wm = windowManager ?: return
+        val params = windowParams ?: return
+        params.y = y
+        try {
+            wm.updateViewLayout(this, params)
+        } catch (e: Exception) {}
     }
 
     // --- Compose UI ---
