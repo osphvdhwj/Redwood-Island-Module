@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.animation.*
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -56,7 +57,8 @@ fun WavySlider(
     onProgressChanged: (Float) -> Unit,
     modifier: Modifier = Modifier,
     activeColor: Color = Color.White,
-    inactiveColor: Color = Color.White.copy(alpha = 0.3f)
+    inactiveColor: Color = Color.White.copy(alpha = 0.3f),
+    interactionSource: androidx.compose.foundation.interaction.MutableInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
 ) {
     Box(modifier = modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
         // Visual custom track
@@ -117,7 +119,8 @@ fun WavySlider(
         androidx.compose.material3.Slider(
             value = progress,
             onValueChange = onProgressChanged,
-            modifier = Modifier.fillMaxSize().alpha(0.01f)
+            modifier = Modifier.fillMaxSize().alpha(0.01f),
+            interactionSource = interactionSource
         )
     }
 }
@@ -282,6 +285,11 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             animationSpec = physicsSpec, label = "radius"
         )
 
+        // Calculate density-independent thresholds for gestures
+        val gestureDensity = androidx.compose.ui.platform.LocalDensity.current.density
+        val swipeThresholdY = 50f * gestureDensity
+        val swipeThresholdX = 100f * gestureDensity
+
         LaunchedEffect(width, height) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
@@ -336,9 +344,11 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                         detectDragGestures(
                             onDragStart = { totalDx = 0f; totalDy = 0f },
                             onDragEnd = {
-                                if (totalDy < -50) onSwipeUp?.invoke()
-                                else if (totalDy > 50) onSwipeDown?.invoke()
-                                else if (kotlin.math.abs(totalDx) > 100) { if (totalDx > 0) onSwipeRight?.invoke() else onSwipeLeft?.invoke() }
+                                if (totalDy < -swipeThresholdY) onSwipeUp?.invoke()
+                                else if (totalDy > swipeThresholdY) onSwipeDown?.invoke()
+                                else if (kotlin.math.abs(totalDx) > swipeThresholdX) {
+                                    if (totalDx > 0) onSwipeRight?.invoke() else onSwipeLeft?.invoke()
+                                }
                             },
                             onDrag = { change, dragAmount -> change.consume(); totalDx += dragAmount.x; totalDy += dragAmount.y }
                         )
@@ -557,26 +567,40 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 }
 
                 // BOTTOM ROW: Prev, Slider, Next, Like, Shuffle
+                val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                val isDragged by interactionSource.collectIsDraggedAsState()
+
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(painterResource(R.drawable.ic_prev_vector), contentDescription = "Prev", tint = textColor, modifier = Modifier.size(28.dp).clickable { onPrevClick?.invoke() })
+                    if (isDragged) {
+                        Text(formatTime(music.currentPosition), color = textColor, fontSize = 12.sp, modifier = Modifier.width(36.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    } else {
+                        Icon(painterResource(R.drawable.ic_prev_vector), contentDescription = "Prev", tint = textColor, modifier = Modifier.size(28.dp).clickable { onPrevClick?.invoke() })
+                    }
+
                     Spacer(Modifier.width(12.dp))
 
                     val safeProgress = if (music.progress.isNaN() || music.progress.isInfinite()) 0f else music.progress.coerceIn(0f, 1f)
 
-                    // Using the custom Wavy Slider here
                     WavySlider(
                         progress = safeProgress,
                         onProgressChanged = { newProgress -> onSeekTo?.invoke((newProgress * music.duration).toLong()) },
                         modifier = Modifier.weight(1f),
                         activeColor = textColor,
-                        inactiveColor = textColor.copy(alpha = 0.3f)
+                        inactiveColor = textColor.copy(alpha = 0.3f),
+                        interactionSource = interactionSource
                     )
 
                     Spacer(Modifier.width(12.dp))
-                    Icon(painterResource(R.drawable.ic_next_vector), contentDescription = "Next", tint = textColor, modifier = Modifier.size(28.dp).clickable { onNextClick?.invoke() })
+
+                    if (isDragged) {
+                        Text(formatTime(music.duration), color = textColor, fontSize = 12.sp, modifier = Modifier.width(36.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    } else {
+                        Icon(painterResource(R.drawable.ic_next_vector), contentDescription = "Next", tint = textColor, modifier = Modifier.size(28.dp).clickable { onNextClick?.invoke() })
+                    }
+
                     Spacer(Modifier.width(20.dp))
                     Icon(painterResource(R.drawable.ic_heart_vector), contentDescription = "Like", tint = textColor, modifier = Modifier.size(24.dp).clickable { onLikeClick?.invoke() })
                     Spacer(Modifier.width(16.dp))
