@@ -472,12 +472,37 @@ object IslandController {
     private fun updateMetadata(metadata: MediaMetadata?) {
         val island = islandViewRef?.get() ?: return
         if (metadata == null) return
-        val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
-        val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
-        val albumArt = metadata.description?.iconBitmap ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
-        mediaDuration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
+
+        val title = metadata.getString(android.media.MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown"
+        val artist = metadata.getString(android.media.MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown"
+        val albumArt = metadata.description?.iconBitmap
+            ?: metadata.getBitmap(android.media.MediaMetadata.METADATA_KEY_ALBUM_ART)
+            ?: metadata.getBitmap(android.media.MediaMetadata.METADATA_KEY_ART)
+
+        mediaDuration = metadata.getLong(android.media.MediaMetadata.METADATA_KEY_DURATION)
+        val packageName = currentController?.packageName ?: ""
+
+        // Process the App Icon in the background to prevent Compose UI stutter
+        var appIconBitmap: android.graphics.Bitmap? = null
+        if (packageName.isNotEmpty()) {
+            try {
+                val pm = island.context.packageManager
+                val drawable = pm.getApplicationIcon(packageName)
+                // Convert Drawable to Bitmap safely
+                val width = drawable.intrinsicWidth.coerceAtLeast(1)
+                val height = drawable.intrinsicHeight.coerceAtLeast(1)
+                appIconBitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(appIconBitmap)
+                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                drawable.draw(canvas)
+            } catch (e: Exception) {
+                // App not found or failed to load icon, appIconBitmap remains null
+            }
+        }
+
+        // Post the fully prepared data to the UI thread
         island.post {
-            island.updateMusicInfo(title, artist, albumArt)
+            island.updateMusicInfo(title, artist, albumArt, packageName, appIconBitmap)
             island.updateMusicProgress(currentController?.playbackState?.position ?: 0L, mediaDuration)
         }
     }
