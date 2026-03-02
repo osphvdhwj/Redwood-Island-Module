@@ -2,9 +2,9 @@ name: Android Build
 
 on:
   push:
-    branches: [ "jules-3682004179386263797-1da4e0e1", "main", "dynamic-island-visuals-v5-build" ]
+    branches: [ "feat/palette-ux-improvements-6667854715765388137", "main", "dynamic-island-visuals-v5-build" ]
   pull_request:
-    branches: [ "jules-3682004179386263797-1da4e0e1", "main" ]
+    branches: [ "feat/palette-ux-improvements-6667854715765388137", "main" ]
 
 jobs:
   build:
