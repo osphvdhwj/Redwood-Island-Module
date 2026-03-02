@@ -28,6 +28,7 @@ object IslandController {
     private val dismissalRunnables = ConcurrentHashMap<String, Runnable>()
     private val dismissedActivities = mutableSetOf<String>()
     private var isScreenOn = true
+    private var isUserExpanded = false // Tracks if the user manually opened the pill
 
     private fun log(msg: String) { XposedBridge.log("DynamicIsland: $msg") }
 
@@ -71,14 +72,28 @@ object IslandController {
         BatteryPlugin.start(view.context)
 
         // CENTRALIZED GESTURE MACHINE
+        // CENTRALIZED GESTURE MACHINE WITH INTERACTION LOCKS
         view.onSingleTap = {
             val island = islandViewRef?.get()
             if (island != null) {
                 when (island.islandState.value) {
-                    DynamicIslandView.IslandState.TYPE_1_MINI -> island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
-                    DynamicIslandView.IslandState.TYPE_2_MID -> island.setState(DynamicIslandView.IslandState.TYPE_3_MAX)
-                    DynamicIslandView.IslandState.TYPE_SPLIT -> island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
-                    DynamicIslandView.IslandState.TYPE_3_MAX -> island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
+                    DynamicIslandView.IslandState.TYPE_1_MINI -> {
+                        isUserExpanded = true
+                        island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
+                    }
+                    DynamicIslandView.IslandState.TYPE_2_MID -> {
+                        isUserExpanded = true
+                        island.setState(DynamicIslandView.IslandState.TYPE_3_MAX)
+                    }
+                    DynamicIslandView.IslandState.TYPE_SPLIT -> {
+                        isUserExpanded = true
+                        island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
+                    }
+                    DynamicIslandView.IslandState.TYPE_3_MAX -> {
+                        isUserExpanded = false // User manually closed it, release the lock
+                        island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
+                        resolveHighestPriorityDebounced()
+                    }
                     else -> {}
                 }
             }
@@ -87,6 +102,7 @@ object IslandController {
         view.onSwipeDown = {
             val island = islandViewRef?.get()
             if (island != null) {
+                isUserExpanded = true // Swiping down implies manual expansion
                 when (island.islandState.value) {
                     DynamicIslandView.IslandState.TYPE_1_MINI -> island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
                     DynamicIslandView.IslandState.TYPE_2_MID -> island.setState(DynamicIslandView.IslandState.TYPE_3_MAX)
@@ -100,9 +116,19 @@ object IslandController {
             val island = islandViewRef?.get()
             if (island != null) {
                 when (island.islandState.value) {
-                    DynamicIslandView.IslandState.TYPE_3_MAX -> island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
-                    DynamicIslandView.IslandState.TYPE_2_MID -> island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
-                    else -> forceHide()
+                    DynamicIslandView.IslandState.TYPE_3_MAX -> {
+                        isUserExpanded = true
+                        island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
+                    }
+                    DynamicIslandView.IslandState.TYPE_2_MID -> {
+                        isUserExpanded = false // Releasing the lock
+                        island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
+                        resolveHighestPriorityDebounced()
+                    }
+                    else -> {
+                        isUserExpanded = false
+                        forceHide()
+                    }
                 }
             }
         }
@@ -187,59 +213,89 @@ object IslandController {
         if (activeActivities.remove(id) != null) resolveHighestPriority()
     }
 
+    private val resolveDebounceRunnable = Runnable { resolveHighestPriority() }
+
+    private fun resolveHighestPriorityDebounced() {
+        mainHandler.removeCallbacks(resolveDebounceRunnable)
+        mainHandler.postDelayed(resolveDebounceRunnable, 300) // Delay slightly to allow closing animations to start
+    }
+
+
+    fun forceHide() {
+        val island = islandViewRef?.get() ?: return
+        island.setState(DynamicIslandView.IslandState.HIDDEN)
+    }
+
     private fun resolveHighestPriority() {
         val island = islandViewRef?.get() ?: return
 
-        // Filter out anything the user swiped up to dismiss
+        // Filter out dismissed notifications
         val available = activeActivities.values.filter { !dismissedActivities.contains(it.id) }
         val sorted = available.sortedByDescending { it.type.priority }
 
         island.post {
             val primary = sorted.getOrNull(0)
             val secondary = sorted.getOrNull(1)
+            val currentVisualState = island.islandState.value
 
             island.clearLiveActivityUI()
             island.clearSecondaryActivityUI()
 
+            // 1. CRITICAL OVERRIDE: Alarms and Calls don't care about locks, they demand the screen.
+            val isCritical = primary?.type == ActivityType.ALARM || primary?.type == ActivityType.CALL
+
+            // 2. INTERACTION LOCK: If the user is currently using the expanded pill, don't interrupt them.
+            if (isUserExpanded && !isCritical) {
+                if (primary != null) {
+                    // Update the data silently in the background so it's ready when they collapse the pill
+                    island.updateLiveActivity(primary.title, primary.dataText, primary.progress, primary.accentColor, primary.type)
+                }
+                return@post // Halt execution here. Do NOT morph the pill.
+            }
+
+            // 3. NORMAL STATE RESOLUTION (Adaptive Flexing)
             if (primary != null && secondary != null) {
-                // MULTIPLE ACTIVITIES = SPLIT PILL
+                // Scenario: Multiple activities (e.g., Music + Charging)
                 island.updateActivities(primary, secondary)
-                if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) island.setState(DynamicIslandView.IslandState.TYPE_SPLIT)
+                if (currentVisualState != DynamicIslandView.IslandState.TYPE_3_MAX && currentVisualState != DynamicIslandView.IslandState.TYPE_2_MID) {
+                    island.setState(DynamicIslandView.IslandState.TYPE_SPLIT)
+                }
 
             } else if (primary != null && currentController != null && primary.type != ActivityType.MEDIA && !dismissedActivities.contains("sys_media")) {
-                // MEDIA ACTIVE + NOTIFICATION = SPLIT PILL
+                // Scenario: Background Music + Single Notification
                 island.updateActivities(LiveActivityModel("sys_media", ActivityType.MEDIA, "Media", "Playing", accentColor = android.graphics.Color.MAGENTA), primary)
-                if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) island.setState(DynamicIslandView.IslandState.TYPE_SPLIT)
+                if (currentVisualState != DynamicIslandView.IslandState.TYPE_3_MAX && currentVisualState != DynamicIslandView.IslandState.TYPE_2_MID) {
+                    island.setState(DynamicIslandView.IslandState.TYPE_SPLIT)
+                }
 
             } else if (primary != null) {
-                // SINGLE NOTIFICATION
+                // Scenario: Single Notification Only
                 if (primary.type == ActivityType.MEDIA && currentController != null) {
-                    if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
+                    if (currentVisualState == DynamicIslandView.IslandState.HIDDEN || currentVisualState == DynamicIslandView.IslandState.TYPE_SPLIT) {
+                        island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
+                    }
                 } else {
                     island.updateLiveActivity(primary.title, primary.dataText, primary.progress, primary.accentColor, primary.type)
                     val targetState = if (primary.type == ActivityType.MESSAGE || primary.type == ActivityType.CALL) DynamicIslandView.IslandState.TYPE_2_MID else DynamicIslandView.IslandState.TYPE_1_MINI
-                    if (island.islandState.value == DynamicIslandView.IslandState.HIDDEN) island.setState(targetState)
+
+                    // Allow the island to flex to fit the notification, but don't force it if they are busy
+                    if (!isUserExpanded && currentVisualState != targetState) {
+                        island.setState(targetState)
+                    }
                 }
+
             } else {
-                // NOTHING ACTIVE
+                // Scenario: Nothing is active. Clean up and hide.
+                isUserExpanded = false
                 if (currentController == null || dismissedActivities.contains("sys_media")) {
                     island.setState(DynamicIslandView.IslandState.HIDDEN)
+                } else if (!dismissedActivities.contains("sys_media")) {
+                    if (currentVisualState == DynamicIslandView.IslandState.HIDDEN || currentVisualState == DynamicIslandView.IslandState.TYPE_SPLIT) {
+                        island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
+                    }
                 }
             }
         }
-    }
-
-    fun forceHide() {
-        val available = activeActivities.values.filter { !dismissedActivities.contains(it.id) }.sortedByDescending { it.type.priority }
-        val highest = available.getOrNull(0)
-
-        if (highest != null) {
-            dismissedActivities.add(highest.id)
-        } else if (currentController != null) {
-            dismissedActivities.add("sys_media")
-        }
-        islandViewRef?.get()?.setState(DynamicIslandView.IslandState.HIDDEN)
-        resolveHighestPriority() // Recalculate to see if something else should pop up
     }
 
     fun hookFrameworkNotifications(lpparam: XC_LoadPackage.LoadPackageParam) {
