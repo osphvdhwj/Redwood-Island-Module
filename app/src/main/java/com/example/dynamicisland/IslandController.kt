@@ -107,8 +107,23 @@ object IslandController {
             }
         }
 
-        view.onSwipeLeft = { currentController?.transportControls?.skipToPrevious(); forceHide() }
-        view.onSwipeRight = { currentController?.transportControls?.skipToNext(); forceHide() }
+        view.onSwipeLeft = {
+            val state = currentController?.playbackState?.state
+            if (state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING || state == PlaybackState.STATE_PAUSED) {
+                currentController?.transportControls?.skipToNext() // Swiping left typically means "Next"
+            } else {
+                forceHide()
+            }
+        }
+
+        view.onSwipeRight = {
+            val state = currentController?.playbackState?.state
+            if (state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING || state == PlaybackState.STATE_PAUSED) {
+                currentController?.transportControls?.skipToPrevious()
+            } else {
+                forceHide()
+            }
+        }
 
         view.onCloseClick = { forceHide() }
         view.onPlayPauseClick = {

@@ -27,6 +27,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -47,6 +48,79 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import java.util.Locale
 import kotlin.math.abs
+
+
+@Composable
+fun WavySlider(
+    progress: Float,
+    onProgressChanged: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    activeColor: Color = Color.White,
+    inactiveColor: Color = Color.White.copy(alpha = 0.3f)
+) {
+    Box(modifier = modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+        // Visual custom track
+        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+            val width = size.width
+            val midY = size.height / 2
+            val activeWidth = width * progress
+
+            // Draw inactive straight line
+            drawLine(
+                color = inactiveColor,
+                start = androidx.compose.ui.geometry.Offset(activeWidth, midY),
+                end = androidx.compose.ui.geometry.Offset(width, midY),
+                strokeWidth = 4.dp.toPx(),
+                cap = androidx.compose.ui.graphics.StrokeCap.Round
+            )
+
+            // Draw wavy active line
+            val path = androidx.compose.ui.graphics.Path()
+            path.moveTo(0f, midY)
+            val waveLength = 24.dp.toPx()
+            val amplitude = 3.dp.toPx()
+
+            var x = 0f
+            while (x < activeWidth) {
+                val nextX = (x + waveLength).coerceAtMost(activeWidth)
+                val halfWave = (nextX - x) / 2
+                path.quadraticBezierTo(
+                    x + halfWave / 2, midY - amplitude,
+                    x + halfWave, midY
+                )
+                path.quadraticBezierTo(
+                    x + halfWave * 1.5f, midY + amplitude,
+                    nextX, midY
+                )
+                x += waveLength
+            }
+
+            drawPath(
+                path = path,
+                color = activeColor,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = 4.dp.toPx(),
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                )
+            )
+
+            // Draw thumb vertically stretched like Android 13
+            drawRoundRect(
+                color = activeColor,
+                topLeft = androidx.compose.ui.geometry.Offset(activeWidth - 4.dp.toPx(), midY - 10.dp.toPx()),
+                size = androidx.compose.ui.geometry.Size(8.dp.toPx(), 20.dp.toPx()),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx())
+            )
+        }
+
+        // Invisible native slider to safely handle all touch/drag math
+        androidx.compose.material3.Slider(
+            value = progress,
+            onValueChange = onProgressChanged,
+            modifier = Modifier.fillMaxSize().alpha(0.01f)
+        )
+    }
+}
 
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -423,52 +497,90 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         // FULL BLEED BACKGROUND
         Box(modifier = Modifier.fillMaxSize()) {
             if (music.art != null && !music.art.isRecycled) {
-                Image(bitmap = music.art.asImageBitmap(), contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize(), alpha = 0.3f)
+                Image(
+                    bitmap = music.art.asImageBitmap(),
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                    alpha = 0.5f // Increased alpha to match screenshot
+                )
             }
 
-            Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    if (music.art != null && !music.art.isRecycled) {
-                        Image(bitmap = music.art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)))
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = music.title, color = textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee())
-                        Text(text = music.artist, color = textColor.copy(alpha = 0.7f), fontSize = 16.sp, maxLines = 1, modifier = Modifier.basicMarquee())
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // TOP ROW: Music Icon & Output Switcher
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(painterResource(R.drawable.ic_play_vector), contentDescription = null, tint = textColor, modifier = Modifier.size(20.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .background(textColor.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(painterResource(R.drawable.ic_phone_vector), contentDescription = null, tint = textColor, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("This phone", color = textColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     }
                 }
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    // OUTPUT SWITCHER
-                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        // Note: If you have an ic_route_vector use that, else use a known safe vector to avoid AVD crash
-                        Icon(painterResource(R.drawable.ic_sync_vector), contentDescription = null, tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("This Phone", color = textColor.copy(alpha = 0.7f), fontSize = 12.sp)
+
+                // MIDDLE ROW: Title, Artist, and Large Play/Pause Button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                        Text(text = music.title, color = textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee())
+                        Spacer(Modifier.height(4.dp))
+                        Text(text = music.artist, color = textColor.copy(alpha = 0.7f), fontSize = 16.sp, maxLines = 1, modifier = Modifier.basicMarquee())
                     }
+
+                    val playIcon = if (music.isPlaying) R.drawable.ic_pause_vector else R.drawable.ic_play_vector
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp) // Large squircle size
+                            .background(textColor.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
+                            .clickable { onPlayPauseClick?.invoke() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(painterResource(playIcon), contentDescription = "Play/Pause", tint = textColor, modifier = Modifier.size(36.dp))
+                    }
+                }
+
+                // BOTTOM ROW: Prev, Slider, Next, Like, Shuffle
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(painterResource(R.drawable.ic_prev_vector), contentDescription = "Prev", tint = textColor, modifier = Modifier.size(28.dp).clickable { onPrevClick?.invoke() })
+                    Spacer(Modifier.width(12.dp))
 
                     val safeProgress = if (music.progress.isNaN() || music.progress.isInfinite()) 0f else music.progress.coerceIn(0f, 1f)
-                    androidx.compose.material3.Slider(
-                        value = safeProgress, onValueChange = { newProgress -> onSeekTo?.invoke((newProgress * music.duration).toLong()) },
-                        modifier = Modifier.fillMaxWidth().height(24.dp),
-                        colors = androidx.compose.material3.SliderDefaults.colors(thumbColor = textColor, activeTrackColor = textColor, inactiveTrackColor = textColor.copy(alpha = 0.3f))
-                    )
-                    Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(formatTime(music.currentPosition), color = textColor.copy(alpha = 0.6f), fontSize = 12.sp)
-                        Text(formatTime(music.duration), color = textColor.copy(alpha = 0.6f), fontSize = 12.sp)
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // ADVANCED MEDIA CONTROLS
-                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                        Icon(painterResource(R.drawable.ic_sync_vector), contentDescription = "Loop", tint = textColor.copy(alpha=0.6f), modifier = Modifier.size(24.dp).clickable { onLoopClick?.invoke() })
-                        Icon(painterResource(R.drawable.ic_prev_vector), contentDescription = "Prev", tint = textColor, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
-                        val playIcon = if (music.isPlaying) R.drawable.ic_pause_vector else R.drawable.ic_play_vector
-                        Box(modifier = Modifier.size(64.dp).background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(32.dp)).clickable { onPlayPauseClick?.invoke() }, contentAlignment = Alignment.Center) {
-                            Icon(painterResource(playIcon), contentDescription = "Play/Pause", tint = textColor, modifier = Modifier.size(36.dp))
-                        }
-                        Icon(painterResource(R.drawable.ic_next_vector), contentDescription = "Next", tint = textColor, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
-                        Icon(painterResource(R.drawable.ic_alarm_vector), contentDescription = "Like", tint = textColor.copy(alpha=0.6f), modifier = Modifier.size(24.dp).clickable { onLikeClick?.invoke() })
-                    }
+                    // Using the custom Wavy Slider here
+                    WavySlider(
+                        progress = safeProgress,
+                        onProgressChanged = { newProgress -> onSeekTo?.invoke((newProgress * music.duration).toLong()) },
+                        modifier = Modifier.weight(1f),
+                        activeColor = textColor,
+                        inactiveColor = textColor.copy(alpha = 0.3f)
+                    )
+
+                    Spacer(Modifier.width(12.dp))
+                    Icon(painterResource(R.drawable.ic_next_vector), contentDescription = "Next", tint = textColor, modifier = Modifier.size(28.dp).clickable { onNextClick?.invoke() })
+                    Spacer(Modifier.width(20.dp))
+                    Icon(painterResource(R.drawable.ic_heart_vector), contentDescription = "Like", tint = textColor, modifier = Modifier.size(24.dp).clickable { onLikeClick?.invoke() })
+                    Spacer(Modifier.width(16.dp))
+                    Icon(painterResource(R.drawable.ic_shuffle_vector), contentDescription = "Shuffle", tint = textColor, modifier = Modifier.size(24.dp).clickable { onLoopClick?.invoke() })
                 }
             }
         }
