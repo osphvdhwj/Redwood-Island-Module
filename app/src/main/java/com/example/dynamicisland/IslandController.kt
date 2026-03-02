@@ -28,6 +28,7 @@ object IslandController {
     private val dismissalRunnables = ConcurrentHashMap<String, Runnable>()
     private val dismissedActivities = mutableSetOf<String>()
     private var isScreenOn = true
+    private var isUserExpanded = false
     private var resolveRunnable: Runnable? = null
 
     private fun log(msg: String) { XposedBridge.log("DynamicIsland: $msg") }
@@ -71,15 +72,28 @@ object IslandController {
         }
         BatteryPlugin.start(view.context)
 
-        // CENTRALIZED GESTURE MACHINE
+        // CENTRALIZED GESTURE MACHINE WITH INTERACTION LOCKS
         view.onSingleTap = {
             val island = islandViewRef?.get()
             if (island != null) {
                 when (island.islandState.value) {
-                    DynamicIslandView.IslandState.TYPE_1_MINI -> island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
-                    DynamicIslandView.IslandState.TYPE_2_MID -> island.setState(DynamicIslandView.IslandState.TYPE_3_MAX)
-                    DynamicIslandView.IslandState.TYPE_SPLIT -> island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
-                    DynamicIslandView.IslandState.TYPE_3_MAX -> island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
+                    DynamicIslandView.IslandState.TYPE_1_MINI -> {
+                        isUserExpanded = true
+                        island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
+                    }
+                    DynamicIslandView.IslandState.TYPE_2_MID -> {
+                        isUserExpanded = true
+                        island.setState(DynamicIslandView.IslandState.TYPE_3_MAX)
+                    }
+                    DynamicIslandView.IslandState.TYPE_SPLIT -> {
+                        isUserExpanded = true
+                        island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
+                    }
+                    DynamicIslandView.IslandState.TYPE_3_MAX -> {
+                        isUserExpanded = false // User manually closed it, release the lock
+                        island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
+                        resolveHighestPriorityDebounced()
+                    }
                     else -> {}
                 }
             }
@@ -88,6 +102,7 @@ object IslandController {
         view.onSwipeDown = {
             val island = islandViewRef?.get()
             if (island != null) {
+                isUserExpanded = true // Swiping down implies manual expansion
                 when (island.islandState.value) {
                     DynamicIslandView.IslandState.TYPE_1_MINI -> island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
                     DynamicIslandView.IslandState.TYPE_2_MID -> island.setState(DynamicIslandView.IslandState.TYPE_3_MAX)
@@ -101,9 +116,19 @@ object IslandController {
             val island = islandViewRef?.get()
             if (island != null) {
                 when (island.islandState.value) {
-                    DynamicIslandView.IslandState.TYPE_3_MAX -> island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
-                    DynamicIslandView.IslandState.TYPE_2_MID -> island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
-                    else -> forceHide()
+                    DynamicIslandView.IslandState.TYPE_3_MAX -> {
+                        isUserExpanded = true
+                        island.setState(DynamicIslandView.IslandState.TYPE_2_MID)
+                    }
+                    DynamicIslandView.IslandState.TYPE_2_MID -> {
+                        isUserExpanded = false // Releasing the lock
+                        island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
+                        resolveHighestPriorityDebounced()
+                    }
+                    else -> {
+                        isUserExpanded = false
+                        forceHide()
+                    }
                 }
             }
         }
@@ -127,10 +152,53 @@ object IslandController {
         }
 
         view.onCloseClick = { forceHide() }
+        view.onDoubleTap = {
+            val island = islandViewRef?.get()
+            if (island != null) {
+                val state = island.islandState.value
+                if (currentController != null && state == DynamicIslandView.IslandState.TYPE_3_MAX) {
+                    // Action 1: Fast-Forward 10 seconds when in MAX media view
+                    val currentPos = currentController?.playbackState?.position ?: 0L
+                    currentController?.transportControls?.seekTo(currentPos + 10000L)
+                } else {
+                    // Action 2: Instantly collapse the island and release the Interaction Lock
+                    isUserExpanded = false
+                    island.setState(DynamicIslandView.IslandState.TYPE_1_MINI)
+                    resolveHighestPriorityDebounced()
+                }
+            }
+        }
+
         view.onPlayPauseClick = {
             val state = currentController?.playbackState?.state
             if (state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING) currentController?.transportControls?.pause() else currentController?.transportControls?.play()
         }
+        view.onLongPress = {
+            val island = islandViewRef?.get()
+            if (island != null && currentController != null) {
+                try {
+                    val intent = view.context.packageManager.getLaunchIntentForPackage(currentController!!.packageName)
+                    intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    view.context.startActivity(intent)
+                    forceHide() // Hide island to show the app
+                } catch (e: Exception) {}
+            }
+        }
+
+        view.onOutputSwitcherClick = {
+            try {
+                // First try the native Android 11+ Media Output Panel
+                val intent = Intent("com.android.settings.panel.action.MEDIA_OUTPUT")
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                intent.putExtra("com.android.settings.panel.extra.PACKAGE_NAME", currentController?.packageName)
+                view.context.startActivity(intent)
+            } catch (e: Exception) {
+                // Fallback: Show Volume Panel
+                val audioManager = view.context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+                audioManager.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.ADJUST_SAME, android.media.AudioManager.FLAG_SHOW_UI)
+            }
+        }
+
         view.onPrevClick = { currentController?.transportControls?.skipToPrevious() }
         view.onNextClick = { currentController?.transportControls?.skipToNext() }
         view.onSeekTo = { pos -> currentController?.transportControls?.seekTo(pos) }

@@ -54,6 +54,7 @@ import kotlin.math.abs
 @Composable
 fun WavySlider(
     progress: Float,
+    isPlaying: Boolean = true,
     onProgressChanged: (Float) -> Unit,
     modifier: Modifier = Modifier,
     activeColor: Color = Color.White,
@@ -164,7 +165,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     private val liveActivityState = mutableStateOf<LiveActivityData?>(null)
     private val secondaryActivityState = mutableStateOf<LiveActivityData?>(null)
 
-    data class MusicData(val title: String, val artist: String, val art: Bitmap?, val isPlaying: Boolean, val progress: Float, val duration: Long, val currentPosition: Long)
+    data class MusicData(val title: String, val artist: String, val art: Bitmap?, val isPlaying: Boolean, val progress: Float, val duration: Long, val currentPosition: Long, val packageName: String = "", val appIcon: Bitmap? = null)
     data class LiveActivityData(val title: String, val data: String, val progress: Float?, val color: Int, val type: ActivityType)
 
     var onSingleTap: (() -> Unit)? = null
@@ -175,6 +176,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     var onSwipeRight: (() -> Unit)? = null
     var onPlayPauseClick: (() -> Unit)? = null
     var onPrevClick: (() -> Unit)? = null
+    var onOutputSwitcherClick: (() -> Unit)? = null
+    var onLongPress: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
     var onLikeClick: (() -> Unit)? = null
     var onLoopClick: (() -> Unit)? = null
@@ -337,7 +340,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             if (state == IslandState.HIDDEN && activity?.progress != null) {
                 val safeProgress = if (activity.progress.isNaN() || activity.progress.isInfinite()) 0f else activity.progress.coerceIn(0f, 1f)
                 androidx.compose.material3.CircularProgressIndicator(
-                    progress = { safeProgress }, modifier = Modifier.size(camWidth.value.dp + 6.dp, camHeight.value.dp + 6.dp),
+                    progress = { safeProgress }, modifier = Modifier.size(camWidth.value.dp + 16.dp, camHeight.value.dp + 16.dp),
                     color = Color(activity.color), trackColor = Color(activity.color).copy(alpha = 0.2f), strokeWidth = 3.dp
                 )
             }
@@ -522,7 +525,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     contentDescription = null,
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
-                    alpha = 0.5f // Increased alpha to match screenshot
+                    alpha = 0.5f // Increased alpha to match your screenshot
                 )
             }
 
@@ -532,17 +535,26 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     .padding(20.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // TOP ROW: Music Icon & Output Switcher
+                // TOP ROW: App Icon & Output Switcher
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(painterResource(R.drawable.ic_play_vector), contentDescription = null, tint = textColor, modifier = Modifier.size(20.dp))
+                    if (music.appIcon != null && !music.appIcon.isRecycled) {
+                        Image(
+                            bitmap = music.appIcon.asImageBitmap(),
+                            contentDescription = "App Icon",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Icon(painterResource(R.drawable.ic_play_vector), contentDescription = null, tint = textColor, modifier = Modifier.size(24.dp))
+                    }
 
                     Row(
                         modifier = Modifier
                             .background(textColor.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                            .clickable { onOutputSwitcherClick?.invoke() }
                             .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -576,7 +588,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     }
                 }
 
-                // BOTTOM ROW: Prev, Slider, Next, Like, Shuffle
+                // BOTTOM ROW: Prev, Wavy Slider, Next, Like, Shuffle
                 val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                 val isDragged by interactionSource.collectIsDraggedAsState()
 
@@ -596,6 +608,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
                     WavySlider(
                         progress = safeProgress,
+                        isPlaying = music.isPlaying,
                         onProgressChanged = { newProgress -> onSeekTo?.invoke((newProgress * music.duration).toLong()) },
                         modifier = Modifier.weight(1f),
                         activeColor = textColor,
@@ -649,9 +662,9 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     fun clearSecondaryActivityUI() { secondaryActivityState.value = null }
     fun clearMusicState() { musicState.value = null }
 
-    fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?) {
+    fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?, packageName: String = "", appIcon: Bitmap? = null) {
         val current = musicState.value
-        musicState.value = current?.copy(title = title ?: "", artist = artist ?: "", art = art) ?: MusicData(title ?: "", artist ?: "", art, false, 0f, 0L, 0L)
+        musicState.value = current?.copy(title = title ?: "", artist = artist ?: "", art = art, packageName = packageName, appIcon = appIcon) ?: MusicData(title ?: "", artist ?: "", art, false, 0f, 0L, 0L, packageName, appIcon)
     }
     fun updatePlayPauseState(isPlaying: Boolean) { musicState.value = musicState.value?.copy(isPlaying = isPlaying) }
     fun updateMusicProgress(positionMs: Long, durationMs: Long) {
