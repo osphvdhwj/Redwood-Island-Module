@@ -166,7 +166,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     private val liveActivityState = mutableStateOf<LiveActivityData?>(null)
     private val secondaryActivityState = mutableStateOf<LiveActivityData?>(null)
 
-    data class MusicData(val title: String, val artist: String, val art: Bitmap?, val isPlaying: Boolean, val progress: Float, val duration: Long, val currentPosition: Long, val packageName: String = "", val appIcon: Bitmap? = null)
+    data class MusicData(val title: String, val artist: String, val art: Bitmap?, val isPlaying: Boolean, val progress: Float, val duration: Long, val currentPosition: Long, val packageName: String = "", val appIcon: Bitmap? = null, val dominantColor: Color = Color.Cyan)
     data class LiveActivityData(val title: String, val data: String, val progress: Float?, val color: Int, val type: ActivityType)
 
     var onSingleTap: (() -> Unit)? = null
@@ -665,7 +665,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     fun clearSecondaryActivityUI() { secondaryActivityState.value = null }
     fun clearMusicState() { musicState.value = null }
 
-    fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?, packageName: String = "", appIcon: Bitmap? = null) {
+    fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?, packageName: String = "", appIcon: Bitmap? = null, dominantColor: Color = Color.Cyan) {
         val current = musicState.value
         musicState.value = current?.copy(title = title ?: "", artist = artist ?: "", art = art, packageName = packageName, appIcon = appIcon) ?: MusicData(title ?: "", artist ?: "", art, false, 0f, 0L, 0L, packageName, appIcon)
     }

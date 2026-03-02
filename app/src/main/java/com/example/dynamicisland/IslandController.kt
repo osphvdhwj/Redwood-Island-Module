@@ -504,9 +504,19 @@ object IslandController {
                 }
             }
 
+            var accentColor = android.graphics.Color.CYAN
+            if (albumArt != null && !albumArt.isRecycled) {
+                try {
+                    val palette = androidx.palette.graphics.Palette.from(albumArt).generate()
+                    accentColor = palette.getDominantColor(android.graphics.Color.CYAN)
+                } catch (e: Exception) {
+                    log("Failed to extract palette color: $e")
+                }
+            }
+
             // Post the fully prepared data to the UI thread
             island.post {
-                island.updateMusicInfo(title, artist, albumArt, packageName, appIconBitmap)
+                island.updateMusicInfo(title, artist, albumArt, packageName, appIconBitmap, androidx.compose.ui.graphics.Color(accentColor))
                 island.updateMusicProgress(currentController?.playbackState?.position ?: 0L, mediaDuration)
             }
         }
