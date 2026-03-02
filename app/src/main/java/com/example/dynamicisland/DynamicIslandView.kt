@@ -199,7 +199,10 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
         // ICE CUBE MORPHING
         val cornerRadius by animateDpAsState(
-            targetValue = if (state == IslandState.TYPE_3_MAX) 32.dp else 50.dp,
+            targetValue = when (state) {
+                IslandState.TYPE_2_MID, IslandState.TYPE_3_MAX -> 28.dp // Cube-like corners
+                else -> 50.dp // Perfect pill for MINI and SPLIT
+            },
             animationSpec = physicsSpec, label = "radius"
         )
 
