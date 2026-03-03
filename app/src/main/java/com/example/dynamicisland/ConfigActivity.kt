@@ -48,6 +48,15 @@ class ConfigActivity : ComponentActivity() {
 
     @Composable
     fun ConfigUI() {
+        val context = androidx.compose.ui.platform.LocalContext.current
+        var currentPreviewState by remember { mutableStateOf("MID") }
+
+        fun broadcastPreview(state: String) {
+            val intent = Intent("com.example.dynamicisland.SHOW_PREVIEW")
+            intent.putExtra("PREVIEW_TYPE", state)
+            context.sendBroadcast(intent)
+        }
+
         var offsetX by remember { mutableStateOf(prefs.getInt("offsetX", 0).toFloat()) }
         var offsetY by remember { mutableStateOf(prefs.getInt("offsetY", 48).toFloat()) }
         var ringOffsetY by remember { mutableStateOf(prefs.getInt("ringOffsetY", 48).toFloat()) }
@@ -58,52 +67,63 @@ class ConfigActivity : ComponentActivity() {
 
         Column(modifier = Modifier.padding(24.dp)) {
             Text("Dynamic Island Configuration", style = MaterialTheme.typography.headlineSmall)
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(text = "Live Preview Toggles:", color = androidx.compose.ui.graphics.Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(modifier = Modifier.weight(1f), onClick = { currentPreviewState = "MINI"; broadcastPreview("MINI") }) { Text("Mini") }
+                Button(modifier = Modifier.weight(1f), onClick = { currentPreviewState = "MID"; broadcastPreview("MID") }) { Text("Mid") }
+                Button(modifier = Modifier.weight(1f), onClick = { currentPreviewState = "MAX"; broadcastPreview("MAX") }) { Text("Max") }
+                Button(modifier = Modifier.weight(1f), onClick = { currentPreviewState = "RING"; broadcastPreview("RING") }) { Text("Ring") }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
 
             ConfigSlider("Pill X Offset (Left/Right)", offsetX, -100f, 100f) {
                 offsetX = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+                if (currentPreviewState == "RING") currentPreviewState = "MID"
+                broadcastPreview(currentPreviewState)
             }
             ConfigSlider("Pill Y Offset (Up/Down)", offsetY, -100f, 200f) {
                 offsetY = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+                if (currentPreviewState == "RING") currentPreviewState = "MID"
+                broadcastPreview(currentPreviewState)
             }
             ConfigSlider("Ring Y Offset", ringOffsetY, -100f, 200f) {
-                ringOffsetY = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY, isRing = true)
+                ringOffsetY = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+                currentPreviewState = "RING"
+                broadcastPreview("RING")
             }
             ConfigSlider("Camera Width", camWidth, 10f, 80f) {
                 camWidth = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+                if (currentPreviewState == "RING") currentPreviewState = "MID"
+                broadcastPreview(currentPreviewState)
             }
             ConfigSlider("Camera Height", camHeight, 10f, 80f) {
                 camHeight = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+                if (currentPreviewState == "RING") currentPreviewState = "MID"
+                broadcastPreview(currentPreviewState)
             }
             ConfigSlider("Pill Width Scale", pillScaleX, 0.5f, 2.0f) {
                 pillScaleX = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+                if (currentPreviewState == "RING") currentPreviewState = "MID"
+                broadcastPreview(currentPreviewState)
             }
             ConfigSlider("Pill Height Scale", pillScaleY, 0.5f, 2.0f) {
                 pillScaleY = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
+                if (currentPreviewState == "RING") currentPreviewState = "MID"
+                broadcastPreview(currentPreviewState)
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-            Button(
-                onClick = { sendBroadcast(Intent("com.example.dynamicisland.TOGGLE_PREVIEW")) },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-            ) {
-                Text("Toggle Visual Preview")
-            }
 
-            Button(
-                onClick = {
-                    // Send a dummy test notification to show the ring
-                    val dummyIntent = Intent("com.example.dynamicisland.TEST_RING")
-                    sendBroadcast(dummyIntent)
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Test Progress Ring")
-            }
         }
     }
 
-    private fun saveAndBroadcast(x: Float, y: Float, ringY: Float, w: Float, h: Float, scaleX: Float, scaleY: Float, isRing: Boolean = false) {
+    private fun saveAndBroadcast(x: Float, y: Float, ringY: Float, w: Float, h: Float, scaleX: Float, scaleY: Float) {
         prefs.edit()
             .putInt("offsetX", x.toInt())
             .putInt("offsetY", y.toInt())
@@ -124,12 +144,6 @@ class ConfigActivity : ComponentActivity() {
         intent.putExtra("pillScaleX", scaleX)
         intent.putExtra("pillScaleY", scaleY)
         sendBroadcast(intent)
-
-        if (isRing) {
-            sendBroadcast(Intent("com.example.dynamicisland.SHOW_RING_PREVIEW"))
-        } else {
-            sendBroadcast(Intent("com.example.dynamicisland.TOGGLE_PREVIEW"))
-        }
     }
 
     @Composable

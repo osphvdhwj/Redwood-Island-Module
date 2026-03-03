@@ -246,22 +246,20 @@ fun Modifier.bounceClick(
                     pillScaleX.value = intent.getFloatExtra("pillScaleX", 1f)
                     pillScaleY.value = intent.getFloatExtra("pillScaleY", 1f)
                 }
-                "com.example.dynamicisland.SHOW_RING_PREVIEW" -> {
-                    IslandController.forceHide()
-                    updateMusicInfo("Preview", "Ring", null, "", null, Color.Cyan)
-                    updateMusicProgress(5000L, 10000L) // 50% progress to show the wavy ring
-                }
-                "com.example.dynamicisland.TEST_RING" -> {
-                    IslandController.postActivity(LiveActivityModel(
-                        id = "test_ring", type = ActivityType.DOWNLOAD, title = "Test Ring",
-                        dataText = "50%", progress = 0.5f, accentColor = android.graphics.Color.CYAN, isTransient = true
-                    ))
-                }
-                "com.example.dynamicisland.TOGGLE_PREVIEW" -> {
-                    IslandController.postActivity(LiveActivityModel(
-                        id = "preview", type = ActivityType.GENERAL, title = "Preview Mode",
-                        dataText = "Adjusting...", accentColor = android.graphics.Color.WHITE, isTransient = true
-                    ))
+                "com.example.dynamicisland.SHOW_PREVIEW" -> {
+                    val type = intent.getStringExtra("PREVIEW_TYPE") ?: "MID"
+
+                    // Force Mock Data & ensure playing state is TRUE for animations
+                    updateMusicInfo("Previewing Layout", "Adjusting $type", null, "", null, androidx.compose.ui.graphics.Color.Cyan)
+                    updatePlayPauseState(true) // CRITICAL: Makes the wave ripple!
+                    updateMusicProgress(5000L, 10000L) // 50% filled bars
+
+                    when (type) {
+                        "MINI" -> setState(IslandState.TYPE_1_MINI)
+                        "MID" -> setState(IslandState.TYPE_2_MID)
+                        "MAX" -> setState(IslandState.TYPE_3_MAX)
+                        "RING" -> setState(IslandState.HIDDEN)
+                    }
                 }
             }
         }
@@ -270,8 +268,7 @@ fun Modifier.bounceClick(
     init {
         val filter = android.content.IntentFilter().apply {
             addAction("com.example.dynamicisland.UPDATE_CONFIG")
-            addAction("com.example.dynamicisland.TEST_RING")
-            addAction("com.example.dynamicisland.TOGGLE_PREVIEW")
+            addAction("com.example.dynamicisland.SHOW_PREVIEW")
         }
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
