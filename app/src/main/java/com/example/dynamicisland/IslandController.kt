@@ -81,14 +81,16 @@ object IslandController {
 
         // Bluetooth Connection Listener
         val btFilter = android.content.IntentFilter(android.bluetooth.BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
+        @android.annotation.SuppressLint("MissingPermission")
         btReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 val state = intent.getIntExtra(android.bluetooth.BluetoothAdapter.EXTRA_CONNECTION_STATE, -1)
                 if (state == android.bluetooth.BluetoothAdapter.STATE_CONNECTED) {
                     val device = intent.getParcelableExtra<android.bluetooth.BluetoothDevice>(android.bluetooth.BluetoothDevice.EXTRA_DEVICE)
+                    val deviceName = try { device?.name } catch (e: Exception) { null } ?: "Bluetooth Device"
                     postActivity(LiveActivityModel(
                         id = "sys_bt", type = ActivityType.BLUETOOTH, title = "Connected",
-                        dataText = device?.name ?: "Bluetooth Device", accentColor = android.graphics.Color.BLUE, isTransient = true
+                        dataText = deviceName, accentColor = android.graphics.Color.BLUE, isTransient = true
                     ))
                 }
             }
@@ -106,7 +108,7 @@ object IslandController {
                 val info = intent.getParcelableExtra<android.net.NetworkInfo>(android.net.wifi.WifiManager.EXTRA_NETWORK_INFO)
                 if (info != null && info.isConnected) {
                     val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
-                    val ssid = wifiManager.connectionInfo.ssid.removeSurrounding(""")
+                    val ssid = wifiManager.connectionInfo.ssid.removeSurrounding("\"")
                     postActivity(LiveActivityModel(
                         id = "sys_wifi", type = ActivityType.WIFI, title = "Wi-Fi Connected",
                         dataText = ssid, accentColor = android.graphics.Color.CYAN, isTransient = true
