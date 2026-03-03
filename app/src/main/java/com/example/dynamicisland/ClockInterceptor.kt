@@ -22,7 +22,8 @@ object ClockInterceptor {
 
         // Stopwatch Logic
         if (notification.channelId == "Stopwatch" || title.contains("Stopwatch", ignoreCase = true)) {
-            return LiveActivityModel(
+            return LiveActivityModel.General(
+                priority = ActivityType.TIMER.priority,
                 id = "system_stopwatch",
                 type = ActivityType.TIMER,
                 title = "Stopwatch",
@@ -36,7 +37,8 @@ object ClockInterceptor {
         if (notification.channelId == "Timer" || title.contains("Timer", ignoreCase = true)) {
             // Try to calculate progress if max value is available (hard in standard notifs),
             // but we can definitely show the countdown text.
-            return LiveActivityModel(
+            return LiveActivityModel.General(
+                priority = ActivityType.TIMER.priority,
                 id = "system_timer",
                 type = ActivityType.TIMER,
                 title = "Timer",
@@ -48,7 +50,8 @@ object ClockInterceptor {
 
         // Alarm Logic (Upcoming Alarm)
         if (notification.channelId == "Alarm" || notification.category == Notification.CATEGORY_ALARM) {
-             return LiveActivityModel(
+             return LiveActivityModel.General(
+                priority = ActivityType.TIMER.priority,
                 id = "system_alarm",
                 type = ActivityType.ALARM,
                 title = "Upcoming Alarm",
