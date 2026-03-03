@@ -208,7 +208,7 @@ fun Modifier.bounceClick(
         )
 }
 
-    data class MusicData(val title: String, val artist: String, val art: Bitmap?, val isPlaying: Boolean, val progress: Float, val duration: Long, val currentPosition: Long, val packageName: String = "", val appIcon: Bitmap? = null, val dominantColor: Color = Color.Cyan)
+    data class MusicData(val title: String, val artist: String, val art: Bitmap?, val isPlaying: Boolean, val progress: Float, val duration: Long, val currentPosition: Long, val packageName: String = "", val appIcon: Bitmap? = null, val dominantColor: Color = Color.Cyan, val repeatMode: Int = 0, val shuffleMode: Int = 0)
     data class LiveActivityData(val title: String, val data: String, val progress: Float?, val color: Int, val type: ActivityType)
 
     var onSingleTap: (() -> Unit)? = null
@@ -222,6 +222,7 @@ fun Modifier.bounceClick(
     var onOutputSwitcherClick: (() -> Unit)? = null
     var onLongPress: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
+    var onShuffleClick: (() -> Unit)? = null
     var onLikeClick: (() -> Unit)? = null
     var onLoopClick: (() -> Unit)? = null
     var onSeekTo: ((Long) -> Unit)? = null
@@ -681,7 +682,15 @@ fun Modifier.bounceClick(
                     Spacer(Modifier.width(20.dp))
                     Icon(painterResource(R.drawable.ic_heart_vector), contentDescription = "Like", tint = textColor, modifier = Modifier.size(24.dp).bounceClick(haptic) { onLikeClick?.invoke() })
                     Spacer(Modifier.width(16.dp))
-                    Icon(painterResource(R.drawable.ic_shuffle_vector), contentDescription = "Shuffle", tint = textColor, modifier = Modifier.size(24.dp).bounceClick(haptic) { onLoopClick?.invoke() })
+                    val shuffleTint = if (music.shuffleMode == 1) Color.Cyan else textColor.copy(alpha = 0.5f)
+                    Icon(painterResource(R.drawable.ic_shuffle_vector), contentDescription = "Shuffle", tint = shuffleTint, modifier = Modifier.size(24.dp).bounceClick(haptic) { onShuffleClick?.invoke() })
+                    Spacer(Modifier.width(16.dp))
+                    val loopTint = when (music.repeatMode) {
+                        2 -> Color.Cyan // Repeat All
+                        1 -> Color.Yellow // Repeat One
+                        else -> textColor.copy(alpha = 0.5f) // Off
+                    }
+                    Icon(painterResource(R.drawable.ic_sync_vector), contentDescription = "Loop", tint = loopTint, modifier = Modifier.size(24.dp).bounceClick(haptic) { onLoopClick?.invoke() })
                 }
             }
         }
@@ -715,6 +724,10 @@ fun Modifier.bounceClick(
     fun clearLiveActivityUI() { liveActivityState.value = null }
     fun clearSecondaryActivityUI() { secondaryActivityState.value = null }
     fun clearMusicState() { musicState.value = null }
+
+    fun updateMediaModes(repeatMode: Int, shuffleMode: Int) {
+        musicState.value = musicState.value?.copy(repeatMode = repeatMode, shuffleMode = shuffleMode)
+    }
 
     fun updateMusicInfo(title: String?, artist: String?, art: Bitmap?, packageName: String = "", appIcon: Bitmap? = null, dominantColor: Color = Color.Cyan) {
         val current = musicState.value
