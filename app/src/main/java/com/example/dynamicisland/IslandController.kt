@@ -34,6 +34,22 @@ object IslandController {
     private var isUserExpanded = false
     private var resolveRunnable: Runnable? = null
 
+    private var btReceiver: android.content.BroadcastReceiver? = null
+    private var wifiReceiver: android.content.BroadcastReceiver? = null
+
+
+
+    fun cleanup(context: Context) {
+        btReceiver?.let {
+            try { context.unregisterReceiver(it) } catch (e: Exception) {}
+            btReceiver = null
+        }
+        wifiReceiver?.let {
+            try { context.unregisterReceiver(it) } catch (e: Exception) {}
+            wifiReceiver = null
+        }
+        BatteryPlugin.stop(context)
+    }
     private fun log(msg: String) { XposedBridge.log("DynamicIsland: $msg") }
 
     private val mediaCallback = object : MediaController.Callback() {
@@ -63,13 +79,59 @@ object IslandController {
         setupMediaListener(view.context)
         setupSystemReceivers(view.context)
 
+        // Bluetooth Connection Listener
+        val btFilter = android.content.IntentFilter(android.bluetooth.BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
+        btReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val state = intent.getIntExtra(android.bluetooth.BluetoothAdapter.EXTRA_CONNECTION_STATE, -1)
+                if (state == android.bluetooth.BluetoothAdapter.STATE_CONNECTED) {
+                    val device = intent.getParcelableExtra<android.bluetooth.BluetoothDevice>(android.bluetooth.BluetoothDevice.EXTRA_DEVICE)
+                    postActivity(LiveActivityModel(
+                        id = "sys_bt", type = ActivityType.BLUETOOTH, title = "Connected",
+                        dataText = device?.name ?: "Bluetooth Device", accentColor = android.graphics.Color.BLUE, isTransient = true
+                    ))
+                }
+            }
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            view.context.registerReceiver(btReceiver, btFilter, Context.RECEIVER_EXPORTED)
+        } else {
+            view.context.registerReceiver(btReceiver, btFilter)
+        }
+
+        // Wi-Fi Connection Listener
+        val wifiFilter = android.content.IntentFilter(android.net.wifi.WifiManager.NETWORK_STATE_CHANGED_ACTION)
+        wifiReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val info = intent.getParcelableExtra<android.net.NetworkInfo>(android.net.wifi.WifiManager.EXTRA_NETWORK_INFO)
+                if (info != null && info.isConnected) {
+                    val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+                    val ssid = wifiManager.connectionInfo.ssid.removeSurrounding(""")
+                    postActivity(LiveActivityModel(
+                        id = "sys_wifi", type = ActivityType.WIFI, title = "Wi-Fi Connected",
+                        dataText = ssid, accentColor = android.graphics.Color.CYAN, isTransient = true
+                    ))
+                }
+            }
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            view.context.registerReceiver(wifiReceiver, wifiFilter, Context.RECEIVER_EXPORTED)
+        } else {
+            view.context.registerReceiver(wifiReceiver, wifiFilter)
+        }
+
         BatteryPlugin.onBatteryChanged = { level, isCharging, color ->
              if (isCharging) {
-                 // Remove from dismissed if it was manually dismissed before
                  dismissedActivities.remove("sys_battery")
                  postActivity(LiveActivityModel(
                      id = "sys_battery", type = ActivityType.CHARGING,
                      title = "Charging", dataText = "$level%", progress = level / 100f, accentColor = color, isTransient = true
+                 ))
+             } else {
+                 // Trigger a 3-second pop-up when unplugged
+                 postActivity(LiveActivityModel(
+                     id = "sys_battery_disconnect", type = ActivityType.BATTERY_LOW,
+                     title = "Disconnected", dataText = "Battery at $level%", progress = level / 100f, accentColor = color, isTransient = true
                  ))
              }
         }

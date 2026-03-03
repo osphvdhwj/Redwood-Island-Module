@@ -9,6 +9,11 @@ enum class ActivityType(val priority: Int) {
     MESSAGE(50),        // SMS / WhatsApp Messages (Transient)
     DOWNLOAD(40),       // Active downloads
     CHARGING(30),       // Plugged in
+    DASHBOARD(25),      // System dashboard
+    BATTERY_LOW(20),    // Disconnected / Low Battery
+    BATTERY_FULL(18),   // Fully Charged
+    BLUETOOTH(15),      // Bluetooth Connect/Disconnect
+    WIFI(12),           // Network Connect/Disconnect
     GENERAL(10)         // Fallback
 }
 

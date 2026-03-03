@@ -453,6 +453,14 @@ fun Modifier.bounceClick(
     @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
     @Composable
     private fun SplitPill(textColor: Color, primary: LiveActivityData, secondary: LiveActivityData?) {
+        val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "pulse")
+        val alphaPulse by infiniteTransition.animateFloat(
+            initialValue = 0.4f, targetValue = 1f,
+            animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                animation = androidx.compose.animation.core.tween(800, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+            ), label = "alphaPulse"
+        )
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Row(modifier = Modifier.weight(1f).height(36.dp).background(Color.Black.copy(alpha=0.75f), RoundedCornerShape(50)).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (primary.type == ActivityType.MEDIA && musicState.value?.art != null) {
@@ -461,7 +469,8 @@ fun Modifier.bounceClick(
                         Image(bitmap = art.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(20.dp).clip(RoundedCornerShape(10.dp)))
                     }
                 } else {
-                    Icon(painterResource(getIconForType(primary.type)), contentDescription = null, tint = Color(primary.color), modifier = Modifier.size(16.dp))
+                    val primaryIconAlpha = if (primary.type == ActivityType.CHARGING) alphaPulse else 1f
+                    Icon(painterResource(getIconForType(primary.type)), contentDescription = null, tint = Color(primary.color), modifier = Modifier.size(16.dp).alpha(primaryIconAlpha))
                 }
                 Spacer(Modifier.width(8.dp))
                 Text(primary.title, color = textColor, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -469,7 +478,8 @@ fun Modifier.bounceClick(
             Spacer(modifier = Modifier.width(camWidth.value.dp + 16.dp))
             if (secondary != null) {
                 Box(modifier = Modifier.size(36.dp).background(Color.Black.copy(alpha=0.75f), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
-                    Icon(painterResource(getIconForType(secondary.type)), contentDescription = null, tint = Color(secondary.color), modifier = Modifier.size(16.dp))
+                    val secondaryIconAlpha = if (secondary.type == ActivityType.CHARGING) alphaPulse else 1f
+                    Icon(painterResource(getIconForType(secondary.type)), contentDescription = null, tint = Color(secondary.color), modifier = Modifier.size(16.dp).alpha(secondaryIconAlpha))
                 }
             } else {
                 Spacer(modifier = Modifier.size(36.dp))
@@ -480,8 +490,17 @@ fun Modifier.bounceClick(
     @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
     @Composable
     fun UniversalMini(textColor: Color, activity: LiveActivityData) {
+        val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "pulse")
+        val alphaPulse by infiniteTransition.animateFloat(
+            initialValue = 0.4f, targetValue = 1f,
+            animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                animation = androidx.compose.animation.core.tween(800, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+            ), label = "alphaPulse"
+        )
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-            Icon(painterResource(getIconForType(activity.type)), contentDescription = null, tint = Color(activity.color), modifier = Modifier.size(16.dp))
+            val iconAlpha = if (activity.type == ActivityType.CHARGING) alphaPulse else 1f
+            Icon(painterResource(getIconForType(activity.type)), contentDescription = null, tint = Color(activity.color), modifier = Modifier.size(16.dp).alpha(iconAlpha))
             Spacer(Modifier.width(8.dp))
             Text(text = "${activity.title} • ${activity.data}", color = textColor, fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
         }
@@ -491,12 +510,21 @@ fun Modifier.bounceClick(
     @Composable
     fun UniversalMid(textColor: Color, activity: LiveActivityData) {
         val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+        val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "pulse")
+        val alphaPulse by infiniteTransition.animateFloat(
+            initialValue = 0.4f, targetValue = 1f,
+            animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                animation = androidx.compose.animation.core.tween(800, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+            ), label = "alphaPulse"
+        )
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) {
                 if (activity.progress != null) {
                     androidx.compose.material3.CircularProgressIndicator(progress = { activity.progress }, color = Color(activity.color), trackColor = textColor.copy(alpha = 0.2f), modifier = Modifier.fillMaxSize())
                 }
-                Icon(painterResource(getIconForType(activity.type)), contentDescription = null, tint = Color(activity.color), modifier = Modifier.size(24.dp))
+                val iconAlpha = if (activity.type == ActivityType.CHARGING) alphaPulse else 1f
+                Icon(painterResource(getIconForType(activity.type)), contentDescription = null, tint = Color(activity.color), modifier = Modifier.size(24.dp).alpha(iconAlpha))
             }
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -531,7 +559,11 @@ fun Modifier.bounceClick(
             ActivityType.TIMER -> R.drawable.ic_timer_vector
             ActivityType.MESSAGE -> R.drawable.ic_mail_vector
             ActivityType.ALARM -> R.drawable.ic_alarm_vector
-            ActivityType.CHARGING -> R.drawable.ic_charging_vector
+            ActivityType.CHARGING -> R.drawable.ic_battery_charging_vector // Active charging
+            ActivityType.BATTERY_LOW -> R.drawable.ic_battery_alert_vector // Disconnected/Low
+            ActivityType.BATTERY_FULL -> R.drawable.ic_battery_full_vector // Added!
+            ActivityType.BLUETOOTH -> R.drawable.ic_bluetooth_vector
+            ActivityType.WIFI -> R.drawable.ic_wifi_vector
             else -> R.drawable.ic_sync_vector
         }
     }

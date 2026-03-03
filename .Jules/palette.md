@@ -1,0 +1,3 @@
+## 2024-05-24 - [UX improvement] Battery Charging Pulse and System Broadcast Icons
+**Learning:** Android 14+ (API 34) broadcast receivers for system-level protected intents like `ACTION_CONNECTION_STATE_CHANGED` and `NETWORK_STATE_CHANGED_ACTION` must use `Context.RECEIVER_EXPORTED` when registered dynamically in SystemUI, contrary to intuition about spoofing protection.
+**Action:** Always use `RECEIVER_EXPORTED` conditionally for these intents on Tiramisu and above to prevent `SecurityException` crashes in the SystemUI hook. Furthermore, vector drawable assets must use a default fill color of `#FFFFFF` to allow Jetpack Compose's `tint` modifier to dynamically colorize them without graphical artifacts.
