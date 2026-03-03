@@ -10,6 +10,9 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.animation.*
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.composed
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -166,6 +169,44 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     private val musicState = mutableStateOf<MusicData?>(null)
     private val liveActivityState = mutableStateOf<LiveActivityData?>(null)
     private val secondaryActivityState = mutableStateOf<LiveActivityData?>(null)
+
+@SuppressLint("ModifierFactoryUnreferencedReceiver")
+fun Modifier.bounceClick(
+    haptic: androidx.compose.ui.hapticfeedback.HapticFeedback,
+    onClick: () -> Unit
+): Modifier = composed {
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    // Spring animation for the "squish" effect
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isPressed) 0.85f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.5f, stiffness = 800f),
+        label = "bounce"
+    )
+
+    // Fire a light tactile tick the exact millisecond the finger touches the screen
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+        }
+    }
+
+    this
+        .graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
+        .clickable(
+            interactionSource = interactionSource,
+            indication = androidx.compose.foundation.LocalIndication.current, // Visual ripple
+            onClick = {
+                // Fire a stronger tactile click when the action actually executes
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                onClick()
+            }
+        )
+}
 
     data class MusicData(val title: String, val artist: String, val art: Bitmap?, val isPlaying: Boolean, val progress: Float, val duration: Long, val currentPosition: Long, val packageName: String = "", val appIcon: Bitmap? = null, val dominantColor: Color = Color.Cyan)
     data class LiveActivityData(val title: String, val data: String, val progress: Float?, val color: Int, val type: ActivityType)
@@ -448,6 +489,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
     @Composable
     fun UniversalMid(textColor: Color, activity: LiveActivityData) {
+        val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) {
                 if (activity.progress != null) {
@@ -461,7 +503,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                  Text(text = activity.data, color = textColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
             }
             if (activity.type == ActivityType.CALL || activity.type == ActivityType.ALARM) {
-                Box(modifier = Modifier.size(40.dp).background(Color.Red.copy(alpha=0.2f), RoundedCornerShape(20.dp)).clickable { onCloseClick?.invoke() }, contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.size(40.dp).background(Color.Red.copy(alpha=0.2f), RoundedCornerShape(20.dp)).bounceClick(haptic) { onCloseClick?.invoke() }, contentAlignment = Alignment.Center) {
                     Icon(painterResource(R.drawable.ic_close_vector), contentDescription="Close", tint=Color.Red)
                 }
             }
@@ -505,6 +547,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
     @Composable
     fun MusicMid(textColor: Color) {
+        val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
         val music = musicState.value ?: return
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             if (music.art != null && !music.art.isRecycled) {
@@ -518,13 +561,14 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                  Text(text = music.artist, color = textColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
             }
             val playIcon = if (music.isPlaying) R.drawable.ic_pause_vector else R.drawable.ic_play_vector
-            Icon(painterResource(playIcon), contentDescription = "Play/Pause", tint = textColor, modifier = Modifier.size(32.dp).clickable { onPlayPauseClick?.invoke() })
+            Icon(painterResource(playIcon), contentDescription = "Play/Pause", tint = textColor, modifier = Modifier.size(32.dp).bounceClick(haptic) { onPlayPauseClick?.invoke() })
         }
     }
 
     @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
     @Composable
     fun MusicMax(textColor: Color) {
+        val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
         val music = musicState.value ?: return
 
         // FULL BLEED BACKGROUND
@@ -564,7 +608,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     Row(
                         modifier = Modifier
                             .background(textColor.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
-                            .clickable { onOutputSwitcherClick?.invoke() }
+                            .bounceClick(haptic) { onOutputSwitcherClick?.invoke() }
                             .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -591,7 +635,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                         modifier = Modifier
                             .size(72.dp) // Large squircle size
                             .background(textColor.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
-                            .clickable { onPlayPauseClick?.invoke() },
+                            .bounceClick(haptic) { onPlayPauseClick?.invoke() },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(painterResource(playIcon), contentDescription = "Play/Pause", tint = textColor, modifier = Modifier.size(36.dp))
@@ -609,7 +653,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     if (isDragged) {
                         Text(formatTime(music.currentPosition), color = textColor, fontSize = 12.sp, modifier = Modifier.width(36.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     } else {
-                        Icon(painterResource(R.drawable.ic_prev_vector), contentDescription = "Prev", tint = textColor, modifier = Modifier.size(28.dp).clickable { onPrevClick?.invoke() })
+                        Icon(painterResource(R.drawable.ic_prev_vector), contentDescription = "Prev", tint = textColor, modifier = Modifier.size(28.dp).bounceClick(haptic) { onPrevClick?.invoke() })
                     }
 
                     Spacer(Modifier.width(12.dp))
@@ -631,13 +675,13 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     if (isDragged) {
                         Text(formatTime(music.duration), color = textColor, fontSize = 12.sp, modifier = Modifier.width(36.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     } else {
-                        Icon(painterResource(R.drawable.ic_next_vector), contentDescription = "Next", tint = textColor, modifier = Modifier.size(28.dp).clickable { onNextClick?.invoke() })
+                        Icon(painterResource(R.drawable.ic_next_vector), contentDescription = "Next", tint = textColor, modifier = Modifier.size(28.dp).bounceClick(haptic) { onNextClick?.invoke() })
                     }
 
                     Spacer(Modifier.width(20.dp))
-                    Icon(painterResource(R.drawable.ic_heart_vector), contentDescription = "Like", tint = textColor, modifier = Modifier.size(24.dp).clickable { onLikeClick?.invoke() })
+                    Icon(painterResource(R.drawable.ic_heart_vector), contentDescription = "Like", tint = textColor, modifier = Modifier.size(24.dp).bounceClick(haptic) { onLikeClick?.invoke() })
                     Spacer(Modifier.width(16.dp))
-                    Icon(painterResource(R.drawable.ic_shuffle_vector), contentDescription = "Shuffle", tint = textColor, modifier = Modifier.size(24.dp).clickable { onLoopClick?.invoke() })
+                    Icon(painterResource(R.drawable.ic_shuffle_vector), contentDescription = "Shuffle", tint = textColor, modifier = Modifier.size(24.dp).bounceClick(haptic) { onLoopClick?.invoke() })
                 }
             }
         }
