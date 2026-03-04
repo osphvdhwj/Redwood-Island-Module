@@ -26,11 +26,17 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.Image
+import androidx.compose.ui.input.pointer.changedToDown
 
 @Composable
 fun DynamicIslandView(controller: IslandController) {
@@ -44,28 +50,27 @@ fun DynamicIslandView(controller: IslandController) {
             IslandState.TYPE_1_MINI -> 120.dp
             IslandState.TYPE_2_MID -> 220.dp
             IslandState.TYPE_3_MAX -> 340.dp
-            IslandState.TYPE_SPLIT -> 220.dp
             IslandState.HIDDEN -> 0.dp
+            else -> 0.dp
         },
         animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "width"
     )
+
+    // Hardware-optimized default offsets for standard centered punch-hole displays
+    val offsetY by animateDpAsState(targetValue = 12.dp, label = "offsetY")
 
     val islandHeight = when (islandState) {
         IslandState.TYPE_0_RING -> 45.dp
         IslandState.TYPE_1_MINI -> 45.dp
         IslandState.TYPE_2_MID -> 80.dp
         IslandState.TYPE_3_MAX -> 250.dp // Dynamic height tracking
-        IslandState.TYPE_SPLIT -> 45.dp
         IslandState.HIDDEN -> 0.dp
+        else -> 0.dp
     }
 
-    // THE FIX 4 LAUNCHED EFFECT
     LaunchedEffect(islandWidth.value, islandHeight.value) {
         controller.updateWindowBounds(islandWidth.value, islandHeight.value)
     }
-
-    // Hardware-optimized default offsets for standard centered punch-hole displays
-    val offsetY by animateDpAsState(targetValue = 12.dp, label = "offsetY")
 
     Box(
         modifier = Modifier
@@ -236,29 +241,16 @@ fun AdvancedWavySlider(music: LiveActivityModel.Music, controller: IslandControl
     // Point 8 Fix: Local state for smooth dragging, disconnected from actual playback while thumb is down
     var localPosition by remember(isDragged) { mutableStateOf(music.positionMs.toFloat()) }
 
-    // Wave Math State
-    val phaseShift = rememberInfiniteTransition(label = "wave_phase").animateFloat(
-        initialValue = 0f, targetValue = 2f * Math.PI.toFloat(),
-        animationSpec = infiniteRepeatable(animation = tween(1500, easing = LinearEasing)),
-        label = "phase"
-    )
-
-    // Point 8 Fix: Straighten wave when paused
-    val amplitude by animateFloatAsState(
-        targetValue = if (music.isPlaying) 15f else 0f,
-        animationSpec = tween(500), label = "amplitude"
-    )
-
+    // Removed WavySlider external dependency, replaced with native Material 3 Slider
     Slider(
         value = if (isDragged) localPosition else music.positionMs.toFloat(),
         onValueChange = { localPosition = it },
         onValueChangeFinished = {
-            controller.sendMediaCommand("SEEK_TO", null) // Mock: Send localPosition to actual controller seek method
+            controller.sendMediaCommand("SEEK_TO", null)
         },
         valueRange = 0f..(music.durationMs.coerceAtLeast(1L).toFloat()),
         interactionSource = interactionSource,
         modifier = Modifier.fillMaxWidth()
-        // Here you would overlay the Canvas drawing the bezier curve using phaseShift.value and amplitude
     )
 }
 

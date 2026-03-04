@@ -1,4 +1,5 @@
 package com.example.dynamicisland
+import com.example.dynamicisland.LiveActivityModel
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
