@@ -15,7 +15,6 @@ import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import androidx.compose.ui.platform.ComposeView
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,7 +25,7 @@ class IslandController(private val context: Context) {
 
     private lateinit var windowManager: WindowManager
     private lateinit var layoutParams: WindowManager.LayoutParams
-    private var composeView: ComposeView? = null
+
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -57,51 +56,35 @@ class IslandController(private val context: Context) {
     /**
      * Binds the Compose UI to this controller.
      */
-    fun createIslandView(wm: android.view.WindowManager, params: android.view.WindowManager.LayoutParams): ComposeView {
-        this.windowManager = wm
-        this.layoutParams = params
+    fun createIslandView(wm: android.view.WindowManager, params: android.view.WindowManager.LayoutParams): android.view.View {
+        val view = DynamicIslandView(context)
+        view.windowManager = wm
+        view.windowParams = params
 
-        val view = ComposeView(context).apply {
-            setContent {
-                DynamicIslandView(controller = this@IslandController)
-            }
+        // Bind callbacks to the view
+        view.onSingleTap = { onIslandTapped() }
+        view.onDoubleTap = { onDoubleTap() }
+        view.onSwipeUp = { onSwipeUp() }
+        view.onCloseClick = { onTripleTap() }
+
+        view.onPlayPauseClick = {
+            if (currentMedia?.isPlaying == true) sendMediaCommand("PAUSE") else sendMediaCommand("PLAY")
+        }
+        view.onPrevClick = { sendMediaCommand("PREV") }
+        view.onNextClick = { sendMediaCommand("NEXT") }
+
+        // Observe the flows and feed them to the view
+        scope.launch {
+            islandState.collect { state -> view.setState(state) }
+        }
+        scope.launch {
+            activeModel.collect { model -> view.setModel(model) }
         }
 
-        // Initialize and attach the custom LifecycleOwner
-        val lifecycleOwner = RedwoodLifecycleOwner()
-        lifecycleOwner.onCreate()
-        lifecycleOwner.onStart()
-        lifecycleOwner.onResume()
-
-        view.setViewTreeLifecycleOwner(lifecycleOwner)
-        view.setViewTreeSavedStateRegistryOwner(lifecycleOwner)
-
-        this.composeView = view
         return view
     }
 
-    // THE FIX 4 INTEGRATION (With Hidden State Protection)
-    fun updateWindowBounds(targetWidthDp: Float, targetHeightDp: Float) {
-        if (composeView == null || !composeView!!.isAttachedToWindow) return
 
-        val density = context.resources.displayMetrics.density
-
-        if (targetWidthDp == 0f || targetHeightDp == 0f) {
-            // HIDDEN STATE: Shrink the physical window to 0 so it consumes NO touches.
-            layoutParams.width = 0
-            layoutParams.height = 0
-        } else {
-            // ACTIVE STATES: Apply your PR #34 math to prevent clipping.
-            layoutParams.width = (targetWidthDp * density).toInt() + (120 * density).toInt()
-            layoutParams.height = (targetHeightDp * density).toInt() + (150 * density).toInt()
-        }
-
-        try {
-            windowManager.updateViewLayout(composeView, layoutParams)
-        } catch (e: Exception) {
-            // Silently catch layout update limits to prevent SystemUI panics
-        }
-    }
 
 
 

@@ -7,11 +7,18 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.io.File
 
 class ConfigActivity : ComponentActivity() {
@@ -22,138 +29,179 @@ class ConfigActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Standard Xposed trick: Make the prefs file readable by SystemUI
+        // Setup XSharedPreferences bridging safely
         prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
         makePrefsWorldReadable()
 
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    ConfigUI()
-                }
+            MaterialTheme(colorScheme = darkColorScheme(background = Color(0xFF121212))) {
+                ConfigScreen()
             }
         }
     }
 
-    private fun makePrefsWorldReadable() {
-        val prefsDir = File(applicationInfo.dataDir, "shared_prefs")
-        val prefsFile = File(prefsDir, "island_prefs.xml")
-        if (prefsFile.exists()) {
-            prefsFile.setReadable(true, false)
-            prefsDir.setExecutable(true, false)
-        }
-    }
-
-
-
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun ConfigUI() {
-        val context = androidx.compose.ui.platform.LocalContext.current
-        var currentPreviewState by remember { mutableStateOf("MID") }
-
-        fun broadcastPreview(state: String) {
-            val intent = Intent("com.example.dynamicisland.SHOW_PREVIEW")
-            intent.putExtra("PREVIEW_TYPE", state)
-            context.sendBroadcast(intent)
-        }
-
+    fun ConfigScreen() {
+        // Read existing prefs, fallback to sensible defaults
         var offsetX by remember { mutableStateOf(prefs.getInt("offsetX", 0).toFloat()) }
         var offsetY by remember { mutableStateOf(prefs.getInt("offsetY", 48).toFloat()) }
-        var ringOffsetY by remember { mutableStateOf(prefs.getInt("ringOffsetY", 48).toFloat()) }
-        var camWidth by remember { mutableStateOf(prefs.getInt("camWidth", 24).toFloat()) }
-        var camHeight by remember { mutableStateOf(prefs.getInt("camHeight", 24).toFloat()) }
-        var pillScaleX by remember { mutableStateOf(prefs.getFloat("pillScaleX", 1f)) }
-        var pillScaleY by remember { mutableStateOf(prefs.getFloat("pillScaleY", 1f)) }
+        var width by remember { mutableStateOf(prefs.getInt("camWidth", 24).toFloat()) }
+        var height by remember { mutableStateOf(prefs.getInt("camHeight", 24).toFloat()) }
+        var pinnedApps by remember { mutableStateOf(prefs.getString("pinnedApps", "com.whatsapp,com.instagram.android") ?: "") }
 
-        Column(modifier = Modifier.padding(24.dp)) {
-            Text("Dynamic Island Configuration", style = MaterialTheme.typography.headlineSmall)
-            Spacer(modifier = Modifier.height(16.dp))
+        val scrollState = rememberScrollState()
 
-            Text(text = "Live Preview Toggles:", color = androidx.compose.ui.graphics.Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(20.dp)
+                .verticalScroll(scrollState)
+        ) {
+            Text("Dynamic Island Settings", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("Poco X5 Pro Fine-Tuning", color = Color.Gray, fontSize = 14.sp)
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // 1. POSITION CARD
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Button(modifier = Modifier.weight(1f), onClick = { currentPreviewState = "MINI"; broadcastPreview("MINI") }) { Text("Mini") }
-                Button(modifier = Modifier.weight(1f), onClick = { currentPreviewState = "MID"; broadcastPreview("MID") }) { Text("Mid") }
-                Button(modifier = Modifier.weight(1f), onClick = { currentPreviewState = "MAX"; broadcastPreview("MAX") }) { Text("Max") }
-                Button(modifier = Modifier.weight(1f), onClick = { currentPreviewState = "RING"; broadcastPreview("RING") }) { Text("Ring") }
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Position", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("X Offset: ${offsetX.toInt()}", color = Color.Gray)
+                    Slider(value = offsetX, onValueChange = { offsetX = it; saveAndBroadcast(offsetX, offsetY, width, height, pinnedApps) }, valueRange = -200f..200f)
+                    Text("Y Offset: ${offsetY.toInt()}", color = Color.Gray)
+                    Slider(value = offsetY, onValueChange = { offsetY = it; saveAndBroadcast(offsetX, offsetY, width, height, pinnedApps) }, valueRange = -100f..200f)
+                }
             }
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            ConfigSlider("Pill X Offset (Left/Right)", offsetX, -100f, 100f) {
-                offsetX = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
-                if (currentPreviewState == "RING") currentPreviewState = "MID"
-                broadcastPreview(currentPreviewState)
-            }
-            ConfigSlider("Pill Y Offset (Up/Down)", offsetY, -100f, 200f) {
-                offsetY = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
-                if (currentPreviewState == "RING") currentPreviewState = "MID"
-                broadcastPreview(currentPreviewState)
-            }
-            ConfigSlider("Ring Y Offset", ringOffsetY, -100f, 200f) {
-                ringOffsetY = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
-                currentPreviewState = "RING"
-                broadcastPreview("RING")
-            }
-            ConfigSlider("Camera Width", camWidth, 10f, 80f) {
-                camWidth = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
-                if (currentPreviewState == "RING") currentPreviewState = "MID"
-                broadcastPreview(currentPreviewState)
-            }
-            ConfigSlider("Camera Height", camHeight, 10f, 80f) {
-                camHeight = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
-                if (currentPreviewState == "RING") currentPreviewState = "MID"
-                broadcastPreview(currentPreviewState)
-            }
-            ConfigSlider("Pill Width Scale", pillScaleX, 0.5f, 2.0f) {
-                pillScaleX = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
-                if (currentPreviewState == "RING") currentPreviewState = "MID"
-                broadcastPreview(currentPreviewState)
-            }
-            ConfigSlider("Pill Height Scale", pillScaleY, 0.5f, 2.0f) {
-                pillScaleY = it; saveAndBroadcast(offsetX, offsetY, ringOffsetY, camWidth, camHeight, pillScaleX, pillScaleY)
-                if (currentPreviewState == "RING") currentPreviewState = "MID"
-                broadcastPreview(currentPreviewState)
+            // 2. DIMENSIONS CARD
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Punch Hole Size", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Width: ${width.toInt()}", color = Color.Gray)
+                    Slider(value = width, onValueChange = { width = it; saveAndBroadcast(offsetX, offsetY, width, height, pinnedApps) }, valueRange = 10f..150f)
+                    Text("Height: ${height.toInt()}", color = Color.Gray)
+                    Slider(value = height, onValueChange = { height = it; saveAndBroadcast(offsetX, offsetY, width, height, pinnedApps) }, valueRange = 10f..150f)
+                }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
 
+            // 3. PINNED APPS ENGINE
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Dashboard Pinned Apps", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Enter package names separated by commas.", color = Color.Gray, fontSize = 12.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = pinnedApps,
+                        onValueChange = { pinnedApps = it; saveAndBroadcast(offsetX, offsetY, width, height, pinnedApps) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.LightGray,
+                            cursorColor = Color.White,
+                            focusedBorderColor = Color.Gray,
+                            unfocusedBorderColor = Color.DarkGray
+                        ),
+                        singleLine = true
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 4. LIVE PREVIEW ENGINE
+            Text("Live Preview Overrides", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = { sendPreviewIntent("TYPE_1_MINI") },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333))
+                ) { Text("Mini") }
+                Button(
+                    onClick = { sendPreviewIntent("TYPE_2_MID") },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333))
+                ) { Text("Mid") }
+                Button(
+                    onClick = { sendPreviewIntent("TYPE_3_MAX") },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333))
+                ) { Text("Max") }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = { sendBroadcast(Intent("com.example.dynamicisland.TEST_RING").setPackage("com.android.systemui")) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0066CC))
+            ) {
+                Text("Trigger Test Notification")
+            }
+
+            Spacer(modifier = Modifier.height(32.dp)) // Bottom padding
         }
     }
 
-    private fun saveAndBroadcast(x: Float, y: Float, ringY: Float, w: Float, h: Float, scaleX: Float, scaleY: Float) {
+    private fun saveAndBroadcast(x: Float, y: Float, w: Float, h: Float, apps: String) {
         prefs.edit()
             .putInt("offsetX", x.toInt())
             .putInt("offsetY", y.toInt())
-            .putInt("ringOffsetY", ringY.toInt())
             .putInt("camWidth", w.toInt())
             .putInt("camHeight", h.toInt())
-            .putFloat("pillScaleX", scaleX)
-            .putFloat("pillScaleY", scaleY)
+            .putString("pinnedApps", apps)
             .apply()
+
         makePrefsWorldReadable()
 
-        val intent = Intent("com.example.dynamicisland.UPDATE_CONFIG")
-        intent.putExtra("offsetX", x.toInt())
-        intent.putExtra("offsetY", y.toInt())
-        intent.putExtra("ringOffsetY", ringY.toInt())
-        intent.putExtra("camWidth", w.toInt())
-        intent.putExtra("camHeight", h.toInt())
-        intent.putExtra("pillScaleX", scaleX)
-        intent.putExtra("pillScaleY", scaleY)
+        // Broadcast to SystemUI to live-update the layout
+        val intent = Intent("com.example.dynamicisland.UPDATE_CONFIG").apply {
+            putExtra("offsetX", x.toInt())
+            putExtra("offsetY", y.toInt())
+            putExtra("camWidth", w.toInt())
+            putExtra("camHeight", h.toInt())
+            putExtra("pinnedApps", apps)
+            setPackage("com.android.systemui")
+        }
         sendBroadcast(intent)
     }
 
-    @Composable
-    fun ConfigSlider(label: String, value: Float, min: Float, max: Float, onValueChange: (Float) -> Unit) {
-        Column(modifier = Modifier.padding(vertical = 8.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(label)
-                Text(value.toInt().toString())
+    private fun sendPreviewIntent(state: String) {
+        val intent = Intent("com.example.dynamicisland.LIVE_PREVIEW").apply {
+            putExtra("preview_state", state)
+            setPackage("com.android.systemui")
+        }
+        sendBroadcast(intent)
+    }
+
+    private fun makePrefsWorldReadable() {
+        try {
+            val file = File(applicationInfo.dataDir, "shared_prefs/island_prefs.xml")
+            if (file.exists()) {
+                file.setReadable(true, false)
             }
-            Slider(value = value, onValueChange = onValueChange, valueRange = min..max)
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }

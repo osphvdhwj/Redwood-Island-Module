@@ -56,9 +56,9 @@ class MainHook : IXposedHookLoadPackage {
                 }
 
                 val islandController = IslandController(systemUiContext)
-                val composeView = islandController.createIslandView(windowManager, layoutParams)
+                val islandView = islandController.createIslandView(windowManager, layoutParams)
 
-                windowManager.addView(composeView, layoutParams)
+                windowManager.addView(islandView, layoutParams)
                 XposedBridge.log("RedwoodIsland: Delayed injection successful.")
 
             } catch (e: Exception) {
