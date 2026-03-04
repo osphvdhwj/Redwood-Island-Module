@@ -40,8 +40,9 @@ class IslandController(private val context: Context) {
     private var mediaTickerJob: Job? = null
 
     init {
-        setupHardwareMonitor()
-        setupMediaListener()
+        // TEMP SAFETY QUARANTINE: Disabled to isolate SystemUI bootloop
+        // setupHardwareMonitor()
+        // setupMediaListener()
     }
 
     /**

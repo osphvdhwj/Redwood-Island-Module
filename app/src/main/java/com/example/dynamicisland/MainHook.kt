@@ -37,21 +37,17 @@ class MainHook : IXposedHookLoadPackage {
         try {
             val windowManager = systemUiContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-            // Critical Fix: Touch Routing & Display Cutout Overlap
             val layoutParams = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                2024, // TYPE_NAVIGATION_BAR_PANEL (Ensures it draws over lockscreen/status bar)
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                2024, // TYPE_NAVIGATION_BAR_PANEL
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or // Allows touches to pass through empty space
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, // Prevents OS clipping at the status bar edge
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                // Forces the view to draw strictly around the physical camera punch-hole
-                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
                 title = "RedwoodIslandOverlay"
             }
 
