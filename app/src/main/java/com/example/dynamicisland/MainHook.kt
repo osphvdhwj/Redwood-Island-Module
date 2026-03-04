@@ -40,21 +40,23 @@ class MainHook : IXposedHookLoadPackage {
                 XposedBridge.log("RedwoodIsland: Starting delayed injection...")
                 val windowManager = systemUiContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-                // Simplified, ultra-safe LayoutParams for debugging
+                // LayoutParams restored to WRAP_CONTENT to allow dynamic pill resizing
                 val layoutParams = WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.MATCH_PARENT,
-                    WindowManager.LayoutParams.MATCH_PARENT,
-                    2024,
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    2024, // TYPE_NAVIGATION_BAR_PANEL
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                     PixelFormat.TRANSLUCENT
                 ).apply {
-                    gravity = android.view.Gravity.TOP
+                    gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
                     title = "RedwoodIslandOverlay"
                 }
 
                 val islandController = IslandController(systemUiContext)
-                val composeView = islandController.createIslandView()
+                val composeView = islandController.createIslandView(windowManager, layoutParams)
 
                 windowManager.addView(composeView, layoutParams)
                 XposedBridge.log("RedwoodIsland: Delayed injection successful.")

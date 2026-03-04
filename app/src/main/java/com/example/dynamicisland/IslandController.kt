@@ -1,4 +1,7 @@
 package com.example.dynamicisland
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+
 
 import android.app.PendingIntent
 import android.content.ComponentName
@@ -17,7 +20,13 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+import android.view.WindowManager
+
 class IslandController(private val context: Context) {
+
+    private lateinit var windowManager: WindowManager
+    private lateinit var layoutParams: WindowManager.LayoutParams
+    private var composeView: ComposeView? = null
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -48,13 +57,53 @@ class IslandController(private val context: Context) {
     /**
      * Binds the Compose UI to this controller.
      */
-    fun createIslandView(): ComposeView {
-        return ComposeView(context).apply {
+    fun createIslandView(wm: android.view.WindowManager, params: android.view.WindowManager.LayoutParams): ComposeView {
+        this.windowManager = wm
+        this.layoutParams = params
+
+        val view = ComposeView(context).apply {
             setContent {
                 DynamicIslandView(controller = this@IslandController)
             }
         }
+
+        // Initialize and attach the custom LifecycleOwner
+        val lifecycleOwner = RedwoodLifecycleOwner()
+        lifecycleOwner.onCreate()
+        lifecycleOwner.onStart()
+        lifecycleOwner.onResume()
+
+        view.setViewTreeLifecycleOwner(lifecycleOwner)
+        view.setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+
+        this.composeView = view
+        return view
     }
+
+    // THE FIX 4 INTEGRATION (With Hidden State Protection)
+    fun updateWindowBounds(targetWidthDp: Float, targetHeightDp: Float) {
+        if (composeView == null || !composeView!!.isAttachedToWindow) return
+
+        val density = context.resources.displayMetrics.density
+
+        if (targetWidthDp == 0f || targetHeightDp == 0f) {
+            // HIDDEN STATE: Shrink the physical window to 0 so it consumes NO touches.
+            layoutParams.width = 0
+            layoutParams.height = 0
+        } else {
+            // ACTIVE STATES: Apply your PR #34 math to prevent clipping.
+            layoutParams.width = (targetWidthDp * density).toInt() + (120 * density).toInt()
+            layoutParams.height = (targetHeightDp * density).toInt() + (150 * density).toInt()
+        }
+
+        try {
+            windowManager.updateViewLayout(composeView, layoutParams)
+        } catch (e: Exception) {
+            // Silently catch layout update limits to prevent SystemUI panics
+        }
+    }
+
+
 
     // --- STATE ROUTING & PRIORITIES ---
 

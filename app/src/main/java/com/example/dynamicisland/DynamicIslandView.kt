@@ -50,6 +50,20 @@ fun DynamicIslandView(controller: IslandController) {
         animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "width"
     )
 
+    val islandHeight = when (islandState) {
+        IslandState.TYPE_0_RING -> 45.dp
+        IslandState.TYPE_1_MINI -> 45.dp
+        IslandState.TYPE_2_MID -> 80.dp
+        IslandState.TYPE_3_MAX -> 250.dp // Dynamic height tracking
+        IslandState.TYPE_SPLIT -> 45.dp
+        IslandState.HIDDEN -> 0.dp
+    }
+
+    // THE FIX 4 LAUNCHED EFFECT
+    LaunchedEffect(islandWidth.value, islandHeight.value) {
+        controller.updateWindowBounds(islandWidth.value, islandHeight.value)
+    }
+
     // Hardware-optimized default offsets for standard centered punch-hole displays
     val offsetY by animateDpAsState(targetValue = 12.dp, label = "offsetY")
 
