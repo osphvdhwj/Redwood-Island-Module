@@ -23,7 +23,10 @@ enum class ActivityType(val priority: Int) {
     MESSAGE(40),
     DOWNLOAD(30),
     CHARGING(20),       // Transient (auto-dismisses)
-    HARDWARE(10)
+    HARDWARE(10),
+    BATTERY_LOW(15),
+    BLUETOOTH(15),
+    WIFI(15)
 }
 
 sealed class LiveActivityModel {

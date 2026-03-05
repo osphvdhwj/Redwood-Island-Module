@@ -298,6 +298,29 @@ class IslandController(private val context: Context) {
     // --- HARDWARE SUBSCRIPTION ---
 
     private fun setupHardwareMonitor() {
+        // Battery Tracking
+        BatteryPlugin.onBatteryChanged = { level, isCharging, color ->
+             if (isCharging) {
+                 val act = LiveActivityModel.Charging(
+                     id = "sys_battery",
+                     level = level,
+                     isPluggedIn = true,
+                     isTransient = true
+                 )
+                 postTransientNotification(act)
+             } else {
+                 // Trigger a 3-second pop-up when unplugged
+                 val act = LiveActivityModel.Charging(
+                     id = "sys_battery_disconnect",
+                     level = level,
+                     isPluggedIn = false,
+                     isTransient = true
+                 ).copy(type = ActivityType.BATTERY_LOW)
+                 postTransientNotification(act)
+             }
+        }
+        BatteryPlugin.start(context)
+
         scope.launch {
             HardwareMonitors.startMonitoring().collect { hw ->
                 currentHardware = hw
