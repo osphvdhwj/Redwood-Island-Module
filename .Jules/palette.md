@@ -25,3 +25,6 @@
 ## 2024-05-24 - [CI/CD] Incompatible APK Signatures
 **Learning:** Android security strictly requires app updates to match the cryptographic signature of the originally installed APK. If you try to install a Release APK built via GitHub Actions (signed with a production keystore) over a Debug-signed installation (built locally via Android Studio), the installation will fail with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`.
 **Action:** When transitioning from local debug testing to production signed APKs, the existing debug module must be fully uninstalled (`adb uninstall com.example.dynamicisland` or via Settings) before flashing the new signed APK. If keeping SharedPreferences is required, the local build environment must use the exact same `.jks` keystore file as the CI/CD pipeline.
+## 2024-05-24 - [Hotfix] Compose Negative Padding Crash
+**Learning:** Jetpack Compose strictly forbids negative padding and will instantly crash the app with `IllegalArgumentException: Padding must be non-negative`.
+**Action:** When implementing global offsets that may require negative values (like fine-tuning a UI against a hardware cutout), remove `Modifier.padding()` and apply the negative offset math directly to the `WindowManager.LayoutParams.x` and `y` coordinates. The OS WindowManager can handle negative screen coordinates safely; Compose cannot.

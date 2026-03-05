@@ -213,7 +213,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
         }
 
-        Box(modifier = Modifier.fillMaxSize().padding(top = camOffsetY.value.dp), contentAlignment = Alignment.TopCenter) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
             Box(
                 modifier = Modifier
                     .width(width)
