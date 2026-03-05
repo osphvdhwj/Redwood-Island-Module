@@ -41,6 +41,24 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.input.pointer.changedToDown
 import androidx.core.graphics.drawable.toBitmap
 
+
+import androidx.lifecycle.*
+import androidx.savedstate.*
+
+class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    private val savedStateRegistryController = SavedStateRegistryController.create(this)
+    override val lifecycle: Lifecycle get() = lifecycleRegistry
+    override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
+
+    fun start() {
+        savedStateRegistryController.performRestore(android.os.Bundle())
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+    }
+}
+
 @SuppressLint("ViewConstructor")
 class DynamicIslandView(context: Context) : FrameLayout(context) {
 
@@ -66,6 +84,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     var onPrevClick: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
     var onSeekTo: ((Long) -> Unit)? = null
+
+    private val lifecycleOwner = OverlayLifecycleOwner()
 
     private val configReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
@@ -111,7 +131,10 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             context.registerReceiver(configReceiver, filter)
         }
 
-        // We rely entirely on the RedwoodLifecycleOwner provided by IslandController
+        setViewTreeLifecycleOwner(lifecycleOwner)
+        setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+        setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
+
         val composeView = ComposeView(context).apply {
             setContent {
                 MaterialTheme(colorScheme = darkColorScheme()) {
@@ -127,6 +150,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         runRecomposeScope.launch { recomposer.runRecomposeAndApplyChanges() }
 
         addView(composeView)
+        lifecycleOwner.start()
     }
 
     override fun onDetachedFromWindow() {
