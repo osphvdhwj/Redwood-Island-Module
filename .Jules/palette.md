@@ -31,3 +31,6 @@
 ## 2024-05-24 - [Architectural Rewrite] ViewTree Lifecycle Delegation
 **Learning:** If a Jetpack Compose tree throws `IllegalStateException: Composed into the View which doesn't propagate ViewTreeLifecycleOwner!`, the lifecycle bindings (`setViewTreeLifecycleOwner`, etc.) must be declared exactly on the root `View` (e.g., `FrameLayout`) *before* the `ComposeView` is attached or initialized.
 **Action:** Relocate the `OverlayLifecycleOwner` instantiation into the `init` block of the outermost container class (e.g., `DynamicIslandView`), call `setViewTreeLifecycleOwner` targeting that container, and ensure no other lifecycle bindings conflict or overwrite it at the Controller level.
+## 2024-05-24 - [Debugging] Android 15 Notification Access Requirement
+**Learning:** To intercept media sessions via `MediaSessionManager` on Android 15+, the app must declare a `NotificationListenerService` in the manifest and be explicitly granted 'Notification Access' in Android settings, otherwise the system will silently block media updates.
+**Action:** Always verify that 'Notification Access' is granted in Android Settings when debugging media or notification interception issues in Xposed modules on modern Android versions.
