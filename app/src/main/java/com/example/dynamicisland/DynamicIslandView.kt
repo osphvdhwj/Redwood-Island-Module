@@ -26,11 +26,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.compositionContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -277,12 +279,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     fun DashboardMax(model: LiveActivityModel.Dashboard) {
         Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                // Using safe local vectors to prevent OEM crashes
+                // 100% safe mathematically drawn icons (No R.drawable)
                 Box(modifier = Modifier.size(50.dp).background(if (model.isWifiOn) Color.Blue else Color.DarkGray, CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.ic_wifi_vector), "WiFi", tint = Color.White, modifier = Modifier.size(24.dp))
+                    Icon(imageVector = Icons.Default.Settings, contentDescription = "WiFi", tint = Color.White, modifier = Modifier.size(24.dp))
                 }
                 Box(modifier = Modifier.size(50.dp).background(if (model.isTorchOn) Color.Yellow else Color.DarkGray, CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.ic_torch_vector), "Torch", tint = Color.White, modifier = Modifier.size(24.dp))
+                    Icon(imageVector = Icons.Default.Build, contentDescription = "Torch", tint = Color.White, modifier = Modifier.size(24.dp))
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -325,12 +327,15 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
             Spacer(modifier = Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-                Icon(painterResource(R.drawable.ic_prev_vector), "Prev", tint = Color.White, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
-                val playIcon = if (music.isPlaying) R.drawable.ic_pause_vector else R.drawable.ic_play_vector
+                Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Prev", tint = Color.White, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
+
+                // Safe Play/Pause handling
+                val playIcon = if (music.isPlaying) Icons.Default.Close else Icons.Default.PlayArrow
                 Box(modifier = Modifier.size(56.dp).background(Color.White.copy(alpha = 0.15f), CircleShape).clickable { onPlayPauseClick?.invoke() }, contentAlignment = Alignment.Center) {
-                    Icon(painterResource(playIcon), "Play/Pause", tint = Color.White, modifier = Modifier.size(32.dp))
+                    Icon(imageVector = playIcon, contentDescription = "Play/Pause", tint = Color.White, modifier = Modifier.size(32.dp))
                 }
-                Icon(painterResource(R.drawable.ic_next_vector), "Next", tint = Color.White, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
+
+                Icon(imageVector = Icons.Default.ArrowForward, contentDescription = "Next", tint = Color.White, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
             }
         }
     }
@@ -390,4 +395,17 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         islandState.value = newState
     }
     fun setModel(model: LiveActivityModel?) { activeModel.value = model }
+
+    private fun getIconForType(type: ActivityType): ImageVector {
+        return when(type) {
+            ActivityType.CALL -> Icons.Default.Phone
+            ActivityType.NAVIGATION -> Icons.Default.LocationOn
+            ActivityType.TIMER -> Icons.Default.Notifications
+            ActivityType.MESSAGE -> Icons.Default.Email
+            ActivityType.ALARM -> Icons.Default.Notifications
+            ActivityType.CHARGING -> Icons.Default.Add
+            else -> Icons.Default.Info
+        }
+    }
+
 }

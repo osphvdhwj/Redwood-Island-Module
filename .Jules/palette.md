@@ -28,3 +28,6 @@
 ## 2024-05-24 - [Hotfix] Compose Negative Padding Crash
 **Learning:** Jetpack Compose strictly forbids negative padding and will instantly crash the app with `IllegalArgumentException: Padding must be non-negative`.
 **Action:** When implementing global offsets that may require negative values (like fine-tuning a UI against a hardware cutout), remove `Modifier.padding()` and apply the negative offset math directly to the `WindowManager.LayoutParams.x` and `y` coordinates. The OS WindowManager can handle negative screen coordinates safely; Compose cannot.
+## 2024-05-24 - [Architectural Rewrite] ViewTree Lifecycle Delegation
+**Learning:** If a Jetpack Compose tree throws `IllegalStateException: Composed into the View which doesn't propagate ViewTreeLifecycleOwner!`, the lifecycle bindings (`setViewTreeLifecycleOwner`, etc.) must be declared exactly on the root `View` (e.g., `FrameLayout`) *before* the `ComposeView` is attached or initialized.
+**Action:** Relocate the `OverlayLifecycleOwner` instantiation into the `init` block of the outermost container class (e.g., `DynamicIslandView`), call `setViewTreeLifecycleOwner` targeting that container, and ensure no other lifecycle bindings conflict or overwrite it at the Controller level.
