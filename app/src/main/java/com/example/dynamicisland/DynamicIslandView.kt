@@ -230,7 +230,13 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 if (state != IslandState.HIDDEN) {
                     val model = activeModel.value
 
-                    Box(modifier = Modifier.fillMaxSize().padding(bottom = if (state == IslandState.TYPE_3_MAX) 24.dp else 0.dp)) {
+                                        // Safely animate the padding to prevent transient negative values on Android 15
+                    val bottomPadding by animateDpAsState(
+                        targetValue = if (state == IslandState.TYPE_3_MAX) 24.dp else 0.dp,
+                        label = "bottomPadding"
+                    )
+
+                    Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
                         AnimatedContent(targetState = state, label = "morph") { s ->
                             when (s) {
                                 IslandState.TYPE_3_MAX -> {

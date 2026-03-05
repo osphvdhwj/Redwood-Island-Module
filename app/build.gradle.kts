@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.example.dynamicisland"
-    compileSdk = 34
+    compileSdk = 35 // ⬆️ Upgraded to Android 15
 
     defaultConfig {
         applicationId = "com.example.dynamicisland"
         minSdk = 33
-        targetSdk = 34
+        targetSdk = 35 // ⬆️ Upgraded to Android 15
         versionCode = 1
         versionName = "1.0"
     }
@@ -22,18 +22,18 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17 // ⬆️ Upgraded for Android 15 ART
+        targetCompatibility = JavaVersion.VERSION_17 // ⬆️ Upgraded for Android 15 ART
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17" // ⬆️ Upgraded for Android 15 ART
     }
     buildFeatures {
         viewBinding = true
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.11"
+        kotlinCompilerExtensionVersion = "1.5.14" // ⬆️ Bumped for newer Compose
     }
 }
 
@@ -48,7 +48,7 @@ dependencies {
     implementation("androidx.palette:palette-ktx:1.0.0")
 
     // Jetpack Compose Integration
-    val composeBom = platform("androidx.compose:compose-bom:2024.02.00")
+    val composeBom = platform("androidx.compose:compose-bom:2024.09.00") // ⬆️ Latest Stable BOM
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
@@ -56,4 +56,5 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.8.2")
 
     // Wavy Slider
+    implementation("ir.mahozad.multiplatform:wavy-slider:1.0.0")
 }

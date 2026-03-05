@@ -34,3 +34,6 @@
 ## 2024-05-24 - [Debugging] Android 15 Notification Access Requirement
 **Learning:** To intercept media sessions via `MediaSessionManager` on Android 15+, the app must declare a `NotificationListenerService` in the manifest and be explicitly granted 'Notification Access' in Android settings, otherwise the system will silently block media updates.
 **Action:** Always verify that 'Notification Access' is granted in Android Settings when debugging media or notification interception issues in Xposed modules on modern Android versions.
+## 2024-05-24 - [CI/CD] Compose Compiler Version Mismatch on SDK 35
+**Learning:** When upgrading a Jetpack Compose project to `compileSdk = 35` and updating the Compose BOM, the `kotlinCompilerExtensionVersion` MUST be compatible with the project's Kotlin version. If `kotlinCompilerExtensionVersion = "1.5.14"` is used, the Gradle `kotlin-android` plugin must be upgraded to `"1.9.24"`. If left at `"1.9.23"`, the build will fail with a compatibility exception.
+**Action:** Always cross-reference the Compose-Kotlin compatibility map (https://developer.android.com/jetpack/androidx/releases/compose-kotlin) and update the `build.gradle.kts` (or project root `build.gradle`) Kotlin version simultaneously when bumping the Compose compiler extension.
