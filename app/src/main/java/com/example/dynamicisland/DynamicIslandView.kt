@@ -269,6 +269,27 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
         val radTarget = if (state == IslandState.TYPE_3_MAX) 42.dp else (targetHeight / 2).dp
         val rad by animateDpAsState(radTarget, physicsSpec, label = "rad")
+        // --- UI PHASE: GLASSMORPHISM & DYNAMIC COLOR ---
+        val targetBgColor = if (state == IslandState.HIDDEN) {
+            Color.Transparent // 100% Invisible when completely idle
+        } else {
+            val model = activeModel.value
+            // If music is playing and we extracted an album color, crossfade into it!
+            if (model is LiveActivityModel.Music && model.dominantColor != null) {
+                Color(model.dominantColor).copy(alpha = 0.65f)
+            } else {
+                // Default: Premium Frosted Dark Glass
+                Color(0xFF121212).copy(alpha = 0.85f)
+            }
+        }
+        
+        val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(500), label = "bgColor")
+        
+        // A subtle white rim-light to make it look physical
+        val borderColor by animateColorAsState(
+            targetValue = if (state == IslandState.HIDDEN) Color.Transparent else Color.White.copy(alpha = 0.15f),
+            animationSpec = tween(500), label = "borderColor"
+        )
 
         LaunchedEffect(width, height, offsetX, offsetY, state) {
             if (!isAttachedToWindow) return@LaunchedEffect
