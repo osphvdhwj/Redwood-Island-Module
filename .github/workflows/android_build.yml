@@ -2,9 +2,9 @@ name: Android Build
 
 on:
   push:
-    branches: [ "feat/palette-ux--6667854715765388137-11764922435106616749", "main", "dynamic-island-visuals-v5-build" ]
+    branches: [ "feat/palette-ux-improvements-6667854715765388137-11764922435106616749", "main", "dynamic-island-visuals-v5-build" ]
   pull_request:
-    branches: [ "feat/palette-ux--6667854715765388137-11764922435106616749", "main" ]
+    branches: [ "feat/palette-ux-improvements-6667854715765388137-11764922435106616749", "main" ]
 jobs:
   build:
     runs-on: ubuntu-latest
