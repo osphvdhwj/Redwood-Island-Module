@@ -144,19 +144,24 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         override fun onReceive(ctx: Context, intent: Intent) {
             when (intent.action) {
                 "com.example.dynamicisland.RELOAD_PREFS" -> {
-                    // Extract the live numbers straight from the Intent
-                    val prefix = intent.getStringExtra("prefix") ?: return
-                    val w = intent.getFloatExtra("w", 0f)
-                    val h = intent.getFloatExtra("h", 0f)
-                    val x = intent.getFloatExtra("x", 0f)
-                    val y = intent.getFloatExtra("y", 0f)
+                    // Extract the live numbers straight from the RAM Payload!
+                    val prefix = intent.getStringExtra("prefix")
+                    if (prefix != null) {
+                        val w = intent.getFloatExtra("w", 0f)
+                        val h = intent.getFloatExtra("h", 0f)
+                        val x = intent.getFloatExtra("x", 0f)
+                        val y = intent.getFloatExtra("y", 0f)
 
-                    // Instantly apply them to the Compose states
-                    when (prefix) {
-                        "ring" -> { ringW.value = w; ringH.value = h; ringX.value = x; ringY.value = y }
-                        "mini" -> { miniW.value = w; miniH.value = h; miniX.value = x; miniY.value = y }
-                        "mid" ->  { midW.value = w; midH.value = h; midX.value = x; midY.value = y }
-                        "max" ->  { maxW.value = w; maxH.value = h; maxX.value = x; maxY.value = y }
+                        // Instantly update the UI states without touching disk
+                        when (prefix) {
+                            "ring" -> { ringW.value = w; ringH.value = h; ringX.value = x; ringY.value = y }
+                            "mini" -> { miniW.value = w; miniH.value = h; miniX.value = x; miniY.value = y }
+                            "mid" ->  { midW.value = w; midH.value = h; midX.value = x; midY.value = y }
+                            "max" ->  { maxW.value = w; maxH.value = h; maxX.value = x; maxY.value = y }
+                        }
+                    } else {
+                        // Fallback to disk read on first boot
+                        loadPreferences()
                     }
                 }
                 "com.example.dynamicisland.LIVE_PREVIEW" -> {
