@@ -29,7 +29,7 @@
             android:value="true" />
         <meta-data
             android:name="xposeddescription"
-            android:value="Dynamic Island for Android 15 (crDroid 11.8)" />
+            android:value="@string/xposed_description" />
         <meta-data
             android:name="xposedminversion"
             android:value="82" />

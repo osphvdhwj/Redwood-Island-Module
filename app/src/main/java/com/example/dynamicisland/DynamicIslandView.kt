@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 // The missing Foundation and Drawing modifiers
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
@@ -356,7 +357,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
             Spacer(modifier = Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-                Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Prev", tint = Color.White, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev", tint = Color.White, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
 
                 // Safe Play/Pause handling
                 val playIcon = if (music.isPlaying) Icons.Default.Close else Icons.Default.PlayArrow
@@ -364,7 +365,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     Icon(imageVector = playIcon, contentDescription = "Play/Pause", tint = Color.White, modifier = Modifier.size(32.dp))
                 }
 
-                Icon(imageVector = Icons.Default.ArrowForward, contentDescription = "Next", tint = Color.White, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next", tint = Color.White, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
             }
         }
     }

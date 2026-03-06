@@ -299,7 +299,7 @@ class IslandController(private val context: Context) {
 
     private fun setupHardwareMonitor() {
         // Battery Tracking
-        BatteryPlugin.onBatteryChanged = { level, isCharging, color ->
+        BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
              if (isCharging) {
                  val act = LiveActivityModel.Charging(
                      id = "sys_battery",
