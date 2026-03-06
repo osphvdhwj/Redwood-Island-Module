@@ -169,7 +169,7 @@ class ConfigActivity : ComponentActivity() {
         val intent = Intent("com.example.dynamicisland.RELOAD_PREFS")
         
         // CRITICAL FIX: Allow the background SystemUI process to hear this broadcast
-        intent.addFlags(Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND)
+        intent.addFlags(0x01000000)
         
         // Pack the payload
         intent.putExtra("prefix", prefix)
