@@ -87,8 +87,7 @@ class ConfigActivity : ComponentActivity() {
                 // The Mock Island
                 Box(
                     modifier = Modifier
-                        .padding(top = currentY.dp)
-                        .offset(x = currentX.dp)
+                        .offset(x = currentX.dp, y = currentY.dp)
                         .width(previewW)
                         .height(previewH)
                         .clip(RoundedCornerShape(previewRad))
