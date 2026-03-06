@@ -164,8 +164,10 @@ class ConfigActivity : ComponentActivity() {
             .apply()
 
         makePrefsWorldReadable()
-        // 🚀 THE FIX: Beam the numbers directly through memory!
+
+        // 🚀 BEAM THE NUMBERS DIRECTLY THROUGH MEMORY TO BYPASS SELINUX!
         val intent = Intent("com.example.dynamicisland.RELOAD_PREFS")
+        intent.setPackage("com.android.systemui") // Explicitly target SystemUI
         intent.putExtra("prefix", prefix)
         intent.putExtra("w", w)
         intent.putExtra("h", h)
