@@ -164,9 +164,14 @@ class ConfigActivity : ComponentActivity() {
             .apply()
 
         makePrefsWorldReadable()
-
-        // Tell the real hooked module to update its cache if it happens to be running
-        sendBroadcast(Intent("com.example.dynamicisland.RELOAD_PREFS").setPackage("com.android.systemui"))
+        // 🚀 THE FIX: Beam the numbers directly through memory!
+        val intent = Intent("com.example.dynamicisland.RELOAD_PREFS")
+        intent.putExtra("prefix", prefix)
+        intent.putExtra("w", w)
+        intent.putExtra("h", h)
+        intent.putExtra("x", x)
+        intent.putExtra("y", y)
+        sendBroadcast(intent)
     }
 
     private fun makePrefsWorldReadable() {
