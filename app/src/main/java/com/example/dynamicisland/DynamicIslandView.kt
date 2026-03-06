@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.*
 import androidx.savedstate.*
+import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -109,30 +110,32 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     private fun loadPreferences() {
         try {
-            val modCtx = context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY)
-            val prefs = modCtx.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+            // XSharedPreferences is the official Xposed way to bypass SELinux restrictions
+            val pref = XSharedPreferences("com.example.dynamicisland", "island_prefs")
+            pref.makeWorldReadable()
+            pref.reload() // Force reload from disk for live updates
 
-            ringW.value = prefs.getFloat("ring_w", 45f)
-            ringH.value = prefs.getFloat("ring_h", 45f)
-            ringX.value = prefs.getFloat("ring_x", 0f)
-            ringY.value = prefs.getFloat("ring_y", 48f)
+            ringW.value = pref.getFloat("ring_w", 45f)
+            ringH.value = pref.getFloat("ring_h", 45f)
+            ringX.value = pref.getFloat("ring_x", 0f)
+            ringY.value = pref.getFloat("ring_y", 48f)
 
-            miniW.value = prefs.getFloat("mini_w", 180f)
-            miniH.value = prefs.getFloat("mini_h", 36f)
-            miniX.value = prefs.getFloat("mini_x", 0f)
-            miniY.value = prefs.getFloat("mini_y", 48f)
+            miniW.value = pref.getFloat("mini_w", 180f)
+            miniH.value = pref.getFloat("mini_h", 36f)
+            miniX.value = pref.getFloat("mini_x", 0f)
+            miniY.value = pref.getFloat("mini_y", 48f)
 
-            midW.value = prefs.getFloat("mid_w", 320f)
-            midH.value = prefs.getFloat("mid_h", 80f)
-            midX.value = prefs.getFloat("mid_x", 0f)
-            midY.value = prefs.getFloat("mid_y", 48f)
+            midW.value = pref.getFloat("mid_w", 320f)
+            midH.value = pref.getFloat("mid_h", 80f)
+            midX.value = pref.getFloat("mid_x", 0f)
+            midY.value = pref.getFloat("mid_y", 48f)
 
-            maxW.value = prefs.getFloat("max_w", 360f)
-            maxH.value = prefs.getFloat("max_h", 220f)
-            maxX.value = prefs.getFloat("max_x", 0f)
-            maxY.value = prefs.getFloat("max_y", 48f)
+            maxW.value = pref.getFloat("max_w", 360f)
+            maxH.value = pref.getFloat("max_h", 220f)
+            maxX.value = pref.getFloat("max_x", 0f)
+            maxY.value = pref.getFloat("max_y", 48f)
         } catch (e: Exception) {
-            // Failsafe to defaults if unreadable
+            // Keep default values if file doesn't exist yet
         }
     }
 
