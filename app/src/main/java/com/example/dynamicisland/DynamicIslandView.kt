@@ -110,10 +110,10 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     private fun loadPreferences() {
         try {
-            // XSharedPreferences is the official Xposed way to bypass SELinux restrictions
-            val pref = XSharedPreferences("com.example.dynamicisland", "island_prefs")
+            // FIX: Force read directly from the physical file path
+            val pref = de.robv.android.xposed.XSharedPreferences("com.example.dynamicisland", "island_prefs")
             pref.makeWorldReadable()
-            pref.reload() // Force reload from disk for live updates
+            pref.reload()
 
             ringW.value = pref.getFloat("ring_w", 45f)
             ringH.value = pref.getFloat("ring_h", 45f)
@@ -135,7 +135,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             maxX.value = pref.getFloat("max_x", 0f)
             maxY.value = pref.getFloat("max_y", 48f)
         } catch (e: Exception) {
-            // Keep default values if file doesn't exist yet
+            // Failsafe
         }
     }
 
