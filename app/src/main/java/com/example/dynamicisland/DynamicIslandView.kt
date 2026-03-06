@@ -226,6 +226,26 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             IslandState.TYPE_3_MAX -> maxH.value
             else -> ringH.value
         }
+        // --- ADD THESE COLOR ANIMATIONS ---
+        val targetBgColor = if (state == IslandState.HIDDEN) {
+            Color.Transparent // 100% Invisible when not in use
+        } else {
+            val model = activeModel.value
+            // If music is playing and we extracted a color, use it! Otherwise, use Glassy Black.
+            if (model is LiveActivityModel.Music && model.backgroundColor != null) {
+                Color(model.backgroundColor).copy(alpha = 0.65f)
+            } else {
+                Color(0xFF121212).copy(alpha = 0.80f)
+            }
+        }
+        
+        val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(500), label = "bgColor")
+        
+        // A subtle white border simulates the physical edge of glass reflecting light
+        val borderColor by animateColorAsState(
+            targetValue = if (state == IslandState.HIDDEN) Color.Transparent else Color.White.copy(alpha = 0.15f),
+            animationSpec = tween(500), label = "borderColor"
+        )
         val targetX = when (state) {
             IslandState.TYPE_1_MINI -> miniX.value
             IslandState.TYPE_2_MID -> midX.value
@@ -276,7 +296,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     .width(width)
                     .height(height)
                     .clip(RoundedCornerShape(rad))
-                    .background(Color.Black)
+                    .background(bgColor) // Dynamic Glass Color
+                    .border(1.dp, borderColor, RoundedCornerShape(rad)) // Glass reflection edge
                     .clickable {
                         if (state != IslandState.TYPE_3_MAX) onSingleTap?.invoke()
                     },
