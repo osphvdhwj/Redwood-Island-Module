@@ -50,6 +50,7 @@ import androidx.lifecycle.*
 import androidx.savedstate.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.io.File
 
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -71,7 +72,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
 
-    // 16 Independent State Variables
+    // 16 Independent Studio Customizer Variables
     var ringW = mutableStateOf(45f)
     var ringH = mutableStateOf(45f)
     var ringX = mutableStateOf(0f)
@@ -131,17 +132,13 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             maxH.value = prefs.getFloat("max_h", 220f)
             maxX.value = prefs.getFloat("max_x", 0f)
             maxY.value = prefs.getFloat("max_y", 48f)
-        } catch (e: Exception) {
-            // Failsafe to defaults if unreadable
-        }
+        } catch (e: Exception) {}
     }
 
     private val configReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             when (intent.action) {
-                "com.example.dynamicisland.RELOAD_PREFS" -> {
-                    loadPreferences()
-                }
+                "com.example.dynamicisland.RELOAD_PREFS" -> loadPreferences()
                 "com.example.dynamicisland.LIVE_PREVIEW" -> {
                     val type = intent.getStringExtra("preview_state") ?: "TYPE_2_MID"
                     activeModel.value = LiveActivityModel.General("preview", ActivityType.MESSAGE, "Preview", "Adjusting", null, android.graphics.Color.CYAN, true)
@@ -155,23 +152,16 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                         else -> setState(IslandState.HIDDEN)
                     }
                 }
-                "com.example.dynamicisland.TEST_RING" -> {
-                    activeModel.value = LiveActivityModel.Charging(id = "preview_charging", level = 50, isPluggedIn = true)
-                    setState(IslandState.TYPE_2_MID)
-                }
             }
         }
     }
 
     init {
         loadPreferences()
-
         val filter = IntentFilter().apply {
             addAction("com.example.dynamicisland.RELOAD_PREFS")
-            addAction("com.example.dynamicisland.TEST_RING")
             addAction("com.example.dynamicisland.LIVE_PREVIEW")
         }
-
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(configReceiver, filter, Context.RECEIVER_EXPORTED)
         } else {
@@ -199,13 +189,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
         addView(composeView)
         lifecycleOwner.start()
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        try {
-            context.unregisterReceiver(configReceiver)
-        } catch (e: Exception) {}
     }
 
     @OptIn(ExperimentalAnimationApi::class)
@@ -243,15 +226,13 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
         val offsetX by animateFloatAsState(targetX, floatSpec, label = "x")
         val offsetY by animateFloatAsState(targetY, floatSpec, label = "y")
-
-        // Smooth Squircle interpolation
         val radTarget = if (state == IslandState.TYPE_3_MAX) 42.dp else (targetHeight / 2).dp
         val rad by animateDpAsState(radTarget, physicsSpec, label = "rad")
 
         LaunchedEffect(width, height, offsetX, offsetY, state) {
-            if (!isAttachedToWindow) return@LaunchedEffect
-            val wp = windowParams ?: return@LaunchedEffect
-            val wm = windowManager ?: return@LaunchedEffect
+            if (windowManager == null || windowParams == null) return@LaunchedEffect
+            val wp = windowParams!!
+            val wm = windowManager!!
             val density = context.resources.displayMetrics.density
 
             if (state == IslandState.HIDDEN) {
@@ -275,173 +256,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     .height(height)
                     .clip(RoundedCornerShape(rad))
                     .background(Color.Black)
-                    .clickable {
-                        if (state != IslandState.TYPE_3_MAX) onSingleTap?.invoke()
-                    },
+                    .clickable { if (state != IslandState.TYPE_3_MAX) onSingleTap?.invoke() },
                 contentAlignment = Alignment.TopCenter
             ) {
                 if (state != IslandState.HIDDEN) {
                     val model = activeModel.value
-
-                    val bottomPadding by animateDpAsState(
-                        targetValue = if (state == IslandState.TYPE_3_MAX) 24.dp else 0.dp,
-                        label = "bottomPadding"
-                    )
-
-                    Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
-                        AnimatedContent(
-                            targetState = state,
-                            transitionSpec = {
-                                (fadeIn(animationSpec = tween(300)) + scaleIn(initialScale = 0.8f)) togetherWith 
-                                (fadeOut(animationSpec = tween(200)) + scaleOut(targetScale = 0.8f))
-                            },
-                            label = "content_morph"
-                        ) { s ->
-                            when (s) {
-                                IslandState.TYPE_3_MAX -> {
-                                    if (model is LiveActivityModel.Dashboard) DashboardMax(model)
-                                    else if (model is LiveActivityModel.Music) MusicMax(model)
-                                }
-                                IslandState.TYPE_2_MID -> {
-                                    if (model is LiveActivityModel.Music) MusicMid(model)
-                                    else if (model is LiveActivityModel.General) GeneralMid(model)
-                                    else if (model is LiveActivityModel.Charging) ChargingMid(model)
-                                }
-                                else -> {
-                                    if (model is LiveActivityModel.Music) MusicMini(model)
-                                    else if (model is LiveActivityModel.General) GeneralMini(model)
-                                    else if (model is LiveActivityModel.HardwareMonitor) HardwareGaugeMini(model)
-                                }
-                            }
-                        }
-                    }
-
-                    if (state == IslandState.TYPE_3_MAX) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .height(32.dp)
-                                .clickable { onCloseClick?.invoke() }
-                                .pointerInput(Unit) {
-                                    detectDragGestures { _, dragAmount ->
-                                        if (dragAmount.y < -10) onCloseClick?.invoke()
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(modifier = Modifier.width(40.dp).height(5.dp).background(Color.DarkGray, CircleShape))
-                        }
-                    }
-                }
-                
-                // The Custom Canvas Glowing Ring using independent dimensions
-                val activity = activeModel.value
-                if (state == IslandState.HIDDEN && activity != null) {
-                    val progress = when(activity) {
-                        is LiveActivityModel.General -> activity.progress
-                        is LiveActivityModel.Charging -> activity.level / 100f
-                        else -> null
-                    }
-                    if (progress != null) {
-                        val safeProgress = if (progress.isNaN() || progress.isInfinite()) 0f else progress.coerceIn(0f, 1f)
-                        val ringBrush = Brush.sweepGradient(colors = listOf(Color.Cyan, Color.Blue, Color.Magenta, Color.Cyan))
-
-                        Canvas(modifier = Modifier.size(ringW.value.dp + 6.dp, ringH.value.dp + 6.dp)) {
-                            drawArc(
-                                brush = ringBrush,
-                                startAngle = -90f,
-                                sweepAngle = safeProgress * 360f,
-                                useCenter = false,
-                                style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    @Composable
-    fun DashboardMax(model: LiveActivityModel.Dashboard) {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                Box(modifier = Modifier.size(50.dp).background(if (model.isWifiOn) Color.Blue else Color.DarkGray, CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(imageVector = Icons.Default.Settings, contentDescription = "WiFi", tint = Color.White, modifier = Modifier.size(24.dp))
-                }
-                Box(modifier = Modifier.size(50.dp).background(if (model.isTorchOn) Color.Yellow else Color.DarkGray, CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(imageVector = Icons.Default.Build, contentDescription = "Torch", tint = Color.White, modifier = Modifier.size(24.dp))
-                }
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-            Slider(value = model.currentVolume.toFloat(), onValueChange = {}, valueRange = 0f..model.maxVolume.toFloat(), colors = SliderDefaults.colors(activeTrackColor = Color.White))
-        }
-    }
-
-    @Composable
-    fun MusicMax(music: LiveActivityModel.Music) {
-        Column(modifier = Modifier.fillMaxSize().padding(start = 24.dp, end = 24.dp, top = 20.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(60.dp).clip(RoundedCornerShape(12.dp)))
-                else Box(Modifier.size(60.dp).background(Color.DarkGray, RoundedCornerShape(12.dp)))
-
-                Spacer(modifier = Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = music.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(text = music.artist, color = Color.LightGray, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-
-            val haptic = LocalHapticFeedback.current
-            val interactionSource = remember { MutableInteractionSource() }
-            val isDragged by interactionSource.collectIsDraggedAsState()
-            var localPosition by remember(isDragged) { mutableStateOf(music.positionMs.toFloat()) }
-
-            val realProgress = if (music.durationMs > 0) (music.positionMs.toFloat() / music.durationMs.toFloat()) else 0f
-            val safeProgress = if (realProgress.isNaN() || realProgress.isInfinite()) 0f else realProgress.coerceIn(0f, 1f)
-
-            Slider(
-                value = if (isDragged) (localPosition / music.durationMs.toFloat()).coerceIn(0f, 1f) else safeProgress,
-                onValueChange = { 
-                    localPosition = it * music.durationMs.toFloat() 
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                },
-                onValueChangeFinished = { 
-                    onSeekTo?.invoke(localPosition.toLong()) 
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                },
-                interactionSource = interactionSource,
-                colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.DarkGray, thumbColor = Color.White),
-                modifier = Modifier.fillMaxWidth().height(24.dp)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Align@DynamicIslandView, wp) } catch (e: Exception) {}
-        }
-
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            Box(
-                modifier = Modifier
-                    .width(width)
-                    .height(height)
-                    .clip(RoundedCornerShape(rad))
-                    .background(Color.Black)
-                    .clickable {
-                        if (state != IslandState.TYPE_3_MAX) onSingleTap?.invoke()
-                    },
-                contentAlignment = Alignment.TopCenter
-            ) {
-                if (state != IslandState.HIDDEN) {
-                    val model = activeModel.value
-
-                                        // Safely animate the padding to prevent transient negative values on Android 15
-                    val bottomPadding by animateDpAsState(
-                        targetValue = if (state == IslandState.TYPE_3_MAX) 24.dp else 0.dp,
-                        label = "bottomPadding"
-                    )
-
-                    Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
+                    Box(modifier = Modifier.fillMaxSize()) {
                         AnimatedContent(targetState = state, label = "morph") { s ->
                             when (s) {
                                 IslandState.TYPE_3_MAX -> {
@@ -461,56 +281,17 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                             }
                         }
                     }
-
-                    // THE GRABBER LOGIC (___)
-                    if (state == IslandState.TYPE_3_MAX) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .height(32.dp)
-                                .clickable { onCloseClick?.invoke() }
-                                .pointerInput(Unit) {
-                                    detectDragGestures { _, dragAmount ->
-                                        if (dragAmount.y < -10) onCloseClick?.invoke()
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(modifier = Modifier.width(40.dp).height(5.dp).background(Color.DarkGray, CircleShape))
-                        }
-                    }
                 }
             }
         }
     }
 
-    // --- DASHBOARD UI ---
-    @Composable
-    fun DashboardMax(model: LiveActivityModel.Dashboard) {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                // 100% safe mathematically drawn icons (No R.drawable)
-                Box(modifier = Modifier.size(50.dp).background(if (model.isWifiOn) Color.Blue else Color.DarkGray, CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(imageVector = Icons.Default.Settings, contentDescription = "WiFi", tint = Color.White, modifier = Modifier.size(24.dp))
-                }
-                Box(modifier = Modifier.size(50.dp).background(if (model.isTorchOn) Color.Yellow else Color.DarkGray, CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(imageVector = Icons.Default.Build, contentDescription = "Torch", tint = Color.White, modifier = Modifier.size(24.dp))
-                }
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-            Slider(value = model.currentVolume.toFloat(), onValueChange = {}, valueRange = 0f..model.maxVolume.toFloat(), colors = SliderDefaults.colors(activeTrackColor = Color.White))
-        }
-    }
-
-    // --- MUSIC UI ---
     @Composable
     fun MusicMax(music: LiveActivityModel.Music) {
-        Column(modifier = Modifier.fillMaxSize().padding(start = 24.dp, end = 24.dp, top = 20.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(60.dp).clip(RoundedCornerShape(12.dp)))
                 else Box(Modifier.size(60.dp).background(Color.DarkGray, RoundedCornerShape(12.dp)))
-
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = music.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -518,196 +299,37 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Native Slider Engine (Safe from SystemUI crashes)
-            val interactionSource = remember { MutableInteractionSource() }
-            val isDragged by interactionSource.collectIsDraggedAsState()
-            var localPosition by remember(isDragged) { mutableStateOf(music.positionMs.toFloat()) }
-
-            val realProgress = if (music.durationMs > 0) (music.positionMs.toFloat() / music.durationMs.toFloat()) else 0f
-            val safeProgress = if (realProgress.isNaN() || realProgress.isInfinite()) 0f else realProgress.coerceIn(0f, 1f)
-
-            Slider(
-                value = if (isDragged) (localPosition / music.durationMs.toFloat()).coerceIn(0f, 1f) else safeProgress,
-                onValueChange = { localPosition = it * music.durationMs.toFloat() },
-                onValueChangeFinished = { onSeekTo?.invoke(localPosition.toLong()) },
-                interactionSource = interactionSource,
-                colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.DarkGray, thumbColor = Color.White),
-                modifier = Modifier.fillMaxWidth().height(24.dp)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev", tint = Color.White, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
-
-                // Safe Play/Pause handling
-                val playIcon = if (music.isPlaying) Icons.Default.Close else Icons.Default.PlayArrow
-                Box(modifier = Modifier.size(56.dp).background(Color.White.copy(alpha = 0.15f), CircleShape).clickable { onPlayPauseClick?.invoke() }, contentAlignment = Alignment.Center) {
-                    Icon(imageVector = playIcon, contentDescription = "Play/Pause", tint = Color.White, modifier = Modifier.size(32.dp))
-                }
-
+                Icon(imageVector = if (music.isPlaying) Icons.Default.Close else Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.White, modifier = Modifier.size(36.dp).clickable { onPlayPauseClick?.invoke() })
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next", tint = Color.White, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
             }
         }
     }
 
-    // Mini and Mid
+    @Composable fun DashboardMax(model: LiveActivityModel.Dashboard) {}
+    @Composable fun MusicMid(music: LiveActivityModel.Music) {}
+    @Composable fun GeneralMid(general: LiveActivityModel.General) {}
+    @Composable fun ChargingMid(charging: LiveActivityModel.Charging) {}
+    @Composable fun MusicMini(music: LiveActivityModel.Music) {}
     @OptIn(ExperimentalFoundationApi::class)
-    @Composable
-    fun GeneralMini(general: LiveActivityModel.General) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-            val iconRes = getIconForType(general.type)
-            Icon(androidx.compose.ui.res.painterResource(iconRes), contentDescription = null, tint = Color(general.accentColor), modifier = Modifier.size(16.dp))
+    @Composable fun GeneralMini(general: LiveActivityModel.General) {
+        Row(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(imageVector = getIconForType(general.type), contentDescription = null, tint = Color(general.accentColor), modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(8.dp))
             Text(text = "${general.title} • ${general.dataText}", color = Color.White, fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
         }
     }
+    @Composable fun HardwareGaugeMini(hw: LiveActivityModel.HardwareMonitor) {}
 
-    @OptIn(ExperimentalFoundationApi::class)
-    @Composable
-    fun MusicMini(music: LiveActivityModel.Music) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-            Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
-        }
-    }
-    @Composable
-    fun MusicMid(music: LiveActivityModel.Music) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-            if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)))
-            Spacer(Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                 Text(text = music.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                 Text(text = music.artist, color = Color.LightGray, fontSize = 14.sp, maxLines = 1)
-            }
-        }
-    }
-
-    @Composable
-    fun HardwareGaugeMini(hw: LiveActivityModel.HardwareMonitor) {
-        // Dynamically shift color based on thermal throttling thresholds
-        val tempColor = when {
-            hw.cpuTempCelsius > 45f -> Color.Red
-            hw.cpuTempCelsius > 38f -> Color.Yellow
-            else -> Color.Green
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
-        ) {
-            Icon(imageVector = Icons.Default.Info, contentDescription = "Hardware", tint = tempColor, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(8.dp))
-
-            // Visual Line Gauge
-            androidx.compose.material3.LinearProgressIndicator(
-                progress = { (hw.cpuTempCelsius / 60f).coerceIn(0f, 1f) },
-                modifier = Modifier.width(60.dp).height(6.dp).clip(RoundedCornerShape(3.dp)),
-                color = tempColor,
-                trackColor = Color.DarkGray
-            )
-
-            Spacer(Modifier.width(8.dp))
-            Text(text = "${hw.cpuFreqMhz} MHz", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-        }
-    }
-
-    @OptIn(ExperimentalFoundationApi::class)
-    @Composable
-    fun UniversalMid(textColor: Color, activity: LiveActivityModel) {
-        // Create a pulsing alpha animation for the charging state
-        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-        val alphaPulse by infiniteTransition.animateFloat(
-            initialValue = 0.4f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(800, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "alphaPulse"
-        )
-
-        val progress = when(activity) {
-            is LiveActivityModel.General -> activity.progress
-            is LiveActivityModel.Charging -> activity.level / 100f
-            else -> null
-        }
-        val colorInt = when(activity) {
-            is LiveActivityModel.General -> activity.accentColor
-            is LiveActivityModel.Charging -> android.graphics.Color.GREEN
-            else -> android.graphics.Color.WHITE
-        }
-        val title = when(activity) {
-            is LiveActivityModel.General -> activity.title
-            is LiveActivityModel.Charging -> if (activity.isPluggedIn) "Charging" else "Disconnected"
-            else -> ""
-        }
-        val dataText = when(activity) {
-            is LiveActivityModel.General -> activity.dataText
-            is LiveActivityModel.Charging -> "${activity.level}%"
-            else -> ""
-        }
-
-
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) {
-                if (progress != null) {
-                    CircularProgressIndicator(
-                        progress = { progress },
-                        color = Color(colorInt),
-                        trackColor = textColor.copy(alpha = 0.2f),
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                // Apply the pulse animation ONLY if it is actively charging
-                val iconAlpha = if (activity.type == ActivityType.CHARGING) alphaPulse else 1f
-
-                Icon(
-                    androidx.compose.ui.res.painterResource(getIconForType(activity.type)),
-                    contentDescription = null,
-                    tint = Color(colorInt), // This automatically applies the Red/Yellow/Green battery color
-                    modifier = Modifier.size(24.dp).alpha(iconAlpha)
-                )
-            }
-            Spacer(Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                 Text(text = title, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee())
-                 Text(text = dataText, color = textColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
-            }
-        }
-    }
-
-    @Composable
-    fun ChargingMid(charging: LiveActivityModel.Charging) {
-        UniversalMid(Color.White, charging)
-    }
-
-    @Composable
-    fun GeneralMid(general: LiveActivityModel.General) {
-        UniversalMid(Color.White, general)
-    }
-
-    // --- Public API ---
-    fun setState(newState: IslandState) {
-        if (!isAttachedToWindow && newState != IslandState.HIDDEN) return
-        islandState.value = newState
-    }
+    fun setState(newState: IslandState) { islandState.value = newState }
     fun setModel(model: LiveActivityModel?) { activeModel.value = model }
 
-    private fun getIconForType(type: ActivityType): Int {
+    private fun getIconForType(type: ActivityType): ImageVector {
         return when(type) {
-            ActivityType.CALL -> R.drawable.ic_call_vector
-            ActivityType.NAVIGATION -> R.drawable.ic_map_vector
-            ActivityType.TIMER -> R.drawable.ic_timer_vector
-            ActivityType.MESSAGE -> R.drawable.ic_mail_vector
-            ActivityType.ALARM -> R.drawable.ic_alarm_vector
-            ActivityType.CHARGING -> R.drawable.ic_battery_charging_vector // Active charging
-            ActivityType.BATTERY_LOW -> R.drawable.ic_battery_alert_vector // Disconnected/Low
-            ActivityType.BLUETOOTH -> R.drawable.ic_bluetooth_vector
-            ActivityType.WIFI -> R.drawable.ic_wifi_vector
-            else -> R.drawable.ic_sync_vector
+            ActivityType.CALL -> Icons.Default.Phone
+            ActivityType.CHARGING -> Icons.Default.BatteryChargingFull
+            else -> Icons.Default.Info
         }
     }
-
 }
