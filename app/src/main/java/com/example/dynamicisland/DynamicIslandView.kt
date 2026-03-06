@@ -12,6 +12,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
@@ -110,8 +111,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     private fun loadPreferences() {
         try {
-            // FIX: Force read directly from the physical file path
-            val pref = de.robv.android.xposed.XSharedPreferences("com.example.dynamicisland", "island_prefs")
+            // Read safely from SystemUI using Xposed
+            val pref = XSharedPreferences("com.example.dynamicisland", "island_prefs")
             pref.makeWorldReadable()
             pref.reload()
 
@@ -135,7 +136,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             maxX.value = pref.getFloat("max_x", 0f)
             maxY.value = pref.getFloat("max_y", 48f)
         } catch (e: Exception) {
-            // Failsafe
+            // Failsafe to defaults
         }
     }
 
@@ -226,26 +227,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             IslandState.TYPE_3_MAX -> maxH.value
             else -> ringH.value
         }
-        // --- ADD THESE COLOR ANIMATIONS ---
-        val targetBgColor = if (state == IslandState.HIDDEN) {
-            Color.Transparent // 100% Invisible when not in use
-        } else {
-            val model = activeModel.value
-            // If music is playing and we extracted a color, use it! Otherwise, use Glassy Black.
-            if (model is LiveActivityModel.Music && model.backgroundColor != null) {
-                Color(model.backgroundColor).copy(alpha = 0.65f)
-            } else {
-                Color(0xFF121212).copy(alpha = 0.80f)
-            }
-        }
-        
-        val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(500), label = "bgColor")
-        
-        // A subtle white border simulates the physical edge of glass reflecting light
-        val borderColor by animateColorAsState(
-            targetValue = if (state == IslandState.HIDDEN) Color.Transparent else Color.White.copy(alpha = 0.15f),
-            animationSpec = tween(500), label = "borderColor"
-        )
         val targetX = when (state) {
             IslandState.TYPE_1_MINI -> miniX.value
             IslandState.TYPE_2_MID -> midX.value
@@ -269,6 +250,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
         val radTarget = if (state == IslandState.TYPE_3_MAX) 42.dp else (targetHeight / 2).dp
         val rad by animateDpAsState(radTarget, physicsSpec, label = "rad")
+
         // --- UI PHASE: GLASSMORPHISM & DYNAMIC COLOR ---
         val targetBgColor = if (state == IslandState.HIDDEN) {
             Color.Transparent // 100% Invisible when completely idle
@@ -317,8 +299,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     .width(width)
                     .height(height)
                     .clip(RoundedCornerShape(rad))
-                    .background(bgColor) // Dynamic Glass Color
-                    .border(1.dp, borderColor, RoundedCornerShape(rad)) // Glass reflection edge
+                    .background(bgColor) // Dynamically colored background
+                    .border(1.dp, borderColor, RoundedCornerShape(rad)) // Glass rim-light
                     .clickable {
                         if (state != IslandState.TYPE_3_MAX) onSingleTap?.invoke()
                     },
@@ -374,7 +356,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Box(modifier = Modifier.width(40.dp).height(5.dp).background(Color.DarkGray, CircleShape))
+                            Box(modifier = Modifier.width(40.dp).height(5.dp).background(Color.White.copy(alpha=0.3f), CircleShape))
                         }
                     }
                 }
@@ -403,7 +385,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 }
             }
         }
-    } // <-- THE MISSING BRACE IS NOW SECURELY IN PLACE!
+    }
 
     @Composable
     fun DashboardMax(model: LiveActivityModel.Dashboard) {
@@ -426,12 +408,12 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         Column(modifier = Modifier.fillMaxSize().padding(start = 24.dp, end = 24.dp, top = 20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(60.dp).clip(RoundedCornerShape(12.dp)))
-                else Box(Modifier.size(60.dp).background(Color.DarkGray, RoundedCornerShape(12.dp)))
+                else Box(Modifier.size(60.dp).background(Color.White.copy(alpha=0.2f), RoundedCornerShape(12.dp)))
 
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = music.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(text = music.artist, color = Color.LightGray, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(text = music.artist, color = Color.White.copy(alpha=0.7f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -455,7 +437,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 },
                 interactionSource = interactionSource,
-                colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.DarkGray, thumbColor = Color.White),
+                colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha=0.3f), thumbColor = Color.White),
                 modifier = Modifier.fillMaxWidth().height(24.dp)
             )
 
@@ -496,7 +478,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                  Text(text = music.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                 Text(text = music.artist, color = Color.LightGray, fontSize = 14.sp, maxLines = 1)
+                 Text(text = music.artist, color = Color.White.copy(alpha=0.7f), fontSize = 14.sp, maxLines = 1)
             }
         }
     }
@@ -520,7 +502,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 progress = { (hw.cpuTempCelsius / 60f).coerceIn(0f, 1f) },
                 modifier = Modifier.width(60.dp).height(6.dp).clip(RoundedCornerShape(3.dp)),
                 color = tempColor,
-                trackColor = Color.DarkGray
+                trackColor = Color.White.copy(alpha=0.2f)
             )
             Spacer(Modifier.width(8.dp))
             Text(text = "${hw.cpuFreqMhz} MHz", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
@@ -604,10 +586,10 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             ActivityType.TIMER -> Icons.Default.Notifications
             ActivityType.MESSAGE -> Icons.Default.Email
             ActivityType.ALARM -> Icons.Default.Notifications
-            ActivityType.CHARGING -> Icons.Default.BatteryChargingFull
+            ActivityType.CHARGING -> Icons.Default.Add
             ActivityType.BATTERY_LOW -> Icons.Default.Warning
-            ActivityType.BLUETOOTH -> Icons.Default.Bluetooth
-            ActivityType.WIFI -> Icons.Default.Wifi
+            ActivityType.BLUETOOTH -> Icons.Default.Share
+            ActivityType.WIFI -> Icons.Default.Search
             ActivityType.HARDWARE -> Icons.Default.Info
             else -> Icons.Default.Info
         }
