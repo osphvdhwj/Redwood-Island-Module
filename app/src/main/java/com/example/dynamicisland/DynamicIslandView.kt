@@ -4,14 +4,15 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.res.Configuration
-import android.graphics.Bitmap
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -19,57 +20,36 @@ import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.*
-// The missing Foundation and Drawing modifiers
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.ui.draw.alpha
-
-// Material You Dynamic Colors (CrDroid 11.8 integration)
-import android.os.Build
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.ui.platform.LocalContext
-
-// Custom Canvas & Gradients for the Glowing Ring
-import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
-
-// Haptic Feedback Engine
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
-
-// Hardware Gauge Icon
-import androidx.compose.material.icons.filled.Info
-
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.compositionContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import androidx.compose.ui.input.pointer.changedToDown
-import androidx.core.graphics.drawable.toBitmap
-
-
 import androidx.lifecycle.*
 import androidx.savedstate.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -91,12 +71,26 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
 
+    // 16 Independent State Variables
+    var ringW = mutableStateOf(45f)
+    var ringH = mutableStateOf(45f)
+    var ringX = mutableStateOf(0f)
+    var ringY = mutableStateOf(48f)
 
+    var miniW = mutableStateOf(180f)
+    var miniH = mutableStateOf(36f)
+    var miniX = mutableStateOf(0f)
+    var miniY = mutableStateOf(48f)
 
-    var camOffsetX = mutableStateOf(0)
-    var camOffsetY = mutableStateOf(48)
-    var camWidth = mutableStateOf(24)
-    var camHeight = mutableStateOf(24)
+    var midW = mutableStateOf(320f)
+    var midH = mutableStateOf(80f)
+    var midX = mutableStateOf(0f)
+    var midY = mutableStateOf(48f)
+
+    var maxW = mutableStateOf(360f)
+    var maxH = mutableStateOf(220f)
+    var maxX = mutableStateOf(0f)
+    var maxY = mutableStateOf(48f)
 
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
@@ -113,14 +107,40 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     private val lifecycleOwner = OverlayLifecycleOwner()
 
+    private fun loadPreferences() {
+        try {
+            val modCtx = context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY)
+            val prefs = modCtx.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+
+            ringW.value = prefs.getFloat("ring_w", 45f)
+            ringH.value = prefs.getFloat("ring_h", 45f)
+            ringX.value = prefs.getFloat("ring_x", 0f)
+            ringY.value = prefs.getFloat("ring_y", 48f)
+
+            miniW.value = prefs.getFloat("mini_w", 180f)
+            miniH.value = prefs.getFloat("mini_h", 36f)
+            miniX.value = prefs.getFloat("mini_x", 0f)
+            miniY.value = prefs.getFloat("mini_y", 48f)
+
+            midW.value = prefs.getFloat("mid_w", 320f)
+            midH.value = prefs.getFloat("mid_h", 80f)
+            midX.value = prefs.getFloat("mid_x", 0f)
+            midY.value = prefs.getFloat("mid_y", 48f)
+
+            maxW.value = prefs.getFloat("max_w", 360f)
+            maxH.value = prefs.getFloat("max_h", 220f)
+            maxX.value = prefs.getFloat("max_x", 0f)
+            maxY.value = prefs.getFloat("max_y", 48f)
+        } catch (e: Exception) {
+            // Failsafe to defaults if unreadable
+        }
+    }
+
     private val configReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             when (intent.action) {
-                "com.example.dynamicisland.UPDATE_CONFIG" -> {
-                    camOffsetX.value = intent.getIntExtra("offsetX", 0)
-                    camOffsetY.value = intent.getIntExtra("offsetY", 48)
-                    camWidth.value = intent.getIntExtra("camWidth", 24)
-                    camHeight.value = intent.getIntExtra("camHeight", 24)
+                "com.example.dynamicisland.RELOAD_PREFS" -> {
+                    loadPreferences()
                 }
                 "com.example.dynamicisland.LIVE_PREVIEW" -> {
                     val type = intent.getStringExtra("preview_state") ?: "TYPE_2_MID"
@@ -144,8 +164,10 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     }
 
     init {
+        loadPreferences()
+
         val filter = IntentFilter().apply {
-            addAction("com.example.dynamicisland.UPDATE_CONFIG")
+            addAction("com.example.dynamicisland.RELOAD_PREFS")
             addAction("com.example.dynamicisland.TEST_RING")
             addAction("com.example.dynamicisland.LIVE_PREVIEW")
         }
@@ -190,34 +212,43 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     @Composable
     fun IslandUI(state: IslandState) {
         val targetWidth = when (state) {
-            IslandState.HIDDEN -> camWidth.value.dp
-            IslandState.TYPE_1_MINI -> 180.dp
-            IslandState.TYPE_2_MID -> 320.dp
-            IslandState.TYPE_3_MAX -> 360.dp
-            else -> 180.dp
+            IslandState.TYPE_1_MINI -> miniW.value
+            IslandState.TYPE_2_MID -> midW.value
+            IslandState.TYPE_3_MAX -> maxW.value
+            else -> ringW.value
         }
         val targetHeight = when (state) {
-            IslandState.HIDDEN -> camHeight.value.dp
-            IslandState.TYPE_1_MINI -> 36.dp
-            IslandState.TYPE_2_MID -> 80.dp
-            IslandState.TYPE_3_MAX -> 220.dp
-            else -> 36.dp
+            IslandState.TYPE_1_MINI -> miniH.value
+            IslandState.TYPE_2_MID -> midH.value
+            IslandState.TYPE_3_MAX -> maxH.value
+            else -> ringH.value
         }
-        val cornerRadius = when (state) {
-            IslandState.HIDDEN -> (camHeight.value / 2).dp
-            IslandState.TYPE_1_MINI -> 18.dp
-            IslandState.TYPE_2_MID -> 32.dp
-            IslandState.TYPE_3_MAX -> 42.dp
-            else -> 18.dp
+        val targetX = when (state) {
+            IslandState.TYPE_1_MINI -> miniX.value
+            IslandState.TYPE_2_MID -> midX.value
+            IslandState.TYPE_3_MAX -> maxX.value
+            else -> ringX.value
+        }
+        val targetY = when (state) {
+            IslandState.TYPE_1_MINI -> miniY.value
+            IslandState.TYPE_2_MID -> midY.value
+            IslandState.TYPE_3_MAX -> maxY.value
+            else -> ringY.value
         }
 
         val physicsSpec = spring<Dp>(dampingRatio = 0.65f, stiffness = 400f)
-        val width by animateDpAsState(targetWidth, physicsSpec, label = "width")
-        val height by animateDpAsState(targetHeight, physicsSpec, label = "height")
-        val rad by animateDpAsState(cornerRadius, physicsSpec, label = "rad")
+        val floatSpec = spring<Float>(dampingRatio = 0.65f, stiffness = 400f)
+        
+        val width by animateDpAsState(targetWidth.dp, physicsSpec, label = "width")
+        val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
+        val offsetX by animateFloatAsState(targetX, floatSpec, label = "x")
+        val offsetY by animateFloatAsState(targetY, floatSpec, label = "y")
 
-        // THE INVISIBLE TAB FIX: Dynamic Padding
-        LaunchedEffect(width, height, state) {
+        // Smooth Squircle interpolation
+        val radTarget = if (state == IslandState.TYPE_3_MAX) 42.dp else (targetHeight / 2).dp
+        val rad by animateDpAsState(radTarget, physicsSpec, label = "rad")
+
+        LaunchedEffect(width, height, offsetX, offsetY, state) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
@@ -227,16 +258,166 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                 wp.width = 0
                 wp.height = 0
             } else {
-                // Shrink the invisible boundary for MINI/MID so you can touch the top screen
                 val extraW = if (state == IslandState.TYPE_3_MAX) 120 else 20
                 val extraH = if (state == IslandState.TYPE_3_MAX) 150 else 20
-
                 wp.width = (width.value * density).toInt() + (extraW * density).toInt()
                 wp.height = (height.value * density).toInt() + (extraH * density).toInt()
             }
-            wp.x = camOffsetX.value
-            wp.y = camOffsetY.value
+            wp.x = offsetX.toInt()
+            wp.y = offsetY.toInt()
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
+        }
+
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            Box(
+                modifier = Modifier
+                    .width(width)
+                    .height(height)
+                    .clip(RoundedCornerShape(rad))
+                    .background(Color.Black)
+                    .clickable {
+                        if (state != IslandState.TYPE_3_MAX) onSingleTap?.invoke()
+                    },
+                contentAlignment = Alignment.TopCenter
+            ) {
+                if (state != IslandState.HIDDEN) {
+                    val model = activeModel.value
+
+                    val bottomPadding by animateDpAsState(
+                        targetValue = if (state == IslandState.TYPE_3_MAX) 24.dp else 0.dp,
+                        label = "bottomPadding"
+                    )
+
+                    Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
+                        AnimatedContent(
+                            targetState = state,
+                            transitionSpec = {
+                                (fadeIn(animationSpec = tween(300)) + scaleIn(initialScale = 0.8f)) togetherWith 
+                                (fadeOut(animationSpec = tween(200)) + scaleOut(targetScale = 0.8f))
+                            },
+                            label = "content_morph"
+                        ) { s ->
+                            when (s) {
+                                IslandState.TYPE_3_MAX -> {
+                                    if (model is LiveActivityModel.Dashboard) DashboardMax(model)
+                                    else if (model is LiveActivityModel.Music) MusicMax(model)
+                                }
+                                IslandState.TYPE_2_MID -> {
+                                    if (model is LiveActivityModel.Music) MusicMid(model)
+                                    else if (model is LiveActivityModel.General) GeneralMid(model)
+                                    else if (model is LiveActivityModel.Charging) ChargingMid(model)
+                                }
+                                else -> {
+                                    if (model is LiveActivityModel.Music) MusicMini(model)
+                                    else if (model is LiveActivityModel.General) GeneralMini(model)
+                                    else if (model is LiveActivityModel.HardwareMonitor) HardwareGaugeMini(model)
+                                }
+                            }
+                        }
+                    }
+
+                    if (state == IslandState.TYPE_3_MAX) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .height(32.dp)
+                                .clickable { onCloseClick?.invoke() }
+                                .pointerInput(Unit) {
+                                    detectDragGestures { _, dragAmount ->
+                                        if (dragAmount.y < -10) onCloseClick?.invoke()
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(modifier = Modifier.width(40.dp).height(5.dp).background(Color.DarkGray, CircleShape))
+                        }
+                    }
+                }
+                
+                // The Custom Canvas Glowing Ring using independent dimensions
+                val activity = activeModel.value
+                if (state == IslandState.HIDDEN && activity != null) {
+                    val progress = when(activity) {
+                        is LiveActivityModel.General -> activity.progress
+                        is LiveActivityModel.Charging -> activity.level / 100f
+                        else -> null
+                    }
+                    if (progress != null) {
+                        val safeProgress = if (progress.isNaN() || progress.isInfinite()) 0f else progress.coerceIn(0f, 1f)
+                        val ringBrush = Brush.sweepGradient(colors = listOf(Color.Cyan, Color.Blue, Color.Magenta, Color.Cyan))
+
+                        Canvas(modifier = Modifier.size(ringW.value.dp + 6.dp, ringH.value.dp + 6.dp)) {
+                            drawArc(
+                                brush = ringBrush,
+                                startAngle = -90f,
+                                sweepAngle = safeProgress * 360f,
+                                useCenter = false,
+                                style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun DashboardMax(model: LiveActivityModel.Dashboard) {
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                Box(modifier = Modifier.size(50.dp).background(if (model.isWifiOn) Color.Blue else Color.DarkGray, CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(imageVector = Icons.Default.Settings, contentDescription = "WiFi", tint = Color.White, modifier = Modifier.size(24.dp))
+                }
+                Box(modifier = Modifier.size(50.dp).background(if (model.isTorchOn) Color.Yellow else Color.DarkGray, CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(imageVector = Icons.Default.Build, contentDescription = "Torch", tint = Color.White, modifier = Modifier.size(24.dp))
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            Slider(value = model.currentVolume.toFloat(), onValueChange = {}, valueRange = 0f..model.maxVolume.toFloat(), colors = SliderDefaults.colors(activeTrackColor = Color.White))
+        }
+    }
+
+    @Composable
+    fun MusicMax(music: LiveActivityModel.Music) {
+        Column(modifier = Modifier.fillMaxSize().padding(start = 24.dp, end = 24.dp, top = 20.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(60.dp).clip(RoundedCornerShape(12.dp)))
+                else Box(Modifier.size(60.dp).background(Color.DarkGray, RoundedCornerShape(12.dp)))
+
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = music.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(text = music.artist, color = Color.LightGray, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val haptic = LocalHapticFeedback.current
+            val interactionSource = remember { MutableInteractionSource() }
+            val isDragged by interactionSource.collectIsDraggedAsState()
+            var localPosition by remember(isDragged) { mutableStateOf(music.positionMs.toFloat()) }
+
+            val realProgress = if (music.durationMs > 0) (music.positionMs.toFloat() / music.durationMs.toFloat()) else 0f
+            val safeProgress = if (realProgress.isNaN() || realProgress.isInfinite()) 0f else realProgress.coerceIn(0f, 1f)
+
+            Slider(
+                value = if (isDragged) (localPosition / music.durationMs.toFloat()).coerceIn(0f, 1f) else safeProgress,
+                onValueChange = { 
+                    localPosition = it * music.durationMs.toFloat() 
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                },
+                onValueChangeFinished = { 
+                    onSeekTo?.invoke(localPosition.toLong()) 
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                },
+                interactionSource = interactionSource,
+                colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.DarkGray, thumbColor = Color.White),
+                modifier = Modifier.fillMaxWidth().height(24.dp)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Align@DynamicIslandView, wp) } catch (e: Exception) {}
         }
 
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
