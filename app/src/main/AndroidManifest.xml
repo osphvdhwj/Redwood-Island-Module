@@ -31,6 +31,10 @@
         <meta-data
             android:name="xposedminversion"
             android:value="82" />
+            
+        <meta-data
+            android:name="xposedscope"
+            android:resource="@array/xposedscope" />
 
         <activity
             android:name=".ConfigActivity"
