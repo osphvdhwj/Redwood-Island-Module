@@ -51,6 +51,7 @@ sealed class LiveActivityModel {
         val title: String,
         val artist: String,
         val albumArt: Bitmap? = null,
+        val appIcon: Bitmap? = null, // 🚀 NEW: Holds the Spotify/YT Music Logo
         val dominantColor: Int? = null,
         val titleTextColor: Int = android.graphics.Color.WHITE, // 🌟 NEW: Dynamic text color
         val isPlaying: Boolean = false,
