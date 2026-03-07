@@ -280,7 +280,16 @@ class DynamicIslandView(
                 }
 
                 if (state != IslandState.HIDDEN) {
-                    val bottomPadding by animateDpAsState(targetValue = if (state == IslandState.TYPE_3_MAX) 24.dp else 0.dp, label = "bottomPadding")
+                    // 1. Dynamic Padding to make room for the grabber in every state
+                    val bottomPadding by animateDpAsState(
+                        targetValue = when(state) {
+                            IslandState.TYPE_3_MAX -> 24.dp
+                            IslandState.TYPE_2_MID -> 16.dp
+                            IslandState.TYPE_1_MINI -> 12.dp
+                            else -> 0.dp
+                        }, 
+                        label = "bottomPadding"
+                    )
 
                     Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
                         AnimatedContent(targetState = state, transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "morph") { s ->
@@ -304,6 +313,26 @@ class DynamicIslandView(
                         }
                     }
 
+                    // 🌟 2. THE UNIVERSAL GRABBER ("___")
+                    if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .height(when(state) { IslandState.TYPE_3_MAX -> 32.dp; IslandState.TYPE_2_MID -> 20.dp; else -> 16.dp })
+                                .clickable { onCloseClick?.invoke() }
+                                .pointerInput(Unit) { detectDragGestures { _, dragAmount -> if (dragAmount.y < -10) onCloseClick?.invoke() } },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(if (state == IslandState.TYPE_1_MINI) 24.dp else 40.dp) // Smaller grabber for mini pill
+                                    .height(if (state == IslandState.TYPE_1_MINI) 3.dp else 5.dp)
+                                    .background(Color.White.copy(alpha=0.4f), CircleShape)
+                            )
+                        }
+                    }
+                }
                     if (state == IslandState.TYPE_3_MAX) {
                         Box(
                             modifier = Modifier
