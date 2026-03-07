@@ -352,6 +352,7 @@ class IslandController(private val context: Context) {
             }
         }
     }
+    }
 
     init {
         setupHardwareMonitor()
