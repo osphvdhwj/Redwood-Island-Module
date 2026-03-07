@@ -321,19 +321,38 @@ class DynamicIslandView(
         val s = ms / 1000
         return String.format("%d:%02d", s / 60, s % 60)
     }
+    
+// ==========================================
+    // MEDIA PILL COMPONENTS
+    // ==========================================
 
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun MusicMini(music: LiveActivityModel.Music) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
-            val infiniteTransition = rememberInfiniteTransition()
-            val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "rot")
-            val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
-            if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(24.dp).clip(CircleShape).rotate(currentRotation)) else Box(Modifier.size(24.dp).background(Color.White.copy(0.2f), CircleShape))
-            Spacer(Modifier.width(8.dp))
-            Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f).basicMarquee())
-            val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
-            Icon(imageVector = playIcon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+        Box(modifier = Modifier.fillMaxSize()) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
+                val infiniteTransition = rememberInfiniteTransition()
+                val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "rot")
+                val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
+                
+                // 🚀 FIXED: ContentScale.Crop creates the perfect 📀 Disk
+                if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Spinning Art", modifier = Modifier.size(24.dp).clip(CircleShape).rotate(currentRotation)) 
+                else Box(Modifier.size(24.dp).background(Color.White.copy(0.2f), CircleShape))
+
+                Spacer(Modifier.width(8.dp))
+                Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f).basicMarquee())
+                
+                val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
+                Icon(imageVector = playIcon, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp)) // 🚀 Bigger Button
+            }
+            
+            // 🚀 NEW: S Pill Bottom Progress Bar
+            val safeDuration = if (music.durationMs > 0) music.durationMs.toFloat() else 1f
+            val progress = (music.positionMs.toFloat() / safeDuration).coerceIn(0f, 1f)
+            LinearProgressIndicator(
+                progress = { progress }, color = Color.White.copy(alpha=0.8f), trackColor = Color.Transparent,
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.5f).height(2.dp).padding(bottom = 1.dp).clip(CircleShape)
+            )
         }
     }
 
@@ -341,32 +360,41 @@ class DynamicIslandView(
     @Composable
     fun MusicMid(music: LiveActivityModel.Music) {
         val dynamicTextColor = Color(music.titleTextColor)
+        val secondaryTextColor = dynamicTextColor.copy(alpha = 0.7f)
         val progress = if (music.durationMs > 0) (music.positionMs.toFloat() / music.durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+        
+        val infiniteTransition = rememberInfiniteTransition()
+        val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "rot")
+        val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
+
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(52.dp)) {
                 CircularProgressIndicator(progress = { progress }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha = 0.2f), strokeWidth = 2.dp, modifier = Modifier.fillMaxSize())
-                if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(44.dp).clip(CircleShape)) else Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
+                // 🚀 FIXED: Rotating M Pill 📀 Disk
+                if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(44.dp).clip(CircleShape).rotate(currentRotation))
+                else Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
             }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                  Text(text = music.title, color = dynamicTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee())
-                 Text(text = music.artist, color = dynamicTextColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
+                 Text(text = music.artist, color = secondaryTextColor, fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
             }
+            
             val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
-            Icon(imageVector = playIcon, contentDescription = "Status", tint = dynamicTextColor, modifier = Modifier.size(24.dp).padding(end = 4.dp).clickable { onPlayPauseClick?.invoke() })
+            Icon(imageVector = playIcon, contentDescription = "Status", tint = dynamicTextColor, modifier = Modifier.size(32.dp).padding(end = 4.dp).clickable { onPlayPauseClick?.invoke() }) // 🚀 Bigger Button
         }
     }
 
     @Composable
     fun MusicMax(music: LiveActivityModel.Music) {
         val dynamicTextColor = Color(music.titleTextColor)
-        val infiniteTransition = rememberInfiniteTransition()
-        val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(6000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "rot")
-        val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
 
         Column(modifier = Modifier.fillMaxSize().padding(start = 24.dp, end = 24.dp, top = 20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(60.dp).clip(CircleShape).rotate(currentRotation)) else Box(Modifier.size(60.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
+                // 🚀 FIXED: Replaced spinning art with the actual App Icon (Spotify/YouTube)!
+                if (music.appIcon != null) Image(bitmap = music.appIcon.asImageBitmap(), contentDescription = "App Logo", modifier = Modifier.size(60.dp).clip(RoundedCornerShape(14.dp)).clickable { onPillLongPress?.invoke() }) 
+                else Box(Modifier.size(60.dp).background(Color.White.copy(alpha=0.2f), RoundedCornerShape(14.dp)))
+                
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = music.title, color = dynamicTextColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -399,6 +427,42 @@ class DynamicIslandView(
         }
     }
 
+    // ==========================================
+    // 🚀 NEW DASHBOARD SCAFFOLDING (Idle State)
+    // ==========================================
+
+    @Composable
+    fun DashboardMid(model: LiveActivityModel.Dashboard) {
+        // M Pill: Pinned Apps (Scaffolded for next phase)
+        Row(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+            Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Phone, null, tint=Color.White, modifier=Modifier.size(24.dp)) }
+            Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Email, null, tint=Color.White, modifier=Modifier.size(24.dp)) }
+            Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Build, null, tint=Color.White, modifier=Modifier.size(24.dp)) }
+            Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Settings, null, tint=Color.White, modifier=Modifier.size(24.dp)) }
+        }
+    }
+
+    @Composable
+    fun DashboardMax(model: LiveActivityModel.Dashboard) {
+        // B Pill: Full QS Tiles (Scaffolded for next phase)
+        Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Quick Settings", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.align(Alignment.Start))
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                Box(modifier = Modifier.size(60.dp).background(if (model.isWifiOn) Color.Blue else Color.White.copy(0.2f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                    Icon(imageVector = Icons.Default.Settings, contentDescription = "WiFi", tint = Color.White, modifier = Modifier.size(28.dp))
+                }
+                Box(modifier = Modifier.size(60.dp).background(if (model.isTorchOn) Color.Yellow else Color.White.copy(0.2f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                    Icon(imageVector = Icons.Default.Build, contentDescription = "Torch", tint = Color.Black, modifier = Modifier.size(28.dp))
+                }
+                Box(modifier = Modifier.size(60.dp).background(Color.White.copy(0.2f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                    Icon(imageVector = Icons.Default.Info, contentDescription = "More", tint = Color.White, modifier = Modifier.size(28.dp))
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            Slider(value = model.currentVolume.toFloat(), onValueChange = {}, valueRange = 0f..model.maxVolume.toFloat(), colors = SliderDefaults.colors(activeTrackColor = Color.White))
+        }
+    }
     fun setState(newState: IslandState) { islandState.value = newState }
     fun setModel(model: LiveActivityModel?) { activeModel.value = model }
     fun setSplitModel(model: LiveActivityModel?) { splitModel.value = model }
