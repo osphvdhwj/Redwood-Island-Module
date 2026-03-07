@@ -3,16 +3,17 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-
-    <application
+<application
         android:allowBackup="true"
-        android:icon="@android:drawable/sym_def_app_icon" 
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.DynamicIsland">
-        
         <service android:name=".DummyListener"
                  android:label="Dynamic Island Media Listener"
                  android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
@@ -21,6 +22,7 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
 
         <meta-data
             android:name="xposedmodule"
@@ -31,10 +33,6 @@
         <meta-data
             android:name="xposedminversion"
             android:value="82" />
-            
-        <meta-data
-            android:name="xposedscope"
-            android:resource="@array/xposedscope" />
 
         <activity
             android:name=".ConfigActivity"

@@ -1,6 +1,8 @@
 package com.example.dynamicisland
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+
+
 import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
@@ -44,6 +46,12 @@ class IslandController(private val context: Context) {
     private val mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
     private var activeMediaController: MediaController? = null
     private var mediaTickerJob: Job? = null
+
+    init {
+        // Quarantine lifted! Testing Media and Hardware isolation.
+        setupHardwareMonitor()
+        setupMediaListener()
+    }
 
     /**
      * Binds the Compose UI to this controller.
@@ -322,12 +330,6 @@ class IslandController(private val context: Context) {
                 }
             }
         }
-    }
-
-    init {
-        // Quarantine lifted! Testing Media and Hardware isolation.
-        setupHardwareMonitor()
-        setupMediaListener()
     }
 
     fun cleanup() {

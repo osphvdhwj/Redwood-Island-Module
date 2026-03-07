@@ -87,7 +87,8 @@ class ConfigActivity : ComponentActivity() {
                 // The Mock Island
                 Box(
                     modifier = Modifier
-                        .offset(x = currentX.dp, y = currentY.dp)
+                        .padding(top = currentY.dp)
+                        .offset(x = currentX.dp)
                         .width(previewW)
                         .height(previewH)
                         .clip(RoundedCornerShape(previewRad))
@@ -165,27 +166,25 @@ class ConfigActivity : ComponentActivity() {
 
         makePrefsWorldReadable()
 
-        // 🚀 BEAM THE NUMBERS DIRECTLY THROUGH MEMORY
-        val intent = Intent("com.example.dynamicisland.RELOAD_PREFS")
-        
-        // CRITICAL FIX: Allow the background SystemUI process to hear this broadcast
-        intent.addFlags(0x01000000)
-        
-        // Pack the payload
-        intent.putExtra("prefix", prefix)
-        intent.putExtra("w", w)
-        intent.putExtra("h", h)
-        intent.putExtra("x", x)
-        intent.putExtra("y", y)
-        
-        // Broadcast to the whole system (Do NOT use .setPackage here!)
-        sendBroadcast(intent)
+        // Tell the real hooked module to update its cache if it happens to be running
+        sendBroadcast(Intent("com.example.dynamicisland.RELOAD_PREFS").setPackage("com.android.systemui"))
     }
 
     private fun makePrefsWorldReadable() {
         try {
-            val file = File(applicationInfo.dataDir, "shared_prefs/island_prefs.xml")
-            if (file.exists()) file.setReadable(true, false)
+            val prefsDir = File(applicationInfo.dataDir, "shared_prefs")
+            val prefsFile = File(prefsDir, "island_prefs.xml")
+
+            // 🚀 FIX: The folder MUST be executable for SystemUI to traverse it
+            if (prefsDir.exists()) {
+                prefsDir.setExecutable(true, false)
+                prefsDir.setReadable(true, false)
+            }
+
+            // The file itself must be readable
+            if (prefsFile.exists()) {
+                prefsFile.setReadable(true, false)
+            }
         } catch (e: Exception) { e.printStackTrace() }
-    }
+    }    }
 }
