@@ -8,7 +8,8 @@ enum class IslandState {
     TYPE_1_MINI,      // Smallest pill (e.g., persistent icon + small text)
     TYPE_2_MID,       // Expanded pill (e.g., standard notification)
     TYPE_3_MAX,       // Full expanded state (Media Player, Dashboard, etc.)
-    TYPE_SPLIT,
+    TYPE_CUBE,        // 🚀 NEW: Square/Cube shape for standalone charging/unlock
+    TYPE_SPLIT,       // 🚀 NEW: Main Pill + Tiny Right Cube
     HIDDEN            // Completely gone
 }
 
