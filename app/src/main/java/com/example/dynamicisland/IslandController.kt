@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaMetadata
+import android.media.Rating
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
@@ -23,15 +24,11 @@ class IslandController(private val context: Context) {
 
     private lateinit var windowManager: WindowManager
     private lateinit var layoutParams: WindowManager.LayoutParams
-
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-
     private val _islandState = MutableStateFlow(IslandState.TYPE_0_RING)
     val islandState = _islandState.asStateFlow()
-
     private val _activeModel = MutableStateFlow<LiveActivityModel?>(null)
     val activeModel = _activeModel.asStateFlow()
-
     private val _splitModel = MutableStateFlow<LiveActivityModel?>(null) 
     val splitModel = _splitModel.asStateFlow()
 
@@ -39,7 +36,6 @@ class IslandController(private val context: Context) {
     private var currentHardware: LiveActivityModel.HardwareMonitor? = null
     private var transientModel: LiveActivityModel? = null
     private var transientJob: Job? = null
-
     private var pauseFadeJob: Job? = null
     private var userForceCollapsed = false 
     private var lastReportedBattery = -1
@@ -50,7 +46,6 @@ class IslandController(private val context: Context) {
 
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
-
         val view = DynamicIslandView(context, moduleContext)
         view.windowManager = wm
         view.windowParams = params
@@ -58,20 +53,23 @@ class IslandController(private val context: Context) {
         view.onSingleTap = { onSingleTap() } 
         view.onPillLongPress = { onPillLongPress() }
         
-        // 🚀 DYNAMIC DOUBLE TAP
+        // 🚀 SIMPMUSIC COMPATIBILITY (RATING FALLBACK)
         view.onDoubleTap = { state ->
             if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) {
                 if (currentMedia?.isPlaying == true) sendMediaCommand("PAUSE") else sendMediaCommand("PLAY")
             } else if (state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) {
-                val heartAction = currentMedia?.customActions?.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("thumb", true) }
-                if (heartAction != null) activeMediaController?.transportControls?.sendCustomAction(heartAction.actionName, null)
+                val heartAction = currentMedia?.customActions?.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("like", true) }
+                if (heartAction != null) {
+                    activeMediaController?.transportControls?.sendCustomAction(heartAction.actionName, null)
+                } else {
+                    // SimpMusic uses the native Android Rating API for favorites!
+                    activeMediaController?.transportControls?.setRating(Rating.newHeartRating(true))
+                }
             }
         }
 
-        // 🚀 SWIPE STRICTLY LIMITED TO S & M PILLS
         view.onSwipeLeft = { state -> if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_2_MID || state == IslandState.TYPE_SPLIT) sendMediaCommand("NEXT") }
         view.onSwipeRight = { state -> if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_2_MID || state == IslandState.TYPE_SPLIT) sendMediaCommand("PREV") }
-
         view.onGrabberDragDown = { onGrabberDragDown() } 
         view.onGrabberDragUp = { onGrabberDragUp() }     
         view.onGrabberLongPress = { onGrabberLongPress() } 
@@ -85,15 +83,12 @@ class IslandController(private val context: Context) {
         scope.launch { islandState.collect { state -> view.setState(state) } }
         scope.launch { activeModel.collect { model -> view.setModel(model) } }
         scope.launch { splitModel.collect { model -> view.setSplitModel(model) } }
-
         return view
     }
 
     private fun launchAudioOutputSwitcher() {
         try {
-            val intent = Intent("com.android.systemui.action.LAUNCH_SYSTEM_MEDIA_OUTPUT_DIALOG").apply {
-                component = ComponentName("com.android.systemui", "com.android.systemui.media.dialog.MediaOutputDialogReceiver")
-            }
+            val intent = Intent("com.android.systemui.action.LAUNCH_SYSTEM_MEDIA_OUTPUT_DIALOG").apply { component = ComponentName("com.android.systemui", "com.android.systemui.media.dialog.MediaOutputDialogReceiver") }
             val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
             pendingIntent.send()
         } catch (e: Exception) { Log.e("DynamicIsland", "Failed to open audio output dialog", e) }
@@ -105,10 +100,8 @@ class IslandController(private val context: Context) {
             else { _activeModel.value = transientModel; _splitModel.value = null; _islandState.value = IslandState.TYPE_CUBE }
             return
         }
-
         _splitModel.value = null
         if (_activeModel.value is LiveActivityModel.Dashboard) return
-
         if (currentMedia != null) {
             _activeModel.value = currentMedia
             if (!userForceCollapsed && (_islandState.value == IslandState.HIDDEN || _islandState.value == IslandState.TYPE_0_RING || _islandState.value == IslandState.TYPE_CUBE || _islandState.value == IslandState.TYPE_SPLIT)) {
@@ -116,7 +109,6 @@ class IslandController(private val context: Context) {
             }
             return
         }
-        
         if (currentHardware?.isGamingModeOn == true) { _activeModel.value = currentHardware; _islandState.value = IslandState.TYPE_1_MINI; return }
         _activeModel.value = null
         _islandState.value = IslandState.TYPE_0_RING
@@ -128,8 +120,7 @@ class IslandController(private val context: Context) {
     }
 
     private fun setupMediaListener() {
-        try { mediaSessionManager.addOnActiveSessionsChangedListener({ controllers -> updateActiveMediaController(controllers?.firstOrNull()) }, ComponentName(context, "com.example.dynamicisland.DummyListener"))
-            updateActiveMediaController(mediaSessionManager.getActiveSessions(ComponentName(context, "com.example.dynamicisland.DummyListener")).firstOrNull()) } catch (e: Exception) {}
+        try { mediaSessionManager.addOnActiveSessionsChangedListener({ controllers -> updateActiveMediaController(controllers?.firstOrNull()) }, ComponentName(context, "com.example.dynamicisland.DummyListener")); updateActiveMediaController(mediaSessionManager.getActiveSessions(ComponentName(context, "com.example.dynamicisland.DummyListener")).firstOrNull()) } catch (e: Exception) {}
     }
 
     private fun updateActiveMediaController(controller: MediaController?) {
@@ -154,23 +145,15 @@ class IslandController(private val context: Context) {
 
         val duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
         val albumArtBitmap = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
-        
         var appIconBitmap: Bitmap? = null
         try { val pm = context.packageManager; appIconBitmap = pm.getApplicationIcon(controller.packageName).toBitmap(config = Bitmap.Config.ARGB_8888) } catch (e: Exception) {}
 
         var bgColor: Int? = null; var txtColor: Int = android.graphics.Color.WHITE
-        if (albumArtBitmap != null) {
-            val palette = Palette.from(albumArtBitmap).generate()
-            val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
-            if (swatch != null) { bgColor = swatch.rgb; txtColor = swatch.bodyTextColor }
-        }
+        if (albumArtBitmap != null) { val palette = Palette.from(albumArtBitmap).generate(); val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch; if (swatch != null) { bgColor = swatch.rgb; txtColor = swatch.bodyTextColor } }
 
         val extractedActions = pbState.customActions.map { CustomMediaAction(actionName = it.action, icon = null, pendingIntent = null, isEnabled = true) }
 
-        currentMedia = LiveActivityModel.Music(
-            id = "media_main", title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown", artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
-            albumArt = albumArtBitmap, appIcon = appIconBitmap, dominantColor = bgColor, titleTextColor = txtColor, isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position, appPackageName = controller.packageName, customActions = extractedActions
-        )
+        currentMedia = LiveActivityModel.Music(id = "media_main", title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown", artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown", albumArt = albumArtBitmap, appIcon = appIconBitmap, dominantColor = bgColor, titleTextColor = txtColor, isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position, appPackageName = controller.packageName, customActions = extractedActions)
 
         if (isPlaying && !wasPlaying) { userForceCollapsed = false; pauseFadeJob?.cancel() }
         if (isPlaying) { startMediaTicker() } else {
@@ -202,10 +185,7 @@ class IslandController(private val context: Context) {
         }
     }
 
-    fun sendMediaCommand(command: String) {
-        val controls = activeMediaController?.transportControls ?: return
-        when (command) { "PLAY" -> controls.play(); "PAUSE" -> controls.pause(); "NEXT" -> controls.skipToNext(); "PREV" -> controls.skipToPrevious() }
-    }
+    fun sendMediaCommand(command: String) { val controls = activeMediaController?.transportControls ?: return; when (command) { "PLAY" -> controls.play(); "PAUSE" -> controls.pause(); "NEXT" -> controls.skipToNext(); "PREV" -> controls.skipToPrevious() } }
 
     private fun setupHardwareMonitor() {
         BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
@@ -217,7 +197,6 @@ class IslandController(private val context: Context) {
         BatteryPlugin.start(context)
         scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; if (hw.isGamingModeOn || _activeModel.value is LiveActivityModel.HardwareMonitor) evaluatePriority() } }
     }
-
     init { setupHardwareMonitor(); setupMediaListener() }
     fun cleanup() { scope.cancel() }
 }
