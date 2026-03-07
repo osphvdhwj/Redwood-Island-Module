@@ -225,7 +225,7 @@ class IslandController(private val context: Context) {
         when (command) { "PLAY" -> controls.play(); "PAUSE" -> controls.pause(); "NEXT" -> controls.skipToNext(); "PREV" -> controls.skipToPrevious() }
     }
 
-    private fun setupHardwareMonitor() {
+   private fun setupHardwareMonitor() {
         BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
              // 🚀 SMART BATTERY POPUP LOGIC
              if (isCharging) {
@@ -240,9 +240,11 @@ class IslandController(private val context: Context) {
              }
              lastReportedBattery = level
              
-             // Update the global view so the Ring (R) knows real-time battery when idle
-             val view = windowManager.defaultDisplay
-             val intent = Intent("com.example.dynamicisland.BATTERY_UPDATE").putExtra("level", level).putExtra("isCharging", isCharging)
+             // 🚀 FIX: Removed the buggy uninitialized windowManager line. 
+             // We just send the broadcast safely!
+             val intent = Intent("com.example.dynamicisland.BATTERY_UPDATE")
+                 .putExtra("level", level)
+                 .putExtra("isCharging", isCharging)
              context.sendBroadcast(intent)
         }
         BatteryPlugin.start(context)
@@ -253,7 +255,7 @@ class IslandController(private val context: Context) {
                 if (hw.isGamingModeOn || _activeModel.value is LiveActivityModel.HardwareMonitor) evaluatePriority()
             }
         }
-    }
+   }
 
     init {
         setupHardwareMonitor()
