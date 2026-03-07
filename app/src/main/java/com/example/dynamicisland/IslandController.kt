@@ -5,12 +5,14 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.util.Log
 import android.view.WindowManager
+import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +31,6 @@ class IslandController(private val context: Context) {
     private val _activeModel = MutableStateFlow<LiveActivityModel?>(null)
     val activeModel = _activeModel.asStateFlow()
 
-    // 🚀 NEW: For the Split Island tiny right cube
     private val _splitModel = MutableStateFlow<LiveActivityModel?>(null) 
     val splitModel = _splitModel.asStateFlow()
 
@@ -38,7 +39,9 @@ class IslandController(private val context: Context) {
     private var transientModel: LiveActivityModel? = null
     private var transientJob: Job? = null
 
-    // Global Battery Tracking for the Ring Idle State
+    // 🚀 NEW: 3-Second Delay Job and User Override Flag
+    private var pauseFadeJob: Job? = null
+    private var userForceCollapsed = false 
     private var lastReportedBattery = -1
 
     private val mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
@@ -76,15 +79,12 @@ class IslandController(private val context: Context) {
     }
 
     private fun evaluatePriority() {
-        // 🚀 THE NEW IOS SPLIT & CUBE STATE MACHINE
         if (transientModel != null) {
-            if (currentMedia?.isPlaying == true) {
-                // Island is busy -> SPLIT STATE
+            if (currentMedia?.isPlaying == true || currentMedia != null) {
                 _activeModel.value = currentMedia
                 _splitModel.value = transientModel
                 _islandState.value = IslandState.TYPE_SPLIT
             } else {
-                // Island is idle -> CUBE STATE
                 _activeModel.value = transientModel
                 _splitModel.value = null
                 _islandState.value = IslandState.TYPE_CUBE
@@ -94,10 +94,17 @@ class IslandController(private val context: Context) {
 
         _splitModel.value = null
 
-        if (currentMedia != null && currentMedia?.isPlaying == true) {
+        // Dashboard has highest persistence if actively opened by user
+        if (_activeModel.value is LiveActivityModel.Dashboard) return
+
+        if (currentMedia != null) {
             _activeModel.value = currentMedia
-            if (_islandState.value == IslandState.HIDDEN || _islandState.value == IslandState.TYPE_0_RING || _islandState.value == IslandState.TYPE_CUBE || _islandState.value == IslandState.TYPE_SPLIT) {
-                _islandState.value = IslandState.TYPE_1_MINI
+            
+            // 🚀 BUG FIX: Do NOT auto-expand if the user manually collapsed it!
+            if (!userForceCollapsed) {
+                if (_islandState.value == IslandState.HIDDEN || _islandState.value == IslandState.TYPE_0_RING || _islandState.value == IslandState.TYPE_CUBE || _islandState.value == IslandState.TYPE_SPLIT) {
+                    _islandState.value = IslandState.TYPE_1_MINI
+                }
             }
             return
         }
@@ -115,11 +122,7 @@ class IslandController(private val context: Context) {
         transientJob?.cancel()
         transientModel = model
         evaluatePriority()
-        transientJob = scope.launch {
-            delay(durationMs)
-            transientModel = null
-            evaluatePriority()
-        }
+        transientJob = scope.launch { delay(durationMs); transientModel = null; evaluatePriority() }
     }
 
     private fun setupMediaListener() {
@@ -153,12 +156,23 @@ class IslandController(private val context: Context) {
         val pbState = controller.playbackState ?: return
 
         val isPlaying = pbState.state == PlaybackState.STATE_PLAYING
-        val duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
+        val wasPlaying = currentMedia?.isPlaying == true
+        
+        // Ignore stale paused media on boot
+        if (!isPlaying && currentMedia == null) return 
 
+        val duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
         val albumArtBitmap = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
+        
+        // 🚀 NEW: Extract Android App Icon (Spotify/YT) for the B Pill
+        var appIconBitmap: Bitmap? = null
+        try {
+            val pm = context.packageManager
+            appIconBitmap = pm.getApplicationIcon(controller.packageName).toBitmap(config = Bitmap.Config.ARGB_8888)
+        } catch (e: Exception) {}
+
         var bgColor: Int? = null
         var txtColor: Int = android.graphics.Color.WHITE
-
         if (albumArtBitmap != null) {
             val palette = Palette.from(albumArtBitmap).generate()
             val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
@@ -167,9 +181,25 @@ class IslandController(private val context: Context) {
 
         currentMedia = LiveActivityModel.Music(
             id = "media_main", title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown", artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
-            albumArt = albumArtBitmap, dominantColor = bgColor, titleTextColor = txtColor, isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position, appPackageName = controller.packageName
+            albumArt = albumArtBitmap, appIcon = appIconBitmap, dominantColor = bgColor, titleTextColor = txtColor, isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position, appPackageName = controller.packageName
         )
-        if (isPlaying) startMediaTicker() else stopMediaTicker()
+
+        // 🚀 NEW: 3-Second Fade Out Logic
+        if (isPlaying) {
+            userForceCollapsed = false // Music resumed, allow auto-expand again
+            pauseFadeJob?.cancel()
+            startMediaTicker()
+        } else {
+            stopMediaTicker()
+            if (wasPlaying) {
+                pauseFadeJob?.cancel()
+                pauseFadeJob = scope.launch {
+                    delay(3000) // Wait 3 seconds
+                    currentMedia = null
+                    evaluatePriority() // Fade back to R
+                }
+            }
+        }
         evaluatePriority()
     }
 
@@ -189,25 +219,43 @@ class IslandController(private val context: Context) {
 
     fun onSingleTap() {
         val currentType = _activeModel.value?.type
+        
+        // 🚀 NEW: IDLE DASHBOARD ROUTING
+        if (currentType == null && _islandState.value == IslandState.TYPE_0_RING) {
+            _activeModel.value = LiveActivityModel.Dashboard()
+            _islandState.value = IslandState.TYPE_2_MID // Open Pinned Apps
+            return
+        }
+
+        userForceCollapsed = false // User intentionally tapped, remove collapse blocker
+
         _islandState.value = when (_islandState.value) {
             IslandState.HIDDEN, IslandState.TYPE_0_RING -> IslandState.TYPE_1_MINI
-            IslandState.TYPE_1_MINI -> if (currentType == ActivityType.MEDIA) IslandState.TYPE_2_MID else IslandState.TYPE_1_MINI
-            IslandState.TYPE_2_MID -> if (currentType == ActivityType.MEDIA) IslandState.TYPE_3_MAX else IslandState.TYPE_2_MID
+            IslandState.TYPE_1_MINI -> if (currentType == ActivityType.MEDIA || currentType == ActivityType.DASHBOARD) IslandState.TYPE_2_MID else IslandState.TYPE_1_MINI
+            IslandState.TYPE_2_MID -> if (currentType == ActivityType.MEDIA || currentType == ActivityType.DASHBOARD) IslandState.TYPE_3_MAX else IslandState.TYPE_2_MID
             IslandState.TYPE_3_MAX -> IslandState.TYPE_3_MAX
             else -> IslandState.TYPE_0_RING
         }
     }
 
     fun onGrabberTap() {
+        userForceCollapsed = true // Remember that user intentionally hid the pill!
         _islandState.value = when (_islandState.value) {
             IslandState.TYPE_3_MAX -> IslandState.TYPE_2_MID
             IslandState.TYPE_2_MID -> IslandState.TYPE_1_MINI
-            IslandState.TYPE_1_MINI -> IslandState.TYPE_0_RING
+            IslandState.TYPE_1_MINI -> {
+                if (_activeModel.value is LiveActivityModel.Dashboard) _activeModel.value = null // Close dashboard fully
+                IslandState.TYPE_0_RING
+            }
             else -> IslandState.TYPE_0_RING
         }
     }
 
-    fun onGrabberLongPress() { _islandState.value = IslandState.TYPE_0_RING }
+    fun onGrabberLongPress() { 
+        userForceCollapsed = true 
+        if (_activeModel.value is LiveActivityModel.Dashboard) _activeModel.value = null
+        _islandState.value = IslandState.TYPE_0_RING 
+    }
 
     fun onPillLongPress() {
         val model = _activeModel.value
@@ -225,41 +273,25 @@ class IslandController(private val context: Context) {
         when (command) { "PLAY" -> controls.play(); "PAUSE" -> controls.pause(); "NEXT" -> controls.skipToNext(); "PREV" -> controls.skipToPrevious() }
     }
 
-   private fun setupHardwareMonitor() {
+    private fun setupHardwareMonitor() {
         BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
-             // 🚀 SMART BATTERY POPUP LOGIC
              if (isCharging) {
                  postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true), 4000L)
              } else {
                  if (lastReportedBattery != -1 && level < lastReportedBattery) {
-                     // ONLY popup on exactly 20%, 10%, and 5%
                      if (level == 20 || level == 10 || level == 5) {
                          postTransientNotification(LiveActivityModel.Charging(id = "sys_battery_low", level = level, isPluggedIn = false, isTransient = true).copy(type = ActivityType.BATTERY_LOW), 6000L)
                      }
                  }
              }
              lastReportedBattery = level
-             
-             // 🚀 FIX: Removed the buggy uninitialized windowManager line. 
-             // We just send the broadcast safely!
-             val intent = Intent("com.example.dynamicisland.BATTERY_UPDATE")
-                 .putExtra("level", level)
-                 .putExtra("isCharging", isCharging)
+             val intent = Intent("com.example.dynamicisland.BATTERY_UPDATE").putExtra("level", level).putExtra("isCharging", isCharging)
              context.sendBroadcast(intent)
         }
         BatteryPlugin.start(context)
-
-        scope.launch {
-            HardwareMonitors.startMonitoring().collect { hw ->
-                currentHardware = hw
-                if (hw.isGamingModeOn || _activeModel.value is LiveActivityModel.HardwareMonitor) evaluatePriority()
-            }
-        }
-   }
-
-    init {
-        setupHardwareMonitor()
-        setupMediaListener()
+        scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; if (hw.isGamingModeOn || _activeModel.value is LiveActivityModel.HardwareMonitor) evaluatePriority() } }
     }
+
+    init { setupHardwareMonitor(); setupMediaListener() }
     fun cleanup() { scope.cancel() }
 }
