@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.compositionContext
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -53,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.*
 import androidx.savedstate.*
+import com.example.dynamicisland.R
 import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -501,9 +503,10 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev", tint = dynamicTextColor, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
                 
-                val playIcon = if (music.isPlaying) Icons.Default.Close else Icons.Default.PlayArrow
-                Box(modifier = Modifier.size(56.dp).background(dynamicTextColor.copy(alpha = 0.2f), CircleShape).clickable { onPlayPauseClick?.invoke() }, contentAlignment = Alignment.Center) {
-                    Icon(imageVector = playIcon, contentDescription = "Play/Pause", tint = dynamicTextColor, modifier = Modifier.size(32.dp))
+                val playIcon = if (music.isPlaying) {
+                    ImageVector.vectorResource(id = R.drawable.ic_pause_vector)
+                } else {
+                   ImageVector.vectorResource(id = R.drawable.ic_play_vector)
                 }
                 
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next", tint = dynamicTextColor, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
