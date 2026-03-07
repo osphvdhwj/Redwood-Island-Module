@@ -78,13 +78,12 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
 @SuppressLint("ViewConstructor")
 class DynamicIslandView(
     context: Context,
-    val moduleContext: Context // 🚀 Injected Module Context
+    val moduleContext: Context 
 ) : FrameLayout(context) {
 
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
 
-    // Layout States
     var ringW = mutableStateOf(45f); var ringH = mutableStateOf(45f); var ringX = mutableStateOf(0f); var ringY = mutableStateOf(48f)
     var miniW = mutableStateOf(180f); var miniH = mutableStateOf(36f); var miniX = mutableStateOf(0f); var miniY = mutableStateOf(48f)
     var midW = mutableStateOf(320f); var midH = mutableStateOf(80f); var midX = mutableStateOf(0f); var midY = mutableStateOf(48f)
@@ -95,14 +94,17 @@ class DynamicIslandView(
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
 
-    // Interaction Callbacks
+    // 🚀 UPDATED CALLBACKS
     var onSingleTap: (() -> Unit)? = null
     var onDoubleTap: (() -> Unit)? = null
+    var onPillLongPress: (() -> Unit)? = null
+    var onGrabberTap: (() -> Unit)? = null
+    var onGrabberLongPress: (() -> Unit)? = null
     var onSwipeUp: (() -> Unit)? = null
     var onSwipeDown: (() -> Unit)? = null
     var onSwipeLeft: (() -> Unit)? = null
     var onSwipeRight: (() -> Unit)? = null
-    var onCloseClick: (() -> Unit)? = null
+    
     var onPlayPauseClick: (() -> Unit)? = null
     var onPrevClick: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
@@ -115,12 +117,10 @@ class DynamicIslandView(
             val pref = XSharedPreferences("com.example.dynamicisland", "island_prefs")
             pref.makeWorldReadable()
             pref.reload()
-
             ringW.value = pref.getFloat("ring_w", 45f); ringH.value = pref.getFloat("ring_h", 45f); ringX.value = pref.getFloat("ring_x", 0f); ringY.value = pref.getFloat("ring_y", 48f)
             miniW.value = pref.getFloat("mini_w", 180f); miniH.value = pref.getFloat("mini_h", 36f); miniX.value = pref.getFloat("mini_x", 0f); miniY.value = pref.getFloat("mini_y", 48f)
             midW.value = pref.getFloat("mid_w", 320f); midH.value = pref.getFloat("mid_h", 80f); midX.value = pref.getFloat("mid_x", 0f); midY.value = pref.getFloat("mid_y", 48f)
             maxW.value = pref.getFloat("max_w", 360f); maxH.value = pref.getFloat("max_h", 220f); maxX.value = pref.getFloat("max_x", 0f); maxY.value = pref.getFloat("max_y", 48f)
-            
             isCubeRotationEnabled.value = pref.getBoolean("rotate_cube", true)
         } catch (e: Exception) {}
     }
@@ -161,19 +161,14 @@ class DynamicIslandView(
         val composeView = ComposeView(context).apply {
             setContent { 
                 MaterialTheme(colorScheme = darkColorScheme()) { 
-                    CompositionLocalProvider(LocalContext provides moduleContext) {
-                        IslandUI(islandState.value) 
-                    }
+                    CompositionLocalProvider(LocalContext provides moduleContext) { IslandUI(islandState.value) }
                 } 
             }
         }
-
         val coroutineContext = AndroidUiDispatcher.CurrentThread
-        val runRecomposeScope = CoroutineScope(coroutineContext)
         val recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
-        composeView.setParentCompositionContext(recomposer) // 🚀 API fix!
-        runRecomposeScope.launch { recomposer.runRecomposeAndApplyChanges() }
-
+        composeView.setParentCompositionContext(recomposer)
+        CoroutineScope(coroutineContext).launch { recomposer.runRecomposeAndApplyChanges() }
         addView(composeView)
         lifecycleOwner.start()
     }
@@ -194,24 +189,27 @@ class DynamicIslandView(
         val offsetX by animateFloatAsState(targetX, floatSpec, label = "x")
         val offsetY by animateFloatAsState(targetY, floatSpec, label = "y")
 
-        val radTarget = if (state == IslandState.TYPE_3_MAX) 42.dp else (targetHeight / 2).dp
+        // 🧊 THE ICE CUBE MATH FIX
+        val radTarget = when (state) {
+            IslandState.TYPE_3_MAX -> 42.dp
+            IslandState.TYPE_2_MID -> 16.dp // Sharper corners for Mid pill
+            else -> (targetHeight / 2).dp // Perfect circle for Mini/Ring
+        }
         val rad by animateDpAsState(radTarget, physicsSpec, label = "rad")
 
         var dragOffsetX by remember { mutableStateOf(0f) }
         var dragOffsetY by remember { mutableStateOf(0f) }
 
-        val targetBgColor = if (state == IslandState.HIDDEN) {
+        // Transparent Ring Fix
+        val targetBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) {
             Color.Transparent
         } else {
             val model = activeModel.value
-            if (model is LiveActivityModel.Music && model.dominantColor != null) {
-                Color(model.dominantColor).copy(alpha = 0.65f) 
-            } else {
-                Color(0xFF121212).copy(alpha = 0.75f) 
-            }
+            if (model is LiveActivityModel.Music && model.dominantColor != null) Color(model.dominantColor).copy(alpha = 0.65f) 
+            else Color(0xFF121212).copy(alpha = 0.75f) 
         }
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
-        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN) Color.Transparent else Color.White.copy(alpha = 0.15f), animationSpec = tween(600), label = "borderColor")
+        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.15f), animationSpec = tween(600), label = "borderColor")
 
         LaunchedEffect(width, height, offsetX, offsetY, state) {
             if (!isAttachedToWindow) return@LaunchedEffect
@@ -221,16 +219,11 @@ class DynamicIslandView(
 
             if (state == IslandState.HIDDEN) {
                 wp.width = 0; wp.height = 0
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                    wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
-                    wp.blurBehindRadius = 0
-                }
             } else {
                 val extraW = 30 
                 val extraH = if (state == IslandState.TYPE_3_MAX) 60 else 30
                 wp.width = (width.value * density).toInt() + (extraW * density).toInt()
                 wp.height = (height.value * density).toInt() + (extraH * density).toInt()
-                
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                     wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
                     wp.blurBehindRadius = 45 
@@ -251,7 +244,8 @@ class DynamicIslandView(
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onTap = { onSingleTap?.invoke() },
-                            onDoubleTap = { onDoubleTap?.invoke() }
+                            onDoubleTap = { onDoubleTap?.invoke() },
+                            onLongPress = { onPillLongPress?.invoke() } // 🚀 Hold to open app
                         )
                     }
                     .pointerInput(Unit) {
@@ -281,65 +275,52 @@ class DynamicIslandView(
                 }
 
                 if (state != IslandState.HIDDEN) {
-                    val bottomPadding by animateDpAsState(
-                        targetValue = when(state) {
-                            IslandState.TYPE_3_MAX -> 24.dp
-                            IslandState.TYPE_2_MID -> 16.dp
-                            IslandState.TYPE_1_MINI -> 12.dp
-                            else -> 0.dp
-                        }, 
-                        label = "bottomPadding"
-                    )
+                    val bottomPadding by animateDpAsState(targetValue = when(state) { IslandState.TYPE_3_MAX -> 24.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_1_MINI -> 12.dp; else -> 0.dp }, label = "bottomPadding")
 
                     Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
-                        AnimatedContent(targetState = state, transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "morph") { s ->
-                            when (s) {
-                                IslandState.TYPE_3_MAX -> {
-                                    if (model is LiveActivityModel.Dashboard) DashboardMax(model)
-                                    else if (model is LiveActivityModel.Music) MusicMax(model)
-                                }
-                                IslandState.TYPE_2_MID -> {
-                                    if (model is LiveActivityModel.Music) MusicMid(model)
-                                    else if (model is LiveActivityModel.General) GeneralMid(model)
-                                    else if (model is LiveActivityModel.Charging) ChargingMid(model)
-                                }
-                                IslandState.TYPE_1_MINI -> {
-                                    if (model is LiveActivityModel.Music) MusicMini(model)
-                                    else if (model is LiveActivityModel.General) GeneralMini(model)
-                                    else if (model is LiveActivityModel.HardwareMonitor) HardwareGaugeMini(model)
-                                }
-                                else -> {} 
+                        // 🚀 SWIPE ANIMATION FIX: Removed AnimatedContent crossfade. It now snaps instantly inside the smooth borders.
+                        when (state) {
+                            IslandState.TYPE_3_MAX -> {
+                                if (model is LiveActivityModel.Dashboard) DashboardMax(model)
+                                else if (model is LiveActivityModel.Music) MusicMax(model)
                             }
+                            IslandState.TYPE_2_MID -> {
+                                if (model is LiveActivityModel.Music) MusicMid(model)
+                                else if (model is LiveActivityModel.General) GeneralMid(model)
+                                else if (model is LiveActivityModel.Charging) ChargingMid(model)
+                            }
+                            IslandState.TYPE_1_MINI -> {
+                                if (model is LiveActivityModel.Music) MusicMini(model)
+                                else if (model is LiveActivityModel.General) GeneralMini(model)
+                                else if (model is LiveActivityModel.HardwareMonitor) HardwareGaugeMini(model)
+                            }
+                            else -> {} 
                         }
                     }
 
-                    // 🌟 UNIVERSAL GRABBER 
+                    // 🌟 UNIVERSAL GRABBER TOUCH TARGETS
                     if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) {
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
                                 .height(when(state) { IslandState.TYPE_3_MAX -> 32.dp; IslandState.TYPE_2_MID -> 20.dp; else -> 16.dp })
-                                .clickable { onCloseClick?.invoke() }
-                                .pointerInput(Unit) { detectDragGestures { _, dragAmount -> if (dragAmount.y < -10) onCloseClick?.invoke() } },
+                                .pointerInput(Unit) { 
+                                    detectTapGestures(
+                                        onTap = { onGrabberTap?.invoke() },
+                                        onLongPress = { onGrabberLongPress?.invoke() }
+                                    ) 
+                                },
                             contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .width(if (state == IslandState.TYPE_1_MINI) 24.dp else 40.dp) 
-                                    .height(if (state == IslandState.TYPE_1_MINI) 3.dp else 5.dp)
-                                    .background(Color.White.copy(alpha=0.4f), CircleShape)
-                            )
+                            Box(modifier = Modifier.width(if (state == IslandState.TYPE_1_MINI) 24.dp else 40.dp).height(if (state == IslandState.TYPE_1_MINI) 3.dp else 5.dp).background(Color.White.copy(alpha=0.4f), CircleShape))
                         }
                     }
                 }
                 
                 if (state == IslandState.TYPE_0_RING && model is LiveActivityModel.Music && model.isPlaying) {
                     val infiniteTransition = rememberInfiniteTransition(label = "wave")
-                    val phase by infiniteTransition.animateFloat(
-                        initialValue = 0f, targetValue = (2 * Math.PI).toFloat(),
-                        animationSpec = infiniteRepeatable(animation = tween(2000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "phase"
-                    )
+                    val phase by infiniteTransition.animateFloat(initialValue = 0f, targetValue = (2 * Math.PI).toFloat(), animationSpec = infiniteRepeatable(animation = tween(2000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "phase")
                     
                     Canvas(modifier = Modifier.size(ringW.value.dp - 4.dp, ringH.value.dp - 4.dp).align(Alignment.Center)) {
                         val path = Path()
@@ -364,6 +345,14 @@ class DynamicIslandView(
         }
     }
 
+    private fun formatTime(ms: Long): String {
+        if (ms <= 0) return "0:00"
+        val totalSeconds = ms / 1000
+        val m = totalSeconds / 60
+        val s = totalSeconds % 60
+        return String.format("%d:%02d", m, s)
+    }
+
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun MusicMini(music: LiveActivityModel.Music) {
@@ -373,8 +362,8 @@ class DynamicIslandView(
             val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
             
             if (music.albumArt != null) {
-                Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Spinning Art", modifier = Modifier.size(24.dp).clip(RoundedCornerShape(8.dp)).rotate(currentRotation))
-            } else Box(Modifier.size(24.dp).background(Color.White.copy(0.2f), RoundedCornerShape(8.dp)))
+                Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Spinning Art", modifier = Modifier.size(24.dp).clip(CircleShape).rotate(currentRotation))
+            } else Box(Modifier.size(24.dp).background(Color.White.copy(0.2f), CircleShape))
 
             Spacer(Modifier.width(8.dp))
             Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f).basicMarquee())
@@ -412,10 +401,14 @@ class DynamicIslandView(
     fun MusicMax(music: LiveActivityModel.Music) {
         val dynamicTextColor = Color(music.titleTextColor)
         
+        val infiniteTransition = rememberInfiniteTransition()
+        val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(6000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "rot")
+        val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
+
         Column(modifier = Modifier.fillMaxSize().padding(start = 24.dp, end = 24.dp, top = 20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(60.dp).clip(RoundedCornerShape(16.dp)))
-                else Box(Modifier.size(60.dp).background(Color.White.copy(alpha=0.2f), RoundedCornerShape(16.dp)))
+                if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(60.dp).clip(CircleShape).rotate(currentRotation))
+                else Box(Modifier.size(60.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
 
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -429,18 +422,25 @@ class DynamicIslandView(
             val interactionSource = remember { MutableInteractionSource() }
             val isDragged by interactionSource.collectIsDraggedAsState()
             var localPosition by remember(isDragged) { mutableStateOf(music.positionMs.toFloat()) }
-            val realProgress = if (music.durationMs > 0) (music.positionMs.toFloat() / music.durationMs.toFloat()) else 0f
-            val safeProgress = if (realProgress.isNaN() || realProgress.isInfinite()) 0f else realProgress.coerceIn(0f, 1f)
+            
+            val safeDuration = if (music.durationMs > 0) music.durationMs.toFloat() else 1f
+            val safePosition = if (isDragged) localPosition else music.positionMs.toFloat()
+            val progress = (safePosition / safeDuration).coerceIn(0f, 1f)
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(text = formatTime(safePosition.toLong()), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 12.sp)
+                Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 12.sp)
+            }
 
             Slider(
-                value = if (isDragged) (localPosition / music.durationMs.toFloat()).coerceIn(0f, 1f) else safeProgress,
-                onValueChange = { localPosition = it * music.durationMs.toFloat(); haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) },
+                value = progress,
+                onValueChange = { localPosition = it * safeDuration; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) },
                 onValueChangeFinished = { onSeekTo?.invoke(localPosition.toLong()); haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
                 interactionSource = interactionSource,
                 colors = SliderDefaults.colors(activeTrackColor = dynamicTextColor, inactiveTrackColor = dynamicTextColor.copy(alpha=0.3f), thumbColor = dynamicTextColor),
                 modifier = Modifier.fillMaxWidth().height(24.dp)
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev", tint = dynamicTextColor, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
@@ -521,8 +521,6 @@ class DynamicIslandView(
     fun ChargingMid(charging: LiveActivityModel.Charging) { UniversalMid(Color.White, charging) }
     @Composable
     fun GeneralMid(general: LiveActivityModel.General) { UniversalMid(Color.White, general) }
-    
-    // 🚀 THESE METHODS WERE ORPHANED BY THE MISSING BRACE. THEY ARE NOW SAFELY BACK INSIDE!
     fun setState(newState: IslandState) { islandState.value = newState }
     fun setModel(model: LiveActivityModel?) { activeModel.value = model }
 
