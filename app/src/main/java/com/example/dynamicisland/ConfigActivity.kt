@@ -189,3 +189,4 @@ class ConfigActivity : ComponentActivity() {
             if (prefsFile.exists()) prefsFile.setReadable(true, false)
         } catch (e: Exception) { e.printStackTrace() }
     }
+}
