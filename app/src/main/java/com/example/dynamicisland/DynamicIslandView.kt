@@ -44,8 +44,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.compositionContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.*
 import androidx.savedstate.*
-import com.example.dynamicisland.R
 import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -77,24 +76,24 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
 }
 
 @SuppressLint("ViewConstructor")
-class DynamicIslandView(context: Context) : FrameLayout(context) {
+class DynamicIslandView(
+    context: Context,
+    val moduleContext: Context // 🚀 Injected Module Context!
+) : FrameLayout(context) {
 
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
 
-    // Layout States
     var ringW = mutableStateOf(45f); var ringH = mutableStateOf(45f); var ringX = mutableStateOf(0f); var ringY = mutableStateOf(48f)
     var miniW = mutableStateOf(180f); var miniH = mutableStateOf(36f); var miniX = mutableStateOf(0f); var miniY = mutableStateOf(48f)
     var midW = mutableStateOf(320f); var midH = mutableStateOf(80f); var midX = mutableStateOf(0f); var midY = mutableStateOf(48f)
     var maxW = mutableStateOf(360f); var maxH = mutableStateOf(220f); var maxX = mutableStateOf(0f); var maxY = mutableStateOf(48f)
 
-    // Feature Toggles
     var isCubeRotationEnabled = mutableStateOf(true)
 
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
 
-    // Interaction Callbacks
     var onSingleTap: (() -> Unit)? = null
     var onDoubleTap: (() -> Unit)? = null
     var onSwipeUp: (() -> Unit)? = null
@@ -128,7 +127,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         override fun onReceive(ctx: Context, intent: Intent) {
             when (intent.action) {
                 "com.example.dynamicisland.RELOAD_PREFS" -> {
-                    // 🚀 RAM BYPASS - Reads directly from memory
                     val prefix = intent.getStringExtra("prefix")
                     if (prefix != null) {
                         val w = intent.getFloatExtra("w", 0f); val h = intent.getFloatExtra("h", 0f)
@@ -159,7 +157,14 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
 
         val composeView = ComposeView(context).apply {
-            setContent { MaterialTheme(colorScheme = darkColorScheme()) { IslandUI(islandState.value) } }
+            setContent { 
+                MaterialTheme(colorScheme = darkColorScheme()) { 
+                    // 🚀 FIX: Feed the module's resources strictly to Compose Icons!
+                    CompositionLocalProvider(LocalContext provides moduleContext) {
+                        IslandUI(islandState.value) 
+                    }
+                } 
+            }
         }
 
         val coroutineContext = AndroidUiDispatcher.CurrentThread
@@ -191,27 +196,21 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         val radTarget = if (state == IslandState.TYPE_3_MAX) 42.dp else (targetHeight / 2).dp
         val rad by animateDpAsState(radTarget, physicsSpec, label = "rad")
 
-        // GESTURE ENGINE VARIABLES
         var dragOffsetX by remember { mutableStateOf(0f) }
         var dragOffsetY by remember { mutableStateOf(0f) }
 
-        // 🎨 GLASSMORPHISM & DYNAMIC COLOR
         val targetBgColor = if (state == IslandState.HIDDEN) {
             Color.Transparent
         } else {
             val model = activeModel.value
             if (model is LiveActivityModel.Music && model.dominantColor != null) {
-                Color(model.dominantColor).copy(alpha = 0.65f) // 65% opacity + hardware blur
+                Color(model.dominantColor).copy(alpha = 0.65f) 
             } else {
-                Color(0xFF121212).copy(alpha = 0.75f) // Default frosted dark glass
+                Color(0xFF121212).copy(alpha = 0.75f) 
             }
         }
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
-        
-        val borderColor by animateColorAsState(
-            targetValue = if (state == IslandState.HIDDEN) Color.Transparent else Color.White.copy(alpha = 0.15f),
-            animationSpec = tween(600), label = "borderColor"
-        )
+        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN) Color.Transparent else Color.White.copy(alpha = 0.15f), animationSpec = tween(600), label = "borderColor")
 
         LaunchedEffect(width, height, offsetX, offsetY, state) {
             if (!isAttachedToWindow) return@LaunchedEffect
@@ -221,26 +220,22 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
             if (state == IslandState.HIDDEN) {
                 wp.width = 0; wp.height = 0
-                // Turn OFF blur when hidden
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                     wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
                     wp.blurBehindRadius = 0
                 }
             } else {
-                // 🚀 MATH FIX: Reduced extraW so it doesn't overflow screen width!
                 val extraW = 30 
                 val extraH = if (state == IslandState.TYPE_3_MAX) 60 else 30
                 wp.width = (width.value * density).toInt() + (extraW * density).toInt()
                 wp.height = (height.value * density).toInt() + (extraH * density).toInt()
                 
-                // Turn ON hardware blur when visible
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                     wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
-                    wp.blurBehindRadius = 45 // Deep, rich iOS-style blur
+                    wp.blurBehindRadius = 45 
                 }
             }
-            wp.x = offsetX.toInt()
-            wp.y = offsetY.toInt()
+            wp.x = offsetX.toInt(); wp.y = offsetY.toInt()
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
         }
 
@@ -250,8 +245,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     .width(width)
                     .height(height)
                     .clip(RoundedCornerShape(rad))
-                    .background(bgColor) // 🪄 The dynamic glass color!
-                    .border(1.dp, borderColor, RoundedCornerShape(rad)) // ✨ The glass reflection edge
+                    .background(bgColor) 
+                    .border(1.dp, borderColor, RoundedCornerShape(rad))
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onTap = { onSingleTap?.invoke() },
@@ -259,7 +254,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                         )
                     }
                     .pointerInput(Unit) {
-                        // 🚀 OMNI-DIRECTIONAL SWIPE ENGINE
                         detectDragGestures(
                             onDragEnd = {
                                 if (abs(dragOffsetX) > abs(dragOffsetY)) {
@@ -269,30 +263,19 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                                     if (dragOffsetY > 40) onSwipeDown?.invoke()
                                     else if (dragOffsetY < -40) onSwipeUp?.invoke()
                                 }
-                                dragOffsetX = 0f
-                                dragOffsetY = 0f
+                                dragOffsetX = 0f; dragOffsetY = 0f
                             },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                dragOffsetX += dragAmount.x
-                                dragOffsetY += dragAmount.y
-                            }
+                            onDrag = { change, dragAmount -> change.consume(); dragOffsetX += dragAmount.x; dragOffsetY += dragAmount.y }
                         )
                     },
                 contentAlignment = Alignment.TopCenter
             ) {
                 val model = activeModel.value
 
-                // 🌟 CINEMATIC ALBUM BACKGROUND (MID & MAX ONLY)
                 if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
                     Image(
-                        bitmap = model.albumArt.asImageBitmap(),
-                        contentDescription = "Cinematic BG",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .alpha(0.35f) // Darken it so text is readable
-                            .blur(24.dp)  // Heavy background blur
+                        bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().alpha(0.35f).blur(24.dp)
                     )
                 }
 
@@ -316,7 +299,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                                     else if (model is LiveActivityModel.General) GeneralMini(model)
                                     else if (model is LiveActivityModel.HardwareMonitor) HardwareGaugeMini(model)
                                 }
-                                else -> {} // Ring handles itself below
+                                else -> {} 
                             }
                         }
                     }
@@ -336,7 +319,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                     }
                 }
                 
-                // 🌟 WAVY MATH CANVAS IN RING STATE
                 if (state == IslandState.TYPE_0_RING && model is LiveActivityModel.Music && model.isPlaying) {
                     val infiniteTransition = rememberInfiniteTransition(label = "wave")
                     val phase by infiniteTransition.animateFloat(
@@ -348,7 +330,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                         val path = Path()
                         val centerOffset = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
                         val baseRadius = (size.width / 2) - 4.dp.toPx()
-                        val frequency = 6 // Number of waves
+                        val frequency = 6 
                         val amplitude = 3.dp.toPx()
 
                         for (i in 0..360) {
@@ -357,7 +339,6 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
                             val r = baseRadius + waveOffset
                             val x = centerOffset.x + (r * cos(angle)).toFloat()
                             val y = centerOffset.y + (r * sin(angle)).toFloat()
-                            
                             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
                         }
                         path.close()
@@ -368,40 +349,22 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
         }
     }
 
-    // ==========================================
-    // MEDIA PILL COMPONENTS
-    // ==========================================
-
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun MusicMini(music: LiveActivityModel.Music) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
-            
-            // 🌟 ROTATING 20dp CUBE
             val infiniteTransition = rememberInfiniteTransition()
-            val rotation by infiniteTransition.animateFloat(
-                initialValue = 0f, targetValue = 360f,
-                animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "rot"
-            )
+            val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "rot")
             val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
             
             if (music.albumArt != null) {
-                Image(
-                    bitmap = music.albumArt.asImageBitmap(), 
-                    contentDescription = "Spinning Art", 
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(RoundedCornerShape(8.dp)) // 8dp simulates a perfect rounded cube
-                        .rotate(currentRotation)
-                )
-            } else {
-                Box(Modifier.size(24.dp).background(Color.White.copy(0.2f), RoundedCornerShape(8.dp)))
-            }
+                Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Spinning Art", modifier = Modifier.size(24.dp).clip(RoundedCornerShape(8.dp)).rotate(currentRotation))
+            } else Box(Modifier.size(24.dp).background(Color.White.copy(0.2f), RoundedCornerShape(8.dp)))
 
             Spacer(Modifier.width(8.dp))
             Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f).basicMarquee())
             
-            // Audio visualizer icon
+            // 🚀 Uses LocalContext (which is now moduleContext!)
             val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
             Icon(imageVector = playIcon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
         }
@@ -412,49 +375,23 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     fun MusicMid(music: LiveActivityModel.Music) {
         val dynamicTextColor = Color(music.titleTextColor)
         val secondaryTextColor = dynamicTextColor.copy(alpha = 0.7f)
-        
-        // Calculate real-time progress for the mini-ring
         val progress = if (music.durationMs > 0) (music.positionMs.toFloat() / music.durationMs.toFloat()).coerceIn(0f, 1f) else 0f
 
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-            
-            // 🌟 Thumbnail wrapped in a Progress Ring
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(52.dp)) {
-                CircularProgressIndicator(
-                    progress = { progress },
-                    color = dynamicTextColor,
-                    trackColor = dynamicTextColor.copy(alpha = 0.2f),
-                    strokeWidth = 2.dp,
-                    modifier = Modifier.fillMaxSize()
-                )
-                
-                if (music.albumArt != null) {
-                    Image(
-                        bitmap = music.albumArt.asImageBitmap(), 
-                        contentDescription = "Art", 
-                        modifier = Modifier.size(44.dp).clip(CircleShape) // Circular art fits inside ring
-                    )
-                } else {
-                    Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
-                }
+                CircularProgressIndicator(progress = { progress }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha = 0.2f), strokeWidth = 2.dp, modifier = Modifier.fillMaxSize())
+                if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Art", modifier = Modifier.size(44.dp).clip(CircleShape))
+                else Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
             }
-            
             Spacer(Modifier.width(14.dp))
-            
-            // 🌟 Dynamic Typography Text
             Column(modifier = Modifier.weight(1f)) {
                  Text(text = music.title, color = dynamicTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee())
                  Text(text = music.artist, color = secondaryTextColor, fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
             }
             
-            // 🌟 Status Icon
+            // 🚀 Uses LocalContext (which is now moduleContext!)
             val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
-            Icon(
-                imageVector = playIcon, 
-                contentDescription = "Status", 
-                tint = dynamicTextColor, 
-                modifier = Modifier.size(24.dp).padding(end = 4.dp).clickable { onPlayPauseClick?.invoke() }
-            )
+            Icon(imageVector = playIcon, contentDescription = "Status", tint = dynamicTextColor, modifier = Modifier.size(24.dp).padding(end = 4.dp).clickable { onPlayPauseClick?.invoke() })
         }
     }
 
@@ -475,64 +412,36 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 🌟 Interactive Media Slider
             val haptic = LocalHapticFeedback.current
             val interactionSource = remember { MutableInteractionSource() }
             val isDragged by interactionSource.collectIsDraggedAsState()
             var localPosition by remember(isDragged) { mutableStateOf(music.positionMs.toFloat()) }
-
             val realProgress = if (music.durationMs > 0) (music.positionMs.toFloat() / music.durationMs.toFloat()) else 0f
             val safeProgress = if (realProgress.isNaN() || realProgress.isInfinite()) 0f else realProgress.coerceIn(0f, 1f)
 
             Slider(
                 value = if (isDragged) (localPosition / music.durationMs.toFloat()).coerceIn(0f, 1f) else safeProgress,
-                onValueChange = { 
-                    localPosition = it * music.durationMs.toFloat() 
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                },
-                onValueChangeFinished = { 
-                    onSeekTo?.invoke(localPosition.toLong()) 
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                },
+                onValueChange = { localPosition = it * music.durationMs.toFloat(); haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) },
+                onValueChangeFinished = { onSeekTo?.invoke(localPosition.toLong()); haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
                 interactionSource = interactionSource,
                 colors = SliderDefaults.colors(activeTrackColor = dynamicTextColor, inactiveTrackColor = dynamicTextColor.copy(alpha=0.3f), thumbColor = dynamicTextColor),
                 modifier = Modifier.fillMaxWidth().height(24.dp)
             )
-
             Spacer(modifier = Modifier.height(12.dp))
             
-            // 🌟 Media Controls
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-                // Prev Button
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev", tint = dynamicTextColor, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
                 
-                // Determine Play/Pause Icon
-                val playIcon = if (music.isPlaying) {
-                    ImageVector.vectorResource(id = R.drawable.ic_pause_vector)
-                } else {
-                   ImageVector.vectorResource(id = R.drawable.ic_play_vector)
-                }
-                
-                // 🚀 FIXED: The actual Play/Pause Button that was missing!
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .background(dynamicTextColor.copy(alpha = 0.15f), CircleShape)
-                        .clickable { onPlayPauseClick?.invoke() }, 
-                    contentAlignment = Alignment.Center
-                ) {
+                // 🚀 Uses LocalContext (which is now moduleContext!)
+                val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
+                Box(modifier = Modifier.size(56.dp).background(dynamicTextColor.copy(alpha = 0.2f), CircleShape).clickable { onPlayPauseClick?.invoke() }, contentAlignment = Alignment.Center) {
                     Icon(imageVector = playIcon, contentDescription = "Play/Pause", tint = dynamicTextColor, modifier = Modifier.size(32.dp))
                 }
                 
-                // Next Button
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next", tint = dynamicTextColor, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
             }
         }
     }
-
-    // ==========================================
-    // OTHER SYSTEM COMPONENTS (Dashboard, Battery, etc)
-    // ==========================================
 
     @Composable
     fun DashboardMax(model: LiveActivityModel.Dashboard) {
@@ -562,19 +471,11 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     @Composable
     fun HardwareGaugeMini(hw: LiveActivityModel.HardwareMonitor) {
-        val tempColor = when {
-            hw.cpuTempCelsius > 45f -> Color.Red
-            hw.cpuTempCelsius > 38f -> Color.Yellow
-            else -> Color.Green
-        }
+        val tempColor = when { hw.cpuTempCelsius > 45f -> Color.Red; hw.cpuTempCelsius > 38f -> Color.Yellow; else -> Color.Green }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Icon(imageVector = Icons.Default.Info, contentDescription = "Hardware", tint = tempColor, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(8.dp))
-            androidx.compose.material3.LinearProgressIndicator(
-                progress = { (hw.cpuTempCelsius / 60f).coerceIn(0f, 1f) },
-                modifier = Modifier.width(60.dp).height(6.dp).clip(RoundedCornerShape(3.dp)),
-                color = tempColor, trackColor = Color.White.copy(alpha=0.2f)
-            )
+            androidx.compose.material3.LinearProgressIndicator(progress = { (hw.cpuTempCelsius / 60f).coerceIn(0f, 1f) }, modifier = Modifier.width(60.dp).height(6.dp).clip(RoundedCornerShape(3.dp)), color = tempColor, trackColor = Color.White.copy(alpha=0.2f))
             Spacer(Modifier.width(8.dp))
             Text(text = "${hw.cpuFreqMhz} MHz", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
         }
@@ -584,10 +485,7 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
     @Composable
     fun UniversalMid(textColor: Color, activity: LiveActivityModel) {
         val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-        val alphaPulse by infiniteTransition.animateFloat(
-            initialValue = 0.4f, targetValue = 1f,
-            animationSpec = infiniteRepeatable(animation = tween(800, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse), label = "alphaPulse"
-        )
+        val alphaPulse by infiniteTransition.animateFloat(initialValue = 0.4f, targetValue = 1f, animationSpec = infiniteRepeatable(animation = tween(800, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse), label = "alphaPulse")
         val progress = when(activity) { is LiveActivityModel.General -> activity.progress; is LiveActivityModel.Charging -> activity.level / 100f; else -> null }
         val colorInt = when(activity) { is LiveActivityModel.General -> activity.accentColor; is LiveActivityModel.Charging -> android.graphics.Color.GREEN; else -> android.graphics.Color.WHITE }
         val title = when(activity) { is LiveActivityModel.General -> activity.title; is LiveActivityModel.Charging -> if (activity.isPluggedIn) "Charging" else "Disconnected"; else -> "" }
@@ -609,10 +507,8 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
 
     @Composable
     fun ChargingMid(charging: LiveActivityModel.Charging) { UniversalMid(Color.White, charging) }
-
     @Composable
     fun GeneralMid(general: LiveActivityModel.General) { UniversalMid(Color.White, general) }
-
     fun setState(newState: IslandState) { islandState.value = newState }
     fun setModel(model: LiveActivityModel?) { activeModel.value = model }
 
