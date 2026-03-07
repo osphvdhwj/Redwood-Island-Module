@@ -3,7 +3,6 @@ package com.example.dynamicisland
 import android.app.PendingIntent
 import android.graphics.Bitmap
 
-
 enum class IslandState {
     TYPE_0_RING,      // Just the wavy ring around the punch hole
     TYPE_1_MINI,      // Smallest pill (e.g., persistent icon + small text)
@@ -52,6 +51,7 @@ sealed class LiveActivityModel {
         val artist: String,
         val albumArt: Bitmap? = null,
         val dominantColor: Int? = null,
+        val titleTextColor: Int = android.graphics.Color.WHITE, // 🌟 NEW: Dynamic text color
         val isPlaying: Boolean = false,
         val durationMs: Long = 0L,
         val positionMs: Long = 0L,
