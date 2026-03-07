@@ -29,10 +29,17 @@ class IslandController(private val context: Context) {
     private val _activeModel = MutableStateFlow<LiveActivityModel?>(null)
     val activeModel = _activeModel.asStateFlow()
 
+    // 🚀 NEW: For the Split Island tiny right cube
+    private val _splitModel = MutableStateFlow<LiveActivityModel?>(null) 
+    val splitModel = _splitModel.asStateFlow()
+
     private var currentMedia: LiveActivityModel.Music? = null
     private var currentHardware: LiveActivityModel.HardwareMonitor? = null
     private var transientModel: LiveActivityModel? = null
     private var transientJob: Job? = null
+
+    // Global Battery Tracking for the Ring Idle State
+    private var lastReportedBattery = -1
 
     private val mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
     private var activeMediaController: MediaController? = null
@@ -47,42 +54,54 @@ class IslandController(private val context: Context) {
         view.windowManager = wm
         view.windowParams = params
 
-        // 🚀 THE NEW STATE MACHINE ROUTING
         view.onSingleTap = { onSingleTap() }
         view.onPillLongPress = { onPillLongPress() }
         view.onGrabberTap = { onGrabberTap() }
         view.onGrabberLongPress = { onGrabberLongPress() }
         
-        view.onSwipeUp = { onGrabberTap() } // Swipe up acts like Grabber Tap (Back)
-        view.onSwipeDown = { onSingleTap() } // Swipe down acts like Pill Tap (Expand)
+        view.onSwipeUp = { onGrabberTap() }
+        view.onSwipeDown = { onSingleTap() }
         view.onSwipeLeft = { sendMediaCommand("NEXT") }
         view.onSwipeRight = { sendMediaCommand("PREV") }
 
-        view.onPlayPauseClick = {
-            if (currentMedia?.isPlaying == true) sendMediaCommand("PAUSE") else sendMediaCommand("PLAY")
-        }
+        view.onPlayPauseClick = { if (currentMedia?.isPlaying == true) sendMediaCommand("PAUSE") else sendMediaCommand("PLAY") }
         view.onPrevClick = { sendMediaCommand("PREV") }
         view.onNextClick = { sendMediaCommand("NEXT") }
 
         scope.launch { islandState.collect { state -> view.setState(state) } }
         scope.launch { activeModel.collect { model -> view.setModel(model) } }
+        scope.launch { splitModel.collect { model -> view.setSplitModel(model) } }
 
         return view
     }
 
     private fun evaluatePriority() {
+        // 🚀 THE NEW IOS SPLIT & CUBE STATE MACHINE
         if (transientModel != null) {
-            _activeModel.value = transientModel
-            _islandState.value = IslandState.TYPE_2_MID
+            if (currentMedia?.isPlaying == true) {
+                // Island is busy -> SPLIT STATE
+                _activeModel.value = currentMedia
+                _splitModel.value = transientModel
+                _islandState.value = IslandState.TYPE_SPLIT
+            } else {
+                // Island is idle -> CUBE STATE
+                _activeModel.value = transientModel
+                _splitModel.value = null
+                _islandState.value = IslandState.TYPE_CUBE
+            }
             return
         }
+
+        _splitModel.value = null
+
         if (currentMedia != null && currentMedia?.isPlaying == true) {
             _activeModel.value = currentMedia
-            if (_islandState.value == IslandState.HIDDEN || _islandState.value == IslandState.TYPE_0_RING) {
+            if (_islandState.value == IslandState.HIDDEN || _islandState.value == IslandState.TYPE_0_RING || _islandState.value == IslandState.TYPE_CUBE || _islandState.value == IslandState.TYPE_SPLIT) {
                 _islandState.value = IslandState.TYPE_1_MINI
             }
             return
         }
+        
         if (currentHardware?.isGamingModeOn == true) {
             _activeModel.value = currentHardware
             _islandState.value = IslandState.TYPE_1_MINI
@@ -105,9 +124,7 @@ class IslandController(private val context: Context) {
 
     private fun setupMediaListener() {
         try {
-            mediaSessionManager.addOnActiveSessionsChangedListener({ controllers ->
-                updateActiveMediaController(controllers?.firstOrNull())
-            }, ComponentName(context, "com.example.dynamicisland.DummyListener"))
+            mediaSessionManager.addOnActiveSessionsChangedListener({ controllers -> updateActiveMediaController(controllers?.firstOrNull()) }, ComponentName(context, "com.example.dynamicisland.DummyListener"))
             updateActiveMediaController(mediaSessionManager.getActiveSessions(ComponentName(context, "com.example.dynamicisland.DummyListener")).firstOrNull())
         } catch (e: Exception) {}
     }
@@ -145,24 +162,13 @@ class IslandController(private val context: Context) {
         if (albumArtBitmap != null) {
             val palette = Palette.from(albumArtBitmap).generate()
             val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
-            if (swatch != null) {
-                bgColor = swatch.rgb; txtColor = swatch.bodyTextColor 
-            }
+            if (swatch != null) { bgColor = swatch.rgb; txtColor = swatch.bodyTextColor }
         }
 
         currentMedia = LiveActivityModel.Music(
-            id = "media_main",
-            title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown",
-            artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
-            albumArt = albumArtBitmap,
-            dominantColor = bgColor,      
-            titleTextColor = txtColor,    
-            isPlaying = isPlaying,
-            durationMs = duration,
-            positionMs = pbState.position,
-            appPackageName = controller.packageName
+            id = "media_main", title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown", artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
+            albumArt = albumArtBitmap, dominantColor = bgColor, titleTextColor = txtColor, isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position, appPackageName = controller.packageName
         )
-
         if (isPlaying) startMediaTicker() else stopMediaTicker()
         evaluatePriority()
     }
@@ -179,25 +185,20 @@ class IslandController(private val context: Context) {
             }
         }
     }
-
     private fun stopMediaTicker() { mediaTickerJob?.cancel() }
 
-    // 🚀 NEW STATE MACHINE LOGIC
-
     fun onSingleTap() {
-        // Main Pill Body Tap: Move FORWARD (R -> S -> M -> B)
         val currentType = _activeModel.value?.type
         _islandState.value = when (_islandState.value) {
             IslandState.HIDDEN, IslandState.TYPE_0_RING -> IslandState.TYPE_1_MINI
             IslandState.TYPE_1_MINI -> if (currentType == ActivityType.MEDIA) IslandState.TYPE_2_MID else IslandState.TYPE_1_MINI
             IslandState.TYPE_2_MID -> if (currentType == ActivityType.MEDIA) IslandState.TYPE_3_MAX else IslandState.TYPE_2_MID
-            IslandState.TYPE_3_MAX -> IslandState.TYPE_3_MAX // Already at Max
+            IslandState.TYPE_3_MAX -> IslandState.TYPE_3_MAX
             else -> IslandState.TYPE_0_RING
         }
     }
 
     fun onGrabberTap() {
-        // Grabber Tap: Move BACKWARD (B -> M -> S -> R)
         _islandState.value = when (_islandState.value) {
             IslandState.TYPE_3_MAX -> IslandState.TYPE_2_MID
             IslandState.TYPE_2_MID -> IslandState.TYPE_1_MINI
@@ -206,44 +207,43 @@ class IslandController(private val context: Context) {
         }
     }
 
-    fun onGrabberLongPress() {
-        // Grabber Hold: Jump to Home (R)
-        _islandState.value = IslandState.TYPE_0_RING
-    }
+    fun onGrabberLongPress() { _islandState.value = IslandState.TYPE_0_RING }
 
     fun onPillLongPress() {
-        // Main Pill Hold: Open Playing App
         val model = _activeModel.value
         if (model is LiveActivityModel.Music && model.appPackageName.isNotEmpty()) {
             try {
                 val launchIntent = context.packageManager.getLaunchIntentForPackage(model.appPackageName)
-                if (launchIntent != null) {
-                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    context.startActivity(launchIntent)
-                }
-            } catch (e: Exception) {
-                Log.e("IslandController", "Failed to launch app: ${model.appPackageName}", e)
-            }
+                launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                launchIntent?.let { context.startActivity(it) }
+            } catch (e: Exception) {}
         }
     }
 
     fun sendMediaCommand(command: String) {
         val controls = activeMediaController?.transportControls ?: return
-        when (command) {
-            "PLAY" -> controls.play()
-            "PAUSE" -> controls.pause()
-            "NEXT" -> controls.skipToNext()
-            "PREV" -> controls.skipToPrevious()
-        }
+        when (command) { "PLAY" -> controls.play(); "PAUSE" -> controls.pause(); "NEXT" -> controls.skipToNext(); "PREV" -> controls.skipToPrevious() }
     }
 
     private fun setupHardwareMonitor() {
         BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
+             // 🚀 SMART BATTERY POPUP LOGIC
              if (isCharging) {
-                 postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true))
+                 postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true), 4000L)
              } else {
-                 postTransientNotification(LiveActivityModel.Charging(id = "sys_battery_dc", level = level, isPluggedIn = false, isTransient = true).copy(type = ActivityType.BATTERY_LOW))
+                 if (lastReportedBattery != -1 && level < lastReportedBattery) {
+                     // ONLY popup on exactly 20%, 10%, and 5%
+                     if (level == 20 || level == 10 || level == 5) {
+                         postTransientNotification(LiveActivityModel.Charging(id = "sys_battery_low", level = level, isPluggedIn = false, isTransient = true).copy(type = ActivityType.BATTERY_LOW), 6000L)
+                     }
+                 }
              }
+             lastReportedBattery = level
+             
+             // Update the global view so the Ring (R) knows real-time battery when idle
+             val view = windowManager.defaultDisplay
+             val intent = Intent("com.example.dynamicisland.BATTERY_UPDATE").putExtra("level", level).putExtra("isCharging", isCharging)
+             context.sendBroadcast(intent)
         }
         BatteryPlugin.start(context)
 
