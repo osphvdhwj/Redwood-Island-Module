@@ -170,7 +170,7 @@ class DynamicIslandView(
         val coroutineContext = AndroidUiDispatcher.CurrentThread
         val runRecomposeScope = CoroutineScope(coroutineContext)
         val recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
-        composeView.compositionContext = recomposer
+        composeView.setParentCompositionContext(recomposer)
         runRecomposeScope.launch { recomposer.runRecomposeAndApplyChanges() }
 
         addView(composeView)
