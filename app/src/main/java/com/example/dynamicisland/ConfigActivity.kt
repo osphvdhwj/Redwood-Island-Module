@@ -1,162 +1,153 @@
 package com.example.dynamicisland
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.io.File
 
 class ConfigActivity : ComponentActivity() {
 
-    private lateinit var prefs: SharedPreferences
-
-    @SuppressLint("WorldReadableFiles")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
-        makePrefsWorldReadable()
+        
+        val prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
 
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme(background = Color(0xFF121212))) {
-                ConfigScreen()
+            MaterialTheme(colorScheme = darkColorScheme()) {
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    ConfigScreen(prefs)
+                }
             }
         }
     }
 
     @Composable
-    fun ConfigScreen() {
-        val scrollState = rememberScrollState()
-        val tabs = listOf("Ring", "Mini Pill", "Mid Pill", "Max Pill")
-        var selectedTab by remember { mutableStateOf(0) }
+    fun ConfigScreen(prefs: android.content.SharedPreferences) {
+        var selectedTab by remember { mutableIntStateOf(0) }
+        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Gestures")
 
-        // State identifiers for SharedPreferences keys
-        val statePrefixes = listOf("ring", "mini", "mid", "max")
-        val currentPrefix = statePrefixes[selectedTab]
+        // State Variables
+        var w by remember { mutableFloatStateOf(0f) }
+        var h by remember { mutableFloatStateOf(0f) }
+        var x by remember { mutableFloatStateOf(0f) }
+        var y by remember { mutableFloatStateOf(0f) }
 
-        // Default values based on your original logic
-        val defaultW = listOf(45f, 180f, 320f, 360f)
-        val defaultH = listOf(45f, 36f, 80f, 220f)
+        val currentPrefix = tabs[selectedTab].lowercase()
 
-        // The 4 variables for the CURRENTLY selected tab
-        var currentW by remember(selectedTab) { mutableStateOf(prefs.getFloat("${currentPrefix}_w", defaultW[selectedTab])) }
-        var currentH by remember(selectedTab) { mutableStateOf(prefs.getFloat("${currentPrefix}_h", defaultH[selectedTab])) }
-        var currentX by remember(selectedTab) { mutableStateOf(prefs.getFloat("${currentPrefix}_x", 0f)) }
-        var currentY by remember(selectedTab) { mutableStateOf(prefs.getFloat("${currentPrefix}_y", 48f)) }
+        // Load values when tab changes
+        LaunchedEffect(selectedTab) {
+            if (currentPrefix != "gestures") {
+                w = prefs.getFloat("${currentPrefix}_w", getDefaultWidth(currentPrefix))
+                h = prefs.getFloat("${currentPrefix}_h", getDefaultHeight(currentPrefix))
+                x = prefs.getFloat("${currentPrefix}_x", 0f)
+                y = prefs.getFloat("${currentPrefix}_y", 48f)
+                broadcastUpdate(currentPrefix, w, h, x, y) // Show preview in SystemUI
+            }
+        }
 
-        // Live Preview Animation states
-        val animSpec = spring<Dp>(dampingRatio = 0.65f, stiffness = Spring.StiffnessLow)
-        val previewW by animateDpAsState(currentW.dp, animSpec, label = "mock_w")
-        val previewH by animateDpAsState(currentH.dp, animSpec, label = "mock_h")
-        // Squircle math: 50% for ring/small pills, 15% for massive dashboard
-        val previewRad by animateDpAsState(if (selectedTab == 3) 42.dp else (currentH / 2).dp, animSpec, label = "mock_r")
-
-        Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-
-            // --- 1. THE IN-APP LIVE PREVIEW (No Hook Required) ---
+        Column(modifier = Modifier.fillMaxSize()) {
+            
+            // 🌟 1:1 TRUE SCALE PREVIEW AREA
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
-                    .background(Color(0xFF0A0A0A)), // Slightly darker to simulate screen top
+                    .background(Color.Black),
                 contentAlignment = Alignment.TopCenter
             ) {
-                // Center guide line
-                Box(modifier = Modifier.fillMaxHeight().width(1.dp).background(Color.DarkGray.copy(alpha = 0.3f)))
-
-                // The Mock Island
-                Box(
-                    modifier = Modifier
-                        .padding(top = currentY.dp)
-                        .offset(x = currentX.dp)
-                        .width(previewW)
-                        .height(previewH)
-                        .clip(RoundedCornerShape(previewRad))
-                        .background(Color.Black)
-                ) {
-                    // Just a visual indicator of the state inside the mock
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(tabs[selectedTab], color = Color.DarkGray, fontWeight = FontWeight.Bold)
-                    }
+                if (currentPrefix != "gestures") {
+                    Box(
+                        modifier = Modifier
+                            .offset(x = x.dp, y = y.dp)
+                            .width(w.dp)
+                            .height(h.dp)
+                            .background(Color.White.copy(alpha = 0.6f), RoundedCornerShape(if(currentPrefix == "max") 42.dp else (h/2).dp))
+                    )
+                } else {
+                    Text("Gesture Customizer Coming Soon", color = Color.White, modifier = Modifier.align(Alignment.Center))
                 }
             }
 
-            // Divider
-            Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(Color.DarkGray))
-
-            // --- 2. THE EDITOR ---
-            Column(modifier = Modifier.padding(20.dp).verticalScroll(scrollState)) {
-                Text("Island Studio", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                Text("Independent State Configuration", color = Color.Gray, fontSize = 14.sp)
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Tab Selector
-                TabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = Color.Transparent,
-                    contentColor = Color.White
-                ) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            text = { Text(title, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal) }
-                        )
-                    }
+            // TABS
+            TabRow(selectedTabIndex = selectedTab) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = { Text(title) }
+                    )
                 }
+            }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Dimensions Card
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)), modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Size", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
-                        Text("Width: ${currentW.toInt()} dp", color = Color.Gray, fontSize = 12.sp)
-                        Slider(value = currentW, onValueChange = { currentW = it; saveState(currentPrefix, currentW, currentH, currentX, currentY) }, valueRange = 20f..400f)
-
-                        Text("Height: ${currentH.toInt()} dp", color = Color.Gray, fontSize = 12.sp)
-                        Slider(value = currentH, onValueChange = { currentH = it; saveState(currentPrefix, currentW, currentH, currentX, currentY) }, valueRange = 20f..350f)
+            // CONTROLS
+            if (currentPrefix != "gestures") {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(text = "Configure ${tabs[selectedTab]}", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        Button(onClick = {
+                            w = getDefaultWidth(currentPrefix)
+                            h = getDefaultHeight(currentPrefix)
+                            x = 0f
+                            y = 48f
+                            saveAndBroadcast(prefs, currentPrefix, w, h, x, y)
+                        }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha=0.7f))) {
+                            Text("Reset Default")
+                        }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                // Position Card
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)), modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Position", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
-                        Text("X Offset (Left/Right): ${currentX.toInt()}", color = Color.Gray, fontSize = 12.sp)
-                        Slider(value = currentX, onValueChange = { currentX = it; saveState(currentPrefix, currentW, currentH, currentX, currentY) }, valueRange = -200f..200f)
-
-                        Text("Y Offset (Up/Down): ${currentY.toInt()}", color = Color.Gray, fontSize = 12.sp)
-                        Slider(value = currentY, onValueChange = { currentY = it; saveState(currentPrefix, currentW, currentH, currentX, currentY) }, valueRange = -50f..200f)
-                    }
+                    PrecisionSlider("Width", w, 10f..400f) { newW -> w = newW; saveAndBroadcast(prefs, currentPrefix, w, h, x, y) }
+                    PrecisionSlider("Height", h, 10f..400f) { newH -> h = newH; saveAndBroadcast(prefs, currentPrefix, w, h, x, y) }
+                    PrecisionSlider("X Pos", x, -200f..200f) { newX -> x = newX; saveAndBroadcast(prefs, currentPrefix, w, h, x, y) }
+                    PrecisionSlider("Y Pos", y, -100f..200f) { newY -> y = newY; saveAndBroadcast(prefs, currentPrefix, w, h, x, y) }
                 }
             }
         }
     }
 
-    private fun saveState(prefix: String, w: Float, h: Float, x: Float, y: Float) {
+    @Composable
+    fun PrecisionSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onValueChange: (Float) -> Unit) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text(label, modifier = Modifier.width(60.dp), fontSize = 14.sp)
+            
+            IconButton(onClick = { onValueChange((value - 1f).coerceIn(range)) }) {
+                Icon(Icons.Default.Remove, contentDescription = "-")
+            }
+            
+            Slider(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.weight(1f),
+                valueRange = range
+            )
+            
+            IconButton(onClick = { onValueChange((value + 1f).coerceIn(range)) }) {
+                Icon(Icons.Default.Add, contentDescription = "+")
+            }
+            
+            Text(String.format("%.0f", value), modifier = Modifier.width(40.dp), fontSize = 14.sp)
+        }
+    }
+
+    private fun saveAndBroadcast(prefs: android.content.SharedPreferences, prefix: String, w: Float, h: Float, x: Float, y: Float) {
+        // Save to disk
         prefs.edit()
             .putFloat("${prefix}_w", w)
             .putFloat("${prefix}_h", h)
@@ -165,9 +156,13 @@ class ConfigActivity : ComponentActivity() {
             .apply()
 
         makePrefsWorldReadable()
+        broadcastUpdate(prefix, w, h, x, y)
+    }
 
+    private fun broadcastUpdate(prefix: String, w: Float, h: Float, x: Float, y: Float) {
+        // Beam to RAM instantly
         val intent = Intent("com.example.dynamicisland.RELOAD_PREFS")
-        intent.addFlags(0x01000000) // 🚀 Brilliant Hex Fix!
+        intent.addFlags(0x01000000) // The hex workaround!
         intent.putExtra("prefix", prefix)
         intent.putExtra("w", w)
         intent.putExtra("h", h)
@@ -176,12 +171,13 @@ class ConfigActivity : ComponentActivity() {
         sendBroadcast(intent)
     }
 
+    private fun getDefaultWidth(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 180f; "mid" -> 320f; "max" -> 360f; else -> 0f }
+    private fun getDefaultHeight(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 36f; "mid" -> 80f; "max" -> 220f; else -> 0f }
+
     private fun makePrefsWorldReadable() {
         try {
             val prefsDir = File(applicationInfo.dataDir, "shared_prefs")
             val prefsFile = File(prefsDir, "island_prefs.xml")
-            
-            // 🚀 FIX: Directory MUST be executable (+x) for SELinux to allow SystemUI inside
             if (prefsDir.exists()) {
                 prefsDir.setExecutable(true, false)
                 prefsDir.setReadable(true, false)
