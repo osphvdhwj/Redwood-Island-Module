@@ -78,12 +78,13 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
 @SuppressLint("ViewConstructor")
 class DynamicIslandView(
     context: Context,
-    val moduleContext: Context // 🚀 Injected Module Context!
+    val moduleContext: Context // 🚀 Injected Module Context
 ) : FrameLayout(context) {
 
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
 
+    // Layout States
     var ringW = mutableStateOf(45f); var ringH = mutableStateOf(45f); var ringX = mutableStateOf(0f); var ringY = mutableStateOf(48f)
     var miniW = mutableStateOf(180f); var miniH = mutableStateOf(36f); var miniX = mutableStateOf(0f); var miniY = mutableStateOf(48f)
     var midW = mutableStateOf(320f); var midH = mutableStateOf(80f); var midX = mutableStateOf(0f); var midY = mutableStateOf(48f)
@@ -94,6 +95,7 @@ class DynamicIslandView(
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
 
+    // Interaction Callbacks
     var onSingleTap: (() -> Unit)? = null
     var onDoubleTap: (() -> Unit)? = null
     var onSwipeUp: (() -> Unit)? = null
@@ -159,7 +161,6 @@ class DynamicIslandView(
         val composeView = ComposeView(context).apply {
             setContent { 
                 MaterialTheme(colorScheme = darkColorScheme()) { 
-                    // 🚀 FIX: Feed the module's resources strictly to Compose Icons!
                     CompositionLocalProvider(LocalContext provides moduleContext) {
                         IslandUI(islandState.value) 
                     }
@@ -170,7 +171,7 @@ class DynamicIslandView(
         val coroutineContext = AndroidUiDispatcher.CurrentThread
         val runRecomposeScope = CoroutineScope(coroutineContext)
         val recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
-        composeView.setParentCompositionContext(recomposer)
+        composeView.setParentCompositionContext(recomposer) // 🚀 API fix!
         runRecomposeScope.launch { recomposer.runRecomposeAndApplyChanges() }
 
         addView(composeView)
@@ -280,7 +281,6 @@ class DynamicIslandView(
                 }
 
                 if (state != IslandState.HIDDEN) {
-                    // 1. Dynamic Padding to make room for the grabber in every state
                     val bottomPadding by animateDpAsState(
                         targetValue = when(state) {
                             IslandState.TYPE_3_MAX -> 24.dp
@@ -313,7 +313,7 @@ class DynamicIslandView(
                         }
                     }
 
-                    // 🌟 2. THE UNIVERSAL GRABBER ("___")
+                    // 🌟 UNIVERSAL GRABBER 
                     if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) {
                         Box(
                             modifier = Modifier
@@ -326,24 +326,10 @@ class DynamicIslandView(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .width(if (state == IslandState.TYPE_1_MINI) 24.dp else 40.dp) // Smaller grabber for mini pill
+                                    .width(if (state == IslandState.TYPE_1_MINI) 24.dp else 40.dp) 
                                     .height(if (state == IslandState.TYPE_1_MINI) 3.dp else 5.dp)
                                     .background(Color.White.copy(alpha=0.4f), CircleShape)
                             )
-                        }
-                    }
-                }
-                    if (state == IslandState.TYPE_3_MAX) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .height(32.dp)
-                                .clickable { onCloseClick?.invoke() }
-                                .pointerInput(Unit) { detectDragGestures { _, dragAmount -> if (dragAmount.y < -10) onCloseClick?.invoke() } },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(modifier = Modifier.width(40.dp).height(5.dp).background(Color.White.copy(alpha=0.3f), CircleShape))
                         }
                     }
                 }
@@ -393,7 +379,6 @@ class DynamicIslandView(
             Spacer(Modifier.width(8.dp))
             Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f).basicMarquee())
             
-            // 🚀 Uses LocalContext (which is now moduleContext!)
             val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
             Icon(imageVector = playIcon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
         }
@@ -418,7 +403,6 @@ class DynamicIslandView(
                  Text(text = music.artist, color = secondaryTextColor, fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
             }
             
-            // 🚀 Uses LocalContext (which is now moduleContext!)
             val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
             Icon(imageVector = playIcon, contentDescription = "Status", tint = dynamicTextColor, modifier = Modifier.size(24.dp).padding(end = 4.dp).clickable { onPlayPauseClick?.invoke() })
         }
@@ -461,7 +445,6 @@ class DynamicIslandView(
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev", tint = dynamicTextColor, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
                 
-                // 🚀 Uses LocalContext (which is now moduleContext!)
                 val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
                 Box(modifier = Modifier.size(56.dp).background(dynamicTextColor.copy(alpha = 0.2f), CircleShape).clickable { onPlayPauseClick?.invoke() }, contentAlignment = Alignment.Center) {
                     Icon(imageVector = playIcon, contentDescription = "Play/Pause", tint = dynamicTextColor, modifier = Modifier.size(32.dp))
@@ -538,6 +521,8 @@ class DynamicIslandView(
     fun ChargingMid(charging: LiveActivityModel.Charging) { UniversalMid(Color.White, charging) }
     @Composable
     fun GeneralMid(general: LiveActivityModel.General) { UniversalMid(Color.White, general) }
+    
+    // 🚀 THESE METHODS WERE ORPHANED BY THE MISSING BRACE. THEY ARE NOW SAFELY BACK INSIDE!
     fun setState(newState: IslandState) { islandState.value = newState }
     fun setModel(model: LiveActivityModel?) { activeModel.value = model }
 
