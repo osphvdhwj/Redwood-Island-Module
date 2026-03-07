@@ -2,18 +2,13 @@ package com.example.dynamicisland
 
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.view.WindowManager
 import androidx.palette.graphics.Palette
@@ -44,27 +39,24 @@ class IslandController(private val context: Context) {
     private var mediaTickerJob: Job? = null
 
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
-        
-        // 1. Get our module's resources context
         val moduleContext = try {
             context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY)
-        } catch (e: Exception) {
-            context 
-        }
+        } catch (e: Exception) { context }
 
-        // 🚀 2. FIX: Pass BOTH contexts! 
-        // context = SystemUI (prevents NPE crash), moduleContext = Your Drawables
         val view = DynamicIslandView(context, moduleContext)
         view.windowManager = wm
         view.windowParams = params
 
+        // 🚀 THE NEW STATE MACHINE ROUTING
         view.onSingleTap = { onSingleTap() }
-        view.onSwipeUp = { onSwipeUp() }
-        view.onSwipeDown = { onSwipeDown() }
-        view.onSwipeLeft = { onSwipeLeft() }
-        view.onSwipeRight = { onSwipeRight() }
-        view.onDoubleTap = { onDoubleTap() }
-        view.onCloseClick = { onTripleTap() }
+        view.onPillLongPress = { onPillLongPress() }
+        view.onGrabberTap = { onGrabberTap() }
+        view.onGrabberLongPress = { onGrabberLongPress() }
+        
+        view.onSwipeUp = { onGrabberTap() } // Swipe up acts like Grabber Tap (Back)
+        view.onSwipeDown = { onSingleTap() } // Swipe down acts like Pill Tap (Expand)
+        view.onSwipeLeft = { sendMediaCommand("NEXT") }
+        view.onSwipeRight = { sendMediaCommand("PREV") }
 
         view.onPlayPauseClick = {
             if (currentMedia?.isPlaying == true) sendMediaCommand("PAUSE") else sendMediaCommand("PLAY")
@@ -86,7 +78,9 @@ class IslandController(private val context: Context) {
         }
         if (currentMedia != null && currentMedia?.isPlaying == true) {
             _activeModel.value = currentMedia
-            if (_islandState.value != IslandState.TYPE_3_MAX) _islandState.value = IslandState.TYPE_2_MID
+            if (_islandState.value == IslandState.HIDDEN || _islandState.value == IslandState.TYPE_0_RING) {
+                _islandState.value = IslandState.TYPE_1_MINI
+            }
             return
         }
         if (currentHardware?.isGamingModeOn == true) {
@@ -144,9 +138,7 @@ class IslandController(private val context: Context) {
         val isPlaying = pbState.state == PlaybackState.STATE_PLAYING
         val duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
 
-        val albumArtBitmap = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
-            ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
-
+        val albumArtBitmap = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
         var bgColor: Int? = null
         var txtColor: Int = android.graphics.Color.WHITE
 
@@ -154,8 +146,7 @@ class IslandController(private val context: Context) {
             val palette = Palette.from(albumArtBitmap).generate()
             val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
             if (swatch != null) {
-                bgColor = swatch.rgb
-                txtColor = swatch.bodyTextColor 
+                bgColor = swatch.rgb; txtColor = swatch.bodyTextColor 
             }
         }
 
@@ -191,38 +182,50 @@ class IslandController(private val context: Context) {
 
     private fun stopMediaTicker() { mediaTickerJob?.cancel() }
 
+    // 🚀 NEW STATE MACHINE LOGIC
+
     fun onSingleTap() {
-        if (_activeModel.value is LiveActivityModel.Music) {
-            if (currentMedia?.isPlaying == true) sendMediaCommand("PAUSE") else sendMediaCommand("PLAY")
-        }
-    }
-    fun onSwipeDown() {
+        // Main Pill Body Tap: Move FORWARD (R -> S -> M -> B)
+        val currentType = _activeModel.value?.type
         _islandState.value = when (_islandState.value) {
-            IslandState.TYPE_0_RING -> IslandState.TYPE_1_MINI
-            IslandState.TYPE_1_MINI -> IslandState.TYPE_2_MID
-            IslandState.TYPE_2_MID -> IslandState.TYPE_3_MAX
-            IslandState.TYPE_3_MAX -> IslandState.TYPE_3_MAX
+            IslandState.HIDDEN, IslandState.TYPE_0_RING -> IslandState.TYPE_1_MINI
+            IslandState.TYPE_1_MINI -> if (currentType == ActivityType.MEDIA) IslandState.TYPE_2_MID else IslandState.TYPE_1_MINI
+            IslandState.TYPE_2_MID -> if (currentType == ActivityType.MEDIA) IslandState.TYPE_3_MAX else IslandState.TYPE_2_MID
+            IslandState.TYPE_3_MAX -> IslandState.TYPE_3_MAX // Already at Max
             else -> IslandState.TYPE_0_RING
         }
     }
-    fun onSwipeUp() {
-        if (transientModel != null) {
-            transientJob?.cancel()
-            transientModel = null
-            evaluatePriority()
-        } else {
-            _islandState.value = when (_islandState.value) {
-                IslandState.TYPE_3_MAX -> IslandState.TYPE_2_MID
-                IslandState.TYPE_2_MID -> IslandState.TYPE_1_MINI
-                IslandState.TYPE_1_MINI -> IslandState.TYPE_0_RING
-                else -> IslandState.TYPE_0_RING
+
+    fun onGrabberTap() {
+        // Grabber Tap: Move BACKWARD (B -> M -> S -> R)
+        _islandState.value = when (_islandState.value) {
+            IslandState.TYPE_3_MAX -> IslandState.TYPE_2_MID
+            IslandState.TYPE_2_MID -> IslandState.TYPE_1_MINI
+            IslandState.TYPE_1_MINI -> IslandState.TYPE_0_RING
+            else -> IslandState.TYPE_0_RING
+        }
+    }
+
+    fun onGrabberLongPress() {
+        // Grabber Hold: Jump to Home (R)
+        _islandState.value = IslandState.TYPE_0_RING
+    }
+
+    fun onPillLongPress() {
+        // Main Pill Hold: Open Playing App
+        val model = _activeModel.value
+        if (model is LiveActivityModel.Music && model.appPackageName.isNotEmpty()) {
+            try {
+                val launchIntent = context.packageManager.getLaunchIntentForPackage(model.appPackageName)
+                if (launchIntent != null) {
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    context.startActivity(launchIntent)
+                }
+            } catch (e: Exception) {
+                Log.e("IslandController", "Failed to launch app: ${model.appPackageName}", e)
             }
         }
     }
-    fun onSwipeLeft() { sendMediaCommand("NEXT") }
-    fun onSwipeRight() { sendMediaCommand("PREV") }
-    fun onDoubleTap() { if (_islandState.value == IslandState.TYPE_3_MAX) _islandState.value = IslandState.TYPE_1_MINI }
-    fun onTripleTap() { _islandState.value = IslandState.TYPE_0_RING }
 
     fun sendMediaCommand(command: String) {
         val controls = activeMediaController?.transportControls ?: return
@@ -237,11 +240,9 @@ class IslandController(private val context: Context) {
     private fun setupHardwareMonitor() {
         BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
              if (isCharging) {
-                 val act = LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true)
-                 postTransientNotification(act)
+                 postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true))
              } else {
-                 val act = LiveActivityModel.Charging(id = "sys_battery_dc", level = level, isPluggedIn = false, isTransient = true).copy(type = ActivityType.BATTERY_LOW)
-                 postTransientNotification(act)
+                 postTransientNotification(LiveActivityModel.Charging(id = "sys_battery_dc", level = level, isPluggedIn = false, isTransient = true).copy(type = ActivityType.BATTERY_LOW))
              }
         }
         BatteryPlugin.start(context)
