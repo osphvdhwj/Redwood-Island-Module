@@ -501,14 +501,28 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             
             // 🌟 Media Controls
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+                // Prev Button
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev", tint = dynamicTextColor, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
                 
+                // Determine Play/Pause Icon
                 val playIcon = if (music.isPlaying) {
                     ImageVector.vectorResource(id = R.drawable.ic_pause_vector)
                 } else {
                    ImageVector.vectorResource(id = R.drawable.ic_play_vector)
                 }
                 
+                // 🚀 FIXED: The actual Play/Pause Button that was missing!
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .background(dynamicTextColor.copy(alpha = 0.15f), CircleShape)
+                        .clickable { onPlayPauseClick?.invoke() }, 
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(imageVector = playIcon, contentDescription = "Play/Pause", tint = dynamicTextColor, modifier = Modifier.size(32.dp))
+                }
+                
+                // Next Button
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next", tint = dynamicTextColor, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
             }
         }
