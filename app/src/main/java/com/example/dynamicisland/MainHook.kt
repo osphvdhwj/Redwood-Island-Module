@@ -41,7 +41,7 @@ class MainHook : IXposedHookLoadPackage {
                 val windowManager = systemUiContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
                 // LayoutParams restored to WRAP_CONTENT to allow dynamic pill resizing
-                                val layoutParams = WindowManager.LayoutParams(
+                val layoutParams = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.WRAP_CONTENT,
                     WindowManager.LayoutParams.WRAP_CONTENT,
                     2024, // TYPE_NAVIGATION_BAR_PANEL
@@ -51,7 +51,7 @@ class MainHook : IXposedHookLoadPackage {
                     WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or // 🚀 FIX: Ignore screen bounds
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,   // 🚀 FIX: Allow drawing anywhere
-                    PixelFormat.TRANSLUCENT
+                    android.graphics.PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
                     title = "RedwoodIslandOverlay"
