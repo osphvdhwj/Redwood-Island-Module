@@ -1,12 +1,12 @@
 package com.example.dynamicisland
+
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-
-
 import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.session.MediaController
@@ -15,17 +15,16 @@ import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.WindowManager
+import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-
-import android.view.WindowManager
 
 class IslandController(private val context: Context) {
 
     private lateinit var windowManager: WindowManager
     private lateinit var layoutParams: WindowManager.LayoutParams
-
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -47,26 +46,26 @@ class IslandController(private val context: Context) {
     private var activeMediaController: MediaController? = null
     private var mediaTickerJob: Job? = null
 
-    init {
-        // Quarantine lifted! Testing Media and Hardware isolation.
-        setupHardwareMonitor()
-        setupMediaListener()
-    }
-
     /**
      * Binds the Compose UI to this controller.
      */
-    fun createIslandView(wm: android.view.WindowManager, params: android.view.WindowManager.LayoutParams): android.view.View {
+    fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
         val view = DynamicIslandView(context)
         view.windowManager = wm
         view.windowParams = params
 
-        // Bind callbacks to the view
-        view.onSingleTap = { onIslandTapped() }
-        view.onDoubleTap = { onDoubleTap() }
+        // 🚀 OMNI-DIRECTIONAL GESTURE MAP
+        view.onSingleTap = { onSingleTap() }
         view.onSwipeUp = { onSwipeUp() }
+        view.onSwipeDown = { onSwipeDown() }
+        view.onSwipeLeft = { onSwipeLeft() }
+        view.onSwipeRight = { onSwipeRight() }
+        
+        // Failsafes / Extras
+        view.onDoubleTap = { onDoubleTap() }
         view.onCloseClick = { onTripleTap() }
 
+        // Slider Media Controls
         view.onPlayPauseClick = {
             if (currentMedia?.isPlaying == true) sendMediaCommand("PAUSE") else sendMediaCommand("PLAY")
         }
@@ -83,10 +82,6 @@ class IslandController(private val context: Context) {
 
         return view
     }
-
-
-
-
 
     // --- STATE ROUTING & PRIORITIES ---
 
@@ -123,7 +118,6 @@ class IslandController(private val context: Context) {
     // --- TRANSIENT (BATTERY) FIX ---
 
     fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
-        // Critical Fix: Cancel any existing timer so we don't get stuck in a loop
         transientJob?.cancel()
 
         transientModel = model
@@ -140,7 +134,6 @@ class IslandController(private val context: Context) {
 
     private fun setupMediaListener() {
         try {
-            // Requires Notification Listener permission or System/Root privileges via Xposed
             mediaSessionManager.addOnActiveSessionsChangedListener({ controllers ->
                 updateActiveMediaController(controllers?.firstOrNull())
             }, ComponentName(context, "com.example.dynamicisland.DummyListener"))
@@ -183,12 +176,30 @@ class IslandController(private val context: Context) {
         val isPlaying = pbState.state == PlaybackState.STATE_PLAYING
         val duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
 
-        // Extract exact Custom Actions provided by the app (e.g., Spotify's Heart)
+        // 🌟 EXTRACT ALBUM ART
+        val albumArtBitmap = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+            ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
+
+        // 🌟 ADVANCED PALETTE EXTRACTOR
+        var bgColor: Int? = null
+        var txtColor: Int = android.graphics.Color.WHITE
+
+        if (albumArtBitmap != null) {
+            val palette = Palette.from(albumArtBitmap).generate()
+            // Try to get a Vibrant Swatch first, fallback to Muted, then Dominant
+            val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
+            
+            if (swatch != null) {
+                bgColor = swatch.rgb
+                txtColor = swatch.bodyTextColor // Automatically gives us highly readable text!
+            }
+        }
+
         val extractedCustomActions = pbState.customActions.map { action ->
             CustomMediaAction(
                 actionName = action.name.toString(),
-                icon = null, // We'll handle cross-package icon rendering in the UI layer
-                pendingIntent = null, // Can invoke via activeMediaController.transportControls.sendCustomAction()
+                icon = null,
+                pendingIntent = null,
                 isEnabled = true
             )
         }
@@ -197,6 +208,9 @@ class IslandController(private val context: Context) {
             id = "media_main",
             title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown",
             artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
+            albumArt = albumArtBitmap,
+            dominantColor = bgColor,      // Pass background
+            titleTextColor = txtColor,    // Pass text color
             isPlaying = isPlaying,
             durationMs = duration,
             positionMs = pbState.position,
@@ -208,19 +222,17 @@ class IslandController(private val context: Context) {
         evaluatePriority()
     }
 
-    // Runs only when media is playing to feed the WavySlider
     private fun startMediaTicker() {
         mediaTickerJob?.cancel()
         mediaTickerJob = scope.launch {
             while (isActive) {
                 activeMediaController?.playbackState?.position?.let { pos ->
                     currentMedia = currentMedia?.copy(positionMs = pos)
-                    // We directly update the flow to bypass the priority evaluator for micro-updates
                     if (_activeModel.value is LiveActivityModel.Music) {
                         _activeModel.value = currentMedia
                     }
                 }
-                delay(1000) // Update slider every second
+                delay(1000)
             }
         }
     }
@@ -229,56 +241,68 @@ class IslandController(private val context: Context) {
         mediaTickerJob?.cancel()
     }
 
-    // --- USER INTENTS (BUTTONS & GESTURES) ---
+    // --- UNIVERSAL GESTURE ENGINE ---
 
-    fun onIslandTapped() {
-        // Point 1 Fix: Open App directly if in Ring/Mini/Mid
-        val current = _activeModel.value
-        if (_islandState.value != IslandState.TYPE_3_MAX && current is LiveActivityModel.Music) {
-            try {
-                val launchIntent = context.packageManager.getLaunchIntentForPackage(current.appPackageName)
-                launchIntent?.let { context.startActivity(it) }
-            } catch (e: Exception) {
-                Log.e("DynamicIsland", "Failed to launch app", e)
-            }
-        } else {
-            // Expand to Max Dashboard
-            _islandState.value = IslandState.TYPE_3_MAX
+    fun onSingleTap() {
+        // Tap always plays/pauses media if available
+        if (_activeModel.value is LiveActivityModel.Music) {
+            if (currentMedia?.isPlaying == true) sendMediaCommand("PAUSE") else sendMediaCommand("PLAY")
         }
     }
 
+    fun onSwipeDown() {
+        // Travel UP the size ladder
+        _islandState.value = when (_islandState.value) {
+            IslandState.TYPE_0_RING -> IslandState.TYPE_1_MINI
+            IslandState.TYPE_1_MINI -> IslandState.TYPE_2_MID
+            IslandState.TYPE_2_MID -> IslandState.TYPE_3_MAX
+            IslandState.TYPE_3_MAX -> IslandState.TYPE_3_MAX
+            else -> IslandState.TYPE_0_RING
+        }
+    }
+
+    fun onSwipeUp() {
+        // Clear transient notifications first, otherwise travel DOWN the size ladder
+        if (transientModel != null) {
+            transientJob?.cancel()
+            transientModel = null
+            evaluatePriority()
+        } else {
+            _islandState.value = when (_islandState.value) {
+                IslandState.TYPE_3_MAX -> IslandState.TYPE_2_MID
+                IslandState.TYPE_2_MID -> IslandState.TYPE_1_MINI
+                IslandState.TYPE_1_MINI -> IslandState.TYPE_0_RING
+                IslandState.TYPE_0_RING -> IslandState.TYPE_0_RING
+                else -> IslandState.TYPE_0_RING
+            }
+        }
+    }
+
+    fun onSwipeLeft() {
+        sendMediaCommand("NEXT")
+    }
+
+    fun onSwipeRight() {
+        sendMediaCommand("PREV")
+    }
+
     fun onDoubleTap() {
-        // Point 13 Fix: Instantly collapse MAX to MINI
         if (_islandState.value == IslandState.TYPE_3_MAX) {
             _islandState.value = IslandState.TYPE_1_MINI
         }
     }
 
     fun onTripleTap() {
-        // Point 13 Fix: Instantly collapse to RING
         _islandState.value = IslandState.TYPE_0_RING
-    }
-
-    fun onSwipeUp() {
-        // Cleanly dismiss current transient or collapse state
-        if (transientModel != null) {
-            transientJob?.cancel()
-            transientModel = null
-            evaluatePriority()
-        } else {
-            _islandState.value = IslandState.TYPE_0_RING
-        }
     }
 
     fun launchOutputSwitcher() {
         try {
-            // Point 10 Fix: FLAG_ACTIVITY_NEW_TASK is legally required from SystemUI
             val intent = Intent("com.android.settings.panel.action.MEDIA_OUTPUT").apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
             context.startActivity(intent)
         } catch (e: Exception) {
-            // Fallback: Trigger volume panel
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_SAME, AudioManager.FLAG_SHOW_UI)
         }
@@ -298,24 +322,12 @@ class IslandController(private val context: Context) {
     // --- HARDWARE SUBSCRIPTION ---
 
     private fun setupHardwareMonitor() {
-        // Battery Tracking
         BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
              if (isCharging) {
-                 val act = LiveActivityModel.Charging(
-                     id = "sys_battery",
-                     level = level,
-                     isPluggedIn = true,
-                     isTransient = true
-                 )
+                 val act = LiveActivityModel.Charging("sys_battery", level, true, isTransient = true)
                  postTransientNotification(act)
              } else {
-                 // Trigger a 3-second pop-up when unplugged
-                 val act = LiveActivityModel.Charging(
-                     id = "sys_battery_disconnect",
-                     level = level,
-                     isPluggedIn = false,
-                     isTransient = true
-                 ).copy(type = ActivityType.BATTERY_LOW)
+                 val act = LiveActivityModel.Charging("sys_battery_disconnect", level, false, isTransient = true).copy(type = ActivityType.BATTERY_LOW)
                  postTransientNotification(act)
              }
         }
@@ -324,12 +336,16 @@ class IslandController(private val context: Context) {
         scope.launch {
             HardwareMonitors.startMonitoring().collect { hw ->
                 currentHardware = hw
-                // Only re-evaluate if it crosses the gaming threshold so it doesn't spam the UI
                 if (hw.isGamingModeOn || _activeModel.value is LiveActivityModel.HardwareMonitor) {
                     evaluatePriority()
                 }
             }
         }
+    }
+
+    init {
+        setupHardwareMonitor()
+        setupMediaListener()
     }
 
     fun cleanup() {
