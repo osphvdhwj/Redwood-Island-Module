@@ -322,15 +322,25 @@ class IslandController(private val context: Context) {
     // --- HARDWARE SUBSCRIPTION ---
 
     private fun setupHardwareMonitor() {
-        BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
-             if (isCharging) {
-                 val act = LiveActivityModel.Charging("sys_battery", level, true, isTransient = true)
-                 postTransientNotification(act)
-             } else {
-                 val act = LiveActivityModel.Charging("sys_battery_disconnect", level, false, isTransient = true).copy(type = ActivityType.BATTERY_LOW)
-                 postTransientNotification(act)
-             }
-        }
+    BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
+         if (isCharging) {
+             // Use named arguments (id =, level =, isPluggedIn =) so Kotlin doesn't get confused
+             val act = LiveActivityModel.Charging(
+                 id = "sys_battery", 
+                 level = level, 
+                 isPluggedIn = true, 
+                 isTransient = true
+             )
+             postTransientNotification(act)
+         } else {
+             val act = LiveActivityModel.Charging(
+                 id = "sys_battery_disconnect", 
+                 level = level, 
+                 isPluggedIn = false, 
+                 isTransient = true
+             ).copy(type = ActivityType.BATTERY_LOW)
+             postTransientNotification(act)
+         }
         BatteryPlugin.start(context)
 
         scope.launch {
