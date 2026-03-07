@@ -401,7 +401,9 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             Spacer(Modifier.width(8.dp))
             Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f).basicMarquee())
             
-            Icon(imageVector = if (music.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+            // Audio visualizer icon
+            val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
+            Icon(imageVector = playIcon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
         }
     }
 
@@ -446,9 +448,9 @@ class DynamicIslandView(context: Context) : FrameLayout(context) {
             }
             
             // 🌟 Status Icon
-            val icon = if (music.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow
+            val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
             Icon(
-                imageVector = icon, 
+                imageVector = playIcon, 
                 contentDescription = "Status", 
                 tint = dynamicTextColor, 
                 modifier = Modifier.size(24.dp).padding(end = 4.dp).clickable { onPlayPauseClick?.invoke() }
