@@ -51,15 +51,26 @@ class IslandController(private val context: Context) {
      */
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
         
-        // 🚀 FIX: Create a context that points strictly to OUR module's resources!
+        // 1. Get the module resources
         val moduleContext = try {
             context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY)
         } catch (e: Exception) {
             context // Failsafe
         }
 
-        // Initialize the view with our isolated module context
-        val view = DynamicIslandView(moduleContext)
+        // 🚀 2. FIX: Create a Hybrid Context. 
+        // It gives Compose the SystemUI application context to prevent crashes, 
+        // but feeds it your module's resources for the icons!
+        val hybridContext = object : android.content.ContextWrapper(context) {
+            override fun getResources() = moduleContext.resources
+            override fun getAssets() = moduleContext.assets
+            override fun getTheme() = moduleContext.theme
+            override fun getPackageName() = moduleContext.packageName
+            override fun getApplicationContext() = context.applicationContext ?: context
+        }
+
+        // 3. Initialize the view with the Hybrid Context
+        val view = DynamicIslandView(hybridContext)
         view.windowManager = wm
         view.windowParams = params
 
@@ -91,7 +102,6 @@ class IslandController(private val context: Context) {
 
         return view
     }
-
     // --- STATE ROUTING & PRIORITIES ---
 
     private fun evaluatePriority() {
