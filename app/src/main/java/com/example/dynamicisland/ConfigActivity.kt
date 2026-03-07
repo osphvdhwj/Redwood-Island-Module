@@ -101,26 +101,35 @@ class ConfigActivity : ComponentActivity() {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(text = "Configure ${tabs[selectedTab]}", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                         Button(onClick = {
-                            w = getDefaultWidth(currentPrefix)
-                            h = getDefaultHeight(currentPrefix)
-                            x = 0f
-                            y = 48f
+                            w = getDefaultWidth(currentPrefix); h = getDefaultHeight(currentPrefix); x = 0f; y = 48f
+                            // Reset Paddings
+                            prefs.edit().putFloat("pad_t", 0f).putFloat("pad_b", 0f).putFloat("pad_l", 0f).putFloat("pad_r", 0f).apply()
                             saveAndBroadcast(prefs, currentPrefix, w, h, x, y)
-                        }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha=0.7f))) {
-                            Text("Reset Default")
-                        }
+                        }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha=0.7f))) { Text("Reset") }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
+                    Text("Outer Dimensions", fontSize = 12.sp, color = Color.Gray)
                     PrecisionSlider("Width", w, 10f..400f) { newW -> w = newW; saveAndBroadcast(prefs, currentPrefix, w, h, x, y) }
                     PrecisionSlider("Height", h, 10f..400f) { newH -> h = newH; saveAndBroadcast(prefs, currentPrefix, w, h, x, y) }
                     PrecisionSlider("X Pos", x, -200f..200f) { newX -> x = newX; saveAndBroadcast(prefs, currentPrefix, w, h, x, y) }
                     PrecisionSlider("Y Pos", y, -100f..200f) { newY -> y = newY; saveAndBroadcast(prefs, currentPrefix, w, h, x, y) }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text("Inner Compression (Padding)", fontSize = 12.sp, color = Color.Gray)
+                    val padT = prefs.getFloat("pad_t", 0f)
+                    val padB = prefs.getFloat("pad_b", 0f)
+                    val padL = prefs.getFloat("pad_l", 0f)
+                    val padR = prefs.getFloat("pad_r", 0f)
+                    
+                    PrecisionSlider("Top", padT, 0f..100f) { v -> prefs.edit().putFloat("pad_t", v).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y) }
+                    PrecisionSlider("Bottom", padB, 0f..100f) { v -> prefs.edit().putFloat("pad_b", v).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y) }
+                    PrecisionSlider("Left", padL, 0f..100f) { v -> prefs.edit().putFloat("pad_l", v).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y) }
+                    PrecisionSlider("Right", padR, 0f..100f) { v -> prefs.edit().putFloat("pad_r", v).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y) }
                 }
             }
-        }
-    }
 
     @Composable
     fun PrecisionSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onValueChange: (Float) -> Unit) {
