@@ -56,6 +56,7 @@ import androidx.savedstate.*
 import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -76,13 +77,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
 
-    // Dimensions
     var ringW = mutableStateOf(45f); var ringH = mutableStateOf(45f); var ringX = mutableStateOf(0f); var ringY = mutableStateOf(48f)
     var miniW = mutableStateOf(180f); var miniH = mutableStateOf(36f); var miniX = mutableStateOf(0f); var miniY = mutableStateOf(48f)
     var midW = mutableStateOf(320f); var midH = mutableStateOf(80f); var midX = mutableStateOf(0f); var midY = mutableStateOf(48f)
     var maxW = mutableStateOf(360f); var maxH = mutableStateOf(220f); var maxX = mutableStateOf(0f); var maxY = mutableStateOf(48f)
-
-    // 🚀 NEW: Internal Compression Paddings
     var padT = mutableStateOf(0f); var padB = mutableStateOf(0f); var padL = mutableStateOf(0f); var padR = mutableStateOf(0f)
 
     var isCubeRotationEnabled = mutableStateOf(true)
@@ -94,16 +92,18 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     val splitModel = mutableStateOf<LiveActivityModel?>(null) 
 
     var onSingleTap: (() -> Unit)? = null
+    var onDoubleTap: ((IslandState) -> Unit)? = null
     var onPillLongPress: (() -> Unit)? = null
     var onGrabberDragDown: (() -> Unit)? = null
     var onGrabberDragUp: (() -> Unit)? = null
     var onGrabberLongPress: (() -> Unit)? = null
+    var onSwipeLeft: ((IslandState) -> Unit)? = null
+    var onSwipeRight: ((IslandState) -> Unit)? = null
     
     var onPlayPauseClick: (() -> Unit)? = null
     var onPrevClick: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
     var onSeekTo: ((Long) -> Unit)? = null
-    var onCustomActionClick: ((CustomMediaAction) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
 
     private val lifecycleOwner = OverlayLifecycleOwner()
@@ -111,14 +111,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     private fun loadPreferences() {
         try {
             val pref = XSharedPreferences("com.example.dynamicisland", "island_prefs")
-            pref.makeWorldReadable()
-            pref.reload()
+            pref.makeWorldReadable(); pref.reload()
             ringW.value = pref.getFloat("ring_w", 45f); ringH.value = pref.getFloat("ring_h", 45f); ringX.value = pref.getFloat("ring_x", 0f); ringY.value = pref.getFloat("ring_y", 48f)
             miniW.value = pref.getFloat("mini_w", 180f); miniH.value = pref.getFloat("mini_h", 36f); miniX.value = pref.getFloat("mini_x", 0f); miniY.value = pref.getFloat("mini_y", 48f)
             midW.value = pref.getFloat("mid_w", 320f); midH.value = pref.getFloat("mid_h", 80f); midX.value = pref.getFloat("mid_x", 0f); midY.value = pref.getFloat("mid_y", 48f)
             maxW.value = pref.getFloat("max_w", 360f); maxH.value = pref.getFloat("max_h", 220f); maxX.value = pref.getFloat("max_x", 0f); maxY.value = pref.getFloat("max_y", 48f)
-            
-            // Load Padding Configurations
             padT.value = pref.getFloat("pad_t", 0f); padB.value = pref.getFloat("pad_b", 0f); padL.value = pref.getFloat("pad_l", 0f); padR.value = pref.getFloat("pad_r", 0f)
             isCubeRotationEnabled.value = pref.getBoolean("rotate_cube", true)
         } catch (e: Exception) {}
@@ -169,10 +166,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val rad by animateDpAsState(radTarget, physicsSpec, label = "rad")
 
         val model = activeModel.value
-
         val targetBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else {
             if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor).copy(alpha = 0.65f) 
-            else if (state == IslandState.TYPE_3_MAX) Color.Transparent // B Pill relies entirely on the Blurred Album Background!
+            else if (state == IslandState.TYPE_3_MAX) Color(0xFF121212).copy(alpha = 0.5f) // Dark overlay so text is readable over the B Pill Blur
             else Color(0xFF121212).copy(alpha = 0.75f) 
         }
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
@@ -195,29 +191,39 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
         }
 
+        var dragOffsetX by remember { mutableStateOf(0f) }
+
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Top) {
             Box(
                 modifier = Modifier
-                    .padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp) // 🚀 ABSOLUTE COMPRESSION PADDING
-                    .width(width)
-                    .height(height)
-                    .clip(RoundedCornerShape(rad))
-                    .background(bgColor) 
-                    .border(1.dp, borderColor, RoundedCornerShape(rad))
+                    .padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp) 
+                    .width(width).height(height).clip(RoundedCornerShape(rad))
+                    .background(bgColor).border(1.dp, borderColor, RoundedCornerShape(rad))
                     .pointerInput(Unit) { 
-                        // 🚀 ONLY Single Tap for R -> S. Removing all other main pill gestures to force Grabber usage.
-                        detectTapGestures(onTap = { if (state == IslandState.TYPE_0_RING || state == IslandState.HIDDEN) onSingleTap?.invoke() }) 
+                        detectTapGestures(
+                            onTap = { if (state == IslandState.TYPE_0_RING || state == IslandState.HIDDEN) onSingleTap?.invoke() },
+                            onDoubleTap = { onDoubleTap?.invoke(state) },
+                            onLongPress = { if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) onPillLongPress?.invoke() } // ONLY entire pill for S
+                        ) 
+                    }
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragEnd = {
+                                if (abs(dragOffsetX) > 40) { if (dragOffsetX > 40) onSwipeRight?.invoke(state) else if (dragOffsetX < -40) onSwipeLeft?.invoke(state) }
+                                dragOffsetX = 0f
+                            },
+                            onDrag = { change, dragAmount -> change.consume(); dragOffsetX += dragAmount.x } // NO dragOffsetY! Disabled Up/Down swipe on Pill!
+                        )
                     },
                 contentAlignment = Alignment.TopCenter
             ) {
-                // 🚀 B PILL CINEMATIC HEAVY BLURRED BACKGROUND
+                // 🚀 B PILL CINEMATIC BLURRED BACKGROUND (Fills the pill perfectly)
                 if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
-                    Image(bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(0.6f).blur(36.dp))
+                    Image(bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(if (state == IslandState.TYPE_3_MAX) 0.8f else 0.35f).blur(if (state == IslandState.TYPE_3_MAX) 45.dp else 24.dp))
                 }
 
                 if (state != IslandState.HIDDEN) {
                     val bottomPadding by animateDpAsState(targetValue = when(state) { IslandState.TYPE_3_MAX -> 24.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> 12.dp; else -> 0.dp }, label = "bottomPadding")
-
                     Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
                         when (state) {
                             IslandState.TYPE_3_MAX -> { if (model is LiveActivityModel.Dashboard) DashboardMax(model) else if (model is LiveActivityModel.Music) MusicMax(model) }
@@ -230,28 +236,21 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
                     // 🌟 THE MASTER GRABBER ("___")
                     if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX || state == IslandState.TYPE_SPLIT) {
-                        var dragY by remember { mutableStateOf(0f) }
+                        var grabberDragY by remember { mutableStateOf(0f) }
                         Box(
                             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(when(state) { IslandState.TYPE_3_MAX -> 32.dp; IslandState.TYPE_2_MID -> 20.dp; else -> 16.dp })
                                 .pointerInput(Unit) {
                                     detectDragGestures(
-                                        onDragEnd = {
-                                            if (dragY > 40) onGrabberDragDown?.invoke() // Pull Down -> Expand S->M->B
-                                            else if (dragY < -40) onGrabberDragUp?.invoke() // Push Up -> Collapse B->M->S->R
-                                            dragY = 0f
-                                        },
-                                        onDrag = { change, dragAmount -> change.consume(); dragY += dragAmount.y }
+                                        onDragEnd = { if (grabberDragY > 40) onGrabberDragDown?.invoke() else if (grabberDragY < -40) onGrabberDragUp?.invoke(); grabberDragY = 0f },
+                                        onDrag = { change, dragAmount -> change.consume(); grabberDragY += dragAmount.y }
                                     )
                                 }
-                                .pointerInput(Unit) { detectTapGestures(onLongPress = { onGrabberLongPress?.invoke() }) }, // Hold -> Home
+                                .pointerInput(Unit) { detectTapGestures(onLongPress = { onGrabberLongPress?.invoke() }) }, 
                             contentAlignment = Alignment.Center
-                        ) {
-                            Box(modifier = Modifier.width(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 24.dp else 40.dp).height(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 3.dp else 5.dp).background(Color.White.copy(alpha=0.6f), CircleShape))
-                        }
+                        ) { Box(modifier = Modifier.width(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 24.dp else 40.dp).height(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 3.dp else 5.dp).background(Color.White.copy(alpha=0.6f), CircleShape)) }
                     }
                 }
                 
-                // Real-time Progress Arc in R
                 if (state == IslandState.TYPE_0_RING) {
                     val isMedia = model is LiveActivityModel.Music && model.isPlaying
                     val shouldShowRing = isMedia || globalIsCharging.value || globalBatteryLevel.value <= 20
@@ -301,8 +300,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
                 if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(24.dp).clip(CircleShape).rotate(currentRotation)) else Box(Modifier.size(24.dp).background(Color.White.copy(0.2f), CircleShape))
                 Spacer(Modifier.width(8.dp))
-                // 🚀 MM:SS added to S Pill
-                Text(text = "${music.title} • ${formatTime(music.positionMs)}", color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f).basicMarquee())
+                // 🚀 MM:SS / MM:SS added to S Pill
+                Text(text = "${music.title} • ${formatTime(music.positionMs)} / ${formatTime(music.durationMs)}", color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f).basicMarquee())
                 val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
                 Icon(imageVector = playIcon, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
             }
@@ -322,13 +321,15 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(52.dp)) {
                 CircularProgressIndicator(progress = { progress }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha = 0.2f), strokeWidth = 2.dp, modifier = Modifier.fillMaxSize())
-                // 🚀 Hold 📀 to open app
-                if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(44.dp).clip(CircleShape).rotate(currentRotation).clickable { onPillLongPress?.invoke() }) else Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
+                // 🚀 Hold 📀 to open app (M Pill only)
+                if (music.albumArt != null) {
+                    Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(44.dp).clip(CircleShape).rotate(currentRotation).pointerInput(Unit) { detectTapGestures(onLongPress = { onPillLongPress?.invoke() }) }) 
+                } else Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
             }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                  Text(text = music.title, color = dynamicTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee())
-                 // 🚀 MM:SS added to M Pill
+                 // 🚀 MM:SS / MM:SS added to M Pill
                  Text(text = "${music.artist} • ${formatTime(music.positionMs)} / ${formatTime(music.durationMs)}", color = dynamicTextColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
             }
             val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
@@ -339,24 +340,29 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun MusicMax(music: LiveActivityModel.Music) {
-        val dynamicTextColor = Color(music.titleTextColor)
+        val dynamicTextColor = Color.White // Force white to stay clean against the blurred background
+
         Column(modifier = Modifier.fillMaxSize().padding(start = 24.dp, end = 24.dp, top = 20.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                // 🚀 Hold App Icon to open app
-                if (music.appIcon != null) Image(bitmap = music.appIcon.asImageBitmap(), contentDescription = "App Logo", modifier = Modifier.size(50.dp).clip(RoundedCornerShape(12.dp)).clickable { onPillLongPress?.invoke() }) 
-                else Box(Modifier.size(50.dp).background(Color.White.copy(alpha=0.2f), RoundedCornerShape(12.dp)))
-                
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = music.title, color = dynamicTextColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee()) // 🚀 Marquee active!
-                    Text(text = music.artist, color = dynamicTextColor.copy(alpha=0.8f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
-                }
+            // 🚀 TOP ROW: App Icon & Audio Switcher
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                // 🚀 Hold App Icon to open app (B Pill only)
+                if (music.appIcon != null) {
+                    Image(bitmap = music.appIcon.asImageBitmap(), contentDescription = "App Logo", modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).pointerInput(Unit) { detectTapGestures(onLongPress = { onPillLongPress?.invoke() }) }) 
+                } else Box(Modifier.size(36.dp).background(Color.White.copy(alpha=0.2f), RoundedCornerShape(10.dp)))
 
                 // 🚀 Audio Output Switcher Cuboid
-                Box(modifier = Modifier.background(Color.White.copy(alpha=0.2f), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 8.dp).clickable { onAudioOutputClick?.invoke() }) {
-                    Icon(Icons.Default.Bluetooth, contentDescription = "Output", tint = dynamicTextColor, modifier = Modifier.size(20.dp))
+                Row(modifier = Modifier.background(Color.White.copy(alpha=0.2f), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 8.dp).clickable { onAudioOutputClick?.invoke() }, verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Bluetooth, contentDescription = "Output", tint = dynamicTextColor, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Audio", color = dynamicTextColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // 🚀 HUGE MARQUEE TITLE
+            Text(text = music.title, color = dynamicTextColor, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.fillMaxWidth().basicMarquee()) 
+            Text(text = music.artist, color = dynamicTextColor.copy(alpha=0.8f), fontSize = 16.sp, maxLines = 1, modifier = Modifier.fillMaxWidth().basicMarquee())
+            
             Spacer(modifier = Modifier.height(16.dp))
 
             val haptic = LocalHapticFeedback.current
@@ -372,19 +378,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             }
             Slider(value = (safePosition / safeDuration).coerceIn(0f, 1f), onValueChange = { localPosition = it * safeDuration; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }, onValueChangeFinished = { onSeekTo?.invoke(localPosition.toLong()); haptic.performHapticFeedback(HapticFeedbackType.LongPress) }, interactionSource = interactionSource, colors = SliderDefaults.colors(activeTrackColor = dynamicTextColor, inactiveTrackColor = dynamicTextColor.copy(alpha=0.3f), thumbColor = dynamicTextColor), modifier = Modifier.fillMaxWidth().height(24.dp))
             
-            // 🚀 DYNAMIC MEDIA ACTIONS
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-                // Map custom actions intelligently
-                val favoriteAction = music.customActions.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("thumb", true) }
-                if (favoriteAction != null) Icon(Icons.Default.Favorite, null, tint = dynamicTextColor, modifier = Modifier.size(24.dp).clickable { onCustomActionClick?.invoke(favoriteAction) }) else Spacer(Modifier.width(24.dp))
-
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev", tint = dynamicTextColor, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
                 val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
-                Box(modifier = Modifier.size(56.dp).background(dynamicTextColor.copy(alpha = 0.2f), CircleShape).clickable { onPlayPauseClick?.invoke() }, contentAlignment = Alignment.Center) { Icon(imageVector = playIcon, contentDescription = "Play/Pause", tint = dynamicTextColor, modifier = Modifier.size(32.dp)) }
+                Box(modifier = Modifier.size(56.dp).background(dynamicTextColor.copy(alpha = 0.2f), CircleShape).clickable { onPlayPauseClick?.invoke() }, contentAlignment = Alignment.Center) {
+                    Icon(imageVector = playIcon, contentDescription = "Play/Pause", tint = dynamicTextColor, modifier = Modifier.size(32.dp))
+                }
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next", tint = dynamicTextColor, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
-
-                val repeatAction = music.customActions.find { it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) }
-                if (repeatAction != null) Icon(Icons.Default.Refresh, null, tint = dynamicTextColor, modifier = Modifier.size(24.dp).clickable { onCustomActionClick?.invoke(repeatAction) }) else Spacer(Modifier.width(24.dp))
             }
         }
     }
@@ -433,5 +434,5 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     fun setModel(model: LiveActivityModel?) { activeModel.value = model }
     fun setSplitModel(model: LiveActivityModel?) { splitModel.value = model }
 
-    private fun getIconForType(type: ActivityType): ImageVector { return when(type) { ActivityType.CALL -> Icons.Default.Phone; ActivityType.NAVIGATION -> Icons.Default.LocationOn; ActivityType.TIMER -> Icons.Default.Notifications; ActivityType.MESSAGE -> Icons.Default.Email; ActivityType.ALARM -> Icons.Default.Notifications; ActivityType.CHARGING -> Icons.Default.Add; ActivityType.BATTERY_LOW -> Icons.Default.Warning; ActivityType.BLUETOOTH -> Icons.Default.Share; ActivityType.WIFI -> Icons.Default.Search; ActivityType.HARDWARE -> Icons.Default.Info; else -> Icons.Default.Info } }
+    private fun getIconForType(type: ActivityType): ImageVector { return when(type) { ActivityType.CALL -> Icons.Default.Phone; ActivityType.NAVIGATION -> Icons.Default.LocationOn; ActivityType.TIMER -> Icons.Default.Notifications; ActivityType.MESSAGE -> Icons.Default.Email; ActivityType.ALARM -> Icons.Default.Notifications; ActivityType.CHARGING -> Icons.Default.Add; ActivityType.BATTERY_LOW -> Icons.Default.Warning; ActivityType.BLUETOOTH -> Icons.Default.Share; ActivityType.WIFI -> Icons.Default.Wifi; ActivityType.HARDWARE -> Icons.Default.Info; else -> Icons.Default.Info } }
 }
