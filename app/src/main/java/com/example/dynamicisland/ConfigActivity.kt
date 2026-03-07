@@ -166,25 +166,26 @@ class ConfigActivity : ComponentActivity() {
 
         makePrefsWorldReadable()
 
-        // Tell the real hooked module to update its cache if it happens to be running
-        sendBroadcast(Intent("com.example.dynamicisland.RELOAD_PREFS").setPackage("com.android.systemui"))
+        val intent = Intent("com.example.dynamicisland.RELOAD_PREFS")
+        intent.addFlags(0x01000000) // 🚀 Brilliant Hex Fix!
+        intent.putExtra("prefix", prefix)
+        intent.putExtra("w", w)
+        intent.putExtra("h", h)
+        intent.putExtra("x", x)
+        intent.putExtra("y", y)
+        sendBroadcast(intent)
     }
 
     private fun makePrefsWorldReadable() {
         try {
             val prefsDir = File(applicationInfo.dataDir, "shared_prefs")
             val prefsFile = File(prefsDir, "island_prefs.xml")
-
-            // 🚀 FIX: The folder MUST be executable for SystemUI to traverse it
+            
+            // 🚀 FIX: Directory MUST be executable (+x) for SELinux to allow SystemUI inside
             if (prefsDir.exists()) {
                 prefsDir.setExecutable(true, false)
                 prefsDir.setReadable(true, false)
             }
-
-            // The file itself must be readable
-            if (prefsFile.exists()) {
-                prefsFile.setReadable(true, false)
-            }
+            if (prefsFile.exists()) prefsFile.setReadable(true, false)
         } catch (e: Exception) { e.printStackTrace() }
-    }    }
-}
+    }
