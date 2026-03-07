@@ -50,7 +50,16 @@ class IslandController(private val context: Context) {
      * Binds the Compose UI to this controller.
      */
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
-        val view = DynamicIslandView(context)
+        
+        // 🚀 FIX: Create a context that points strictly to OUR module's resources!
+        val moduleContext = try {
+            context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY)
+        } catch (e: Exception) {
+            context // Failsafe
+        }
+
+        // Initialize the view with our isolated module context
+        val view = DynamicIslandView(moduleContext)
         view.windowManager = wm
         view.windowParams = params
 
