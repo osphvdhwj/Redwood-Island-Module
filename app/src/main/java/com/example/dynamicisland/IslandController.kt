@@ -54,6 +54,21 @@ class IslandController(private val context: Context) {
             }
         }
     }
+    
+    private var isLandscape = false
+
+    // 🚀 NEW: Listen for device rotation (Landscape/Portrait)
+    private val componentCallbacks = object : android.content.ComponentCallbacks {
+        override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+            isLandscape = newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+            if (isLandscape) {
+                _islandState.value = IslandState.HIDDEN // Hide instantly in games/video
+            } else {
+                evaluatePriority() // Restore the island when back in portrait
+            }
+        }
+        override fun onLowMemory() {}
+    }
 
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
@@ -101,6 +116,10 @@ class IslandController(private val context: Context) {
     }
 
     private fun evaluatePriority() {
+        if (isLandscape) {
+            _islandState.value = IslandState.HIDDEN
+            return
+        }
         if (transientModel != null) {
             if (currentMedia?.isPlaying == true || currentMedia != null) { _activeModel.value = currentMedia; _splitModel.value = transientModel; _islandState.value = IslandState.TYPE_SPLIT } 
             else { _activeModel.value = transientModel; _splitModel.value = null; _islandState.value = IslandState.TYPE_CUBE }
@@ -228,6 +247,7 @@ class IslandController(private val context: Context) {
     private fun setupHardwareMonitor() {
         val filter = IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) }
         context.registerReceiver(screenStateReceiver, filter)
+        context.registerComponentCallbacks(componentCallbacks)
 
         BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
              if (isCharging) { postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true), 4000L)
@@ -239,5 +259,9 @@ class IslandController(private val context: Context) {
         scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; if (hw.isGamingModeOn || _activeModel.value is LiveActivityModel.HardwareMonitor) evaluatePriority() } }
     }
     init { setupHardwareMonitor(); setupMediaListener() }
-    fun cleanup() { scope.cancel(); context.unregisterReceiver(screenStateReceiver) }
-}
+    fun cleanup() { 
+        scope.cancel() 
+        context.unregisterReceiver(screenStateReceiver)
+        context.unregisterComponentCallbacks(componentCallbacks)
+        BatteryPlugin.stop(context) // 🚀 FIXED: Prevent battery receiver leak
+    }
