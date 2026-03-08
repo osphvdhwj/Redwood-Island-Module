@@ -265,3 +265,4 @@ class IslandController(private val context: Context) {
         context.unregisterComponentCallbacks(componentCallbacks)
         BatteryPlugin.stop(context) // 🚀 FIXED: Prevent battery receiver leak
     }
+}
