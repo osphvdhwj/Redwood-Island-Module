@@ -45,14 +45,12 @@ class IslandController(private val context: Context) {
     private var isScreenOn = true 
     private var isLandscape = false
 
-    // 🚀 THE UNIVERSAL GESTURE MATRIX
     private val gestureMatrix = mutableMapOf<String, IslandAction>()
 
     private val mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
     private var activeMediaController: MediaController? = null
     private var mediaTickerJob: Job? = null
 
-    // 🚀 FIXED MEDIA LEAK
     private val sessionListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers -> updateActiveMediaController(controllers?.firstOrNull()) }
 
     private val screenStateReceiver = object : BroadcastReceiver() {
@@ -88,7 +86,6 @@ class IslandController(private val context: Context) {
             } catch (e: Exception) {}
         }
 
-        // 🚀 THE CENTRAL GESTURE ROUTER
         view.onGestureEvent = { gesture ->
             val currentState = _islandState.value.name
             val actionKey = "${currentState}_${gesture.name}"
@@ -145,7 +142,17 @@ class IslandController(private val context: Context) {
         return view
     }
 
-    // 🚀 SMART DEFAULTS IF USER HASN'T CONFIGURED JSON YET
+    // 🚀 RESTORED: The missing media command helper!
+    private fun sendMediaCommand(command: String) {
+        val controls = activeMediaController?.transportControls ?: return
+        when (command) { 
+            "PLAY" -> controls.play()
+            "PAUSE" -> controls.pause()
+            "NEXT" -> controls.skipToNext()
+            "PREV" -> controls.skipToPrevious() 
+        } 
+    }
+
     private fun getDefaultAction(state: String, gesture: IslandGesture): IslandAction {
         return when (gesture) {
             IslandGesture.SINGLE_TAP -> if (state == "TYPE_0_RING" || state == "HIDDEN") IslandAction.EXPAND else IslandAction.NONE
@@ -297,6 +304,6 @@ class IslandController(private val context: Context) {
         context.unregisterReceiver(screenStateReceiver)
         context.unregisterComponentCallbacks(componentCallbacks)
         BatteryPlugin.stop(context)
-        try { mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener) } catch(e: Exception){} // 🚀 FIXED LEAK
+        try { mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener) } catch(e: Exception){} 
     }
 }
