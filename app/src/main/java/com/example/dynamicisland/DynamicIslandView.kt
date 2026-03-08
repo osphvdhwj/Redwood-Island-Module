@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -290,7 +291,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             AnimatedContent(targetState = state, transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "UI Transition") { s ->
                                 when (s) {
                                     IslandState.TYPE_3_MAX -> { if (model is LiveActivityModel.Dashboard) DashboardMax(model) else if (model is LiveActivityModel.Music) MusicMax(model) }
-                                    IslandState.TYPE_2_MID -> { if (model is LiveActivityModel.Dashboard) DashboardMid(model) else if (model is LiveActivityModel.Music) MusicMid(model) else if (model is LiveActivityModel.General) GeneralMid(model) else if (model is LiveActivityModel.Charging) ChargingMid(model) }
+                                    IslandState.TYPE_2_MID -> { 
+                                        if (model is LiveActivityModel.Dashboard) DashboardMid(model) 
+                                        else if (model is LiveActivityModel.Music) MusicMid(model) 
+                                        else if (model is LiveActivityModel.General) GeneralMid(model) 
+                                        else if (model is LiveActivityModel.Charging) ChargingMid(model)
+                                        else if (model is LiveActivityModel.SystemAlert) SystemAlertMid(model) // 🚀 ADD THIS LINE
+                                    }
                                     IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { if (model is LiveActivityModel.Music) MusicMini(model) else if (model is LiveActivityModel.General) GeneralMini(model) else if (model is LiveActivityModel.HardwareMonitor) HardwareGaugeMini(model) }
                                     IslandState.TYPE_CUBE -> { if (model is LiveActivityModel.Charging) ChargingCube(model) }
                                     else -> {} 
@@ -355,13 +362,43 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     private fun formatTime(ms: Long): String { if (ms <= 0) return "0:00"; val s = ms / 1000; return String.format("%d:%02d", s / 60, s % 60) }
 
+    // 🚀 NEW: PREMIUM GLASSMORPHISM SYSTEM OVERRIDE CHARGING ANIMATION
     @Composable
     fun ChargingCube(model: LiveActivityModel.Charging) {
         val color = if (model.isPluggedIn) Color.Green else if (model.level <= 20) Color.Red else Color.White
-        Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Icon(imageVector = if (model.isPluggedIn) Icons.Default.Add else Icons.Default.Warning, contentDescription = null, tint = color, modifier = Modifier.size(28.dp))
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = "${model.level}%", color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        
+        val transition = updateTransition(targetState = true, label = "cube_override")
+        val scale by transition.animateFloat(
+            transitionSpec = { spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow) },
+            label = "scale"
+        ) { state -> if (state) 1f else 0.5f }
+        
+        val blurRadius by transition.animateDp(
+            transitionSpec = { tween(durationMillis = 600, easing = FastOutSlowInEasing) },
+            label = "blur"
+        ) { state -> if (state) 32.dp else 0.dp }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.4f))
+                .blur(blurRadius), 
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    shadowElevation = 16.dp.toPx() 
+                    shape = CircleShape
+                    clip = false
+                }
+            ) {
+                Icon(imageVector = if (model.isPluggedIn) Icons.Default.Add else Icons.Default.Warning, contentDescription = null, tint = color, modifier = Modifier.size(36.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = "${model.level}%", color = color, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+            }
         }
     }
 
@@ -461,11 +498,171 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         }
     }
 
+    // 🚀 NEW: CONTROL CENTER (MID PILL)
     @Composable
-    fun DashboardMid(model: LiveActivityModel.Dashboard) { Row(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) { Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Phone, null, tint=Color.White, modifier=Modifier.size(24.dp)) }; Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Email, null, tint=Color.White, modifier=Modifier.size(24.dp)) }; Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Build, null, tint=Color.White, modifier=Modifier.size(24.dp)) }; Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Settings, null, tint=Color.White, modifier=Modifier.size(24.dp)) } } }
+    fun DashboardMid(model: LiveActivityModel.Dashboard) { 
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), 
+            verticalAlignment = Alignment.CenterVertically, 
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) { 
+            DashboardQuickToggle(Icons.Default.Wifi, true)
+            DashboardQuickToggle(Icons.Default.Bluetooth, false)
+            DashboardQuickToggle(Icons.Default.Build, false)
+            DashboardQuickToggle(Icons.Default.NotificationsActive, true)
+        } 
+    }
+
+    // 🚀 NEW: CONTROL CENTER (MAX PILL)
     @Composable
-    fun DashboardMax(model: LiveActivityModel.Dashboard) { Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text("Quick Settings", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.align(Alignment.Start)); Spacer(modifier = Modifier.height(16.dp)); Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) { Box(modifier = Modifier.size(60.dp).background(if (model.isWifiOn) Color.Blue else Color.White.copy(0.2f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Settings, null, tint = Color.White, modifier = Modifier.size(28.dp)) }; Box(modifier = Modifier.size(60.dp).background(if (model.isTorchOn) Color.Yellow else Color.White.copy(0.2f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Build, null, tint = Color.Black, modifier = Modifier.size(28.dp)) }; Box(modifier = Modifier.size(60.dp).background(Color.White.copy(0.2f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Info, null, tint = Color.White, modifier = Modifier.size(28.dp)) } }; Spacer(modifier = Modifier.height(24.dp)); Slider(value = model.currentVolume.toFloat(), onValueChange = {}, valueRange = 0f..model.maxVolume.toFloat(), colors = SliderDefaults.colors(activeTrackColor = Color.White)) } }
+    fun DashboardMax(model: LiveActivityModel.Dashboard) {
+        val context = LocalContext.current
+        val coroutineScope = rememberCoroutineScope()
+        
+        // Audio Manager
+        val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
+        val maxVolume = remember { audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() }
+        var volume by remember { mutableFloatStateOf(audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) / maxVolume) }
+        var ringerState by remember { mutableIntStateOf(audioManager.ringerMode) }
+
+        // Brightness Manager
+        val initialBrightness = remember { try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS) / 255f } catch (e: Exception) { 0.5f } }
+        var brightness by remember { mutableFloatStateOf(initialBrightness) }
+        val initialAuto = remember { try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE) == 1 } catch(e:Exception){false} }
+        var autoBrightness by remember { mutableStateOf(initialAuto) }
+
+        // Torch Manager
+        var isTorchOn by remember { mutableStateOf(false) }
+        val cameraManager = remember { context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager }
+        val cameraId = remember { try { cameraManager.cameraIdList.firstOrNull() } catch(e: Exception) { null } }
+
+        Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
+            // --- ROW 1: Quick Settings Grid ---
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                DashboardQuickToggle(Icons.Default.Wifi, true, "Wi-Fi") {
+                    val intent = Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                    context.startActivity(intent)
+                }
+                DashboardQuickToggle(Icons.Default.Bluetooth, false, "Bluetooth") {
+                    val intent = Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                    context.startActivity(intent)
+                }
+                DashboardQuickToggle(Icons.Default.Build, isTorchOn, "Flashlight") {
+                    try { isTorchOn = !isTorchOn; cameraId?.let { cameraManager.setTorchMode(it, isTorchOn) } } catch(e: Exception) {}
+                }
+                DashboardQuickToggle(Icons.Default.LocationOn, true, "Location") {
+                    val intent = Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                    context.startActivity(intent)
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- ROW 2: Brightness Control ---
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = { 
+                        autoBrightness = !autoBrightness
+                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE, if (autoBrightness) 1 else 0) }
+                    },
+                    modifier = Modifier.background(if (autoBrightness) Color.Yellow.copy(alpha=0.3f) else Color.White.copy(alpha=0.1f), CircleShape)
+                ) { Icon(Icons.Default.BrightnessAuto, contentDescription = "Auto", tint = if (autoBrightness) Color.Yellow else Color.White) }
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                Slider(
+                    value = brightness,
+                    onValueChange = { 
+                        brightness = it
+                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (it * 255).toInt()) }
+                    },
+                    valueRange = 0f..1f,
+                    colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha=0.3f), thumbColor = Color.White),
+                    modifier = Modifier.weight(1f).height(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // --- ROW 3: Volume & Ringer Control ---
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val ringerIcon = when (ringerState) {
+                    android.media.AudioManager.RINGER_MODE_SILENT -> Icons.Default.NotificationsOff
+                    android.media.AudioManager.RINGER_MODE_VIBRATE -> Icons.Default.Vibration
+                    else -> Icons.Default.NotificationsActive
+                }
+                val ringerTint = if (ringerState == android.media.AudioManager.RINGER_MODE_NORMAL) Color.White else Color.Red
+                
+                IconButton(
+                    onClick = { 
+                        ringerState = when (ringerState) {
+                            android.media.AudioManager.RINGER_MODE_NORMAL -> android.media.AudioManager.RINGER_MODE_VIBRATE
+                            android.media.AudioManager.RINGER_MODE_VIBRATE -> android.media.AudioManager.RINGER_MODE_SILENT
+                            else -> android.media.AudioManager.RINGER_MODE_NORMAL
+                        }
+                        audioManager.ringerMode = ringerState
+                    },
+                    modifier = Modifier.background(ringerTint.copy(alpha=0.1f), CircleShape)
+                ) { Icon(ringerIcon, contentDescription = "Ringer", tint = ringerTint) }
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                Slider(
+                    value = volume,
+                    onValueChange = { 
+                        volume = it
+                        audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (it * maxVolume).toInt(), 0)
+                    },
+                    valueRange = 0f..1f,
+                    colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha=0.3f), thumbColor = Color.White),
+                    modifier = Modifier.weight(1f).height(24.dp)
+                )
+            }
+        }
+    }
+
+    // 🚀 NEW: QUICK TOGGLE COMPONENT
+    @Composable
+    fun DashboardQuickToggle(icon: androidx.compose.ui.graphics.vector.ImageVector, isActive: Boolean, label: String? = null, onClick: () -> Unit = {}) {
+        val bgColor by animateColorAsState(if (isActive) Color(0xFF0A84FF) else Color.White.copy(alpha=0.15f), label="bg")
+        val tint by animateColorAsState(if (isActive) Color.White else Color.White.copy(alpha=0.6f), label="tint")
+        
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier.size(56.dp).clip(CircleShape).background(bgColor).clickable { onClick() },
+                contentAlignment = Alignment.Center
+            ) { Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(26.dp)) }
+            if (label != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(label, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+
+    // 🚀 NEW: DYNAMIC SYSTEM ALERT UI
     @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    fun SystemAlertMid(alert: LiveActivityModel.SystemAlert) {
+        val color = Color(alert.alertColor)
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            Box(
+                modifier = Modifier.size(44.dp).background(color.copy(alpha=0.2f), CircleShape).border(1.dp, color.copy(alpha=0.5f), CircleShape), 
+                contentAlignment = Alignment.Center
+            ) {
+                // Change icon based on alert type
+                val icon = when(alert.alertType) {
+                    "THERMAL" -> Icons.Default.Warning // Use Thermostat/Fire icon if you have a custom vector
+                    "ROGUE" -> Icons.Default.BatteryAlert
+                    else -> Icons.Default.Info
+                }
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                 Text(text = alert.title, color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee())
+                 Text(text = alert.message, color = color.copy(alpha=0.8f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
+            }
+        }
+    }
+
     @Composable
     fun GeneralMini(general: LiveActivityModel.General) { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) { Icon(imageVector = getIconForType(general.type), contentDescription = null, tint = Color(general.accentColor), modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text(text = "${general.title} • ${general.dataText}", color = Color.White, fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee()) } }
     @Composable
