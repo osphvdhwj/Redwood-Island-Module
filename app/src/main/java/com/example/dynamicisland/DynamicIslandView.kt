@@ -360,7 +360,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         }
     }
 
-    private fun formatTime(ms: Long): String { if (ms <= 0) return "0:00"; val s = ms / 1000; return String.format("%d:%02d", s / 60, s % 60) }
+
 
     // 🚀 NEW: PREMIUM GLASSMORPHISM SYSTEM OVERRIDE CHARGING ANIMATION
     @Composable
@@ -414,10 +414,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 // 🚀 TEXT CLIPPING FIX: Fill=false
                 Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f, fill = false).basicMarquee())
                 Spacer(Modifier.width(8.dp))
-                Text(text = "${formatTime(currentMediaPos.longValue)} / ${formatTime(music.durationMs)}", color = Color.White.copy(alpha=0.7f), fontSize = 12.sp)
+                IsolatedTimeText(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = Color.White.copy(alpha=0.7f))
             }
-            val safeDuration = if (music.durationMs > 0) music.durationMs.toFloat() else 1f
-            LinearProgressIndicator(progress = { (currentMediaPos.longValue.toFloat() / safeDuration).coerceIn(0f, 1f) }, color = Color.White.copy(alpha=0.8f), trackColor = Color.Transparent, modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.5f).height(2.dp).padding(bottom = 1.dp).clip(CircleShape))
+            IsolatedLinearProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = Color.White.copy(alpha=0.8f), trackColor = Color.Transparent, modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.5f).height(2.dp).padding(bottom = 1.dp).clip(CircleShape))
         }
     }
 
@@ -431,7 +430,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(52.dp)) {
-                CircularProgressIndicator(progress = { progress }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha = 0.2f), strokeWidth = 2.dp, modifier = Modifier.fillMaxSize())
+                IsolatedCircularProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha = 0.2f), strokeWidth = 2.dp, modifier = Modifier.fillMaxSize())
                 if (music.albumArt != null) { Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(44.dp).clip(CircleShape).rotate(currentRotation)) } else Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
             }
             Spacer(Modifier.width(14.dp))
@@ -440,7 +439,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                  Text(text = music.artist, color = dynamicTextColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
             }
             Spacer(Modifier.width(8.dp))
-            Text(text = "${formatTime(currentMediaPos.longValue)} / ${formatTime(music.durationMs)}", color = dynamicTextColor.copy(alpha=0.7f), fontSize = 12.sp)
+            IsolatedTimeText(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = dynamicTextColor.copy(alpha=0.7f))
         }
     }
 
@@ -473,13 +472,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             Text(text = music.artist, color = dynamicTextColor.copy(alpha=0.8f), fontSize = 16.sp, maxLines = 1, modifier = Modifier.fillMaxWidth().basicMarquee())
             Spacer(modifier = Modifier.height(16.dp))
 
-            val haptic = LocalHapticFeedback.current; val interactionSource = remember { MutableInteractionSource() }; val isDragged by interactionSource.collectIsDraggedAsState()
-            var localPosition by remember(isDragged) { mutableStateOf(currentMediaPos.longValue.toFloat()) }
-            val safeDuration = if (music.durationMs > 0) music.durationMs.toFloat() else 1f
-            val safePosition = if (isDragged) localPosition else currentMediaPos.longValue.toFloat()
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(text = formatTime(safePosition.toLong()), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 12.sp); Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 12.sp) }
-            Slider(value = (safePosition / safeDuration).coerceIn(0f, 1f), onValueChange = { localPosition = it * safeDuration; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }, onValueChangeFinished = { onSeekTo?.invoke(localPosition.toLong()); haptic.performHapticFeedback(HapticFeedbackType.LongPress) }, interactionSource = interactionSource, colors = SliderDefaults.colors(activeTrackColor = dynamicTextColor, inactiveTrackColor = dynamicTextColor.copy(alpha=0.3f), thumbColor = dynamicTextColor), modifier = Modifier.fillMaxWidth().height(24.dp))
+            IsolatedTimeRow(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = dynamicTextColor)
+            IsolatedMediaSlider(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, dynamicTextColor = dynamicTextColor, onSeek = { onSeekTo?.invoke(it) })
             
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -679,3 +673,120 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     fun setSplitModel(model: LiveActivityModel?) { splitModel.value = model }
     private fun getIconForType(type: ActivityType): ImageVector { return when(type) { ActivityType.CALL -> Icons.Default.Phone; ActivityType.NAVIGATION -> Icons.Default.LocationOn; ActivityType.TIMER -> Icons.Default.Notifications; ActivityType.MESSAGE -> Icons.Default.Email; ActivityType.ALARM -> Icons.Default.Notifications; ActivityType.CHARGING -> Icons.Default.Add; ActivityType.BATTERY_LOW -> Icons.Default.Warning; ActivityType.BLUETOOTH -> Icons.Default.Bluetooth; ActivityType.WIFI -> Icons.Default.Wifi; ActivityType.HARDWARE -> Icons.Default.Info; else -> Icons.Default.Info } }
 }
+
+    // 🚀 NEW: ISOLATED STATE COMPONENTS (Prevents 1-second Recomposition Churn)
+    fun formatTime(ms: Long): String { if (ms <= 0) return "0:00"; val s = ms / 1000; return String.format("%d:%02d", s / 60, s % 60) }
+
+    @Composable
+    fun IsolatedTimeText(durationMs: Long, posProvider: () -> Long, textColor: Color, modifier: Modifier = Modifier) {
+        // Only this tiny text box redraws when the second ticks!
+        Text(text = "${formatTime(posProvider())} / ${formatTime(durationMs)}", color = textColor, fontSize = 12.sp, modifier = modifier)
+    }
+
+    @Composable
+    fun IsolatedTimeRow(durationMs: Long, posProvider: () -> Long, textColor: Color) {
+        val pos = posProvider()
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(text = formatTime(pos), color = textColor.copy(alpha=0.7f), fontSize = 12.sp)
+            Text(text = formatTime(durationMs), color = textColor.copy(alpha=0.7f), fontSize = 12.sp)
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun IsolatedMediaSlider(durationMs: Long, posProvider: () -> Long, dynamicTextColor: Color, onSeek: (Long) -> Unit) {
+        val haptic = LocalHapticFeedback.current
+        val interactionSource = remember { MutableInteractionSource() }
+        val isDragged by interactionSource.collectIsDraggedAsState()
+
+        val currentPos = posProvider().toFloat()
+        var localPosition by remember(isDragged) { mutableFloatStateOf(currentPos) }
+
+        val safeDuration = if (durationMs > 0) durationMs.toFloat() else 1f
+        val safePosition = if (isDragged) localPosition else currentPos
+
+        Slider(
+            value = (safePosition / safeDuration).coerceIn(0f, 1f),
+            onValueChange = {
+                localPosition = it * safeDuration
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            },
+            onValueChangeFinished = {
+                onSeek(localPosition.toLong())
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            },
+            interactionSource = interactionSource,
+            colors = SliderDefaults.colors(activeTrackColor = dynamicTextColor, inactiveTrackColor = dynamicTextColor.copy(alpha=0.3f), thumbColor = dynamicTextColor),
+            modifier = Modifier.fillMaxWidth().height(24.dp)
+        )
+    }
+
+    @Composable
+    fun IsolatedLinearProgressIndicator(durationMs: Long, posProvider: () -> Long, color: Color, trackColor: Color, modifier: Modifier = Modifier) {
+        val safeDuration = if (durationMs > 0) durationMs.toFloat() else 1f
+        LinearProgressIndicator(
+            progress = { (posProvider().toFloat() / safeDuration).coerceIn(0f, 1f) },
+            color = color,
+            trackColor = trackColor,
+            modifier = modifier
+        )
+    }
+
+    @Composable
+    fun IsolatedCircularProgressIndicator(durationMs: Long, posProvider: () -> Long, color: Color, trackColor: Color, strokeWidth: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+        val safeDuration = if (durationMs > 0) durationMs.toFloat() else 1f
+        CircularProgressIndicator(
+            progress = { (posProvider().toFloat() / safeDuration).coerceIn(0f, 1f) },
+            color = color,
+            trackColor = trackColor,
+            strokeWidth = strokeWidth,
+            modifier = modifier
+        )
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    fun AppTimerWarningMid(model: LiveActivityModel.AppTimerWarning) {
+        var remainingSeconds by remember { mutableIntStateOf(((model.targetTimeMs - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)) }
+
+        // Local Ticker (1 second intervals)
+        LaunchedEffect(model.targetTimeMs) {
+            while (remainingSeconds > 0) {
+                kotlinx.coroutines.delay(1000)
+                remainingSeconds = ((model.targetTimeMs - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
+            }
+        }
+
+        // Aggressive Pulsing Red Alert
+        val pulseTransition = rememberInfiniteTransition(label = "pulse")
+        val alertAlpha by pulseTransition.animateFloat(
+            initialValue = 0.2f,
+            targetValue = 0.6f,
+            animationSpec = infiniteRepeatable(animation = tween(600, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse),
+            label = "alertAlpha"
+        )
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Color.Red.copy(alpha = alertAlpha), CircleShape)
+                    .border(2.dp, Color.Red, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                if (model.appIcon != null) {
+                    Image(bitmap = model.appIcon.asImageBitmap(), contentDescription = "App Icon", modifier = Modifier.size(36.dp).clip(CircleShape))
+                } else {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+                }
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                 Text(text = "Time Limit Reached", color = Color.Red, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee())
+                 Text(text = "${model.appName} closing in ${remainingSeconds}s", color = Color.White, fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
+            }
+        }
+    }

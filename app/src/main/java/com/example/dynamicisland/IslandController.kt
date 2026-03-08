@@ -65,28 +65,56 @@ class IslandController(private val context: Context) {
     // 🚀 NEW: THE ECOSYSTEM BRIDGE (Listens to your Battery Manager module)
     private val ecosystemReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
-            if (intent.action == "com.crdroid.batterywellbeing.SYSTEM_OVERRIDE") {
-                when (intent.getStringExtra("action")) {
-                    "SMART_CHARGE_LIMIT" -> {
-                        val level = intent.getIntExtra("level", 100)
-                        postTransientNotification(LiveActivityModel.Charging("sys_smart_charge", ActivityType.CHARGING, level, true, true), 6000L) 
+            when (intent.action) {
+                "com.crdroid.batterywellbeing.SYSTEM_OVERRIDE" -> {
+                    when (intent.getStringExtra("action")) {
+                        "SMART_CHARGE_LIMIT" -> {
+                            val level = intent.getIntExtra("level", 100)
+                            postTransientNotification(LiveActivityModel.Charging("sys_smart_charge", ActivityType.CHARGING, level, true, true), 6000L)
+                        }
+                        "THERMAL_WARNING" -> {
+                            val temp = intent.getStringExtra("extra_info") ?: "High"
+                            val alert = LiveActivityModel.SystemAlert(
+                                id = "sys_thermal", alertType = "THERMAL", title = "Thermal Throttling",
+                                message = "Battery temperature at $temp", alertColor = android.graphics.Color.RED
+                            )
+                            postTransientNotification(alert, 6000L)
+                        }
+                        "ROGUE_APP_DETECTED" -> {
+                            val appName = intent.getStringExtra("extra_info") ?: "Unknown App"
+                            val alert = LiveActivityModel.SystemAlert(
+                                id = "sys_rogue", alertType = "ROGUE", title = "High Background Drain",
+                                message = "$appName is draining battery", alertColor = android.graphics.Color.rgb(255, 165, 0) // Orange
+                            )
+                            postTransientNotification(alert, 6000L)
+                        }
                     }
-                    "THERMAL_WARNING" -> {
-                        val temp = intent.getStringExtra("extra_info") ?: "High"
-                        val alert = LiveActivityModel.SystemAlert(
-                            id = "sys_thermal", alertType = "THERMAL", title = "Thermal Throttling",
-                            message = "Battery temperature at $temp", alertColor = android.graphics.Color.RED
-                        )
-                        postTransientNotification(alert, 6000L)
-                    }
-                    "ROGUE_APP_DETECTED" -> {
-                        val appName = intent.getStringExtra("extra_info") ?: "Unknown App"
-                        val alert = LiveActivityModel.SystemAlert(
-                            id = "sys_rogue", alertType = "ROGUE", title = "High Background Drain",
-                            message = "$appName is draining battery", alertColor = android.graphics.Color.rgb(255, 165, 0) // Orange
-                        )
-                        postTransientNotification(alert, 6000L)
-                    }
+                }
+                "com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING" -> {
+                    val pkg = intent.getStringExtra("package_name") ?: return
+                    val pm = context.packageManager
+                    var appName = pkg
+                    var appIcon: Bitmap? = null
+
+                    try {
+                        val appInfo = pm.getApplicationInfo(pkg, 0)
+                        appName = pm.getApplicationLabel(appInfo).toString()
+                        val drawable = pm.getApplicationIcon(appInfo)
+                        val bmp = Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+                        val canvas = android.graphics.Canvas(bmp)
+                        drawable.setBounds(0, 0, canvas.width, canvas.height)
+                        drawable.draw(canvas)
+                        appIcon = getScaledBitmap(bmp, 150)
+                    } catch (e: Exception) {}
+
+                    val warningModel = LiveActivityModel.AppTimerWarning(
+                        packageName = pkg,
+                        appName = appName,
+                        appIcon = appIcon,
+                        targetTimeMs = System.currentTimeMillis() + 60000L
+                    )
+                    // Lock the Island open for exactly 60 seconds
+                    postTransientNotification(warningModel, 60000L)
                 }
             }
         }
@@ -214,7 +242,7 @@ class IslandController(private val context: Context) {
         if (isLandscape) { _islandState.value = IslandState.HIDDEN; return }
         
         if (transientModel != null) {
-            if (transientModel is LiveActivityModel.SystemAlert) {
+            if (transientModel is LiveActivityModel.SystemAlert || transientModel is LiveActivityModel.AppTimerWarning) {
                 // System Alerts (Text) demand the Mid Pill, temporarily overriding everything else
                 _activeModel.value = transientModel
                 _splitModel.value = null
@@ -287,7 +315,17 @@ class IslandController(private val context: Context) {
         if (!isPlaying && currentMedia == null) return 
 
         val duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
-        val rawAlbumArt = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
+
+        // 🚀 OOM BOMB PROTECTION
+        val rawAlbumArt = try {
+            metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
+        } catch (e: OutOfMemoryError) {
+            Log.e("DynamicIsland", "FATAL: Prevented SystemUI OOM Crash from massive Album Art!")
+            null
+        } catch (e: Exception) {
+            null
+        }
+
         val albumArtBitmap = getScaledBitmap(rawAlbumArt)
         
         var appIconBitmap: Bitmap? = null
@@ -338,7 +376,10 @@ class IslandController(private val context: Context) {
         context.registerComponentCallbacks(componentCallbacks)
         
         // 🚀 Register Ecosystem Bridge
-        val ecoFilter = IntentFilter("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE")
+        val ecoFilter = IntentFilter().apply {
+            addAction("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE")
+            addAction("com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING")
+        }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(ecosystemReceiver, ecoFilter, Context.RECEIVER_EXPORTED)
         } else {

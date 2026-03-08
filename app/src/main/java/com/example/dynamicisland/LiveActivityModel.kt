@@ -41,6 +41,17 @@ sealed class LiveActivityModel {
         val alertColor: Int,
         override val isTransient: Boolean = true
     ) : LiveActivityModel()
+    // 🚀 NEW: The 60-Second Execution Warning
+    data class AppTimerWarning(
+        override val id: String = "sys_app_timer",
+        override val type: ActivityType = ActivityType.SYSTEM_ALERT,
+        val packageName: String,
+        val appName: String,
+        val appIcon: Bitmap?,
+        val targetTimeMs: Long,
+        override val isTransient: Boolean = true
+    ) : LiveActivityModel()
+
 
     data class Music(
         override val id: String = "sys_media",
