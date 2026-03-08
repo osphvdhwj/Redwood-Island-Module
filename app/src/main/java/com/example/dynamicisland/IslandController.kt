@@ -21,6 +21,7 @@ import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.json.JSONObject
 
 class IslandController(private val context: Context) {
 
@@ -44,14 +45,15 @@ class IslandController(private val context: Context) {
     private var isScreenOn = true 
     private var isLandscape = false
 
-    // 🚀 NEW: DYNAMIC GESTURE STATE
-    private var swipeGestureAction = "Next/Prev Track"
-    private var doubleTapGestureAction = "Heart/Like Song"
-    private var longPressGestureAction = "Open Playing App"
+    // 🚀 THE UNIVERSAL GESTURE MATRIX
+    private val gestureMatrix = mutableMapOf<String, IslandAction>()
 
     private val mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
     private var activeMediaController: MediaController? = null
     private var mediaTickerJob: Job? = null
+
+    // 🚀 FIXED MEDIA LEAK
+    private val sessionListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers -> updateActiveMediaController(controllers?.firstOrNull()) }
 
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -76,65 +78,60 @@ class IslandController(private val context: Context) {
         view.windowManager = wm
         view.windowParams = params
 
-        // 🚀 RECEIVE GESTURE SETTINGS FROM VIEW
-        view.onGestureSettingsUpdated = { swipe, doubleTap, longPress ->
-            swipeGestureAction = swipe ?: "Next/Prev Track"
-            doubleTapGestureAction = doubleTap ?: "Heart/Like Song"
-            longPressGestureAction = longPress ?: "Open Playing App"
-        }
-
-        view.onSingleTap = { onSingleTap() } 
-        
-        view.onDoubleTap = { state ->
-            if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT || state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) {
-                when (doubleTapGestureAction) {
-                    "Heart/Like Song" -> {
-                        val heartAction = currentMedia?.customActions?.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("like", true) }
-                        if (heartAction != null) activeMediaController?.transportControls?.sendCustomAction(heartAction.actionName, null)
-                        else activeMediaController?.transportControls?.setRating(Rating.newHeartRating(true))
-                    }
-                    "Play/Pause" -> { if (currentMedia?.isPlaying == true) sendMediaCommand("PAUSE") else sendMediaCommand("PLAY") }
+        view.onGestureSettingsUpdated = { payload ->
+            try {
+                if (payload != null) {
+                    val json = JSONObject(payload)
+                    gestureMatrix.clear()
+                    json.keys().forEach { key -> gestureMatrix[key] = IslandAction.valueOf(json.getString(key)) }
                 }
-            }
+            } catch (e: Exception) {}
         }
 
-        view.onPillLongPress = {
-            when (longPressGestureAction) {
-                "Open Playing App" -> {
+        // 🚀 THE CENTRAL GESTURE ROUTER
+        view.onGestureEvent = { gesture ->
+            val currentState = _islandState.value.name
+            val actionKey = "${currentState}_${gesture.name}"
+            val action = gestureMatrix[actionKey] ?: getDefaultAction(currentState, gesture)
+
+            when (action) {
+                IslandAction.PLAY_PAUSE -> { if (currentMedia?.isPlaying == true) sendMediaCommand("PAUSE") else sendMediaCommand("PLAY") }
+                IslandAction.NEXT_TRACK -> sendMediaCommand("NEXT")
+                IslandAction.PREV_TRACK -> sendMediaCommand("PREV")
+                IslandAction.VOL_UP -> adjustVolume(android.media.AudioManager.ADJUST_RAISE)
+                IslandAction.VOL_DOWN -> adjustVolume(android.media.AudioManager.ADJUST_LOWER)
+                IslandAction.EXPAND -> {
+                    userForceCollapsed = false
+                    _islandState.value = when (_islandState.value) {
+                        IslandState.TYPE_0_RING -> IslandState.TYPE_1_MINI
+                        IslandState.TYPE_1_MINI -> IslandState.TYPE_2_MID
+                        IslandState.TYPE_2_MID -> IslandState.TYPE_3_MAX
+                        else -> _islandState.value
+                    }
+                }
+                IslandAction.COLLAPSE -> {
+                    userForceCollapsed = true
+                    _islandState.value = when (_islandState.value) {
+                        IslandState.TYPE_3_MAX -> IslandState.TYPE_2_MID
+                        IslandState.TYPE_2_MID -> IslandState.TYPE_1_MINI
+                        IslandState.TYPE_1_MINI -> { if (_activeModel.value is LiveActivityModel.Dashboard) _activeModel.value = null; IslandState.TYPE_0_RING }
+                        else -> IslandState.TYPE_0_RING
+                    }
+                }
+                IslandAction.OPEN_APP -> {
                     val model = _activeModel.value
                     if (model is LiveActivityModel.Music && model.appPackageName.isNotEmpty()) {
                         try { val launchIntent = context.packageManager.getLaunchIntentForPackage(model.appPackageName); launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK); launchIntent?.let { context.startActivity(it) } } catch (e: Exception) {}
                     }
                 }
-                "Open Settings" -> {
-                    val intent = Intent(android.provider.Settings.ACTION_SETTINGS)
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    context.startActivity(intent)
+                IslandAction.HEART_SONG -> {
+                    val heartAction = currentMedia?.customActions?.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("like", true) }
+                    if (heartAction != null) activeMediaController?.transportControls?.sendCustomAction(heartAction.actionName, null)
+                    else activeMediaController?.transportControls?.setRating(Rating.newHeartRating(true))
                 }
+                IslandAction.NONE, IslandAction.TOGGLE_TORCH -> {} 
             }
         }
-
-        view.onSwipeLeft = { state -> 
-            if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_2_MID || state == IslandState.TYPE_SPLIT) {
-                when (swipeGestureAction) {
-                    "Next/Prev Track" -> sendMediaCommand("NEXT")
-                    "Volume Up/Down" -> adjustVolume(android.media.AudioManager.ADJUST_LOWER) // Swiping left lowers volume
-                }
-            } 
-        }
-
-        view.onSwipeRight = { state -> 
-            if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_2_MID || state == IslandState.TYPE_SPLIT) {
-                when (swipeGestureAction) {
-                    "Next/Prev Track" -> sendMediaCommand("PREV")
-                    "Volume Up/Down" -> adjustVolume(android.media.AudioManager.ADJUST_RAISE) // Swiping right raises volume
-                }
-            } 
-        }
-
-        view.onGrabberDragDown = { onGrabberDragDown() } 
-        view.onGrabberDragUp = { onGrabberDragUp() }     
-        view.onGrabberLongPress = { onGrabberLongPress() } 
         
         view.onAudioOutputClick = { launchAudioOutputSwitcher() }
         view.onPlayPauseClick = { if (currentMedia?.isPlaying == true) sendMediaCommand("PAUSE") else sendMediaCommand("PLAY") }
@@ -146,6 +143,19 @@ class IslandController(private val context: Context) {
         scope.launch { activeModel.collect { model -> view.setModel(model) } }
         scope.launch { splitModel.collect { model -> view.setSplitModel(model) } }
         return view
+    }
+
+    // 🚀 SMART DEFAULTS IF USER HASN'T CONFIGURED JSON YET
+    private fun getDefaultAction(state: String, gesture: IslandGesture): IslandAction {
+        return when (gesture) {
+            IslandGesture.SINGLE_TAP -> if (state == "TYPE_0_RING" || state == "HIDDEN") IslandAction.EXPAND else IslandAction.NONE
+            IslandGesture.SWIPE_DOWN -> IslandAction.EXPAND
+            IslandGesture.SWIPE_UP -> IslandAction.COLLAPSE
+            IslandGesture.SWIPE_LEFT -> IslandAction.NEXT_TRACK
+            IslandGesture.SWIPE_RIGHT -> IslandAction.PREV_TRACK
+            IslandGesture.LONG_PRESS -> IslandAction.OPEN_APP
+            IslandGesture.DOUBLE_TAP -> IslandAction.PLAY_PAUSE
+        }
     }
 
     private fun adjustVolume(direction: Int) {
@@ -190,7 +200,7 @@ class IslandController(private val context: Context) {
     }
 
     private fun setupMediaListener() {
-        try { mediaSessionManager.addOnActiveSessionsChangedListener({ controllers -> updateActiveMediaController(controllers?.firstOrNull()) }, ComponentName(context, "com.example.dynamicisland.DummyListener")); updateActiveMediaController(mediaSessionManager.getActiveSessions(ComponentName(context, "com.example.dynamicisland.DummyListener")).firstOrNull()) } catch (e: Exception) {}
+        try { mediaSessionManager.addOnActiveSessionsChangedListener(sessionListener, ComponentName(context, "com.example.dynamicisland.DummyListener")); updateActiveMediaController(mediaSessionManager.getActiveSessions(ComponentName(context, "com.example.dynamicisland.DummyListener")).firstOrNull()) } catch (e: Exception) {}
     }
 
     private fun updateActiveMediaController(controller: MediaController?) {
@@ -266,17 +276,6 @@ class IslandController(private val context: Context) {
     }
     private fun stopMediaTicker() { mediaTickerJob?.cancel() }
 
-    fun onSingleTap() {
-        if (_activeModel.value?.type == null && _islandState.value == IslandState.TYPE_0_RING) { _activeModel.value = LiveActivityModel.Dashboard(); _islandState.value = IslandState.TYPE_2_MID; return }
-        if (_islandState.value == IslandState.HIDDEN || _islandState.value == IslandState.TYPE_0_RING) { userForceCollapsed = false; _islandState.value = IslandState.TYPE_1_MINI }
-    }
-
-    fun onGrabberDragDown() { userForceCollapsed = false; _islandState.value = when (_islandState.value) { IslandState.TYPE_1_MINI -> IslandState.TYPE_2_MID; IslandState.TYPE_2_MID -> IslandState.TYPE_3_MAX; else -> _islandState.value } }
-    fun onGrabberDragUp() { userForceCollapsed = true; _islandState.value = when (_islandState.value) { IslandState.TYPE_3_MAX -> IslandState.TYPE_2_MID; IslandState.TYPE_2_MID -> IslandState.TYPE_1_MINI; IslandState.TYPE_1_MINI -> { if (_activeModel.value is LiveActivityModel.Dashboard) _activeModel.value = null; IslandState.TYPE_0_RING }; else -> IslandState.TYPE_0_RING } }
-    fun onGrabberLongPress() { userForceCollapsed = true; if (_activeModel.value is LiveActivityModel.Dashboard) _activeModel.value = null; _islandState.value = IslandState.TYPE_0_RING }
-
-    fun sendMediaCommand(command: String) { val controls = activeMediaController?.transportControls ?: return; when (command) { "PLAY" -> controls.play(); "PAUSE" -> controls.pause(); "NEXT" -> controls.skipToNext(); "PREV" -> controls.skipToPrevious() } }
-
     private fun setupHardwareMonitor() {
         val filter = IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) }
         context.registerReceiver(screenStateReceiver, filter)
@@ -292,5 +291,12 @@ class IslandController(private val context: Context) {
         scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; if (hw.isGamingModeOn || _activeModel.value is LiveActivityModel.HardwareMonitor) evaluatePriority() } }
     }
     init { setupHardwareMonitor(); setupMediaListener() }
-    fun cleanup() { scope.cancel(); context.unregisterReceiver(screenStateReceiver); context.unregisterComponentCallbacks(componentCallbacks); BatteryPlugin.stop(context) }
+    
+    fun cleanup() { 
+        scope.cancel()
+        context.unregisterReceiver(screenStateReceiver)
+        context.unregisterComponentCallbacks(componentCallbacks)
+        BatteryPlugin.stop(context)
+        try { mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener) } catch(e: Exception){} // 🚀 FIXED LEAK
+    }
 }
