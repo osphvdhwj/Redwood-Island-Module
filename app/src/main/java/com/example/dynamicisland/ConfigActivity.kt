@@ -5,13 +5,17 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.json.JSONObject
 import java.io.File
 
 class ConfigActivity : ComponentActivity() {
@@ -59,61 +64,65 @@ class ConfigActivity : ComponentActivity() {
             Box(modifier = Modifier.fillMaxWidth().height(250.dp).background(Color.Black), contentAlignment = if (expandUpwards) Alignment.BottomCenter else Alignment.TopCenter) {
                 if (currentPrefix != "gestures") {
                     Box(modifier = Modifier.offset(x = x.dp, y = y.dp).width(w.dp).height(h.dp).background(Color.White.copy(alpha = 0.6f), RoundedCornerShape(if(currentPrefix == "max") 42.dp else (h/2).dp)))
-                } else Text("Gesture Customization", color = Color.White, modifier = Modifier.align(Alignment.Center))
+                } else Text("Universal Matrix Config", color = Color.White, modifier = Modifier.align(Alignment.Center))
             }
 
-            ScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 8.dp) { 
-                tabs.forEachIndexed { index, title -> Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) }) } 
-            }
+            ScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 8.dp) { tabs.forEachIndexed { index, title -> Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) }) } }
 
             Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
                 if (currentPrefix == "gestures") {
-                    Text(text = "Gesture Mapping", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    // 🚀 THE NEW ACCORDION GESTURE MATRIX
+                    Text(text = "Action Matrix", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    GestureDropdown("Swipe Left/Right", listOf("Next/Prev Track", "Volume Up/Down", "Do Nothing"), prefs, "gesture_swipe")
-                    Spacer(modifier = Modifier.height(12.dp))
-                    GestureDropdown("Double Tap", listOf("Heart/Like Song", "Play/Pause", "Do Nothing"), prefs, "gesture_double_tap")
-                    Spacer(modifier = Modifier.height(12.dp))
-                    GestureDropdown("Long Press", listOf("Open Playing App", "Open Settings", "Do Nothing"), prefs, "gesture_long_press")
-                    
+                    val states = listOf("Ring" to "TYPE_0_RING", "Mini Pill" to "TYPE_1_MINI", "Mid Pill" to "TYPE_2_MID", "Max Pill" to "TYPE_3_MAX")
+                    val gestures = IslandGesture.values()
+                    val actionOptions = IslandAction.values().map { it.name }
+
+                    states.forEach { (label, stateKey) ->
+                        var expanded by remember { mutableStateOf(false) }
+                        ElevatedCard(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Text(label, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                                    Icon(if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null)
+                                }
+                                AnimatedVisibility(expanded) {
+                                    Column(modifier = Modifier.padding(top = 16.dp)) {
+                                        gestures.forEach { gesture ->
+                                            val prefKey = "${stateKey}_${gesture.name}"
+                                            GestureDropdown(label = gesture.name.replace("_", " "), options = actionOptions, prefs = prefs, prefKey = prefKey)
+                                            Spacer(Modifier.height(8.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 } else {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(text = "Configure ${tabs[selectedTab]}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        Button(onClick = {
-                            w = getDefaultWidth(currentPrefix); h = getDefaultHeight(currentPrefix); x = 0f; y = 48f
-                            prefs.edit().putFloat("pad_t", 0f).putFloat("pad_b", 0f).putFloat("pad_l", 0f).putFloat("pad_r", 0f).apply()
-                            saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards)
-                        }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha=0.7f))) { Text("Reset") }
+                        Button(onClick = { w = getDefaultWidth(currentPrefix); h = getDefaultHeight(currentPrefix); x = 0f; y = 48f; prefs.edit().putFloat("pad_t", 0f).putFloat("pad_b", 0f).putFloat("pad_l", 0f).putFloat("pad_r", 0f).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha=0.7f))) { Text("Reset") }
                     }
-
                     Spacer(modifier = Modifier.height(16.dp))
-                    
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("Expand Upwards (From Bottom)", fontSize = 14.sp)
                         Switch(checked = expandUpwards, onCheckedChange = { expandUpwards = it; prefs.edit().putBoolean("expand_upwards", it).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) })
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-
                     Text("Outer Dimensions", fontSize = 12.sp, color = Color.Gray)
                     PrecisionSlider("Width", w, 10f..400f, { w = it }) { saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
                     PrecisionSlider("Height", h, 10f..400f, { h = it }) { saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
                     PrecisionSlider("X Pos", x, -200f..200f, { x = it }) { saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
                     PrecisionSlider("Y Pos", y, -100f..200f, { y = it }) { saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
-                    
                     if (currentPrefix == "ring") {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text("Ring Properties", fontSize = 12.sp, color = Color.Gray)
                         PrecisionSlider("Thickness", ringT, 1f..20f, { ringT = it }) { prefs.edit().putFloat("ring_thickness", ringT).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
                     }
-                    
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Inner Compression (Padding)", fontSize = 12.sp, color = Color.Gray)
-                    var padT by remember { mutableFloatStateOf(prefs.getFloat("pad_t", 0f)) }
-                    var padB by remember { mutableFloatStateOf(prefs.getFloat("pad_b", 0f)) }
-                    var padL by remember { mutableFloatStateOf(prefs.getFloat("pad_l", 0f)) }
-                    var padR by remember { mutableFloatStateOf(prefs.getFloat("pad_r", 0f)) }
-                    
+                    var padT by remember { mutableFloatStateOf(prefs.getFloat("pad_t", 0f)) }; var padB by remember { mutableFloatStateOf(prefs.getFloat("pad_b", 0f)) }; var padL by remember { mutableFloatStateOf(prefs.getFloat("pad_l", 0f)) }; var padR by remember { mutableFloatStateOf(prefs.getFloat("pad_r", 0f)) }
                     PrecisionSlider("Top", padT, 0f..100f, { padT = it }) { prefs.edit().putFloat("pad_t", padT).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
                     PrecisionSlider("Bottom", padB, 0f..100f, { padB = it }) { prefs.edit().putFloat("pad_b", padB).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
                     PrecisionSlider("Left", padL, 0f..100f, { padL = it }) { prefs.edit().putFloat("pad_l", padL).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
@@ -128,21 +137,11 @@ class ConfigActivity : ComponentActivity() {
     @Composable
     fun GestureDropdown(label: String, options: List<String>, prefs: android.content.SharedPreferences, prefKey: String) {
         var expanded by remember { mutableStateOf(false) }
-        var selectedOption by remember { mutableStateOf(prefs.getString(prefKey, options[0]) ?: options[0]) }
-        
+        var selectedOption by remember { mutableStateOf(prefs.getString(prefKey, IslandAction.NONE.name) ?: IslandAction.NONE.name) }
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-            OutlinedTextField(
-                value = selectedOption, onValueChange = {}, readOnly = true, label = { Text(label) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth()
-            )
+            OutlinedTextField(value = selectedOption, onValueChange = {}, readOnly = true, label = { Text(label) }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, modifier = Modifier.menuAnchor().fillMaxWidth())
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                options.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = { selectedOption = option; prefs.edit().putString(prefKey, option).apply(); expanded = false; sendGestureUpdate() }
-                    )
-                }
+                options.forEach { option -> DropdownMenuItem(text = { Text(option) }, onClick = { selectedOption = option; prefs.edit().putString(prefKey, option).apply(); expanded = false; sendGestureUpdate(prefs) }) }
             }
         }
     }
@@ -170,21 +169,18 @@ class ConfigActivity : ComponentActivity() {
         intent.putExtra("prefix", prefix).putExtra("w", w).putExtra("h", h).putExtra("x", x).putExtra("y", y).putExtra("ring_thickness", ringT).putExtra("expand_upwards", expandUp)
         intent.putExtra("pad_t", prefs.getFloat("pad_t", 0f)).putExtra("pad_b", prefs.getFloat("pad_b", 0f)).putExtra("pad_l", prefs.getFloat("pad_l", 0f)).putExtra("pad_r", prefs.getFloat("pad_r", 0f))
         
-        // 🚀 PACK RAM PAYLOAD
-        intent.putExtra("gesture_swipe", prefs.getString("gesture_swipe", "Next/Prev Track"))
-        intent.putExtra("gesture_double_tap", prefs.getString("gesture_double_tap", "Heart/Like Song"))
-        intent.putExtra("gesture_long_press", prefs.getString("gesture_long_press", "Open Playing App"))
-        
+        // Serialize JSON Matrix
+        val matrix = JSONObject()
+        prefs.all.forEach { (key, value) -> if (key.startsWith("TYPE_") && value is String) matrix.put(key, value) }
+        intent.putExtra("gesture_payload", matrix.toString())
         sendBroadcast(intent)
     }
 
-    // 🚀 NEW: FAST INTENT DISPATCH FOR GESTURE DROPDOWNS
-    private fun sendGestureUpdate() { 
-        val prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+    private fun sendGestureUpdate(prefs: android.content.SharedPreferences) { 
         val intent = Intent("com.example.dynamicisland.RELOAD_PREFS").addFlags(0x01000000)
-        intent.putExtra("gesture_swipe", prefs.getString("gesture_swipe", "Next/Prev Track"))
-        intent.putExtra("gesture_double_tap", prefs.getString("gesture_double_tap", "Heart/Like Song"))
-        intent.putExtra("gesture_long_press", prefs.getString("gesture_long_press", "Open Playing App"))
+        val matrix = JSONObject()
+        prefs.all.forEach { (key, value) -> if (key.startsWith("TYPE_") && value is String) matrix.put(key, value) }
+        intent.putExtra("gesture_payload", matrix.toString())
         sendBroadcast(intent) 
     }
 
