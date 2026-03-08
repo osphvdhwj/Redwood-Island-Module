@@ -365,3 +365,4 @@ class IslandController(private val context: Context) {
         try { mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener) } catch(e: Exception){} 
         try { context.unregisterReceiver(ecosystemReceiver) } catch(e: Exception){} // 🚀 Clean up Bridge
     }
+}
