@@ -439,10 +439,92 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     }
 
     @Composable
-    fun DashboardMid(model: LiveActivityModel.Dashboard) { Row(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) { Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Phone, null, tint=Color.White, modifier=Modifier.size(24.dp)) }; Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Email, null, tint=Color.White, modifier=Modifier.size(24.dp)) }; Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Build, null, tint=Color.White, modifier=Modifier.size(24.dp)) }; Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Settings, null, tint=Color.White, modifier=Modifier.size(24.dp)) } } }
+    fun DashboardMid(model: LiveActivityModel.Dashboard) {
+        // 🚀 SCALABLE APP PINNING (Defaults for now, configurable later)
+        val apps = listOf(
+            Triple(Icons.Default.Phone, "com.android.dialer", "Phone"),
+            Triple(Icons.Default.Email, "com.google.android.apps.messaging", "Messages"),
+            Triple(Icons.Default.Camera, "com.android.camera", "Camera"),
+            Triple(Icons.Default.Settings, "com.android.settings", "Settings")
+        )
+
+        Row(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+            apps.forEach { (icon, pkg, _) ->
+                Box(
+                    modifier = Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape).clickable {
+                        try {
+                            val intent = context.packageManager.getLaunchIntentForPackage(pkg) ?: Intent(android.provider.Settings.ACTION_SETTINGS)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                            context.startActivity(intent)
+                        } catch (e: Exception) {}
+                    }, 
+                    contentAlignment=Alignment.Center
+                ) {
+                    Icon(icon, null, tint=Color.White, modifier=Modifier.size(24.dp))
+                }
+            }
+        }
+    }
+
     @Composable
-    fun DashboardMax(model: LiveActivityModel.Dashboard) { Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text("Quick Settings", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.align(Alignment.Start)); Spacer(modifier = Modifier.height(16.dp)); Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) { Box(modifier = Modifier.size(60.dp).background(if (model.isWifiOn) Color.Blue else Color.White.copy(0.2f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Settings, null, tint = Color.White, modifier = Modifier.size(28.dp)) }; Box(modifier = Modifier.size(60.dp).background(if (model.isTorchOn) Color.Yellow else Color.White.copy(0.2f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Build, null, tint = Color.Black, modifier = Modifier.size(28.dp)) }; Box(modifier = Modifier.size(60.dp).background(Color.White.copy(0.2f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Info, null, tint = Color.White, modifier = Modifier.size(28.dp)) } }; Spacer(modifier = Modifier.height(24.dp)); Slider(value = model.currentVolume.toFloat(), onValueChange = {}, valueRange = 0f..model.maxVolume.toFloat(), colors = SliderDefaults.colors(activeTrackColor = Color.White)) } }
-    @OptIn(ExperimentalFoundationApi::class)
+    fun DashboardMax(model: LiveActivityModel.Dashboard) {
+        // 🚀 LIVE AUDIO MANAGER
+        val am = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
+        var volume by remember { mutableFloatStateOf(am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC).toFloat()) }
+        val maxVolume = remember { am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() }
+
+        // 🚀 LIVE CAMERA/FLASHLIGHT MANAGER
+        var isTorchOn by remember { mutableStateOf(false) }
+        val cameraManager = remember { context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager }
+        val cameraId = remember { try { cameraManager.cameraIdList[0] } catch(e: Exception) { null } }
+
+        Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Quick Settings", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.align(Alignment.Start))
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                // WI-FI BUTTON
+                Box(modifier = Modifier.size(60.dp).background(Color.White.copy(0.2f), RoundedCornerShape(16.dp)).clickable {
+                    val intent = Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                    context.startActivity(intent)
+                }, contentAlignment = Alignment.Center) { 
+                    Icon(Icons.Default.Wifi, contentDescription = "WiFi", tint = Color.White, modifier = Modifier.size(28.dp)) 
+                }
+                
+                // FLASHLIGHT BUTTON
+                Box(modifier = Modifier.size(60.dp).background(if (isTorchOn) Color.White else Color.White.copy(0.2f), RoundedCornerShape(16.dp)).clickable {
+                    try {
+                        isTorchOn = !isTorchOn
+                        cameraId?.let { cameraManager.setTorchMode(it, isTorchOn) }
+                    } catch(e: Exception) {}
+                }, contentAlignment = Alignment.Center) { 
+                    Icon(Icons.Default.Build, contentDescription = "Torch", tint = if(isTorchOn) Color.Black else Color.White, modifier = Modifier.size(28.dp)) 
+                }
+                
+                // BLUETOOTH BUTTON
+                Box(modifier = Modifier.size(60.dp).background(Color.White.copy(0.2f), RoundedCornerShape(16.dp)).clickable {
+                    val intent = Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                    context.startActivity(intent)
+                }, contentAlignment = Alignment.Center) { 
+                    Icon(Icons.Default.Bluetooth, contentDescription = "Bluetooth", tint = Color.White, modifier = Modifier.size(28.dp)) 
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // 🚀 LIVE VOLUME SLIDER
+            Slider(
+                value = volume, 
+                onValueChange = { 
+                    volume = it
+                    am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, it.toInt(), 0)
+                }, 
+                valueRange = 0f..maxVolume, 
+                colors = SliderDefaults.colors(activeTrackColor = Color.White, thumbColor = Color.White),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
     @Composable
     fun GeneralMini(general: LiveActivityModel.General) { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) { Icon(imageVector = getIconForType(general.type), contentDescription = null, tint = Color(general.accentColor), modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text(text = "${general.title} • ${general.dataText}", color = Color.White, fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee()) } }
     @Composable
