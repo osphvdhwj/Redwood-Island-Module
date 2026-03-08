@@ -16,7 +16,6 @@ import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.util.Log
 import android.view.WindowManager
-import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,13 +40,12 @@ class IslandController(private val context: Context) {
     private var pauseFadeJob: Job? = null
     private var userForceCollapsed = false 
     private var lastReportedBattery = -1
-    private var isScreenOn = true // 🚀 BATTERY SAVER FLAG
+    private var isScreenOn = true 
 
     private val mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
     private var activeMediaController: MediaController? = null
     private var mediaTickerJob: Job? = null
 
-    // 🚀 NEW: SCREEN STATE RECEIVER TO SAVE BATTERY
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -142,6 +140,14 @@ class IslandController(private val context: Context) {
         override fun onMetadataChanged(metadata: MediaMetadata?) { extractMediaData(activeMediaController) }
     }
 
+    // 🚀 NEW: Safely downscale massive album arts to stop SystemUI Memory Leaks
+    private fun getScaledBitmap(bitmap: Bitmap?, maxDim: Int = 400): Bitmap? {
+        if (bitmap == null) return null
+        val ratio = Math.min(maxDim.toFloat() / bitmap.width, maxDim.toFloat() / bitmap.height)
+        if (ratio >= 1.0f) return bitmap
+        return Bitmap.createScaledBitmap(bitmap, (bitmap.width * ratio).toInt(), (bitmap.height * ratio).toInt(), true)
+    }
+
     private fun extractMediaData(controller: MediaController?) {
         if (controller == null) return
         val metadata = controller.metadata
@@ -152,9 +158,22 @@ class IslandController(private val context: Context) {
         if (!isPlaying && currentMedia == null) return 
 
         val duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
-        val albumArtBitmap = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
+        val rawAlbumArt = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
+        
+        // 🚀 PREVENT OOM CRASHES
+        val albumArtBitmap = getScaledBitmap(rawAlbumArt) 
+        
         var appIconBitmap: Bitmap? = null
-        try { val pm = context.packageManager; appIconBitmap = pm.getApplicationIcon(controller.packageName).toBitmap(config = Bitmap.Config.ARGB_8888) } catch (e: Exception) {}
+        try { 
+            val pm = context.packageManager
+            val drawable = pm.getApplicationIcon(controller.packageName)
+            // 🚀 PREVENT ADAPTIVE ICON RENDERING GLITCHES
+            val bmp = Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bmp)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+            appIconBitmap = getScaledBitmap(bmp, 150)
+        } catch (e: Exception) {}
 
         var bgColor: Int? = null; var txtColor: Int = android.graphics.Color.WHITE
         if (albumArtBitmap != null) { val palette = Palette.from(albumArtBitmap).generate(); val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch; if (swatch != null) { bgColor = swatch.rgb; txtColor = swatch.bodyTextColor } }
@@ -172,9 +191,19 @@ class IslandController(private val context: Context) {
     }
 
     private fun startMediaTicker() {
-        if (!isScreenOn) return // Don't run ticker if screen is off!
+        if (!isScreenOn) return 
         mediaTickerJob?.cancel()
-        mediaTickerJob = scope.launch { while (isActive) { activeMediaController?.playbackState?.position?.let { pos -> currentMedia = currentMedia?.copy(positionMs = pos); if (_activeModel.value is LiveActivityModel.Music) _activeModel.value = currentMedia }; delay(1000) } }
+        mediaTickerJob = scope.launch { 
+            while (isActive) { 
+                activeMediaController?.playbackState?.position?.let { pos -> 
+                    // 🚀 HUGE FIX: Stop re-allocating the Data Class. Broadcast the time instead!
+                    (activeModel.value as? LiveActivityModel.Music)?.let { 
+                        context.sendBroadcast(Intent("com.example.dynamicisland.TICKER_UPDATE").putExtra("pos", pos))
+                    }
+                }
+                delay(1000) 
+            } 
+        }
     }
     private fun stopMediaTicker() { mediaTickerJob?.cancel() }
 
