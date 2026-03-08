@@ -7,7 +7,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
@@ -32,7 +34,7 @@ class ConfigActivity : ComponentActivity() {
     @Composable
     fun ConfigScreen(prefs: android.content.SharedPreferences) {
         var selectedTab by remember { mutableIntStateOf(0) }
-        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Gestures")
+        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures") // 🚀 ADDED CUBE
 
         var w by remember { mutableFloatStateOf(0f) }
         var h by remember { mutableFloatStateOf(0f) }
@@ -59,10 +61,13 @@ class ConfigActivity : ComponentActivity() {
                 } else Text("Gesture Customizer Coming Soon", color = Color.White, modifier = Modifier.align(Alignment.Center))
             }
 
-            TabRow(selectedTabIndex = selectedTab) { tabs.forEachIndexed { index, title -> Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) }) } }
+            ScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 8.dp) { 
+                tabs.forEachIndexed { index, title -> Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) }) } 
+            }
 
             if (currentPrefix != "gestures") {
-                Column(modifier = Modifier.padding(16.dp)) {
+                // 🚀 FIXED SCROLLING ISSUE
+                Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(text = "Configure ${tabs[selectedTab]}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         Button(onClick = {
@@ -97,6 +102,8 @@ class ConfigActivity : ComponentActivity() {
                     PrecisionSlider("Bottom", padB, 0f..100f) { v -> padB = v; prefs.edit().putFloat("pad_b", v).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
                     PrecisionSlider("Left", padL, 0f..100f) { v -> padL = v; prefs.edit().putFloat("pad_l", v).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
                     PrecisionSlider("Right", padR, 0f..100f) { v -> padR = v; prefs.edit().putFloat("pad_r", v).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
+                    
+                    Spacer(modifier = Modifier.height(60.dp)) // Prevent bottom cutoff
                 }
             }
         }
@@ -128,8 +135,8 @@ class ConfigActivity : ComponentActivity() {
         sendBroadcast(intent)
     }
 
-    private fun getDefaultWidth(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 180f; "mid" -> 320f; "max" -> 360f; else -> 0f }
-    private fun getDefaultHeight(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 36f; "mid" -> 80f; "max" -> 220f; else -> 0f }
+    private fun getDefaultWidth(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 180f; "mid" -> 320f; "max" -> 360f; "cube" -> 85f; else -> 0f }
+    private fun getDefaultHeight(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 36f; "mid" -> 80f; "max" -> 220f; "cube" -> 85f; else -> 0f }
 
     private fun makePrefsWorldReadable() {
         try {
