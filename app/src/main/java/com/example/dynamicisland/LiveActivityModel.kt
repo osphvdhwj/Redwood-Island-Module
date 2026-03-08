@@ -8,7 +8,7 @@ enum class IslandState {
 }
 
 enum class ActivityType {
-    CALL, MEDIA, NAVIGATION, TIMER, MESSAGE, ALARM, DASHBOARD, BATTERY_LOW, CHARGING, WIFI, BLUETOOTH, HARDWARE
+    CALL, MEDIA, NAVIGATION, TIMER, MESSAGE, ALARM, DASHBOARD, BATTERY_LOW, CHARGING, WIFI, BLUETOOTH, HARDWARE, SYSTEM_ALERT
 }
 
 enum class IslandGesture {
@@ -30,6 +30,17 @@ sealed class LiveActivityModel {
     abstract val id: String
     abstract val type: ActivityType
     abstract val isTransient: Boolean
+
+    // 🚀 NEW: Universal System Alert Model for Ecosystem IPC
+    data class SystemAlert(
+        override val id: String,
+        override val type: ActivityType = ActivityType.SYSTEM_ALERT,
+        val alertType: String, // e.g., "THERMAL", "ROGUE"
+        val title: String,
+        val message: String,
+        val alertColor: Int,
+        override val isTransient: Boolean = true
+    ) : LiveActivityModel()
 
     data class Music(
         override val id: String = "sys_media",
@@ -63,9 +74,12 @@ sealed class LiveActivityModel {
         override val id: String = "sys_dash",
         override val type: ActivityType = ActivityType.DASHBOARD,
         val isWifiOn: Boolean = true,
+        val isBluetoothOn: Boolean = false,
         val isTorchOn: Boolean = false,
-        val currentVolume: Int = 50,
-        val maxVolume: Int = 100,
+        val currentVolume: Float = 0.5f,
+        val ringerMode: Int = android.media.AudioManager.RINGER_MODE_NORMAL,
+        val currentBrightness: Float = 0.5f,
+        val isAutoBrightness: Boolean = false,
         override val isTransient: Boolean = false
     ) : LiveActivityModel()
 
