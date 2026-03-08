@@ -42,6 +42,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
@@ -81,11 +83,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     var padT = mutableStateOf(0f); var padB = mutableStateOf(0f); var padL = mutableStateOf(0f); var padR = mutableStateOf(0f)
     var ringThickness = mutableStateOf(6f)
-    var isCubeRotationEnabled = mutableStateOf(true)
 
+    var isCubeRotationEnabled = mutableStateOf(true)
     var globalBatteryLevel = mutableIntStateOf(100)
     var globalIsCharging = mutableStateOf(false)
-    var currentMediaPos = mutableLongStateOf(0L) // 🚀 High-Efficiency Ticker State
+    var currentMediaPos = mutableLongStateOf(0L) // 🚀 Tracked strictly locally now to save battery
 
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
@@ -106,6 +108,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onAudioOutputClick: (() -> Unit)? = null
 
     private val lifecycleOwner = OverlayLifecycleOwner()
+    
+    // 🚀 NEW: INSETS ENGINE TRACKERS (Eliminates deadzones completely)
+    private val mainPillRect = android.graphics.Rect()
+    private val splitCubeRect = android.graphics.Rect()
 
     private fun loadPreferences() {
         try {
@@ -125,7 +131,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     private val receiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             if (intent.action == "com.example.dynamicisland.RELOAD_PREFS") {
-                loadPreferences() // Safely reload all natively from disk
+                val prefix = intent.getStringExtra("prefix")
+                if (prefix != null) {
+                    val w = intent.getFloatExtra("w", 0f); val h = intent.getFloatExtra("h", 0f); val x = intent.getFloatExtra("x", 0f); val y = intent.getFloatExtra("y", 0f)
+                    when (prefix) { "ring" -> { ringW.value = w; ringH.value = h; ringX.value = x; ringY.value = y }; "mini" -> { miniW.value = w; miniH.value = h; miniX.value = x; miniY.value = y }; "mid" -> { midW.value = w; midH.value = h; midX.value = x; midY.value = y }; "max" -> { maxW.value = w; maxH.value = h; maxX.value = x; maxY.value = y }; "cube" -> { cubeW.value = w; cubeH.value = h; cubeX.value = x; cubeY.value = y } }
+                    padT.value = intent.getFloatExtra("pad_t", padT.value); padB.value = intent.getFloatExtra("pad_b", padB.value); padL.value = intent.getFloatExtra("pad_l", padL.value); padR.value = intent.getFloatExtra("pad_r", padR.value)
+                    ringThickness.value = intent.getFloatExtra("ring_thickness", ringThickness.value)
+                } else loadPreferences()
             } else if (intent.action == "com.example.dynamicisland.BATTERY_UPDATE") {
                 globalBatteryLevel.value = intent.getIntExtra("level", 100); globalIsCharging.value = intent.getBooleanExtra("isCharging", false)
             } else if (intent.action == "com.example.dynamicisland.TICKER_UPDATE") {
@@ -139,6 +151,18 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val filter = IntentFilter().apply { addAction("com.example.dynamicisland.RELOAD_PREFS"); addAction("com.example.dynamicisland.BATTERY_UPDATE"); addAction("com.example.dynamicisland.TICKER_UPDATE") }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED) else @Suppress("UnspecifiedRegisterReceiverFlag") context.registerReceiver(receiver, filter)
         setViewTreeLifecycleOwner(lifecycleOwner); setViewTreeSavedStateRegistryOwner(lifecycleOwner); setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
+
+        // 🚀 THE INSETS ENGINE: Dictates touchable regions pixel-by-pixel
+        viewTreeObserver.addOnComputeInternalInsetsListener { info ->
+            info.setTouchableInsets(android.view.ViewTreeObserver.InternalInsetsInfo.TOUCHABLE_INSETS_REGION)
+            info.touchableRegion.setEmpty()
+            if (islandState.value != IslandState.HIDDEN) {
+                if (!mainPillRect.isEmpty) info.touchableRegion.op(mainPillRect, android.graphics.Region.Op.UNION)
+                if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) {
+                    info.touchableRegion.op(splitCubeRect, android.graphics.Region.Op.UNION)
+                }
+            }
+        }
 
         val composeView = ComposeView(context).apply { setContent { MaterialTheme(colorScheme = darkColorScheme()) { CompositionLocalProvider(LocalContext provides moduleContext) { IslandUI(islandState.value) } } } }
         val coroutineContext = AndroidUiDispatcher.CurrentThread; val recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
@@ -169,68 +193,67 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         else if (state == IslandState.TYPE_0_RING) Color.Black.copy(alpha = 0.01f) 
         else {
             if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor).copy(alpha = 0.65f) 
-            else if (state == IslandState.TYPE_3_MAX) Color(0xFF121212).copy(alpha = 0.6f) // Slightly darker base for better contrast
+            else if (state == IslandState.TYPE_3_MAX) Color(0xFF121212).copy(alpha = 0.4f) 
             else Color(0xFF121212).copy(alpha = 0.75f) 
         }
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.15f), animationSpec = tween(600), label = "borderColor")
 
-        LaunchedEffect(width, height, offsetX, offsetY, state) {
+        // 🚀 THE STATIC WINDOW MANAGER: Only updates once per major state change. Kills IPC spam.
+        LaunchedEffect(state) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
             val density = context.resources.displayMetrics.density
 
-            if (state == IslandState.HIDDEN) { wp.width = 0; wp.height = 0 } else {
-                val splitExtra = if (state == IslandState.TYPE_SPLIT) (height.value + 16f) else 0f
-                wp.width = ((width.value + splitExtra) * density).toInt()
-                wp.height = (height.value * density).toInt()
+            if (state == IslandState.HIDDEN) {
+                wp.width = 0; wp.height = 0
+                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
+            } else if (state == IslandState.TYPE_CUBE || state == IslandState.TYPE_SPLIT) {
+                // Charging states -> Full screen blur
+                wp.width = WindowManager.LayoutParams.MATCH_PARENT
+                wp.height = WindowManager.LayoutParams.MATCH_PARENT
+                wp.x = 0; wp.y = 0
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND; wp.blurBehindRadius = 45 }
+            } else {
+                // Normal Media states -> Static container, no background blur, entirely managed by Insets
+                wp.width = WindowManager.LayoutParams.MATCH_PARENT
+                wp.height = ((maxH.value + 150) * density).toInt()
+                wp.x = 0; wp.y = 0
+                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             }
-            wp.x = offsetX.toInt(); wp.y = offsetY.toInt()
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
         }
 
         var dragOffsetX by remember { mutableStateOf(0f) }
 
-        Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.Top) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset(x = offsetX.dp, y = offsetY.dp), // 🚀 Window is static, so we move the layout physically inside it!
+            horizontalArrangement = Arrangement.Center, 
+            verticalAlignment = Alignment.Top
+        ) {
             Box(
                 modifier = Modifier
+                    .onGloballyPositioned { coordinates ->
+                        val bounds = coordinates.boundsInWindow()
+                        val l = bounds.left.toInt(); val t = bounds.top.toInt(); val r = bounds.right.toInt(); val b = bounds.bottom.toInt()
+                        // Notify Android view system immediately if pixel boundary changes
+                        if (mainPillRect.left != l || mainPillRect.right != r || mainPillRect.top != t || mainPillRect.bottom != b) {
+                            mainPillRect.set(l, t, r, b)
+                            this@DynamicIslandView.requestLayout()
+                        }
+                    }
                     .width(width).height(height).clip(RoundedCornerShape(rad))
                     .background(bgColor).border(1.dp, borderColor, RoundedCornerShape(rad))
-                    .pointerInput(Unit) { 
-                        detectTapGestures(
-                            onTap = { if (state == IslandState.TYPE_0_RING || state == IslandState.HIDDEN) onSingleTap?.invoke() },
-                            onDoubleTap = { onDoubleTap?.invoke(state) },
-                            onLongPress = { if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) onPillLongPress?.invoke() } 
-                        ) 
-                    }
-                    .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragEnd = { if (abs(dragOffsetX) > 40) { if (dragOffsetX > 40) onSwipeRight?.invoke(state) else if (dragOffsetX < -40) onSwipeLeft?.invoke(state) }; dragOffsetX = 0f },
-                            onDrag = { change, dragAmount -> change.consume(); dragOffsetX += dragAmount.x } 
-                        )
-                    },
+                    .pointerInput(Unit) { detectTapGestures(onTap = { if (state == IslandState.TYPE_0_RING || state == IslandState.HIDDEN) onSingleTap?.invoke() }, onDoubleTap = { onDoubleTap?.invoke(state) }, onLongPress = { if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) onPillLongPress?.invoke() }) }
+                    .pointerInput(Unit) { detectDragGestures(onDragEnd = { if (abs(dragOffsetX) > 40) { if (dragOffsetX > 40) onSwipeRight?.invoke(state) else if (dragOffsetX < -40) onSwipeLeft?.invoke(state) }; dragOffsetX = 0f }, onDrag = { change, dragAmount -> change.consume(); dragOffsetX += dragAmount.x }) },
                 contentAlignment = Alignment.TopCenter
             ) {
                 Box(modifier = Modifier.fillMaxSize().padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp)) {
-                    
-                    // 🚀 REDESIGNED: Premium Spotify-style Background Image
                     if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
-                        Image(
-                            bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
-                            modifier = Modifier.fillMaxSize()
-                                .alpha(if (state == IslandState.TYPE_3_MAX) 0.5f else 0.35f) // Cleaner, more transparent thumbnail
-                                .blur(if (state == IslandState.TYPE_3_MAX) 16.dp else 24.dp) // Softer blur so the image is recognizable
-                        )
-                        // 🚀 Premium Dark Gradient Overlay for perfect text legibility
-                        if (state == IslandState.TYPE_3_MAX) {
-                            Box(modifier = Modifier.fillMaxSize().background(
-                                Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, Color(0xFF000000).copy(alpha = 0.4f), Color(0xFF000000).copy(alpha = 0.85f))
-                                )
-                            ))
-                        }
+                        Image(bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(if (state == IslandState.TYPE_3_MAX) 0.85f else 0.35f).blur(if (state == IslandState.TYPE_3_MAX) 40.dp else 24.dp))
                     }
 
                     if (state != IslandState.HIDDEN) {
@@ -254,9 +277,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                     .pointerInput(Unit) { detectDragGestures(onDragEnd = { if (grabberDragY > 40) onGrabberDragDown?.invoke() else if (grabberDragY < -40) onGrabberDragUp?.invoke(); grabberDragY = 0f }, onDrag = { change, dragAmount -> change.consume(); grabberDragY += dragAmount.y }) }
                                     .pointerInput(Unit) { detectTapGestures(onLongPress = { onGrabberLongPress?.invoke() }) }, 
                                 contentAlignment = Alignment.Center
-                            ) { 
-                                Box(modifier = Modifier.width(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 24.dp else 40.dp).height(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 3.dp else 5.dp).shadow(2.dp, CircleShape).background(Color.White.copy(alpha=0.8f), CircleShape)) 
-                            }
+                            ) { Box(modifier = Modifier.width(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 24.dp else 40.dp).height(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 3.dp else 5.dp).shadow(2.dp, CircleShape).background(Color.White.copy(alpha=0.8f), CircleShape)) }
                         }
                     }
                     
@@ -264,7 +285,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         val isMedia = model is LiveActivityModel.Music && model.isPlaying
                         val shouldShowRing = isMedia || globalIsCharging.value || globalBatteryLevel.value <= 20
                         if (shouldShowRing) {
-                            val progress = if (isMedia) (currentMediaPos.longValue.toFloat() / (model as LiveActivityModel.Music).durationMs.toFloat()) else globalBatteryLevel.value / 100f
+                            val progress = if (isMedia) (currentMediaPos.longValue.toFloat() / model.durationMs.toFloat()) else globalBatteryLevel.value / 100f
                             val progressColor = if (isMedia) Color.White else if (globalIsCharging.value) Color.Green else if (globalBatteryLevel.value <= 20) Color.Red else Color.White
                             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
                                 val strokeW = ringThickness.value.dp.toPx() 
@@ -281,7 +302,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 val splitBg = if (sModel is LiveActivityModel.Charging) { if (sModel.isPluggedIn) Color.Green.copy(alpha=0.2f) else if (sModel.level <= 20) Color.Red.copy(alpha=0.2f) else Color(0xFF121212).copy(alpha=0.75f) } else Color(0xFF121212).copy(alpha=0.75f)
                 Row {
                     Spacer(modifier = Modifier.width(8.dp))
-                    Box(modifier = Modifier.size(height).clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.size(height)
+                            .onGloballyPositioned { coordinates ->
+                                val bounds = coordinates.boundsInWindow()
+                                val l = bounds.left.toInt(); val t = bounds.top.toInt(); val r = bounds.right.toInt(); val b = bounds.bottom.toInt()
+                                if (splitCubeRect.left != l || splitCubeRect.right != r || splitCubeRect.top != t || splitCubeRect.bottom != b) {
+                                    splitCubeRect.set(l, t, r, b); this@DynamicIslandView.requestLayout()
+                                }
+                            }
+                            .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape), 
+                        contentAlignment = Alignment.Center) {
                         if (sModel is LiveActivityModel.Charging) { val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White; Text(text = "${sModel.level}%", color = iconColor, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
                     }
                 }
@@ -330,9 +360,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(52.dp)) {
                 CircularProgressIndicator(progress = { progress }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha = 0.2f), strokeWidth = 2.dp, modifier = Modifier.fillMaxSize())
-                if (music.albumArt != null) {
-                    Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(44.dp).clip(CircleShape).rotate(currentRotation).pointerInput(Unit) { detectTapGestures(onLongPress = { onPillLongPress?.invoke() }) }) 
-                } else Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
+                if (music.albumArt != null) { Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(44.dp).clip(CircleShape).rotate(currentRotation).pointerInput(Unit) { detectTapGestures(onLongPress = { onPillLongPress?.invoke() }) }) } else Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
             }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -379,10 +407,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+                val favoriteAction = music.customActions.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("thumb", true) }
+                if (favoriteAction != null) Icon(Icons.Default.Favorite, null, tint = dynamicTextColor, modifier = Modifier.size(24.dp).clickable { onDoubleTap?.invoke(IslandState.TYPE_3_MAX) }) else Spacer(Modifier.width(24.dp))
+
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev", tint = dynamicTextColor, modifier = Modifier.size(36.dp).clickable { onPrevClick?.invoke() })
                 val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
                 Box(modifier = Modifier.size(56.dp).background(dynamicTextColor.copy(alpha = 0.2f), CircleShape).clickable { onPlayPauseClick?.invoke() }, contentAlignment = Alignment.Center) { Icon(imageVector = playIcon, contentDescription = "Play/Pause", tint = dynamicTextColor, modifier = Modifier.size(32.dp)) }
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next", tint = dynamicTextColor, modifier = Modifier.size(36.dp).clickable { onNextClick?.invoke() })
+                
+                val repeatAction = music.customActions.find { it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) }
+                if (repeatAction != null) Icon(Icons.Default.Refresh, null, tint = dynamicTextColor, modifier = Modifier.size(24.dp).clickable { onDoubleTap?.invoke(IslandState.TYPE_3_MAX) }) else Spacer(Modifier.width(24.dp))
             }
         }
     }
@@ -406,5 +440,5 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     fun setState(newState: IslandState) { islandState.value = newState }
     fun setModel(model: LiveActivityModel?) { activeModel.value = model }
     fun setSplitModel(model: LiveActivityModel?) { splitModel.value = model }
-    private fun getIconForType(type: ActivityType): ImageVector { return when(type) { ActivityType.CALL -> Icons.Default.Phone; ActivityType.NAVIGATION -> Icons.Default.LocationOn; ActivityType.TIMER -> Icons.Default.Notifications; ActivityType.MESSAGE -> Icons.Default.Email; ActivityType.ALARM -> Icons.Default.Notifications; ActivityType.CHARGING -> Icons.Default.Add; ActivityType.BATTERY_LOW -> Icons.Default.Warning; ActivityType.BLUETOOTH -> Icons.Default.Share; ActivityType.WIFI -> Icons.Default.Wifi; ActivityType.HARDWARE -> Icons.Default.Info; else -> Icons.Default.Info } }
+    private fun getIconForType(type: ActivityType): ImageVector { return when(type) { ActivityType.CALL -> Icons.Default.Phone; ActivityType.NAVIGATION -> Icons.Default.LocationOn; ActivityType.TIMER -> Icons.Default.Notifications; ActivityType.MESSAGE -> Icons.Default.Email; ActivityType.ALARM -> Icons.Default.Notifications; ActivityType.CHARGING -> Icons.Default.Add; ActivityType.BATTERY_LOW -> Icons.Default.Warning; ActivityType.BLUETOOTH -> Icons.Default.Bluetooth; ActivityType.WIFI -> Icons.Default.Wifi; ActivityType.HARDWARE -> Icons.Default.Info; else -> Icons.Default.Info } }
 }
