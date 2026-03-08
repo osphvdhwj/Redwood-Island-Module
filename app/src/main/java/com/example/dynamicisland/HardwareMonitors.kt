@@ -13,7 +13,6 @@ object HardwareMonitors {
         findThermalPath()
     }
 
-    // 🚀 NEW: Dynamically scan the Linux Kernel for the exact CPU thermal sensor
     private fun findThermalPath() {
         try {
             val dir = File("/sys/class/thermal/")
@@ -23,7 +22,6 @@ object HardwareMonitors {
                         val typeFile = File(zone, "type")
                         if (typeFile.exists()) {
                             val type = typeFile.readText().lowercase()
-                            // Look for Qualcomm (tsens), MediaTek/Exynos (cpu), or generic SOC sensors
                             if (type.contains("cpu") || type.contains("tsens") || type.contains("soc") || type.contains("bcl")) {
                                 cpuThermalPath = File(zone, "temp").absolutePath
                                 return
@@ -34,8 +32,13 @@ object HardwareMonitors {
             }
         } catch (e: Exception) {}
         
-        // Failsafe fallback
-        if (cpuThermalPath == null) cpuThermalPath = "/sys/class/thermal/thermal_zone0/temp"
+        // 🚀 SAFE FALLBACK: If no CPU node is found, try the universal battery node
+        if (cpuThermalPath == null) {
+            val battTemp = File("/sys/class/power_supply/battery/temp")
+            if (battTemp.exists()) {
+                cpuThermalPath = battTemp.absolutePath
+            }
+        }
     }
 
     fun startMonitoring(): Flow<LiveActivityModel.HardwareMonitor> = flow {
@@ -55,10 +58,11 @@ object HardwareMonitors {
     }
 
     private fun readCpuTemp(): Float {
+        // 🚀 FAIL GRACEFULLY: Return 0f if the hardware doesn't support thermal reading
+        val path = cpuThermalPath ?: return 0f
         return try {
-            val tempStr = File(cpuThermalPath!!).readText().trim()
+            val tempStr = File(path).readText().trim()
             val tempRaw = tempStr.toFloat()
-            // Some kernels report 45000 for 45.0C
             if (tempRaw > 1000) tempRaw / 1000f else tempRaw
         } catch (e: Exception) {
             0f
