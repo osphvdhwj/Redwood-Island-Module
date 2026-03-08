@@ -68,7 +68,6 @@ class ConfigActivity : ComponentActivity() {
 
             Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
                 if (currentPrefix == "gestures") {
-                    // 🚀 NEW: GESTURE SETTINGS
                     Text(text = "Gesture Mapping", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
                     
@@ -90,7 +89,6 @@ class ConfigActivity : ComponentActivity() {
 
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // 🚀 NEW: EXPAND DIRECTION TOGGLE
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("Expand Upwards (From Bottom)", fontSize = 14.sp)
                         Switch(checked = expandUpwards, onCheckedChange = { expandUpwards = it; prefs.edit().putBoolean("expand_upwards", it).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) })
@@ -167,15 +165,28 @@ class ConfigActivity : ComponentActivity() {
     }
 
     private fun broadcastUpdate(prefix: String, w: Float, h: Float, x: Float, y: Float, ringT: Float, expandUp: Boolean) {
-        val intent = Intent("com.example.dynamicisland.RELOAD_PREFS")
-        intent.addFlags(0x01000000) 
-        intent.putExtra("prefix", prefix).putExtra("w", w).putExtra("h", h).putExtra("x", x).putExtra("y", y).putExtra("ring_thickness", ringT).putExtra("expand_upwards", expandUp)
         val prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+        val intent = Intent("com.example.dynamicisland.RELOAD_PREFS").addFlags(0x01000000) 
+        intent.putExtra("prefix", prefix).putExtra("w", w).putExtra("h", h).putExtra("x", x).putExtra("y", y).putExtra("ring_thickness", ringT).putExtra("expand_upwards", expandUp)
         intent.putExtra("pad_t", prefs.getFloat("pad_t", 0f)).putExtra("pad_b", prefs.getFloat("pad_b", 0f)).putExtra("pad_l", prefs.getFloat("pad_l", 0f)).putExtra("pad_r", prefs.getFloat("pad_r", 0f))
+        
+        // 🚀 PACK RAM PAYLOAD
+        intent.putExtra("gesture_swipe", prefs.getString("gesture_swipe", "Next/Prev Track"))
+        intent.putExtra("gesture_double_tap", prefs.getString("gesture_double_tap", "Heart/Like Song"))
+        intent.putExtra("gesture_long_press", prefs.getString("gesture_long_press", "Open Playing App"))
+        
         sendBroadcast(intent)
     }
 
-    private fun sendGestureUpdate() { sendBroadcast(Intent("com.example.dynamicisland.RELOAD_PREFS").addFlags(0x01000000)) }
+    // 🚀 NEW: FAST INTENT DISPATCH FOR GESTURE DROPDOWNS
+    private fun sendGestureUpdate() { 
+        val prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+        val intent = Intent("com.example.dynamicisland.RELOAD_PREFS").addFlags(0x01000000)
+        intent.putExtra("gesture_swipe", prefs.getString("gesture_swipe", "Next/Prev Track"))
+        intent.putExtra("gesture_double_tap", prefs.getString("gesture_double_tap", "Heart/Like Song"))
+        intent.putExtra("gesture_long_press", prefs.getString("gesture_long_press", "Open Playing App"))
+        sendBroadcast(intent) 
+    }
 
     private fun getDefaultWidth(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 180f; "mid" -> 320f; "max" -> 360f; "cube" -> 85f; else -> 0f }
     private fun getDefaultHeight(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 36f; "mid" -> 80f; "max" -> 220f; "cube" -> 85f; else -> 0f }
