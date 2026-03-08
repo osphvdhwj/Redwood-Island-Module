@@ -62,6 +62,36 @@ class IslandController(private val context: Context) {
         }
     }
 
+    // 🚀 NEW: THE ECOSYSTEM BRIDGE (Listens to your Battery Manager module)
+    private val ecosystemReceiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent) {
+            if (intent.action == "com.crdroid.batterywellbeing.SYSTEM_OVERRIDE") {
+                when (intent.getStringExtra("action")) {
+                    "SMART_CHARGE_LIMIT" -> {
+                        val level = intent.getIntExtra("level", 100)
+                        postTransientNotification(LiveActivityModel.Charging("sys_smart_charge", ActivityType.CHARGING, level, true, true), 6000L) 
+                    }
+                    "THERMAL_WARNING" -> {
+                        val temp = intent.getStringExtra("extra_info") ?: "High"
+                        val alert = LiveActivityModel.SystemAlert(
+                            id = "sys_thermal", alertType = "THERMAL", title = "Thermal Throttling",
+                            message = "Battery temperature at $temp", alertColor = android.graphics.Color.RED
+                        )
+                        postTransientNotification(alert, 6000L)
+                    }
+                    "ROGUE_APP_DETECTED" -> {
+                        val appName = intent.getStringExtra("extra_info") ?: "Unknown App"
+                        val alert = LiveActivityModel.SystemAlert(
+                            id = "sys_rogue", alertType = "ROGUE", title = "High Background Drain",
+                            message = "$appName is draining battery", alertColor = android.graphics.Color.rgb(255, 165, 0) // Orange
+                        )
+                        postTransientNotification(alert, 6000L)
+                    }
+                }
+            }
+        }
+    }
+
     private val componentCallbacks = object : android.content.ComponentCallbacks {
         override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
             isLandscape = newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -182,13 +212,30 @@ class IslandController(private val context: Context) {
 
     private fun evaluatePriority() {
         if (isLandscape) { _islandState.value = IslandState.HIDDEN; return }
+        
         if (transientModel != null) {
-            if (currentMedia?.isPlaying == true || currentMedia != null) { _activeModel.value = currentMedia; _splitModel.value = transientModel; _islandState.value = IslandState.TYPE_SPLIT } 
-            else { _activeModel.value = transientModel; _splitModel.value = null; _islandState.value = IslandState.TYPE_CUBE }
+            if (transientModel is LiveActivityModel.SystemAlert) {
+                // System Alerts (Text) demand the Mid Pill, temporarily overriding everything else
+                _activeModel.value = transientModel
+                _splitModel.value = null
+                _islandState.value = IslandState.TYPE_2_MID
+            } else if (currentMedia?.isPlaying == true || currentMedia != null) {
+                // Charging while media playing = Split Cube
+                _activeModel.value = currentMedia
+                _splitModel.value = transientModel
+                _islandState.value = IslandState.TYPE_SPLIT
+            } else {
+                // Charging while idle = Tiny Cube
+                _activeModel.value = transientModel
+                _splitModel.value = null
+                _islandState.value = IslandState.TYPE_CUBE
+            }
             return
         }
+        
         _splitModel.value = null
         if (_activeModel.value is LiveActivityModel.Dashboard) return
+        
         if (currentMedia != null) {
             _activeModel.value = currentMedia
             if (!userForceCollapsed && (_islandState.value == IslandState.HIDDEN || _islandState.value == IslandState.TYPE_0_RING || _islandState.value == IslandState.TYPE_CUBE || _islandState.value == IslandState.TYPE_SPLIT)) {
@@ -196,7 +243,9 @@ class IslandController(private val context: Context) {
             }
             return
         }
+        
         if (currentHardware?.isGamingModeOn == true) { _activeModel.value = currentHardware; _islandState.value = IslandState.TYPE_1_MINI; return }
+        
         _activeModel.value = null
         _islandState.value = IslandState.TYPE_0_RING
     }
@@ -287,6 +336,15 @@ class IslandController(private val context: Context) {
         val filter = IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) }
         context.registerReceiver(screenStateReceiver, filter)
         context.registerComponentCallbacks(componentCallbacks)
+        
+        // 🚀 Register Ecosystem Bridge
+        val ecoFilter = IntentFilter("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE")
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(ecosystemReceiver, ecoFilter, Context.RECEIVER_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            context.registerReceiver(ecosystemReceiver, ecoFilter)
+        }
 
         BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
              if (isCharging) { postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true), 4000L)
@@ -305,5 +363,5 @@ class IslandController(private val context: Context) {
         context.unregisterComponentCallbacks(componentCallbacks)
         BatteryPlugin.stop(context)
         try { mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener) } catch(e: Exception){} 
+        try { context.unregisterReceiver(ecosystemReceiver) } catch(e: Exception){} // 🚀 Clean up Bridge
     }
-}
