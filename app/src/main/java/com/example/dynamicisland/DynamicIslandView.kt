@@ -84,6 +84,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     var padT = mutableStateOf(0f); var padB = mutableStateOf(0f); var padL = mutableStateOf(0f); var padR = mutableStateOf(0f)
     var ringThickness = mutableStateOf(6f)
+    var expandUpwards = mutableStateOf(false) // 🚀 EXPAND DIRECTION TRACKER
 
     var isCubeRotationEnabled = mutableStateOf(true)
     var globalBatteryLevel = mutableIntStateOf(100)
@@ -109,7 +110,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onAudioOutputClick: (() -> Unit)? = null
 
     private val lifecycleOwner = OverlayLifecycleOwner()
-    
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
 
@@ -124,6 +124,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             cubeW.value = pref.getFloat("cube_w", 85f); cubeH.value = pref.getFloat("cube_h", 85f); cubeX.value = pref.getFloat("cube_x", 0f); cubeY.value = pref.getFloat("cube_y", 48f)
             padT.value = pref.getFloat("pad_t", 0f); padB.value = pref.getFloat("pad_b", 0f); padL.value = pref.getFloat("pad_l", 0f); padR.value = pref.getFloat("pad_r", 0f)
             ringThickness.value = pref.getFloat("ring_thickness", 6f)
+            expandUpwards.value = pref.getBoolean("expand_upwards", false)
             isCubeRotationEnabled.value = pref.getBoolean("rotate_cube", true)
         } catch (e: Exception) {}
     }
@@ -137,6 +138,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     when (prefix) { "ring" -> { ringW.value = w; ringH.value = h; ringX.value = x; ringY.value = y }; "mini" -> { miniW.value = w; miniH.value = h; miniX.value = x; miniY.value = y }; "mid" -> { midW.value = w; midH.value = h; midX.value = x; midY.value = y }; "max" -> { maxW.value = w; maxH.value = h; maxX.value = x; maxY.value = y }; "cube" -> { cubeW.value = w; cubeH.value = h; cubeX.value = x; cubeY.value = y } }
                     padT.value = intent.getFloatExtra("pad_t", padT.value); padB.value = intent.getFloatExtra("pad_b", padB.value); padL.value = intent.getFloatExtra("pad_l", padL.value); padR.value = intent.getFloatExtra("pad_r", padR.value)
                     ringThickness.value = intent.getFloatExtra("ring_thickness", ringThickness.value)
+                    expandUpwards.value = intent.getBooleanExtra("expand_upwards", expandUpwards.value)
                 } else loadPreferences()
             } else if (intent.action == "com.example.dynamicisland.BATTERY_UPDATE") {
                 globalBatteryLevel.value = intent.getIntExtra("level", 100); globalIsCharging.value = intent.getBooleanExtra("isCharging", false)
@@ -152,33 +154,24 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED) else @Suppress("UnspecifiedRegisterReceiverFlag") context.registerReceiver(receiver, filter)
         setViewTreeLifecycleOwner(lifecycleOwner); setViewTreeSavedStateRegistryOwner(lifecycleOwner); setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
 
-        // 🚀 REFLECTION INSETS ENGINE: Bypasses @hide restriction to kill Deadzones
         try {
             val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
-            val listener = java.lang.reflect.Proxy.newProxyInstance(
-                context.classLoader,
-                arrayOf(listenerClass)
-            ) { _, method, args ->
+            val listener = java.lang.reflect.Proxy.newProxyInstance(context.classLoader, arrayOf(listenerClass)) { _, method, args ->
                 if (method.name == "onComputeInternalInsets") {
                     val info = args[0]
                     val touchableInsetsRegion = info.javaClass.getField("TOUCHABLE_INSETS_REGION").getInt(null)
                     info.javaClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType).invoke(info, touchableInsetsRegion)
-
                     val region = info.javaClass.getField("touchableRegion").get(info) as android.graphics.Region
                     region.setEmpty()
                     if (islandState.value != IslandState.HIDDEN) {
                         if (!mainPillRect.isEmpty) region.op(mainPillRect, android.graphics.Region.Op.UNION)
-                        if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) {
-                            region.op(splitCubeRect, android.graphics.Region.Op.UNION)
-                        }
+                        if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) region.op(splitCubeRect, android.graphics.Region.Op.UNION)
                     }
                 }
                 null
             }
             viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, listener)
-        } catch (e: Exception) {
-            Log.e("DynamicIsland", "Failed to setup Insets Reflection", e)
-        }
+        } catch (e: Exception) {}
 
         val composeView = ComposeView(context).apply { setContent { MaterialTheme(colorScheme = darkColorScheme()) { CompositionLocalProvider(LocalContext provides moduleContext) { IslandUI(islandState.value) } } } }
         val coroutineContext = AndroidUiDispatcher.CurrentThread; val recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
@@ -222,17 +215,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             val density = context.resources.displayMetrics.density
 
             if (state == IslandState.HIDDEN) {
-                wp.width = 0; wp.height = 0
-                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
+                wp.width = 0; wp.height = 0; wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             } else if (state == IslandState.TYPE_CUBE || state == IslandState.TYPE_SPLIT) {
-                wp.width = WindowManager.LayoutParams.MATCH_PARENT
-                wp.height = WindowManager.LayoutParams.MATCH_PARENT
-                wp.x = 0; wp.y = 0
+                wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = WindowManager.LayoutParams.MATCH_PARENT; wp.x = 0; wp.y = 0
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND; wp.blurBehindRadius = 45 }
             } else {
-                wp.width = WindowManager.LayoutParams.MATCH_PARENT
-                wp.height = ((maxH.value + 150) * density).toInt()
-                wp.x = 0; wp.y = 0
+                wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = ((maxH.value + 150) * density).toInt(); wp.x = 0; wp.y = 0
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             }
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
@@ -240,32 +228,37 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         var dragOffsetX by remember { mutableStateOf(0f) }
 
+        // 🚀 ALIGNMENT CONTROL: Expand Upwards vs Downwards
+        val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
+
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .offset(x = offsetX.dp, y = offsetY.dp), 
+            modifier = Modifier.fillMaxWidth().offset(x = offsetX.dp, y = offsetY.dp).height(maxH.value.dp), // Height container gives space for upward growth
             horizontalArrangement = Arrangement.Center, 
-            verticalAlignment = Alignment.Top
+            verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
         ) {
             Box(
                 modifier = Modifier
                     .onGloballyPositioned { coordinates ->
                         val bounds = coordinates.boundsInWindow()
-                        val l = bounds.left.toInt(); val t = bounds.top.toInt(); val r = bounds.right.toInt(); val b = bounds.bottom.toInt()
-                        if (mainPillRect.left != l || mainPillRect.right != r || mainPillRect.top != t || mainPillRect.bottom != b) {
-                            mainPillRect.set(l, t, r, b)
-                            this@DynamicIslandView.requestLayout()
+                        if (mainPillRect.left != bounds.left.toInt() || mainPillRect.right != bounds.right.toInt() || mainPillRect.top != bounds.top.toInt() || mainPillRect.bottom != bounds.bottom.toInt()) {
+                            mainPillRect.set(bounds.left.toInt(), bounds.top.toInt(), bounds.right.toInt(), bounds.bottom.toInt()); this@DynamicIslandView.requestLayout()
                         }
                     }
                     .width(width).height(height).clip(RoundedCornerShape(rad))
                     .background(bgColor).border(1.dp, borderColor, RoundedCornerShape(rad))
                     .pointerInput(Unit) { detectTapGestures(onTap = { if (state == IslandState.TYPE_0_RING || state == IslandState.HIDDEN) onSingleTap?.invoke() }, onDoubleTap = { onDoubleTap?.invoke(state) }, onLongPress = { if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) onPillLongPress?.invoke() }) }
-                    .pointerInput(Unit) { detectDragGestures(onDragEnd = { if (abs(dragOffsetX) > 40) { if (dragOffsetX > 40) onSwipeRight?.invoke(state) else if (dragOffsetX < -40) onSwipeLeft?.invoke(state) }; dragOffsetX = 0f }, onDrag = { change, dragAmount -> change.consume(); dragOffsetX += dragAmount.x }) },
-                contentAlignment = Alignment.TopCenter
+                    // 🚀 FIXED: Only Horizontal Drag on Main Pill!
+                    .pointerInput(Unit) { detectHorizontalDragGestures(
+                        onDragEnd = { if (abs(dragOffsetX) > 40) { if (dragOffsetX > 40) onSwipeRight?.invoke(state) else if (dragOffsetX < -40) onSwipeLeft?.invoke(state) }; dragOffsetX = 0f },
+                        onHorizontalDrag = { change, dragAmount -> change.consume(); dragOffsetX += dragAmount } 
+                    )},
+                contentAlignment = boxAlignment
             ) {
                 Box(modifier = Modifier.fillMaxSize().padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp)) {
+                    
+                    // 🚀 B PILL THUMBNAIL TWEAK: Less Blur (12.dp), Moderately Transparent (0.65f)
                     if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
-                        Image(bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(if (state == IslandState.TYPE_3_MAX) 0.85f else 0.35f).blur(if (state == IslandState.TYPE_3_MAX) 40.dp else 24.dp))
+                        Image(bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(if (state == IslandState.TYPE_3_MAX) 0.65f else 0.35f).blur(if (state == IslandState.TYPE_3_MAX) 12.dp else 24.dp))
                     }
 
                     if (state != IslandState.HIDDEN) {
@@ -286,7 +279,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             var grabberDragY by remember { mutableStateOf(0f) }
                             Box(
                                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(when(state) { IslandState.TYPE_3_MAX -> 32.dp; IslandState.TYPE_2_MID -> 20.dp; else -> 16.dp })
-                                    .pointerInput(Unit) { detectDragGestures(onDragEnd = { if (grabberDragY > 40) onGrabberDragDown?.invoke() else if (grabberDragY < -40) onGrabberDragUp?.invoke(); grabberDragY = 0f }, onDrag = { change, dragAmount -> change.consume(); grabberDragY += dragAmount.y }) }
+                                    // 🚀 FIXED: Only Vertical Drag on Grabber!
+                                    .pointerInput(Unit) { detectVerticalDragGestures(
+                                        onDragEnd = { if (grabberDragY > 40) onGrabberDragDown?.invoke() else if (grabberDragY < -40) onGrabberDragUp?.invoke(); grabberDragY = 0f }, 
+                                        onVerticalDrag = { change, dragAmount -> change.consume(); grabberDragY += dragAmount }
+                                    )}
                                     .pointerInput(Unit) { detectTapGestures(onLongPress = { onGrabberLongPress?.invoke() }) }, 
                                 contentAlignment = Alignment.Center
                             ) { Box(modifier = Modifier.width(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 24.dp else 40.dp).height(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 3.dp else 5.dp).shadow(2.dp, CircleShape).background(Color.White.copy(alpha=0.8f), CircleShape)) }
@@ -320,9 +317,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     Box(modifier = Modifier.size(height)
                             .onGloballyPositioned { coordinates ->
                                 val bounds = coordinates.boundsInWindow()
-                                val l = bounds.left.toInt(); val t = bounds.top.toInt(); val r = bounds.right.toInt(); val b = bounds.bottom.toInt()
-                                if (splitCubeRect.left != l || splitCubeRect.right != r || splitCubeRect.top != t || splitCubeRect.bottom != b) {
-                                    splitCubeRect.set(l, t, r, b); this@DynamicIslandView.requestLayout()
+                                if (splitCubeRect.left != bounds.left.toInt() || splitCubeRect.right != bounds.right.toInt() || splitCubeRect.top != bounds.top.toInt() || splitCubeRect.bottom != bounds.bottom.toInt()) {
+                                    splitCubeRect.set(bounds.left.toInt(), bounds.top.toInt(), bounds.right.toInt(), bounds.bottom.toInt()); this@DynamicIslandView.requestLayout()
                                 }
                             }
                             .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape), 
@@ -439,92 +435,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     }
 
     @Composable
-    fun DashboardMid(model: LiveActivityModel.Dashboard) {
-        // 🚀 SCALABLE APP PINNING (Defaults for now, configurable later)
-        val apps = listOf(
-            Triple(Icons.Default.Phone, "com.android.dialer", "Phone"),
-            Triple(Icons.Default.Email, "com.google.android.apps.messaging", "Messages"),
-            Triple(Icons.Default.Camera, "com.android.camera", "Camera"),
-            Triple(Icons.Default.Settings, "com.android.settings", "Settings")
-        )
-
-        Row(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-            apps.forEach { (icon, pkg, _) ->
-                Box(
-                    modifier = Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape).clickable {
-                        try {
-                            val intent = context.packageManager.getLaunchIntentForPackage(pkg) ?: Intent(android.provider.Settings.ACTION_SETTINGS)
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                            context.startActivity(intent)
-                        } catch (e: Exception) {}
-                    }, 
-                    contentAlignment=Alignment.Center
-                ) {
-                    Icon(icon, null, tint=Color.White, modifier=Modifier.size(24.dp))
-                }
-            }
-        }
-    }
-
+    fun DashboardMid(model: LiveActivityModel.Dashboard) { Row(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) { Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Phone, null, tint=Color.White, modifier=Modifier.size(24.dp)) }; Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Email, null, tint=Color.White, modifier=Modifier.size(24.dp)) }; Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Build, null, tint=Color.White, modifier=Modifier.size(24.dp)) }; Box(Modifier.size(44.dp).background(Color.White.copy(0.2f), CircleShape), contentAlignment=Alignment.Center) { Icon(Icons.Default.Settings, null, tint=Color.White, modifier=Modifier.size(24.dp)) } } }
     @Composable
-    fun DashboardMax(model: LiveActivityModel.Dashboard) {
-        // 🚀 LIVE AUDIO MANAGER
-        val am = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
-        var volume by remember { mutableFloatStateOf(am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC).toFloat()) }
-        val maxVolume = remember { am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() }
-
-        // 🚀 LIVE CAMERA/FLASHLIGHT MANAGER
-        var isTorchOn by remember { mutableStateOf(false) }
-        val cameraManager = remember { context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager }
-        val cameraId = remember { try { cameraManager.cameraIdList[0] } catch(e: Exception) { null } }
-
-        Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Quick Settings", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.align(Alignment.Start))
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                // WI-FI BUTTON
-                Box(modifier = Modifier.size(60.dp).background(Color.White.copy(0.2f), RoundedCornerShape(16.dp)).clickable {
-                    val intent = Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                    context.startActivity(intent)
-                }, contentAlignment = Alignment.Center) { 
-                    Icon(Icons.Default.Wifi, contentDescription = "WiFi", tint = Color.White, modifier = Modifier.size(28.dp)) 
-                }
-                
-                // FLASHLIGHT BUTTON
-                Box(modifier = Modifier.size(60.dp).background(if (isTorchOn) Color.White else Color.White.copy(0.2f), RoundedCornerShape(16.dp)).clickable {
-                    try {
-                        isTorchOn = !isTorchOn
-                        cameraId?.let { cameraManager.setTorchMode(it, isTorchOn) }
-                    } catch(e: Exception) {}
-                }, contentAlignment = Alignment.Center) { 
-                    Icon(Icons.Default.Build, contentDescription = "Torch", tint = if(isTorchOn) Color.Black else Color.White, modifier = Modifier.size(28.dp)) 
-                }
-                
-                // BLUETOOTH BUTTON
-                Box(modifier = Modifier.size(60.dp).background(Color.White.copy(0.2f), RoundedCornerShape(16.dp)).clickable {
-                    val intent = Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                    context.startActivity(intent)
-                }, contentAlignment = Alignment.Center) { 
-                    Icon(Icons.Default.Bluetooth, contentDescription = "Bluetooth", tint = Color.White, modifier = Modifier.size(28.dp)) 
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // 🚀 LIVE VOLUME SLIDER
-            Slider(
-                value = volume, 
-                onValueChange = { 
-                    volume = it
-                    am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, it.toInt(), 0)
-                }, 
-                valueRange = 0f..maxVolume, 
-                colors = SliderDefaults.colors(activeTrackColor = Color.White, thumbColor = Color.White),
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }
+    fun DashboardMax(model: LiveActivityModel.Dashboard) { Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text("Quick Settings", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.align(Alignment.Start)); Spacer(modifier = Modifier.height(16.dp)); Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) { Box(modifier = Modifier.size(60.dp).background(if (model.isWifiOn) Color.Blue else Color.White.copy(0.2f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Settings, null, tint = Color.White, modifier = Modifier.size(28.dp)) }; Box(modifier = Modifier.size(60.dp).background(if (model.isTorchOn) Color.Yellow else Color.White.copy(0.2f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Build, null, tint = Color.Black, modifier = Modifier.size(28.dp)) }; Box(modifier = Modifier.size(60.dp).background(Color.White.copy(0.2f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Info, null, tint = Color.White, modifier = Modifier.size(28.dp)) } }; Spacer(modifier = Modifier.height(24.dp)); Slider(value = model.currentVolume.toFloat(), onValueChange = {}, valueRange = 0f..model.maxVolume.toFloat(), colors = SliderDefaults.colors(activeTrackColor = Color.White)) } }
+    @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun GeneralMini(general: LiveActivityModel.General) { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) { Icon(imageVector = getIconForType(general.type), contentDescription = null, tint = Color(general.accentColor), modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text(text = "${general.title} • ${general.dataText}", color = Color.White, fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee()) } }
     @Composable
