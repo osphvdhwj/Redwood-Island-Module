@@ -127,13 +127,12 @@ import kotlinx.coroutines.channels.BufferOverflow
     @Composable
     fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
         val dynamicTextColor = Color(music.titleTextColor)
-        val progress = if (music.durationMs > 0) (currentMediaPos.longValue.toFloat() / music.durationMs.toFloat()).coerceIn(0f, 1f) else 0f
         val infiniteTransition = rememberInfiniteTransition(); val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart))
         val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
 
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(52.dp)) {
-                IsolatedCircularProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha = 0.2f), strokeWidth = 2.dp, modifier = Modifier.fillMaxSize())
+                IsolatedCircularProgress(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor)
                 if (music.albumArt != null) { Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(44.dp).clip(CircleShape).rotate(currentRotation)) } else Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
             }
             Spacer(Modifier.width(14.dp))
@@ -196,6 +195,7 @@ import kotlinx.coroutines.channels.BufferOverflow
     }
 
     // 🚀 NEW: CONTROL CENTER (MID PILL)
+    @Suppress("UNUSED_PARAMETER") // 🚀 FIX: We pull system stats natively now!
     @Composable
     fun DynamicIslandView.DashboardMid(model: LiveActivityModel.Dashboard) {
         Row(
@@ -211,6 +211,7 @@ import kotlinx.coroutines.channels.BufferOverflow
     }
 
     // 🚀 NEW: CONTROL CENTER (MAX PILL)
+    @Suppress("UNUSED_PARAMETER")
     @Composable
     fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
         val context = LocalContext.current
@@ -491,4 +492,17 @@ import kotlinx.coroutines.channels.BufferOverflow
                  Text(text = "${model.appName} closing in ${remainingSeconds}s", color = Color.White, fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
             }
         }
+    }
+
+    @Composable
+    fun IsolatedCircularProgress(durationMs: Long, posProvider: () -> Long, color: Color) {
+        val pos = posProvider()
+        val progress = if (durationMs > 0) (pos.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+        CircularProgressIndicator(
+            progress = { progress },
+            color = color,
+            trackColor = color.copy(alpha = 0.2f),
+            strokeWidth = 2.dp,
+            modifier = Modifier.fillMaxSize()
+        )
     }

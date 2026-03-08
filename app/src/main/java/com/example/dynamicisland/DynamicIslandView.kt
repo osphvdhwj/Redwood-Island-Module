@@ -73,6 +73,7 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     fun start() { savedStateRegistryController.performRestore(android.os.Bundle()); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME) }
 }
 
+@OptIn(kotlinx.coroutines.FlowPreview::class) // 🚀 FIX: Opt-in to debounce preview
 @SuppressLint("ViewConstructor")
 class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLayout(context) {
 

@@ -139,7 +139,7 @@ class ConfigActivity : ComponentActivity() {
         var expanded by remember { mutableStateOf(false) }
         var selectedOption by remember { mutableStateOf(prefs.getString(prefKey, IslandAction.NONE.name) ?: IslandAction.NONE.name) }
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-            OutlinedTextField(value = selectedOption, onValueChange = {}, readOnly = true, label = { Text(label) }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, modifier = Modifier.menuAnchor().fillMaxWidth())
+            OutlinedTextField(value = selectedOption, onValueChange = {}, readOnly = true, label = { Text(label) }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth())
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 options.forEach { option -> DropdownMenuItem(text = { Text(option) }, onClick = { selectedOption = option; prefs.edit().putString(prefKey, option).apply(); expanded = false; sendGestureUpdate(prefs) }) }
             }
