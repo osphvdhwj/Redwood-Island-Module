@@ -34,7 +34,7 @@ class ConfigActivity : ComponentActivity() {
     @Composable
     fun ConfigScreen(prefs: android.content.SharedPreferences) {
         var selectedTab by remember { mutableIntStateOf(0) }
-        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures") // 🚀 ADDED CUBE
+        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures")
 
         var w by remember { mutableFloatStateOf(0f) }
         var h by remember { mutableFloatStateOf(0f) }
@@ -66,7 +66,6 @@ class ConfigActivity : ComponentActivity() {
             }
 
             if (currentPrefix != "gestures") {
-                // 🚀 FIXED SCROLLING ISSUE
                 Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(text = "Configure ${tabs[selectedTab]}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -80,15 +79,17 @@ class ConfigActivity : ComponentActivity() {
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text("Outer Dimensions", fontSize = 12.sp, color = Color.Gray)
-                    PrecisionSlider("Width", w, 10f..400f) { newW -> w = newW; saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
-                    PrecisionSlider("Height", h, 10f..400f) { newH -> h = newH; saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
-                    PrecisionSlider("X Pos", x, -200f..200f) { newX -> x = newX; saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
-                    PrecisionSlider("Y Pos", y, -100f..200f) { newY -> y = newY; saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
+                    
+                    // 🚀 FIXED: IPC Broadcast Flood - Only saves when finger is lifted!
+                    PrecisionSlider("Width", w, 10f..400f, { w = it }) { saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
+                    PrecisionSlider("Height", h, 10f..400f, { h = it }) { saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
+                    PrecisionSlider("X Pos", x, -200f..200f, { x = it }) { saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
+                    PrecisionSlider("Y Pos", y, -100f..200f, { y = it }) { saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
                     
                     if (currentPrefix == "ring") {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text("Ring Properties", fontSize = 12.sp, color = Color.Gray)
-                        PrecisionSlider("Thickness", ringT, 1f..20f) { newT -> ringT = newT; prefs.edit().putFloat("ring_thickness", newT).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
+                        PrecisionSlider("Thickness", ringT, 1f..20f, { ringT = it }) { prefs.edit().putFloat("ring_thickness", ringT).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
                     }
                     
                     Spacer(modifier = Modifier.height(16.dp))
@@ -98,24 +99,25 @@ class ConfigActivity : ComponentActivity() {
                     var padL by remember { mutableFloatStateOf(prefs.getFloat("pad_l", 0f)) }
                     var padR by remember { mutableFloatStateOf(prefs.getFloat("pad_r", 0f)) }
                     
-                    PrecisionSlider("Top", padT, 0f..100f) { v -> padT = v; prefs.edit().putFloat("pad_t", v).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
-                    PrecisionSlider("Bottom", padB, 0f..100f) { v -> padB = v; prefs.edit().putFloat("pad_b", v).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
-                    PrecisionSlider("Left", padL, 0f..100f) { v -> padL = v; prefs.edit().putFloat("pad_l", v).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
-                    PrecisionSlider("Right", padR, 0f..100f) { v -> padR = v; prefs.edit().putFloat("pad_r", v).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
+                    PrecisionSlider("Top", padT, 0f..100f, { padT = it }) { prefs.edit().putFloat("pad_t", padT).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
+                    PrecisionSlider("Bottom", padB, 0f..100f, { padB = it }) { prefs.edit().putFloat("pad_b", padB).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
+                    PrecisionSlider("Left", padL, 0f..100f, { padL = it }) { prefs.edit().putFloat("pad_l", padL).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
+                    PrecisionSlider("Right", padR, 0f..100f, { padR = it }) { prefs.edit().putFloat("pad_r", padR).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT) }
                     
-                    Spacer(modifier = Modifier.height(60.dp)) // Prevent bottom cutoff
+                    Spacer(modifier = Modifier.height(60.dp))
                 }
             }
         }
     }
 
+    // 🚀 FIXED: Separated real-time state change from the Broadcast intent dispatch
     @Composable
-    fun PrecisionSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onValueChange: (Float) -> Unit) {
+    fun PrecisionSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onValueChange: (Float) -> Unit, onValueChangeFinished: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text(label, modifier = Modifier.width(60.dp), fontSize = 14.sp)
-            IconButton(onClick = { onValueChange((value - 1f).coerceIn(range)) }) { Icon(Icons.Default.Remove, contentDescription = "-") }
-            Slider(value = value, onValueChange = onValueChange, modifier = Modifier.weight(1f), valueRange = range)
-            IconButton(onClick = { onValueChange((value + 1f).coerceIn(range)) }) { Icon(Icons.Default.Add, contentDescription = "+") }
+            IconButton(onClick = { onValueChange((value - 1f).coerceIn(range)); onValueChangeFinished() }) { Icon(Icons.Default.Remove, contentDescription = "-") }
+            Slider(value = value, onValueChange = onValueChange, onValueChangeFinished = onValueChangeFinished, modifier = Modifier.weight(1f), valueRange = range)
+            IconButton(onClick = { onValueChange((value + 1f).coerceIn(range)); onValueChangeFinished() }) { Icon(Icons.Default.Add, contentDescription = "+") }
             Text(String.format("%.0f", value), modifier = Modifier.width(40.dp), fontSize = 14.sp)
         }
     }
