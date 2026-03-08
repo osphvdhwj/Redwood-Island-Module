@@ -4,36 +4,51 @@ import android.app.PendingIntent
 import android.graphics.Bitmap
 
 enum class IslandState {
-    TYPE_0_RING,      // Just the wavy ring around the punch hole
-    TYPE_1_MINI,      // Smallest pill (e.g., persistent icon + small text)
-    TYPE_2_MID,       // Expanded pill (e.g., standard notification)
-    TYPE_3_MAX,       // Full expanded state (Media Player, Dashboard, etc.)
-    TYPE_CUBE,        // 🚀 NEW: Square/Cube shape for standalone charging/unlock
-    TYPE_SPLIT,       // 🚀 NEW: Main Pill + Tiny Right Cube
-    HIDDEN            // Completely gone
+    TYPE_0_RING, TYPE_1_MINI, TYPE_2_MID, TYPE_3_MAX, TYPE_CUBE, TYPE_SPLIT, HIDDEN
 }
 
-enum class ActivityType(val priority: Int) {
-    DASHBOARD(100),     // User explicitly opened the Control Center
-    ALARM(90),
-    CALL(80),
-    NAVIGATION(70),
-    TIMER(60),
-    MEDIA(50),          // Media Player
-    MESSAGE(40),
-    DOWNLOAD(30),
-    CHARGING(20),       // Transient (auto-dismisses)
-    HARDWARE(10),
-    BATTERY_LOW(15),
-    BLUETOOTH(15),
-    WIFI(15)
+enum class ActivityType {
+    CALL, MEDIA, NAVIGATION, TIMER, MESSAGE, ALARM, DASHBOARD, BATTERY_LOW, CHARGING, WIFI, BLUETOOTH, HARDWARE
 }
+
+// 🚀 THE NEW UNIVERSAL GESTURE MATRIX ENUMS
+enum class IslandGesture {
+    SINGLE_TAP, DOUBLE_TAP, LONG_PRESS, SWIPE_LEFT, SWIPE_RIGHT, SWIPE_UP, SWIPE_DOWN
+}
+
+enum class IslandAction {
+    NONE, PLAY_PAUSE, NEXT_TRACK, PREV_TRACK, VOL_UP, VOL_DOWN, EXPAND, COLLAPSE, OPEN_APP, HEART_SONG
+}
+
+data class CustomMediaAction(
+    val actionName: String,
+    val icon: Bitmap?,
+    val pendingIntent: PendingIntent?,
+    val isEnabled: Boolean
+)
 
 sealed class LiveActivityModel {
     abstract val id: String
     abstract val type: ActivityType
     abstract val isTransient: Boolean
-    val priority: Int get() = type.priority
+
+    data class Music(
+        override val id: String = "sys_media",
+        override val type: ActivityType = ActivityType.MEDIA,
+        val title: String,
+        val artist: String,
+        val albumArt: Bitmap? = null,
+        val appIcon: Bitmap? = null,
+        val dominantColor: Int? = null,
+        val titleTextColor: Int = android.graphics.Color.WHITE, 
+        val isPlaying: Boolean = false,
+        val durationMs: Long = 0L,
+        val positionMs: Long = 0L,
+        val appPackageName: String = "",
+        val launchIntent: PendingIntent? = null,
+        val customActions: List<CustomMediaAction> = emptyList(),
+        override val isTransient: Boolean = false
+    ) : LiveActivityModel()
 
     data class General(
         override val id: String,
@@ -45,71 +60,30 @@ sealed class LiveActivityModel {
         override val isTransient: Boolean = false
     ) : LiveActivityModel()
 
-    data class Music(
-        override val id: String = "sys_media",
-        override val type: ActivityType = ActivityType.MEDIA,
-        val title: String,
-        val artist: String,
-        val albumArt: Bitmap? = null,
-        val appIcon: Bitmap? = null, // 🚀 NEW: Holds the Spotify/YT Music Logo
-        val dominantColor: Int? = null,
-        val titleTextColor: Int = android.graphics.Color.WHITE, // 🌟 NEW: Dynamic text color
-        val isPlaying: Boolean = false,
-        val durationMs: Long = 0L,
-        val positionMs: Long = 0L,
-        val appPackageName: String = "",
-        val launchIntent: PendingIntent? = null,
-        val customActions: List<CustomMediaAction> = emptyList(),
-        override val isTransient: Boolean = false
-    ) : LiveActivityModel()
-
     data class Dashboard(
-        override val id: String = "sys_dashboard",
+        override val id: String = "sys_dash",
         override val type: ActivityType = ActivityType.DASHBOARD,
-        val currentVolume: Int = 0,
-        val maxVolume: Int = 15,
-        val isWifiOn: Boolean = false,
+        val isWifiOn: Boolean = true,
         val isTorchOn: Boolean = false,
+        val currentVolume: Int = 50,
+        val maxVolume: Int = 100,
         override val isTransient: Boolean = false
     ) : LiveActivityModel()
 
-    // --- 3. HARDWARE & GAMING MONITOR ---
-    data class HardwareMonitor(
-        override val id: String = "hardware_monitor",
-        override val type: ActivityType = ActivityType.HARDWARE,
-        val cpuTempCelsius: Float = 0f,
-        val batteryTempCelsius: Float = 0f,
-        val cpuFreqMhz: Int = 0,
-        val isGamingModeOn: Boolean = false,
-        override val isTransient: Boolean = false
-    ) : LiveActivityModel()
-
-    // --- 4. TRANSIENT NOTIFICATIONS (Charging, Calls, etc.) ---
     data class Charging(
         override val id: String,
         override val type: ActivityType = ActivityType.CHARGING,
         val level: Int,
         val isPluggedIn: Boolean,
-        val isFastCharging: Boolean = false,
+        override val isTransient: Boolean = false
+    ) : LiveActivityModel()
+
+    data class HardwareMonitor(
+        override val id: String = "sys_hw",
+        override val type: ActivityType = ActivityType.HARDWARE,
+        val cpuTempCelsius: Float = 0f,
+        val cpuFreqMhz: Int = 0,
+        val isGamingModeOn: Boolean = false,
         override val isTransient: Boolean = false
     ) : LiveActivityModel()
 }
-
-/**
- * Represents a custom action provided by a Media App (e.g., Spotify's Heart, YouTube's Close)
- */
-data class CustomMediaAction(
-    val actionName: String,
-    val icon: android.graphics.drawable.Icon?,
-    val pendingIntent: PendingIntent?,
-    val isEnabled: Boolean = true
-)
-
-/**
- * Represents an app pinned by the user in the Dashboard.
- */
-data class PinnedApp(
-    val packageName: String,
-    val appName: String,
-    val appIcon: android.graphics.drawable.Drawable?
-)
