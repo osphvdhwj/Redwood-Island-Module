@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.util.Log
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.animation.*
@@ -87,7 +88,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var isCubeRotationEnabled = mutableStateOf(true)
     var globalBatteryLevel = mutableIntStateOf(100)
     var globalIsCharging = mutableStateOf(false)
-    var currentMediaPos = mutableLongStateOf(0L) // 🚀 Tracked strictly locally now to save battery
+    var currentMediaPos = mutableLongStateOf(0L)
 
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
@@ -109,7 +110,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     private val lifecycleOwner = OverlayLifecycleOwner()
     
-    // 🚀 NEW: INSETS ENGINE TRACKERS (Eliminates deadzones completely)
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
 
@@ -152,16 +152,32 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED) else @Suppress("UnspecifiedRegisterReceiverFlag") context.registerReceiver(receiver, filter)
         setViewTreeLifecycleOwner(lifecycleOwner); setViewTreeSavedStateRegistryOwner(lifecycleOwner); setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
 
-        // 🚀 THE INSETS ENGINE: Dictates touchable regions pixel-by-pixel
-        viewTreeObserver.addOnComputeInternalInsetsListener { info ->
-            info.setTouchableInsets(android.view.ViewTreeObserver.InternalInsetsInfo.TOUCHABLE_INSETS_REGION)
-            info.touchableRegion.setEmpty()
-            if (islandState.value != IslandState.HIDDEN) {
-                if (!mainPillRect.isEmpty) info.touchableRegion.op(mainPillRect, android.graphics.Region.Op.UNION)
-                if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) {
-                    info.touchableRegion.op(splitCubeRect, android.graphics.Region.Op.UNION)
+        // 🚀 REFLECTION INSETS ENGINE: Bypasses @hide restriction to kill Deadzones
+        try {
+            val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
+            val listener = java.lang.reflect.Proxy.newProxyInstance(
+                context.classLoader,
+                arrayOf(listenerClass)
+            ) { _, method, args ->
+                if (method.name == "onComputeInternalInsets") {
+                    val info = args[0]
+                    val touchableInsetsRegion = info.javaClass.getField("TOUCHABLE_INSETS_REGION").getInt(null)
+                    info.javaClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType).invoke(info, touchableInsetsRegion)
+
+                    val region = info.javaClass.getField("touchableRegion").get(info) as android.graphics.Region
+                    region.setEmpty()
+                    if (islandState.value != IslandState.HIDDEN) {
+                        if (!mainPillRect.isEmpty) region.op(mainPillRect, android.graphics.Region.Op.UNION)
+                        if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) {
+                            region.op(splitCubeRect, android.graphics.Region.Op.UNION)
+                        }
+                    }
                 }
+                null
             }
+            viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, listener)
+        } catch (e: Exception) {
+            Log.e("DynamicIsland", "Failed to setup Insets Reflection", e)
         }
 
         val composeView = ComposeView(context).apply { setContent { MaterialTheme(colorScheme = darkColorScheme()) { CompositionLocalProvider(LocalContext provides moduleContext) { IslandUI(islandState.value) } } } }
@@ -199,7 +215,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.15f), animationSpec = tween(600), label = "borderColor")
 
-        // 🚀 THE STATIC WINDOW MANAGER: Only updates once per major state change. Kills IPC spam.
         LaunchedEffect(state) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
@@ -210,13 +225,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 wp.width = 0; wp.height = 0
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             } else if (state == IslandState.TYPE_CUBE || state == IslandState.TYPE_SPLIT) {
-                // Charging states -> Full screen blur
                 wp.width = WindowManager.LayoutParams.MATCH_PARENT
                 wp.height = WindowManager.LayoutParams.MATCH_PARENT
                 wp.x = 0; wp.y = 0
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND; wp.blurBehindRadius = 45 }
             } else {
-                // Normal Media states -> Static container, no background blur, entirely managed by Insets
                 wp.width = WindowManager.LayoutParams.MATCH_PARENT
                 wp.height = ((maxH.value + 150) * density).toInt()
                 wp.x = 0; wp.y = 0
@@ -230,7 +243,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset(x = offsetX.dp, y = offsetY.dp), // 🚀 Window is static, so we move the layout physically inside it!
+                .offset(x = offsetX.dp, y = offsetY.dp), 
             horizontalArrangement = Arrangement.Center, 
             verticalAlignment = Alignment.Top
         ) {
@@ -239,7 +252,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     .onGloballyPositioned { coordinates ->
                         val bounds = coordinates.boundsInWindow()
                         val l = bounds.left.toInt(); val t = bounds.top.toInt(); val r = bounds.right.toInt(); val b = bounds.bottom.toInt()
-                        // Notify Android view system immediately if pixel boundary changes
                         if (mainPillRect.left != l || mainPillRect.right != r || mainPillRect.top != t || mainPillRect.bottom != b) {
                             mainPillRect.set(l, t, r, b)
                             this@DynamicIslandView.requestLayout()
@@ -282,11 +294,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     }
                     
                     if (state == IslandState.TYPE_0_RING) {
-                        val isMedia = model is LiveActivityModel.Music && model.isPlaying
+                        val musicModel = model as? LiveActivityModel.Music
+                        val isMedia = musicModel != null && musicModel.isPlaying
                         val shouldShowRing = isMedia || globalIsCharging.value || globalBatteryLevel.value <= 20
                         if (shouldShowRing) {
-                            val progress = if (isMedia) (currentMediaPos.longValue.toFloat() / model.durationMs.toFloat()) else globalBatteryLevel.value / 100f
+                            val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
+                            val progress = if (isMedia) (currentMediaPos.longValue.toFloat() / safeDur) else globalBatteryLevel.value / 100f
                             val progressColor = if (isMedia) Color.White else if (globalIsCharging.value) Color.Green else if (globalBatteryLevel.value <= 20) Color.Red else Color.White
+                            
                             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
                                 val strokeW = ringThickness.value.dp.toPx() 
                                 drawArc(color = progressColor.copy(alpha=0.2f), startAngle = -90f, sweepAngle = 360f, useCenter = false, style = Stroke(strokeW))
@@ -360,7 +375,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(52.dp)) {
                 CircularProgressIndicator(progress = { progress }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha = 0.2f), strokeWidth = 2.dp, modifier = Modifier.fillMaxSize())
-                if (music.albumArt != null) { Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(44.dp).clip(CircleShape).rotate(currentRotation).pointerInput(Unit) { detectTapGestures(onLongPress = { onPillLongPress?.invoke() }) }) } else Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
+                if (music.albumArt != null) {
+                    Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(44.dp).clip(CircleShape).rotate(currentRotation).pointerInput(Unit) { detectTapGestures(onLongPress = { onPillLongPress?.invoke() }) }) 
+                } else Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
             }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
