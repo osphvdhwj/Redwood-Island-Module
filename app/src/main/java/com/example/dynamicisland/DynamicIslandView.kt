@@ -99,6 +99,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
     val splitModel = mutableStateOf<LiveActivityModel?>(null) 
 
+    // 🚀 FIX: Direct update endpoints (Replaces Broadcasts)
+    fun updateTicker(pos: Long) {
+        currentMediaPos.longValue = pos
+    }
+
+    fun updateBattery(level: Int, isCharging: Boolean) {
+        globalBatteryLevel.intValue = level
+        globalIsCharging.value = isCharging
+    }
+
     // 🚀 THE UNIFIED EVENT SINK
     var onGestureEvent: ((IslandGesture) -> Unit)? = null
     var onGestureSettingsUpdated: ((String?) -> Unit)? = null
@@ -145,18 +155,20 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 } 
                 val payload = intent.getStringExtra("gesture_payload")
                 if (payload != null) onGestureSettingsUpdated?.invoke(payload) else loadPreferences()
-            } else if (intent.action == "com.example.dynamicisland.BATTERY_UPDATE") {
-                globalBatteryLevel.value = intent.getIntExtra("level", 100); globalIsCharging.value = intent.getBooleanExtra("isCharging", false)
-            } else if (intent.action == "com.example.dynamicisland.TICKER_UPDATE") {
-                currentMediaPos.longValue = intent.getLongExtra("pos", 0L)
             }
         }
     }
 
     init {
         loadPreferences()
-        val filter = IntentFilter().apply { addAction("com.example.dynamicisland.RELOAD_PREFS"); addAction("com.example.dynamicisland.BATTERY_UPDATE"); addAction("com.example.dynamicisland.TICKER_UPDATE") }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED) else @Suppress("UnspecifiedRegisterReceiverFlag") context.registerReceiver(receiver, filter)
+        // 🚀 FIX: Only listen for RELOAD_PREFS
+        val filter = IntentFilter("com.example.dynamicisland.RELOAD_PREFS")
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            context.registerReceiver(receiver, filter)
+        }
         setViewTreeLifecycleOwner(lifecycleOwner); setViewTreeSavedStateRegistryOwner(lifecycleOwner); setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
 
         try {

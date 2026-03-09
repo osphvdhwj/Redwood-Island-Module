@@ -36,6 +36,7 @@ class IslandController(private val context: Context) {
     val splitModel = _splitModel.asStateFlow()
 
     private var currentMedia: LiveActivityModel.Music? = null
+    private var islandView: DynamicIslandView? = null
     private var currentHardware: LiveActivityModel.HardwareMonitor? = null
     private var transientModel: LiveActivityModel? = null
     private var transientJob: Job? = null
@@ -195,6 +196,7 @@ class IslandController(private val context: Context) {
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
         val view = DynamicIslandView(context, moduleContext)
+        this.islandView = view // 🚀 FIX: Store the reference
         view.windowManager = wm
         view.windowParams = params
 
@@ -425,7 +427,8 @@ class IslandController(private val context: Context) {
             while (isActive) { 
                 activeMediaController?.playbackState?.position?.let { pos -> 
                     (activeModel.value as? LiveActivityModel.Music)?.let { 
-                        context.sendBroadcast(Intent("com.example.dynamicisland.TICKER_UPDATE").putExtra("pos", pos))
+                        // 🚀 FIX: Direct memory update! Zero IPC overhead!
+                        islandView?.updateTicker(pos)
                     }
                 }
                 delay(1000) 
@@ -458,7 +461,8 @@ class IslandController(private val context: Context) {
              if (isCharging) { postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true), 4000L)
              } else { if (lastReportedBattery != -1 && level < lastReportedBattery) { if (level == 20 || level == 10 || level == 5) postTransientNotification(LiveActivityModel.Charging(id = "sys_battery_low", level = level, isPluggedIn = false, isTransient = true).copy(type = ActivityType.BATTERY_LOW), 6000L) } }
              lastReportedBattery = level
-             context.sendBroadcast(Intent("com.example.dynamicisland.BATTERY_UPDATE").putExtra("level", level).putExtra("isCharging", isCharging))
+             // 🚀 FIX: Direct memory update instead of illegal system broadcast!
+             islandView?.updateBattery(level, isCharging)
         }
         BatteryPlugin.start(context)
         scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; if (hw.isGamingModeOn || _activeModel.value is LiveActivityModel.HardwareMonitor) evaluatePriority() } }
