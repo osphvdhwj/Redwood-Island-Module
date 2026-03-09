@@ -506,3 +506,25 @@ import kotlinx.coroutines.channels.BufferOverflow
             modifier = Modifier.fillMaxSize()
         )
     }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    fun DynamicIslandView.RealityPillMini(model: LiveActivityModel.RealityPill) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
+        ) {
+            // A glowing green timer icon to indicate an active session
+            Icon(Icons.Default.Timer, contentDescription = "Session Time", tint = Color(0xFF00FF00), modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "${model.appName} • ${model.sessionMinutes}m",
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                modifier = Modifier.basicMarquee()
+            )
+        }
+    }

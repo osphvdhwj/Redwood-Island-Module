@@ -63,6 +63,11 @@ class IslandController(private val context: Context) {
     }
 
     // 🚀 NEW: THE ECOSYSTEM BRIDGE (Listens to your Battery Manager module)
+    // Global Config State in Memory
+    private var activeAppTimers = mapOf<String, Long>()
+    private var exemptedApps = setOf<String>()
+
+    // 🚀 THE MASTER ECOSYSTEM RECEIVER
     private val ecosystemReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             when (intent.action) {
@@ -90,31 +95,89 @@ class IslandController(private val context: Context) {
                         }
                     }
                 }
+                // 1. HARDWARE ALERTS
+                "com.crdroid.batterywellbeing.SYSTEM_ALERT" -> {
+                    val alertType = intent.getStringExtra("alertType") ?: "INFO"
+                    val title = intent.getStringExtra("title") ?: "System Alert"
+                    val message = intent.getStringExtra("message") ?: ""
+                    val colorHex = intent.getStringExtra("colorHex") ?: "#FFFFFF"
+
+                    val colorInt = try {
+                        android.graphics.Color.parseColor(colorHex)
+                    } catch(e: Exception) {
+                        android.graphics.Color.WHITE
+                    }
+
+                    val alert = LiveActivityModel.SystemAlert(
+                        id = "sys_alert_$alertType", alertType = alertType,
+                        title = title, message = message, alertColor = colorInt
+                    )
+                    postTransientNotification(alert, 5000L)
+                }
+
+                // 2. THE EXECUTIONER WARNING (60s)
                 "com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING" -> {
                     val pkg = intent.getStringExtra("package_name") ?: return
-                    val pm = context.packageManager
-                    var appName = pkg
-                    var appIcon: Bitmap? = null
+                    val providedAppName = intent.getStringExtra("app_name")
 
-                    try {
-                        val appInfo = pm.getApplicationInfo(pkg, 0)
-                        appName = pm.getApplicationLabel(appInfo).toString()
-                        val drawable = pm.getApplicationIcon(appInfo)
-                        val bmp = Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
-                        val canvas = android.graphics.Canvas(bmp)
-                        drawable.setBounds(0, 0, canvas.width, canvas.height)
-                        drawable.draw(canvas)
-                        appIcon = getScaledBitmap(bmp, 150)
-                    } catch (e: Exception) {}
+                    // Thread-safe Icon Extraction
+                    scope.launch(Dispatchers.IO) {
+                        val pm = context.packageManager
+                        var appName = providedAppName ?: pkg
+                        var appIcon: Bitmap? = null
 
-                    val warningModel = LiveActivityModel.AppTimerWarning(
-                        packageName = pkg,
-                        appName = appName,
-                        appIcon = appIcon,
-                        targetTimeMs = System.currentTimeMillis() + 60000L
-                    )
-                    // Lock the Island open for exactly 60 seconds
-                    postTransientNotification(warningModel, 60000L)
+                        try {
+                            val appInfo = pm.getApplicationInfo(pkg, 0)
+                            if (providedAppName == null) appName = pm.getApplicationLabel(appInfo).toString()
+
+                            val drawable = pm.getApplicationIcon(appInfo)
+                            val bmp = Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+                            val canvas = android.graphics.Canvas(bmp)
+                            drawable.setBounds(0, 0, canvas.width, canvas.height)
+                            drawable.draw(canvas)
+                            appIcon = getScaledBitmap(bmp, 150)
+                        } catch (e: Exception) {}
+
+                        val warningModel = LiveActivityModel.AppTimerWarning(
+                            packageName = pkg, appName = appName,
+                            appIcon = appIcon, targetTimeMs = System.currentTimeMillis() + 60000L
+                        )
+
+                        withContext(Dispatchers.Main) {
+                            postTransientNotification(warningModel, 60000L) // Locks open for 60s
+                        }
+                    }
+                }
+
+                // 3. THE REALITY PILL TICK
+                "com.crdroid.batterywellbeing.REALITY_PILL_TICK" -> {
+                    val appName = intent.getStringExtra("app_name") ?: "App"
+                    val sessionMinutes = intent.getIntExtra("session_minutes", 0)
+
+                    // If it's exempted (like ArchiveAll running a background compression), ignore the tick
+                    if (exemptedApps.contains(appName)) return
+
+                    val pillModel = LiveActivityModel.RealityPill(appName = appName, sessionMinutes = sessionMinutes)
+                    // Brief 3-second popup
+                    postTransientNotification(pillModel, 3000L)
+                }
+
+                // 4. GLOBAL CONFIG SYNC
+                "com.crdroid.batterywellbeing.SYNC_CONFIG" -> {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            val timersJson = intent.getStringExtra("timers_json") ?: "{}"
+                            val json = org.json.JSONObject(timersJson)
+                            val newTimers = mutableMapOf<String, Long>()
+                            json.keys().forEach { newTimers[it] = json.getLong(it) }
+
+                            val exemptionsCsv = intent.getStringExtra("exemptions_csv") ?: ""
+                            val newExemptions = exemptionsCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+
+                            activeAppTimers = newTimers
+                            exemptedApps = newExemptions
+                        } catch (e: Exception) {}
+                    }
                 }
             }
         }
@@ -379,7 +442,10 @@ class IslandController(private val context: Context) {
         // 🚀 Register Ecosystem Bridge
         val ecoFilter = IntentFilter().apply {
             addAction("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE")
+            addAction("com.crdroid.batterywellbeing.SYSTEM_ALERT")
             addAction("com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING")
+            addAction("com.crdroid.batterywellbeing.REALITY_PILL_TICK")
+            addAction("com.crdroid.batterywellbeing.SYNC_CONFIG")
         }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(ecosystemReceiver, ecoFilter, Context.RECEIVER_EXPORTED)

@@ -314,7 +314,15 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                         else if (model is LiveActivityModel.Charging) ChargingMid(model)
                                         else if (model is LiveActivityModel.SystemAlert) SystemAlertMid(model) // 🚀 ADD THIS LINE
                                     }
-                                    IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { if (model is LiveActivityModel.Music) MusicMini(model) else if (model is LiveActivityModel.General) GeneralMini(model) else if (model is LiveActivityModel.HardwareMonitor) HardwareGaugeMini(model) }
+                                    IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> {
+                                        when (model) {
+                                            is LiveActivityModel.Music -> MusicMini(model)
+                                            is LiveActivityModel.General -> GeneralMini(model)
+                                            is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model)
+                                            is LiveActivityModel.RealityPill -> RealityPillMini(model) // 🚀 RENDER PATH ADDED
+                                            else -> {}
+                                        }
+                                    }
                                     IslandState.TYPE_CUBE -> { if (model is LiveActivityModel.Charging) ChargingCube(model) }
                                     else -> {} 
                                 }

@@ -32,13 +32,23 @@ sealed class LiveActivityModel {
     abstract val isTransient: Boolean
 
     // 🚀 NEW: Universal System Alert Model for Ecosystem IPC
+    // 1. Updated System Alert (Now accepts dynamic Color Hex)
     data class SystemAlert(
         override val id: String,
         override val type: ActivityType = ActivityType.SYSTEM_ALERT,
         val alertType: String, // e.g., "THERMAL", "ROGUE"
         val title: String,
         val message: String,
-        val alertColor: Int,
+        val alertColor: Int, // Will be parsed from Hex
+        override val isTransient: Boolean = true
+    ) : LiveActivityModel()
+
+    // 2. NEW: The Reality Pill Tick
+    data class RealityPill(
+        override val id: String = "sys_reality_tick",
+        override val type: ActivityType = ActivityType.SYSTEM_ALERT,
+        val appName: String,
+        val sessionMinutes: Int,
         override val isTransient: Boolean = true
     ) : LiveActivityModel()
     // 🚀 NEW: The 60-Second Execution Warning
