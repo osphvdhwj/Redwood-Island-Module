@@ -123,8 +123,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
 
-    // 🚀 NEW: The Debouncer Flow
-    private val boundsUpdateFlow = MutableSharedFlow<android.graphics.Rect>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    // 🚀 THE FIX: A unified, thread-safe layout trigger
+    private val insetsUpdateFlow = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(
+        replay = 1,
+        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
+    )
 
     private fun loadPreferences() {
         try {
@@ -195,15 +198,15 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         composeView.setParentCompositionContext(recomposer)
         CoroutineScope(coroutineContext).launch { recomposer.runRecomposeAndApplyChanges() }
 
-        // 🚀 NEW: Safely debounce layout requests to save the Choreographer
+        // 🚀 THE FIX: Collects layout requests safely outside the Compose layout phase
         CoroutineScope(coroutineContext).launch {
-            boundsUpdateFlow.debounce(50).collect { rect ->
-                mainPillRect.set(rect)
-                composeView.requestLayout() // Much lighter than dispatchOnGlobalLayout!
+            insetsUpdateFlow.debounce(50).collect {
+                this@DynamicIslandView.requestLayout()
             }
         }
 
-        addView(composeView); lifecycleOwner.start()
+        addView(composeView)
+        lifecycleOwner.start()
     }
 
     @OptIn(ExperimentalAnimationApi::class)
@@ -275,10 +278,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         val globalRight = location[0] + bounds.right.toInt()
                         val globalBottom = location[1] + bounds.bottom.toInt()
 
-                        // 🚀 CHOREOGRAPHER FIX: Only fire if physical bounds change significantly
                         if (abs(mainPillRect.left - globalLeft) > 5 || abs(mainPillRect.bottom - globalBottom) > 5 || mainPillRect.isEmpty) {
                             mainPillRect.set(globalLeft, globalTop, globalRight, globalBottom)
-                            viewTreeObserver.dispatchOnGlobalLayout()
+                            insetsUpdateFlow.tryEmit(Unit) // 🚀 Safe emission, no direct ViewTree manipulation!
                         }
                     }
                     .width(width).height(height).clip(RoundedCornerShape(rad))
@@ -417,7 +419,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 val globalBottom = location[1] + bounds.bottom.toInt()
                                 if (abs(splitCubeRect.left - globalLeft) > 5 || splitCubeRect.isEmpty) {
                                     splitCubeRect.set(globalLeft, globalTop, globalRight, globalBottom)
-                                    viewTreeObserver.dispatchOnGlobalLayout()
+                                    insetsUpdateFlow.tryEmit(Unit) // 🚀 Safe emission!
                                 }
                             }
                             .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape), 
