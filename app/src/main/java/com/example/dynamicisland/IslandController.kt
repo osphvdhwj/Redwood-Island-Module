@@ -54,7 +54,14 @@ class IslandController(private val context: Context) {
     private var activeMediaController: MediaController? = null
     private var mediaTickerJob: Job? = null
 
-    private val sessionListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers -> updateActiveMediaController(controllers?.firstOrNull()) }
+    private fun getBestMediaController(controllers: List<MediaController>?): MediaController? {
+        if (controllers.isNullOrEmpty()) return null
+        // 🚀 LOGIC FIX: Prioritize playing media over paused background apps
+        return controllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+            ?: controllers.firstOrNull()
+    }
+
+    private val sessionListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers -> updateActiveMediaController(getBestMediaController(controllers)) }
 
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -146,6 +153,11 @@ class IslandController(private val context: Context) {
                                 drawable.setBounds(0, 0, canvas.width, canvas.height)
                                 drawable.draw(canvas)
                                 appIcon = getScaledBitmap(bmp, 150)
+
+                                // 🚀 MEMORY FIX: Destroy the raw bitmap immediately after scaling!
+                                if (bmp != appIcon) {
+                                    bmp.recycle()
+                                }
 
                                 // Save to cache for next time
                                 appIcon?.let { iconCache.put(pkg, it) }
@@ -366,7 +378,10 @@ class IslandController(private val context: Context) {
     }
 
     private fun setupMediaListener() {
-        try { mediaSessionManager.addOnActiveSessionsChangedListener(sessionListener, ComponentName(context, "com.example.dynamicisland.DummyListener")); updateActiveMediaController(mediaSessionManager.getActiveSessions(ComponentName(context, "com.example.dynamicisland.DummyListener")).firstOrNull()) } catch (e: Exception) {}
+        try {
+            mediaSessionManager.addOnActiveSessionsChangedListener(sessionListener, ComponentName(context, "com.example.dynamicisland.DummyListener"))
+            updateActiveMediaController(getBestMediaController(mediaSessionManager.getActiveSessions(ComponentName(context, "com.example.dynamicisland.DummyListener"))))
+        } catch (e: Exception) {}
     }
 
     private fun updateActiveMediaController(controller: MediaController?) {
@@ -419,6 +434,11 @@ class IslandController(private val context: Context) {
             drawable.setBounds(0, 0, canvas.width, canvas.height)
             drawable.draw(canvas)
             appIconBitmap = getScaledBitmap(bmp, 150)
+
+            // 🚀 MEMORY FIX: Destroy the raw bitmap immediately after scaling!
+            if (bmp != appIconBitmap) {
+                bmp.recycle()
+            }
         } catch (e: Exception) {}
 
         var bgColor: Int? = null; var txtColor: Int = android.graphics.Color.WHITE

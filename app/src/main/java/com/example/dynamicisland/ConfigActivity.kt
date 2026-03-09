@@ -39,7 +39,7 @@ class ConfigActivity : ComponentActivity() {
     @Composable
     fun ConfigScreen(prefs: android.content.SharedPreferences) {
         var selectedTab by remember { mutableIntStateOf(0) }
-        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures")
+        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures", "Pinning")
 
         var w by remember { mutableFloatStateOf(0f) }
         var h by remember { mutableFloatStateOf(0f) }
@@ -97,6 +97,36 @@ class ConfigActivity : ComponentActivity() {
                                             Spacer(Modifier.height(8.dp))
                                         }
                                     }
+                                }
+                            }
+                        }
+                    }
+                } else if (currentPrefix == "pinning") {
+                    // 🚀 NEW: Control Center App Pinning Matrix
+                    Text(text = "Control Center Shortcuts", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Select 4 apps to pin to your Max Dashboard.", fontSize = 14.sp, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // (Mockup for the UI)
+                    val pinnedApps = listOf("Slot 1", "Slot 2", "Slot 3", "Slot 4")
+                    pinnedApps.forEachIndexed { index, slot ->
+                        var expanded by remember { mutableStateOf(false) }
+                        var selectedApp by remember { mutableStateOf(prefs.getString("pinned_app_$index", "None") ?: "None") }
+
+                        @OptIn(ExperimentalMaterial3Api::class)
+                        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                            OutlinedTextField(
+                                value = selectedApp, onValueChange = {}, readOnly = true, label = { Text(slot) },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp)
+                            )
+                            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                // In production, fetch pm.getInstalledApplications() here
+                                listOf("None", "com.whatsapp", "com.maxrave.simpmusic", "org.telegram.messenger").forEach { app ->
+                                    DropdownMenuItem(text = { Text(app) }, onClick = {
+                                        selectedApp = app; prefs.edit().putString("pinned_app_$index", app).apply(); expanded = false
+                                        // broadcastUpdate() to IslandController
+                                    })
                                 }
                             }
                         }

@@ -293,19 +293,21 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             onLongPress = { onGestureEvent?.invoke(IslandGesture.LONG_PRESS) }
                         ) 
                     }
-                    .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragEnd = {
-                                if (abs(dragOffsetX) > abs(dragOffsetY)) {
-                                    if (abs(dragOffsetX) > 40f) onGestureEvent?.invoke(if (dragOffsetX > 0) IslandGesture.SWIPE_RIGHT else IslandGesture.SWIPE_LEFT)
-                                } else {
-                                    if (abs(dragOffsetY) > 40f) onGestureEvent?.invoke(if (dragOffsetY > 0) IslandGesture.SWIPE_DOWN else IslandGesture.SWIPE_UP)
+                    .pointerInput(state) { // 🚀 FIX: Re-evaluate when state changes
+                        if (state != IslandState.TYPE_3_MAX && state != IslandState.TYPE_SPLIT) { // 🚀 FIX: Let sliders work in MAX!
+                            detectDragGestures(
+                                onDragEnd = {
+                                    if (abs(dragOffsetX) > abs(dragOffsetY)) {
+                                        if (abs(dragOffsetX) > 40f) onGestureEvent?.invoke(if (dragOffsetX > 0) IslandGesture.SWIPE_RIGHT else IslandGesture.SWIPE_LEFT)
+                                    } else {
+                                        if (abs(dragOffsetY) > 40f) onGestureEvent?.invoke(if (dragOffsetY > 0) IslandGesture.SWIPE_DOWN else IslandGesture.SWIPE_UP)
+                                    }
+                                    dragOffsetX = 0f; dragOffsetY = 0f
                                 }
-                                dragOffsetX = 0f; dragOffsetY = 0f
+                            ) { change, dragAmount ->
+                                change.consume()
+                                dragOffsetX += dragAmount.x; dragOffsetY += dragAmount.y
                             }
-                        ) { change, dragAmount ->
-                            change.consume()
-                            dragOffsetX += dragAmount.x; dragOffsetY += dragAmount.y
                         }
                     },
                 contentAlignment = boxAlignment
@@ -319,7 +321,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     if (state != IslandState.HIDDEN) {
                         val bottomPadding by animateDpAsState(targetValue = when(state) { IslandState.TYPE_3_MAX -> 24.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> 12.dp; else -> 0.dp }, label = "bottomPadding")
                         Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
-                            AnimatedContent(targetState = state, transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "UI Transition") { s ->
+                            // 🚀 UX FIX: Liquid morphing illusion instead of ghosting crossfades
+                            AnimatedContent(
+                                targetState = state,
+                                transitionSpec = {
+                                    (fadeIn(animationSpec = tween(220, delayMillis = 90)) +
+                                     scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)))
+                                    .togetherWith(fadeOut(animationSpec = tween(90)))
+                                },
+                                label = "UI Transition"
+                            ) { s ->
                                 when (s) {
                                     IslandState.TYPE_3_MAX -> { if (model is LiveActivityModel.Dashboard) DashboardMax(model) else if (model is LiveActivityModel.Music) MusicMax(model) }
                                     IslandState.TYPE_2_MID -> { 
