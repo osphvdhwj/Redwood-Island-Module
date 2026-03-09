@@ -6,3 +6,8 @@
 
 # 3. Allow Compose to shrink safely
 -keepattributes *Annotation*
+
+# 🚀 PROGUARD FIX: Protect the data models from R8 obfuscation
+-keep class com.example.dynamicisland.LiveActivityModel** { *; }
+-keep class com.example.dynamicisland.IslandAction { *; }
+-keep class com.example.dynamicisland.IslandGesture { *; }

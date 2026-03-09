@@ -22,6 +22,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
+import android.util.LruCache
+import java.util.concurrent.ConcurrentHashMap
 
 class IslandController(private val context: Context) {
 
@@ -64,9 +66,14 @@ class IslandController(private val context: Context) {
     }
 
     // 🚀 NEW: THE ECOSYSTEM BRIDGE (Listens to your Battery Manager module)
-    // Global Config State in Memory
-    private var activeAppTimers = mapOf<String, Long>()
-    private var exemptedApps = setOf<String>()
+    // 🚀 CONCURRENCY FIX: Thread-safe collections
+    private val activeAppTimers = ConcurrentHashMap<String, Long>()
+    private val exemptedApps = ConcurrentHashMap.newKeySet<String>()
+
+    // 🚀 MEMORY FIX: 10MB LruCache for App Icons to prevent OOM fragmentation
+    private val iconCache = object : LruCache<String, Bitmap>(10 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+    }
 
     // 🚀 THE MASTER ECOSYSTEM RECEIVER
     private val ecosystemReceiver = object : BroadcastReceiver() {
@@ -121,23 +128,29 @@ class IslandController(private val context: Context) {
                     val pkg = intent.getStringExtra("package_name") ?: return
                     val providedAppName = intent.getStringExtra("app_name")
 
-                    // Thread-safe Icon Extraction
                     scope.launch(Dispatchers.IO) {
                         val pm = context.packageManager
                         var appName = providedAppName ?: pkg
-                        var appIcon: Bitmap? = null
 
-                        try {
-                            val appInfo = pm.getApplicationInfo(pkg, 0)
-                            if (providedAppName == null) appName = pm.getApplicationLabel(appInfo).toString()
+                        // 🚀 MEMORY FIX: Check the cache first!
+                        var appIcon: Bitmap? = iconCache.get(pkg)
 
-                            val drawable = pm.getApplicationIcon(appInfo)
-                            val bmp = Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
-                            val canvas = android.graphics.Canvas(bmp)
-                            drawable.setBounds(0, 0, canvas.width, canvas.height)
-                            drawable.draw(canvas)
-                            appIcon = getScaledBitmap(bmp, 150)
-                        } catch (e: Exception) {}
+                        if (appIcon == null) {
+                            try {
+                                val appInfo = pm.getApplicationInfo(pkg, 0)
+                                if (providedAppName == null) appName = pm.getApplicationLabel(appInfo).toString()
+
+                                val drawable = pm.getApplicationIcon(appInfo)
+                                val bmp = Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+                                val canvas = android.graphics.Canvas(bmp)
+                                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                                drawable.draw(canvas)
+                                appIcon = getScaledBitmap(bmp, 150)
+
+                                // Save to cache for next time
+                                appIcon?.let { iconCache.put(pkg, it) }
+                            } catch (e: Exception) {}
+                        }
 
                         val warningModel = LiveActivityModel.AppTimerWarning(
                             packageName = pkg, appName = appName,
@@ -145,7 +158,7 @@ class IslandController(private val context: Context) {
                         )
 
                         withContext(Dispatchers.Main) {
-                            postTransientNotification(warningModel, 60000L) // Locks open for 60s
+                            postTransientNotification(warningModel, 60000L)
                         }
                     }
                 }
@@ -168,15 +181,18 @@ class IslandController(private val context: Context) {
                     scope.launch(Dispatchers.IO) {
                         try {
                             val timersJson = intent.getStringExtra("timers_json") ?: "{}"
+                            // 🚀 SECURITY FIX: JSON Bomb Protection
+                            if (timersJson.length > 5000) return@launch
+
                             val json = org.json.JSONObject(timersJson)
-                            val newTimers = mutableMapOf<String, Long>()
-                            json.keys().forEach { newTimers[it] = json.getLong(it) }
+                            activeAppTimers.clear()
+                            json.keys().forEach { activeAppTimers[it] = json.getLong(it) }
 
                             val exemptionsCsv = intent.getStringExtra("exemptions_csv") ?: ""
-                            val newExemptions = exemptionsCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+                            if (exemptionsCsv.length > 2000) return@launch // Length check
 
-                            activeAppTimers = newTimers
-                            exemptedApps = newExemptions
+                            exemptedApps.clear()
+                            exemptionsCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { exemptedApps.add(it) }
                         } catch (e: Exception) {}
                     }
                 }
@@ -443,6 +459,7 @@ class IslandController(private val context: Context) {
         context.registerComponentCallbacks(componentCallbacks)
         
         // 🚀 Register Ecosystem Bridge
+        // 🚀 SECURITY FIX: Register receiver with strict Signature Permission
         val ecoFilter = IntentFilter().apply {
             addAction("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE")
             addAction("com.crdroid.batterywellbeing.SYSTEM_ALERT")
@@ -450,11 +467,14 @@ class IslandController(private val context: Context) {
             addAction("com.crdroid.batterywellbeing.REALITY_PILL_TICK")
             addAction("com.crdroid.batterywellbeing.SYNC_CONFIG")
         }
+
+        val securePermission = "com.redwood.permission.SECURE_IPC"
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(ecosystemReceiver, ecoFilter, Context.RECEIVER_EXPORTED)
+            context.registerReceiver(ecosystemReceiver, ecoFilter, securePermission, null, Context.RECEIVER_EXPORTED)
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
-            context.registerReceiver(ecosystemReceiver, ecoFilter)
+            context.registerReceiver(ecosystemReceiver, ecoFilter, securePermission, null)
         }
 
         BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
