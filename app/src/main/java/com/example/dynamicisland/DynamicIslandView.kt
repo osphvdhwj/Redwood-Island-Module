@@ -320,11 +320,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 when (s) {
                                     IslandState.TYPE_3_MAX -> { if (model is LiveActivityModel.Dashboard) DashboardMax(model) else if (model is LiveActivityModel.Music) MusicMax(model) }
                                     IslandState.TYPE_2_MID -> { 
-                                        if (model is LiveActivityModel.Dashboard) DashboardMid(model) 
-                                        else if (model is LiveActivityModel.Music) MusicMid(model) 
-                                        else if (model is LiveActivityModel.General) GeneralMid(model) 
-                                        else if (model is LiveActivityModel.Charging) ChargingMid(model)
-                                        else if (model is LiveActivityModel.SystemAlert) SystemAlertMid(model) // 🚀 ADD THIS LINE
+                                        when (model) {
+                                            is LiveActivityModel.Dashboard -> DashboardMid(model)
+                                            is LiveActivityModel.Music -> MusicMid(model)
+                                            is LiveActivityModel.General -> GeneralMid(model)
+                                            is LiveActivityModel.Charging -> ChargingMid(model)
+                                            is LiveActivityModel.SystemAlert -> SystemAlertMid(model)
+                                            // 🚀 FIX: The missing render path!
+                                            is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model)
+                                            else -> {}
+                                        }
                                     }
                                     IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> {
                                         when (model) {
