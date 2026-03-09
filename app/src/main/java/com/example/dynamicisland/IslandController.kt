@@ -188,11 +188,8 @@ class IslandController(private val context: Context) {
             isLandscape = newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
             if (isLandscape) _islandState.value = IslandState.HIDDEN else evaluatePriority()
         }
-        
-        @Suppress("DEPRECATION") // 🚀 FIX: Acknowledge the deprecated override
-        override fun onLowMemory() {
-            // This is left empty as required by the interface
-        }
+        @Deprecated("Deprecated in Java") // 🚀 FIX: Suppress Android's deprecated interface requirement
+        override fun onLowMemory() {}
     }
 
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
