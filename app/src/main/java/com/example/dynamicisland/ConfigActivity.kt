@@ -77,7 +77,9 @@ class ConfigActivity : ComponentActivity() {
                     
                     val states = listOf("Ring" to "TYPE_0_RING", "Mini Pill" to "TYPE_1_MINI", "Mid Pill" to "TYPE_2_MID", "Max Pill" to "TYPE_3_MAX")
                     val gestures = IslandGesture.values()
-                    val actionOptions = IslandAction.values().map { it.name }
+
+                    // Creates a clean, readable list: "None", "Play Pause", "Volume Up", etc.
+                    val actionOptions = IslandAction.values().map { it.name.replace("_", " ") }
 
                     states.forEach { (label, stateKey) ->
                         var expanded by remember { mutableStateOf(false) }

@@ -243,7 +243,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             if (state == IslandState.HIDDEN) {
                 wp.width = 0; wp.height = 0; wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             } else if (state == IslandState.TYPE_CUBE || state == IslandState.TYPE_SPLIT) {
-                wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = WindowManager.LayoutParams.MATCH_PARENT; wp.x = 0; wp.y = 0
+                // 🚀 FIX: Removed MATCH_PARENT height. This prevents the entire screen from freezing!
+                wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = ((maxH.value + 150) * density).toInt(); wp.x = 0; wp.y = 0
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND; wp.blurBehindRadius = 45 }
             } else {
                 wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = ((maxH.value + 150) * density).toInt(); wp.x = 0; wp.y = 0
@@ -357,16 +358,43 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     if (state == IslandState.TYPE_0_RING) {
                         val musicModel = model as? LiveActivityModel.Music
                         val isMedia = musicModel != null && musicModel.isPlaying
-                        val shouldShowRing = isMedia || globalIsCharging.value || globalBatteryLevel.value <= 20
+                        val shouldShowRing = isMedia || globalIsCharging.value || globalBatteryLevel.intValue <= 20
+
                         if (shouldShowRing) {
                             val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
-                            val progress = if (isMedia) (currentMediaPos.longValue.toFloat() / safeDur) else globalBatteryLevel.value / 100f
-                            val progressColor = if (isMedia) Color.White else if (globalIsCharging.value) Color.Green else if (globalBatteryLevel.value <= 20) Color.Red else Color.White
+                            val progress = if (isMedia) (currentMediaPos.longValue.toFloat() / safeDur) else globalBatteryLevel.intValue / 100f
                             
+                            // 🚀 FIX: Dynamic Media Colors
+                            val baseColor = if (isMedia) {
+                                musicModel?.dominantColor?.let { Color(it) } ?: Color.White
+                            } else if (globalIsCharging.value) {
+                                Color.Green
+                            } else if (globalBatteryLevel.intValue <= 20) {
+                                Color.Red
+                            } else {
+                                Color.White
+                            }
+
+                            // 🚀 FIX: Charging Pulsing Animation
+                            val infiniteTransition = rememberInfiniteTransition(label = "ring_pulse")
+                            val pulseAlpha by infiniteTransition.animateFloat(
+                                initialValue = if (globalIsCharging.value && !isMedia) 0.3f else 1f,
+                                targetValue = 1f,
+                                animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                                label = "alpha"
+                            )
+                            val progressColor = baseColor.copy(alpha = pulseAlpha)
+
                             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
                                 val strokeW = ringThickness.value.dp.toPx() 
-                                drawArc(color = progressColor.copy(alpha=0.2f), startAngle = -90f, sweepAngle = 360f, useCenter = false, style = Stroke(strokeW))
-                                drawArc(color = progressColor, startAngle = -90f, sweepAngle = 360f * progress.coerceIn(0f, 1f), useCenter = false, style = Stroke(strokeW, cap = StrokeCap.Round))
+
+                                // 🚀 FIX: Perfect Stroke Math to prevent thickness clipping
+                                val inset = strokeW / 2
+                                val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
+                                val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
+
+                                drawArc(color = baseColor.copy(alpha=0.15f), startAngle = -90f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
+                                drawArc(color = progressColor, startAngle = -90f, sweepAngle = 360f * progress.coerceIn(0f, 1f), useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round))
                             }
                         }
                     }
