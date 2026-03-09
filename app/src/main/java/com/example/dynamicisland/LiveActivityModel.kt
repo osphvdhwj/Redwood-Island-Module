@@ -69,6 +69,7 @@ sealed class LiveActivityModel {
         val title: String,
         val artist: String,
         val albumArt: Bitmap? = null,
+        val blurredAlbumArt: Bitmap? = null, // 🚀 FIX: Pre-blurred background bitmap
         val appIcon: Bitmap? = null,
         val dominantColor: Int? = null,
         val titleTextColor: Int = android.graphics.Color.WHITE, 

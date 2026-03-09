@@ -441,12 +441,49 @@ class IslandController(private val context: Context) {
             }
         } catch (e: Exception) {}
 
+        var blurredArtBitmap: Bitmap? = null
+
         var bgColor: Int? = null; var txtColor: Int = android.graphics.Color.WHITE
-        if (albumArtBitmap != null) { val palette = Palette.from(albumArtBitmap).generate(); val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch; if (swatch != null) { bgColor = swatch.rgb; txtColor = swatch.bodyTextColor } }
+        if (albumArtBitmap != null) {
+            // 🚀 CHOREOGRAPHER FIX: Pre-blur the background on the IO Thread!
+            @Suppress("DEPRECATION")
+            try {
+                val rs = android.renderscript.RenderScript.create(context)
+                val input = android.renderscript.Allocation.createFromBitmap(rs, albumArtBitmap)
+                val output = android.renderscript.Allocation.createTyped(rs, input.type)
+                val script = android.renderscript.ScriptIntrinsicBlur.create(rs, android.renderscript.Element.U8_4(rs))
+                script.setRadius(24f) // Maximum blur radius
+                script.setInput(input)
+                script.forEach(output)
+                blurredArtBitmap = Bitmap.createBitmap(albumArtBitmap.width, albumArtBitmap.height, albumArtBitmap.config ?: Bitmap.Config.ARGB_8888)
+                output.copyTo(blurredArtBitmap)
+                rs.destroy()
+            } catch (e: Exception) {
+                blurredArtBitmap = albumArtBitmap // Fallback if RenderScript fails
+            }
+
+            // 🚀 CONTRAST FIX: Calculate mathematical luminance
+            val palette = Palette.from(albumArtBitmap).generate()
+            val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
+            if (swatch != null) {
+                bgColor = swatch.rgb
+                val luminance = androidx.core.graphics.ColorUtils.calculateLuminance(bgColor)
+                // If the background is too bright (>0.5 luminance), flip text to Black
+                txtColor = if (luminance > 0.5) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+            }
+        }
 
         val extractedActions = pbState.customActions.map { CustomMediaAction(actionName = it.action, icon = null, pendingIntent = null, isEnabled = true) }
 
-        currentMedia = LiveActivityModel.Music(id = "media_main", title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown", artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown", albumArt = albumArtBitmap, appIcon = appIconBitmap, dominantColor = bgColor, titleTextColor = txtColor, isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position, appPackageName = controller.packageName, customActions = extractedActions)
+        currentMedia = LiveActivityModel.Music(
+            id = "media_main", title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown",
+            artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
+            albumArt = albumArtBitmap,
+            blurredAlbumArt = blurredArtBitmap, // 🚀 Passed here
+            appIcon = appIconBitmap, dominantColor = bgColor, titleTextColor = txtColor,
+            isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position,
+            appPackageName = controller.packageName, customActions = extractedActions
+        )
 
         if (isPlaying && !wasPlaying) { userForceCollapsed = false; pauseFadeJob?.cancel() }
         if (isPlaying) { startMediaTicker() } else {

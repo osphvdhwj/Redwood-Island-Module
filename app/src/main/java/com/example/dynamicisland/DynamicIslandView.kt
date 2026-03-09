@@ -212,6 +212,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     @OptIn(ExperimentalAnimationApi::class)
     @Composable
     fun IslandUI(state: IslandState) {
+        val haptic = LocalHapticFeedback.current // 🚀 FIX: Haptic Engine
         val targetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
         val targetHeight = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniH.value; IslandState.TYPE_2_MID -> midH.value; IslandState.TYPE_3_MAX -> maxH.value; IslandState.TYPE_CUBE -> cubeH.value; else -> ringH.value }
         val targetX = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value; IslandState.TYPE_2_MID -> midX.value; IslandState.TYPE_3_MAX -> maxX.value; IslandState.TYPE_CUBE -> cubeX.value; else -> ringX.value }
@@ -288,19 +289,25 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     // 🚀 UNIFIED TAP & DRAG ENGINE
                     .pointerInput(Unit) { 
                         detectTapGestures(
-                            onTap = { onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) }, 
-                            onDoubleTap = { onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) }, 
-                            onLongPress = { onGestureEvent?.invoke(IslandGesture.LONG_PRESS) }
+                            onTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) },
+                            onDoubleTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) },
+                            onLongPress = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) } // Heavy thud
                         ) 
                     }
-                    .pointerInput(state) { // 🚀 FIX: Re-evaluate when state changes
-                        if (state != IslandState.TYPE_3_MAX && state != IslandState.TYPE_SPLIT) { // 🚀 FIX: Let sliders work in MAX!
+                    .pointerInput(state) { // 🚀 GESTURE CONFLICT FIX: Pass 'state' as key
+                        if (state != IslandState.TYPE_3_MAX && state != IslandState.TYPE_SPLIT) { // Free the sliders!
                             detectDragGestures(
                                 onDragEnd = {
                                     if (abs(dragOffsetX) > abs(dragOffsetY)) {
-                                        if (abs(dragOffsetX) > 40f) onGestureEvent?.invoke(if (dragOffsetX > 0) IslandGesture.SWIPE_RIGHT else IslandGesture.SWIPE_LEFT)
+                                        if (abs(dragOffsetX) > 40f) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            onGestureEvent?.invoke(if (dragOffsetX > 0) IslandGesture.SWIPE_RIGHT else IslandGesture.SWIPE_LEFT)
+                                        }
                                     } else {
-                                        if (abs(dragOffsetY) > 40f) onGestureEvent?.invoke(if (dragOffsetY > 0) IslandGesture.SWIPE_DOWN else IslandGesture.SWIPE_UP)
+                                        if (abs(dragOffsetY) > 40f) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            onGestureEvent?.invoke(if (dragOffsetY > 0) IslandGesture.SWIPE_DOWN else IslandGesture.SWIPE_UP)
+                                        }
                                     }
                                     dragOffsetX = 0f; dragOffsetY = 0f
                                 }
