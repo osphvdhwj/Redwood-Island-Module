@@ -45,6 +45,7 @@ class IslandController(private val context: Context) {
     private var pauseFadeJob: Job? = null
     private var userForceCollapsed = false 
     private var lastReportedBattery = -1
+    private var wasCharging = false // 🚀 FIX: Track previous charging state
     private var isScreenOn = true 
     private var isLandscape = false
 
@@ -572,10 +573,18 @@ class IslandController(private val context: Context) {
         }
 
         BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
-             if (isCharging) { postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true), 4000L)
-             } else { if (lastReportedBattery != -1 && level < lastReportedBattery) { if (level == 20 || level == 10 || level == 5) postTransientNotification(LiveActivityModel.Charging(id = "sys_battery_low", level = level, isPluggedIn = false, isTransient = true).copy(type = ActivityType.BATTERY_LOW), 6000L) } }
+             // 🚀 SPAM FIX: Only show Cube if it JUST plugged in!
+             if (isCharging && !wasCharging) {
+                 postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true), 4000L)
+             } else if (!isCharging) {
+                 if (lastReportedBattery != -1 && level < lastReportedBattery) {
+                     if (level == 20 || level == 10 || level == 5) postTransientNotification(LiveActivityModel.Charging(id = "sys_battery_low", level = level, isPluggedIn = false, isTransient = true).copy(type = ActivityType.BATTERY_LOW), 6000L)
+                 }
+             }
+
+             wasCharging = isCharging
              lastReportedBattery = level
-             // 🚀 FIX: Direct memory update instead of illegal system broadcast!
+             // Direct memory update for the R ring
              islandView?.updateBattery(level, isCharging)
         }
         BatteryPlugin.start(context)
