@@ -213,7 +213,15 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     @Composable
     fun IslandUI(state: IslandState) {
         val haptic = LocalHapticFeedback.current // 🚀 FIX: Haptic Engine
-        val targetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
+        // 🚀 HARDWARE FIX: Prevent light bleed by clamping to physical display cutout
+        val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            windowManager?.currentWindowMetrics?.windowInsets?.displayCutout
+        } else null
+        val minWidth = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / LocalContext.current.resources.displayMetrics.density
+        val minSafeWidth = minWidth + 4f // 2px hardware padding on each side
+
+        val rawTargetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
+        val targetWidth = rawTargetWidth.coerceAtLeast(minSafeWidth)
         val targetHeight = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniH.value; IslandState.TYPE_2_MID -> midH.value; IslandState.TYPE_3_MAX -> maxH.value; IslandState.TYPE_CUBE -> cubeH.value; else -> ringH.value }
         val targetX = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value; IslandState.TYPE_2_MID -> midX.value; IslandState.TYPE_3_MAX -> maxX.value; IslandState.TYPE_CUBE -> cubeX.value; else -> ringX.value }
         val targetY = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value; IslandState.TYPE_2_MID -> midY.value; IslandState.TYPE_3_MAX -> maxY.value; IslandState.TYPE_CUBE -> cubeY.value; else -> ringY.value }
@@ -238,21 +246,29 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.15f), animationSpec = tween(600), label = "borderColor")
 
-        LaunchedEffect(state) {
+        // 🚀 Observe both state AND model to trigger privacy updates instantly
+        LaunchedEffect(state, model) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
             val density = context.resources.displayMetrics.density
 
+            // 🚀 SECURITY FIX: Dynamic Privacy Masking for Screen Recorders
+            if (model?.isSensitive == true) {
+                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE
+            } else {
+                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv()
+            }
+
             if (state == IslandState.HIDDEN) {
                 wp.width = 0; wp.height = 0; wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
-            } else if (state == IslandState.TYPE_CUBE || state == IslandState.TYPE_SPLIT) {
-                // 🚀 FIX: Removed MATCH_PARENT height. This prevents the entire screen from freezing!
-                wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = ((maxH.value + 150) * density).toInt(); wp.x = 0; wp.y = 0
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND; wp.blurBehindRadius = 45 }
             } else {
                 wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = ((maxH.value + 150) * density).toInt(); wp.x = 0; wp.y = 0
-                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
+                if (state == IslandState.TYPE_CUBE || state == IslandState.TYPE_SPLIT) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND; wp.blurBehindRadius = 45 }
+                } else {
+                    wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
+                }
             }
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
         }
@@ -294,25 +310,44 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             onLongPress = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) } // Heavy thud
                         ) 
                     }
-                    .pointerInput(state) { // 🚀 GESTURE CONFLICT FIX: Pass 'state' as key
-                        if (state != IslandState.TYPE_3_MAX && state != IslandState.TYPE_SPLIT) { // Free the sliders!
+                    .pointerInput(state) {
+                        if (state != IslandState.TYPE_3_MAX && state != IslandState.TYPE_SPLIT) {
+                            val velocityTracker = androidx.compose.ui.input.pointer.util.VelocityTracker() // 🚀 KINETIC FIX
+
                             detectDragGestures(
+                                onDragStart = { velocityTracker.resetTracking() },
                                 onDragEnd = {
-                                    if (abs(dragOffsetX) > abs(dragOffsetY)) {
-                                        if (abs(dragOffsetX) > 40f) {
+                                    val velocity = velocityTracker.calculateVelocity()
+                                    val isFling = abs(velocity.x) > 800f || abs(velocity.y) > 800f
+
+                                    if (isFling) {
+                                        // Trigger based on kinetic velocity
+                                        if (abs(velocity.x) > abs(velocity.y)) {
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            onGestureEvent?.invoke(if (dragOffsetX > 0) IslandGesture.SWIPE_RIGHT else IslandGesture.SWIPE_LEFT)
+                                            onGestureEvent?.invoke(if (velocity.x > 0) IslandGesture.SWIPE_RIGHT else IslandGesture.SWIPE_LEFT)
+                                        } else {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            onGestureEvent?.invoke(if (velocity.y > 0) IslandGesture.SWIPE_DOWN else IslandGesture.SWIPE_UP)
                                         }
                                     } else {
-                                        if (abs(dragOffsetY) > 40f) {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            onGestureEvent?.invoke(if (dragOffsetY > 0) IslandGesture.SWIPE_DOWN else IslandGesture.SWIPE_UP)
+                                        // Fallback to spatial distance if it was a slow drag
+                                        if (abs(dragOffsetX) > abs(dragOffsetY)) {
+                                            if (abs(dragOffsetX) > 40f) {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                onGestureEvent?.invoke(if (dragOffsetX > 0) IslandGesture.SWIPE_RIGHT else IslandGesture.SWIPE_LEFT)
+                                            }
+                                        } else {
+                                            if (abs(dragOffsetY) > 40f) {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                onGestureEvent?.invoke(if (dragOffsetY > 0) IslandGesture.SWIPE_DOWN else IslandGesture.SWIPE_UP)
+                                            }
                                         }
                                     }
                                     dragOffsetX = 0f; dragOffsetY = 0f
                                 }
                             ) { change, dragAmount ->
                                 change.consume()
+                                velocityTracker.addPosition(change.uptimeMillis, change.position) // Track speed
                                 dragOffsetX += dragAmount.x; dragOffsetY += dragAmount.y
                             }
                         }

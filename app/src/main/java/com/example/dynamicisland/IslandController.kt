@@ -66,8 +66,18 @@ class IslandController(private val context: Context) {
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                Intent.ACTION_SCREEN_OFF -> { isScreenOn = false; stopMediaTicker() }
-                Intent.ACTION_SCREEN_ON -> { isScreenOn = true; if (currentMedia?.isPlaying == true) startMediaTicker() }
+                Intent.ACTION_SCREEN_OFF -> {
+                    isScreenOn = false
+                    stopMediaTicker()
+                    // 🚀 HARDWARE FIX: Prevent OLED Burn-In by nuking the UI on AOD
+                    _islandState.value = IslandState.HIDDEN
+                }
+                Intent.ACTION_SCREEN_ON -> {
+                    isScreenOn = true
+                    if (currentMedia?.isPlaying == true) startMediaTicker()
+                    // 🚀 Restore the correct state when the screen wakes up
+                    evaluatePriority()
+                }
             }
         }
     }
