@@ -65,6 +65,7 @@ import androidx.savedstate.*
 import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 import kotlin.math.abs
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.debounce
@@ -128,6 +129,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onSeekTo: ((Long) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
 
+    private var viewScope: CoroutineScope? = null
     private val lifecycleOwner = OverlayLifecycleOwner()
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
@@ -195,14 +197,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     init {
         loadPreferences()
-        // 🚀 FIX: Only listen for RELOAD_PREFS
-        val filter = IntentFilter("com.example.dynamicisland.RELOAD_PREFS")
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
-        } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            context.registerReceiver(receiver, filter)
-        }
         setViewTreeLifecycleOwner(lifecycleOwner); setViewTreeSavedStateRegistryOwner(lifecycleOwner); setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
 
         try {
@@ -236,16 +230,40 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val coroutineContext = AndroidUiDispatcher.CurrentThread; val recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
         composeView.setParentCompositionContext(recomposer)
         CoroutineScope(coroutineContext).launch { recomposer.runRecomposeAndApplyChanges() }
+        addView(composeView)
+        lifecycleOwner.start()
+    }
 
-        // 🚀 THE FIX: Collects layout requests safely outside the Compose layout phase
-        CoroutineScope(coroutineContext).launch {
+    // 🚀 MEMORY LEAK FIX: Only listen when the view actually exists on screen
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+
+        // 1. Start the layout debouncer safely
+        viewScope = CoroutineScope(AndroidUiDispatcher.CurrentThread)
+        viewScope?.launch {
             insetsUpdateFlow.debounce(50).collect {
                 this@DynamicIslandView.requestLayout()
             }
         }
 
-        addView(composeView)
-        lifecycleOwner.start()
+        // 2. Register the IPC Receiver
+        val filter = IntentFilter("com.example.dynamicisland.RELOAD_PREFS")
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            context.registerReceiver(receiver, filter)
+        }
+    }
+
+    // 🚀 MEMORY LEAK FIX: Destroy everything when the view dies to free up RAM
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+                viewScope?.cancel() // Kill the coroutine
+        viewScope = null
+        try {
+            context.unregisterReceiver(receiver) // Free the broadcast registry
+        } catch (e: Exception) {}
     }
 
     @OptIn(ExperimentalAnimationApi::class)

@@ -284,7 +284,23 @@ class IslandController(private val context: Context) {
                 "OPEN_APP" -> {
                     val model = _activeModel.value
                     if (model is LiveActivityModel.Music && model.appPackageName.isNotEmpty()) {
-                        try { val launchIntent = context.packageManager.getLaunchIntentForPackage(model.appPackageName); launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK); launchIntent?.let { context.startActivity(it) } } catch (e: Exception) {}
+                        try {
+                            val launchIntent = context.packageManager.getLaunchIntentForPackage(model.appPackageName)
+                            if (launchIntent != null) {
+                                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+
+                                // 🚀 OS RESTRICTION FIX: Bypass Android 14 BAL restrictions!
+                                val pendingIntent = PendingIntent.getActivity(
+                                    context, 0, launchIntent,
+                                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                                )
+                                val options = android.app.ActivityOptions.makeBasic()
+                                if (android.os.Build.VERSION.SDK_INT >= 34) { // Android 14+
+                                    options.pendingIntentBackgroundActivityStartMode = android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                                }
+                                pendingIntent.send(context, 0, null, null, null, null, options.toBundle())
+                            }
+                        } catch (e: Exception) {}
                     }
                 }
                 "HEART_SONG" -> {
