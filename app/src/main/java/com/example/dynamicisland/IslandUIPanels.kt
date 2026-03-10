@@ -65,43 +65,34 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.channels.BufferOverflow
 
-    // 🚀 NEW: PREMIUM GLASSMORPHISM SYSTEM OVERRIDE CHARGING ANIMATION
+    // 🚀 RESTORED: Clean, snappy Charging Cube without the laggy full-screen blur
     @Composable
     fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
         val color = if (model.isPluggedIn) Color.Green else if (model.level <= 20) Color.Red else Color.White
 
-        val transition = updateTransition(targetState = true, label = "cube_override")
-        val scale by transition.animateFloat(
-            transitionSpec = { spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow) },
+        val infiniteTransition = rememberInfiniteTransition(label = "cube_pulse")
+        val pulseScale by infiniteTransition.animateFloat(
+            initialValue = 0.85f,
+            targetValue = 1.15f,
+            animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
             label = "scale"
-        ) { state -> if (state) 1f else 0.5f }
+        )
 
-        val blurRadius by transition.animateDp(
-            transitionSpec = { tween(durationMillis = 600, easing = FastOutSlowInEasing) },
-            label = "blur"
-        ) { state -> if (state) 32.dp else 0.dp }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.4f))
-                .blur(blurRadius),
-            contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    shadowElevation = 16.dp.toPx()
-                    shape = CircleShape
-                    clip = false
-                }
-            ) {
-                Icon(imageVector = if (model.isPluggedIn) Icons.Default.Add else Icons.Default.Warning, contentDescription = null, tint = color, modifier = Modifier.size(36.dp))
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "${model.level}%", color = color, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-            }
+            Icon(
+                imageVector = if (model.isPluggedIn) Icons.Default.Add else Icons.Default.Warning,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier
+                    .size(36.dp)
+                    .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = "${model.level}%", color = color, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
         }
     }
 

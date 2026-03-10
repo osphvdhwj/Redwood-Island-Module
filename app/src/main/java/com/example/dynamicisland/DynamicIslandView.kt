@@ -341,17 +341,19 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     .clip(RoundedCornerShape(rad))
                     .background(bgColor).border(1.dp, borderColor, RoundedCornerShape(rad))
                     // 🚀 UNIFIED TAP & DRAG ENGINE
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onPress = {
-                                isSquished = true
-                                tryAwaitRelease() // Waits for the user to lift their finger
-                                isSquished = false
-                            },
-                            onTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) },
-                            onDoubleTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) },
-                            onLongPress = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) }
-                        )
+                    .pointerInput(state) {
+                        if (state != IslandState.TYPE_3_MAX) { // 🚀 UX FIX: Disable root squish/tap in MAX state so sliders work flawlessly!
+                            detectTapGestures(
+                                onPress = {
+                                    isSquished = true
+                                    tryAwaitRelease()
+                                    isSquished = false
+                                },
+                                onTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) },
+                                onDoubleTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) },
+                                onLongPress = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) }
+                            )
+                        }
                     }
                     .pointerInput(state) {
                         val velocityTracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
@@ -516,8 +518,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 }
                             }
                             .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape)
-                            // 🚀 THE FIX: Independent interaction!
-                            .clickable { onSplitPillClick?.invoke() },
+                            // 🚀 UX FIX: Remove the cheap grey Android ripple effect
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onSplitPillClick?.invoke() },
                         contentAlignment = Alignment.Center) {
                         if (sModel is LiveActivityModel.Charging) { val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White; Text(text = "${sModel.level}%", color = iconColor, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
                     }
