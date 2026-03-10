@@ -361,7 +361,10 @@ class IslandController(private val context: Context) {
         }
         
         if (transientModel != null) {
-            if (transientModel is LiveActivityModel.SystemAlert || transientModel is LiveActivityModel.AppTimerWarning) {
+            // 🚀 GAMING FIX: Don't show battery/charging cubes if user is gaming!
+            if (currentHardware?.isGamingModeOn == true && transientModel is LiveActivityModel.Charging) {
+                // Ignore the popup, leave Island hidden or in mini mode
+            } else if (transientModel is LiveActivityModel.SystemAlert || transientModel is LiveActivityModel.AppTimerWarning) {
                 _activeModel.value = transientModel
                 _splitModel.value = null
                 _islandState.value = IslandState.TYPE_2_MID

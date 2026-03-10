@@ -219,13 +219,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     @Composable
     fun IslandUI(state: IslandState) {
         val haptic = LocalHapticFeedback.current // 🚀 FIX: Haptic Engine
-        // 🚀 IOS SQUISH PHYSICS: Track the user's physical finger press
-        val interactionSource = remember { MutableInteractionSource() }
-        val isPressed by interactionSource.collectIsPressedAsState()
+        // 🚀 FIX: Unified Squish Physics & Tap Detection
+        var isSquished by remember { mutableStateOf(false) }
         val touchScale by animateFloatAsState(
-            targetValue = if (isPressed) 0.96f else 1f,
-            animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
-            label = "squish"
+            targetValue = if (isSquished) 0.96f else 1f,
+            animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "squish"
         )
         // 🚀 HARDWARE FIX: Prevent light bleed by clamping to physical display cutout
         val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
@@ -318,18 +316,18 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     .graphicsLayer { scaleX = touchScale; scaleY = touchScale }
                     .clip(RoundedCornerShape(rad))
                     .background(bgColor).border(1.dp, borderColor, RoundedCornerShape(rad))
-                    // 🚀 LINK INTERACTION SOURCE FOR SQUISH
-                    .clickable(
-                        interactionSource = interactionSource,
-                        indication = null, // Removes Android's ugly default ripple
-                        onClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) }
-                    )
                     // 🚀 UNIFIED TAP & DRAG ENGINE
-                    .pointerInput(Unit) { 
+                    .pointerInput(Unit) {
                         detectTapGestures(
+                            onPress = {
+                                isSquished = true
+                                tryAwaitRelease() // Waits for the user to lift their finger
+                                isSquished = false
+                            },
+                            onTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) },
                             onDoubleTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) },
-                            onLongPress = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) } // Heavy thud
-                        ) 
+                            onLongPress = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) }
+                        )
                     }
                     .pointerInput(state) {
                         val velocityTracker = androidx.compose.ui.input.pointer.util.VelocityTracker()

@@ -281,36 +281,24 @@ import kotlinx.coroutines.channels.BufferOverflow
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // --- ROW 3: Volume & Ringer Control ---
+            // --- ROW 3: Multi-Channel Volume Control ---
+            var activeStream by remember { mutableIntStateOf(android.media.AudioManager.STREAM_MUSIC) }
+            val maxVol = remember(activeStream) { audioManager.getStreamMaxVolume(activeStream).toFloat() }
+            var currentVol by remember(activeStream) { mutableFloatStateOf(audioManager.getStreamVolume(activeStream) / maxVol) }
+
             Row(verticalAlignment = Alignment.CenterVertically) {
-                val ringerIcon = when (ringerState) {
-                    android.media.AudioManager.RINGER_MODE_SILENT -> Icons.Default.NotificationsOff
-                    android.media.AudioManager.RINGER_MODE_VIBRATE -> Icons.Default.Vibration
-                    else -> Icons.Default.NotificationsActive
-                }
-                val ringerTint = if (ringerState == android.media.AudioManager.RINGER_MODE_NORMAL) Color.White else Color.Red
+                // Stream Selectors
+                IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_MUSIC }) { Icon(Icons.Default.MusicNote, null, tint = if (activeStream == android.media.AudioManager.STREAM_MUSIC) Color.Cyan else Color.White) }
+                IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_RING }) { Icon(Icons.Default.Notifications, null, tint = if (activeStream == android.media.AudioManager.STREAM_RING) Color.Cyan else Color.White) }
+                IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_ALARM }) { Icon(Icons.Default.Alarm, null, tint = if (activeStream == android.media.AudioManager.STREAM_ALARM) Color.Cyan else Color.White) }
 
-                IconButton(
-                    onClick = {
-                        ringerState = when (ringerState) {
-                            android.media.AudioManager.RINGER_MODE_NORMAL -> android.media.AudioManager.RINGER_MODE_VIBRATE
-                            android.media.AudioManager.RINGER_MODE_VIBRATE -> android.media.AudioManager.RINGER_MODE_SILENT
-                            else -> android.media.AudioManager.RINGER_MODE_NORMAL
-                        }
-                        audioManager.ringerMode = ringerState
-                    },
-                    modifier = Modifier.background(ringerTint.copy(alpha=0.1f), CircleShape)
-                ) { Icon(ringerIcon, contentDescription = "Ringer", tint = ringerTint) }
-
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Slider(
-                    value = volume,
+                    value = currentVol,
                     onValueChange = {
-                        volume = it
-                        audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (it * maxVolume).toInt(), 0)
+                        currentVol = it
+                        audioManager.setStreamVolume(activeStream, (it * maxVol).toInt(), 0)
                     },
-                    valueRange = 0f..1f,
-                    colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha=0.3f), thumbColor = Color.White),
                     modifier = Modifier.weight(1f).height(24.dp)
                 )
             }

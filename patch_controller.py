@@ -3,23 +3,16 @@ import re
 with open('./app/src/main/java/com/example/dynamicisland/IslandController.kt', 'r') as f:
     content = f.read()
 
-old_create = """        val view = DynamicIslandView(context, moduleContext)
-        this.islandView = view // 🚀 FIX: Store the reference
-        view.windowManager = wm"""
+old_eval = """        if (transientModel != null) {
+            if (transientModel is LiveActivityModel.SystemAlert || transientModel is LiveActivityModel.AppTimerWarning) {"""
 
-new_create = """        val view = DynamicIslandView(context, moduleContext)
-        this.islandView = view // 🚀 FIX: Store the reference
-        view.onSplitPillClick = {
-            // If the split model is the Battery Manager's Reality Pill or Charging, do nothing.
-            // If it's a second app, launch it here!
-            val sModel = _splitModel.value
-            if (sModel is LiveActivityModel.Charging) {
-                 _islandState.value = IslandState.TYPE_CUBE
-            }
-        }
-        view.windowManager = wm"""
+new_eval = """        if (transientModel != null) {
+            // 🚀 GAMING FIX: Don't show battery/charging cubes if user is gaming!
+            if (currentHardware?.isGamingModeOn == true && transientModel is LiveActivityModel.Charging) {
+                // Ignore the popup, leave Island hidden or in mini mode
+            } else if (transientModel is LiveActivityModel.SystemAlert || transientModel is LiveActivityModel.AppTimerWarning) {"""
 
-content = content.replace(old_create, new_create)
+content = content.replace(old_eval, new_eval)
 
 with open('./app/src/main/java/com/example/dynamicisland/IslandController.kt', 'w') as f:
     f.write(content)
