@@ -225,7 +225,7 @@ class IslandController(private val context: Context) {
     private val componentCallbacks = object : android.content.ComponentCallbacks {
         override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
             isLandscape = newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-            if (isLandscape) _islandState.value = IslandState.HIDDEN else evaluatePriority()
+            evaluatePriority()
         }
         @Deprecated("Deprecated in Java") // 🚀 FIX: Suppress Android's deprecated interface requirement
         override fun onLowMemory() {}
@@ -343,21 +343,29 @@ class IslandController(private val context: Context) {
     }
 
     private fun evaluatePriority() {
-        if (isLandscape) { _islandState.value = IslandState.HIDDEN; return }
+        // 🚀 EDGE CASE FIX: Allow Critical alerts to show in Landscape!
+        if (isLandscape) {
+            val isAlertCritical = transientModel?.isCritical == true
+            if (!isAlertCritical) {
+                _islandState.value = IslandState.HIDDEN
+                return
+            }
+        }
         
         if (transientModel != null) {
             if (transientModel is LiveActivityModel.SystemAlert || transientModel is LiveActivityModel.AppTimerWarning) {
-                // System Alerts (Text) demand the Mid Pill, temporarily overriding everything else
                 _activeModel.value = transientModel
                 _splitModel.value = null
                 _islandState.value = IslandState.TYPE_2_MID
+            } else if (transientModel is LiveActivityModel.RealityPill) {
+                _activeModel.value = transientModel
+                _splitModel.value = null
+                _islandState.value = IslandState.TYPE_1_MINI
             } else if (currentMedia?.isPlaying == true || currentMedia != null) {
-                // Charging while media playing = Split Cube
                 _activeModel.value = currentMedia
                 _splitModel.value = transientModel
                 _islandState.value = IslandState.TYPE_SPLIT
             } else {
-                // Charging while idle = Tiny Cube
                 _activeModel.value = transientModel
                 _splitModel.value = null
                 _islandState.value = IslandState.TYPE_CUBE

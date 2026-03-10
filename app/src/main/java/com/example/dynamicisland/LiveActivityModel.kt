@@ -31,6 +31,7 @@ sealed class LiveActivityModel {
     abstract val type: ActivityType
     abstract val isTransient: Boolean
     abstract val isSensitive: Boolean // 🚀 SECURITY: New Privacy Flag
+    abstract val isCritical: Boolean // 🚀 NEW: Landscape Override Flag
 
     // 🚀 NEW: Universal System Alert Model for Ecosystem IPC
     // 1. Updated System Alert (Now accepts dynamic Color Hex)
@@ -42,7 +43,8 @@ sealed class LiveActivityModel {
         val message: String,
         val alertColor: Int, // Will be parsed from Hex
         override val isTransient: Boolean = true,
-        override val isSensitive: Boolean = true // 🚀 Masks from screen recorders
+        override val isSensitive: Boolean = true, // 🚀 Masks from screen recorders
+        override val isCritical: Boolean = true // 🚀 Forces itself on screen
     ) : LiveActivityModel()
 
     // 2. NEW: The Reality Pill Tick
@@ -52,7 +54,8 @@ sealed class LiveActivityModel {
         val appName: String,
         val sessionMinutes: Int,
         override val isTransient: Boolean = true,
-        override val isSensitive: Boolean = true // 🚀 Masks from screen recorders
+        override val isSensitive: Boolean = true, // 🚀 Masks from screen recorders
+        override val isCritical: Boolean = true // 🚀 Forces itself on screen
     ) : LiveActivityModel()
     // 🚀 NEW: The 60-Second Execution Warning
     data class AppTimerWarning(
@@ -63,7 +66,8 @@ sealed class LiveActivityModel {
         val appIcon: Bitmap?,
         val targetTimeMs: Long,
         override val isTransient: Boolean = true,
-        override val isSensitive: Boolean = true // 🚀 Masks from screen recorders
+        override val isSensitive: Boolean = true, // 🚀 Masks from screen recorders
+        override val isCritical: Boolean = true // 🚀 Forces itself on screen
     ) : LiveActivityModel()
 
 
@@ -84,7 +88,8 @@ sealed class LiveActivityModel {
         val launchIntent: PendingIntent? = null,
         val customActions: List<CustomMediaAction> = emptyList(),
         override val isTransient: Boolean = false,
-        override val isSensitive: Boolean = false
+        override val isSensitive: Boolean = false,
+        override val isCritical: Boolean = false
     ) : LiveActivityModel()
 
     data class General(
@@ -95,7 +100,8 @@ sealed class LiveActivityModel {
         val progress: Float? = null,
         val accentColor: Int = android.graphics.Color.WHITE,
         override val isTransient: Boolean = false,
-        override val isSensitive: Boolean = false
+        override val isSensitive: Boolean = false,
+        override val isCritical: Boolean = false
     ) : LiveActivityModel()
 
     data class Dashboard(
@@ -109,7 +115,8 @@ sealed class LiveActivityModel {
         val currentBrightness: Float = 0.5f,
         val isAutoBrightness: Boolean = false,
         override val isTransient: Boolean = false,
-        override val isSensitive: Boolean = false
+        override val isSensitive: Boolean = false,
+        override val isCritical: Boolean = false
     ) : LiveActivityModel()
 
     data class Charging(
@@ -118,7 +125,8 @@ sealed class LiveActivityModel {
         val level: Int,
         val isPluggedIn: Boolean,
         override val isTransient: Boolean = false,
-        override val isSensitive: Boolean = false
+        override val isSensitive: Boolean = false,
+        override val isCritical: Boolean = false
     ) : LiveActivityModel()
 
     data class HardwareMonitor(
@@ -128,6 +136,7 @@ sealed class LiveActivityModel {
         val cpuFreqMhz: Int = 0,
         val isGamingModeOn: Boolean = false,
         override val isTransient: Boolean = false,
-        override val isSensitive: Boolean = false
+        override val isSensitive: Boolean = false,
+        override val isCritical: Boolean = false
     ) : LiveActivityModel()
 }
