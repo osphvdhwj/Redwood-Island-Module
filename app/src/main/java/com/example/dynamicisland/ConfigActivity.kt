@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import org.json.JSONObject
 import java.io.File
@@ -102,30 +103,41 @@ class ConfigActivity : ComponentActivity() {
                         }
                     }
                 } else if (currentPrefix == "pinning") {
-                    // 🚀 NEW: Control Center App Pinning Matrix
                     Text(text = "Control Center Shortcuts", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text(text = "Select 4 apps to pin to your Max Dashboard.", fontSize = 14.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // (Mockup for the UI)
+                    // 🚀 THE FIX: Live Native App Fetcher
+                    val pm = LocalContext.current.packageManager
+                    val installedApps = remember {
+                        pm.getInstalledApplications(android.content.pm.PackageManager.GET_META_DATA)
+                            .filter { appInfo -> pm.getLaunchIntentForPackage(appInfo.packageName) != null }
+                            .map { appInfo -> Pair(appInfo.loadLabel(pm).toString(), appInfo.packageName) }
+                            .sortedBy { pair -> pair.first }
+                    }
+
                     val pinnedApps = listOf("Slot 1", "Slot 2", "Slot 3", "Slot 4")
                     pinnedApps.forEachIndexed { index, slot ->
                         var expanded by remember { mutableStateOf(false) }
-                        var selectedApp by remember { mutableStateOf(prefs.getString("pinned_app_$index", "None") ?: "None") }
+                        var selectedAppPkg by remember { mutableStateOf(prefs.getString("pinned_app_$index", "") ?: "") }
+                        val selectedAppName = installedApps.find { it.second == selectedAppPkg }?.first ?: "None"
 
                         @OptIn(ExperimentalMaterial3Api::class)
                         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                             OutlinedTextField(
-                                value = selectedApp, onValueChange = {}, readOnly = true, label = { Text(slot) },
+                                value = selectedAppName, onValueChange = {}, readOnly = true, label = { Text(slot) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                                 modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp)
                             )
                             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                // In production, fetch pm.getInstalledApplications() here
-                                listOf("None", "com.whatsapp", "com.maxrave.simpmusic", "org.telegram.messenger").forEach { app ->
-                                    DropdownMenuItem(text = { Text(app) }, onClick = {
-                                        selectedApp = app; prefs.edit().putString("pinned_app_$index", app).apply(); expanded = false
-                                        // broadcastUpdate() to IslandController
+                                DropdownMenuItem(text = { Text("None") }, onClick = {
+                                    selectedAppPkg = ""; prefs.edit().putString("pinned_app_$index", "").apply(); expanded = false
+                                    saveAndBroadcast(prefs, "pinning", 0f, 0f, 0f, 0f, 0f, false)
+                                })
+                                installedApps.forEach { pair ->
+                                    DropdownMenuItem(text = { Text(pair.first) }, onClick = {
+                                        selectedAppPkg = pair.second; prefs.edit().putString("pinned_app_$index", pair.second).apply(); expanded = false
+                                        saveAndBroadcast(prefs, "pinning", 0f, 0f, 0f, 0f, 0f, false)
                                     })
                                 }
                             }
