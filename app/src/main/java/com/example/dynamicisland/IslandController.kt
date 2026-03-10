@@ -235,6 +235,14 @@ class IslandController(private val context: Context) {
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
         val view = DynamicIslandView(context, moduleContext)
         this.islandView = view // 🚀 FIX: Store the reference
+        view.onSplitPillClick = {
+            // If the split model is the Battery Manager's Reality Pill or Charging, do nothing.
+            // If it's a second app, launch it here!
+            val sModel = _splitModel.value
+            if (sModel is LiveActivityModel.Charging) {
+                 _islandState.value = IslandState.TYPE_CUBE
+            }
+        }
         view.windowManager = wm
         view.windowParams = params
 

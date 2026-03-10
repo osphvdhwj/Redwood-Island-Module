@@ -405,8 +405,10 @@ import kotlinx.coroutines.channels.BufferOverflow
         val currentPos = posProvider().toFloat()
         var localPosition by remember(isDragged) { mutableFloatStateOf(currentPos) }
 
-        val safeDuration = if (durationMs > 0) durationMs.toFloat() else 1f
-        val safePosition = if (isDragged) localPosition else currentPos
+        // 🚀 MATH CORRUPTION FIX: Prevent division by zero, negative times, and streams.
+        val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
+        val currentPosition = posProvider().toFloat().coerceAtLeast(0f)
+        val safePosition = if (isDragged) localPosition else currentPosition
 
         Slider(
             value = (safePosition / safeDuration).coerceIn(0f, 1f),
@@ -426,9 +428,12 @@ import kotlinx.coroutines.channels.BufferOverflow
 
     @Composable
     fun IsolatedLinearProgressIndicator(durationMs: Long, posProvider: () -> Long, color: Color, trackColor: Color, modifier: Modifier = Modifier) {
-        val safeDuration = if (durationMs > 0) durationMs.toFloat() else 1f
+        // 🚀 MATH CORRUPTION FIX: Prevent division by zero, negative times, and streams.
+        val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
+        val currentPosition = posProvider().toFloat().coerceAtLeast(0f)
+        val progress = (currentPosition / safeDuration).coerceIn(0f, 1f)
         LinearProgressIndicator(
-            progress = { (posProvider().toFloat() / safeDuration).coerceIn(0f, 1f) },
+            progress = { progress },
             color = color,
             trackColor = trackColor,
             modifier = modifier
@@ -496,8 +501,10 @@ import kotlinx.coroutines.channels.BufferOverflow
 
     @Composable
     fun IsolatedCircularProgress(durationMs: Long, posProvider: () -> Long, color: Color) {
-        val pos = posProvider()
-        val progress = if (durationMs > 0) (pos.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+        // 🚀 MATH CORRUPTION FIX: Prevent division by zero, negative times, and streams.
+        val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
+        val currentPosition = posProvider().toFloat().coerceAtLeast(0f)
+        val progress = (currentPosition / safeDuration).coerceIn(0f, 1f)
         CircularProgressIndicator(
             progress = { progress },
             color = color,

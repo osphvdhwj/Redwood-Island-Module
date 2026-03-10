@@ -18,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -116,6 +117,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     // 🚀 THE UNIFIED EVENT SINK
     var onGestureEvent: ((IslandGesture) -> Unit)? = null
     var onGestureSettingsUpdated: ((String?) -> Unit)? = null
+    var onSplitPillClick: (() -> Unit)? = null
 
     var onPlayPauseClick: (() -> Unit)? = null
     var onPrevClick: (() -> Unit)? = null
@@ -217,6 +219,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     @Composable
     fun IslandUI(state: IslandState) {
         val haptic = LocalHapticFeedback.current // 🚀 FIX: Haptic Engine
+        // 🚀 IOS SQUISH PHYSICS: Track the user's physical finger press
+        val interactionSource = remember { MutableInteractionSource() }
+        val isPressed by interactionSource.collectIsPressedAsState()
+        val touchScale by animateFloatAsState(
+            targetValue = if (isPressed) 0.96f else 1f,
+            animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+            label = "squish"
+        )
         // 🚀 HARDWARE FIX: Prevent light bleed by clamping to physical display cutout
         val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
             windowManager?.currentWindowMetrics?.windowInsets?.displayCutout
@@ -278,8 +288,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         }
 
         // 🚀 THE OMNI-GESTURE TRACKER
-        var dragOffsetX by remember { mutableFloatStateOf(0f) }
-        var dragOffsetY by remember { mutableFloatStateOf(0f) }
+
         val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
 
         Row(
@@ -304,55 +313,49 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             insetsUpdateFlow.tryEmit(Unit) // 🚀 Safe emission, no direct ViewTree manipulation!
                         }
                     }
-                    .width(width).height(height).clip(RoundedCornerShape(rad))
+                    .width(width).height(height)
+                    // 🚀 APPLY SQUISH PHYSICS
+                    .graphicsLayer { scaleX = touchScale; scaleY = touchScale }
+                    .clip(RoundedCornerShape(rad))
                     .background(bgColor).border(1.dp, borderColor, RoundedCornerShape(rad))
+                    // 🚀 LINK INTERACTION SOURCE FOR SQUISH
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null, // Removes Android's ugly default ripple
+                        onClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) }
+                    )
                     // 🚀 UNIFIED TAP & DRAG ENGINE
                     .pointerInput(Unit) { 
                         detectTapGestures(
-                            onTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) },
                             onDoubleTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) },
                             onLongPress = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) } // Heavy thud
                         ) 
                     }
                     .pointerInput(state) {
-                        if (state != IslandState.TYPE_3_MAX && state != IslandState.TYPE_SPLIT) {
-                            val velocityTracker = androidx.compose.ui.input.pointer.util.VelocityTracker() // 🚀 KINETIC FIX
+                        val velocityTracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
 
-                            detectDragGestures(
-                                onDragStart = { velocityTracker.resetTracking() },
-                                onDragEnd = {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull() ?: continue
+
+                                // 🚀 DIRECTIONAL FIX: We only care about Y-Axis (Vertical) swipes for the Island!
+                                // By ignoring X-axis drags, the volume sliders in MAX work perfectly!
+                                if (change.pressed) {
+                                    velocityTracker.addPosition(change.uptimeMillis, change.position)
+                                } else if (change.previousPressed && !change.pressed) {
                                     val velocity = velocityTracker.calculateVelocity()
-                                    val isFling = abs(velocity.x) > 800f || abs(velocity.y) > 800f
-
-                                    if (isFling) {
-                                        // Trigger based on kinetic velocity
-                                        if (abs(velocity.x) > abs(velocity.y)) {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            onGestureEvent?.invoke(if (velocity.x > 0) IslandGesture.SWIPE_RIGHT else IslandGesture.SWIPE_LEFT)
-                                        } else {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            onGestureEvent?.invoke(if (velocity.y > 0) IslandGesture.SWIPE_DOWN else IslandGesture.SWIPE_UP)
-                                        }
-                                    } else {
-                                        // Fallback to spatial distance if it was a slow drag
-                                        if (abs(dragOffsetX) > abs(dragOffsetY)) {
-                                            if (abs(dragOffsetX) > 40f) {
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                onGestureEvent?.invoke(if (dragOffsetX > 0) IslandGesture.SWIPE_RIGHT else IslandGesture.SWIPE_LEFT)
-                                            }
-                                        } else {
-                                            if (abs(dragOffsetY) > 40f) {
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                onGestureEvent?.invoke(if (dragOffsetY > 0) IslandGesture.SWIPE_DOWN else IslandGesture.SWIPE_UP)
-                                            }
-                                        }
+                                    if (velocity.y < -800f) {
+                                        // User swiped UP hard. Collapse it!
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
+                                    } else if (velocity.y > 800f && state != IslandState.TYPE_3_MAX) {
+                                        // User swiped DOWN hard. Expand it!
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN)
                                     }
-                                    dragOffsetX = 0f; dragOffsetY = 0f
+                                    velocityTracker.resetTracking()
                                 }
-                            ) { change, dragAmount ->
-                                change.consume()
-                                velocityTracker.addPosition(change.uptimeMillis, change.position) // Track speed
-                                dragOffsetX += dragAmount.x; dragOffsetY += dragAmount.y
                             }
                         }
                     },
@@ -453,7 +456,18 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
 
                                 drawArc(color = baseColor.copy(alpha=0.15f), startAngle = -90f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
-                                drawArc(color = progressColor, startAngle = -90f, sweepAngle = 360f * progress.coerceIn(0f, 1f), useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round))
+
+                                val progressPercent = progress.coerceIn(0f, 1f)
+                                val capStyle = if (progressPercent >= 0.99f) StrokeCap.Butt else StrokeCap.Round
+                                drawArc(
+                                    color = progressColor,
+                                    startAngle = -90f,
+                                    sweepAngle = 360f * progressPercent,
+                                    useCenter = false,
+                                    topLeft = arcTopLeft,
+                                    size = arcSize,
+                                    style = Stroke(strokeW, cap = capStyle) // 🚀 FIX: Prevent 102% bleed!
+                                )
                             }
                         }
                     }
@@ -479,7 +493,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                     insetsUpdateFlow.tryEmit(Unit) // 🚀 Safe emission!
                                 }
                             }
-                            .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape), 
+                            .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape)
+                            // 🚀 THE FIX: Independent interaction!
+                            .clickable { onSplitPillClick?.invoke() },
                         contentAlignment = Alignment.Center) {
                         if (sModel is LiveActivityModel.Charging) { val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White; Text(text = "${sModel.level}%", color = iconColor, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
                     }
