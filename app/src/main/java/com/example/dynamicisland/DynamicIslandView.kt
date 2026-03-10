@@ -166,19 +166,30 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     expandUpwards.value = intent.getBooleanExtra("expand_upwards", expandUpwards.value)
                 } 
 
-                val sp = ctx.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
-                customOffsetY.floatValue = sp.getFloat("tweak_offset_y", 0f)
-                customBaseWidth.floatValue = sp.getFloat("tweak_base_width", 100f)
+                // 🚀 THE FIX: Read directly from the Intent! No file permission issues!
+                customOffsetY.floatValue = intent.getFloatExtra("tweak_offset_y", customOffsetY.floatValue)
+                customBaseWidth.floatValue = intent.getFloatExtra("tweak_base_width", customBaseWidth.floatValue)
 
-                // 🚀 READ THE THEME SETTINGS
                 activeTheme.value = IslandTheme(
-                    cornerRadius = sp.getFloat("theme_corner_radius", 50f).dp,
-                    primaryTextSize = sp.getFloat("theme_text_primary", 16f).sp,
-                    secondaryTextSize = sp.getFloat("theme_text_secondary", 14f).sp,
-                    progressBarThickness = sp.getFloat("theme_progress_thick", 4f).dp,
-                    ringThickness = sp.getFloat("theme_ring_thick", 12f).dp,
-                    buttonSize = sp.getFloat("theme_button_size", 48f).dp,
-                    elementGap = sp.getFloat("theme_element_gap", 8f).dp
+                    cornerRadius = intent.getFloatExtra("theme_corner_radius", activeTheme.value.cornerRadius.value).dp,
+                    primaryTextSize = intent.getFloatExtra("theme_text_primary", activeTheme.value.primaryTextSize.value).sp,
+                    secondaryTextSize = intent.getFloatExtra("theme_text_secondary", activeTheme.value.secondaryTextSize.value).sp,
+                    progressBarThickness = intent.getFloatExtra("theme_progress_thick", activeTheme.value.progressBarThickness.value).dp,
+                    ringThickness = intent.getFloatExtra("theme_ring_thick", activeTheme.value.ringThickness.value).dp,
+                    buttonSize = intent.getFloatExtra("theme_button_size", activeTheme.value.buttonSize.value).dp,
+                    elementGap = intent.getFloatExtra("theme_element_gap", activeTheme.value.elementGap.value).dp,
+
+                    musicTitleSize = intent.getFloatExtra("theme_music_title", activeTheme.value.musicTitleSize.value).sp,
+                    musicArtistSize = intent.getFloatExtra("theme_music_artist", activeTheme.value.musicArtistSize.value).sp,
+                    musicSeekerThickness = intent.getFloatExtra("theme_music_seeker", activeTheme.value.musicSeekerThickness.value).dp,
+                    musicButtonSize = intent.getFloatExtra("theme_music_btn", activeTheme.value.musicButtonSize.value).dp,
+
+                    batteryCubeTextSize = intent.getFloatExtra("theme_bat_text", activeTheme.value.batteryCubeTextSize.value).sp,
+                    batteryCubeIconSize = intent.getFloatExtra("theme_bat_icon", activeTheme.value.batteryCubeIconSize.value).dp,
+                    batteryRingThickness = intent.getFloatExtra("theme_bat_ring", activeTheme.value.batteryRingThickness.value).dp,
+
+                    alertTitleSize = intent.getFloatExtra("theme_alert_title", activeTheme.value.alertTitleSize.value).sp,
+                    alertMessageSize = intent.getFloatExtra("theme_alert_msg", activeTheme.value.alertMessageSize.value).sp
                 )
 
                 val payload = intent.getStringExtra("gesture_payload")

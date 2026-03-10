@@ -92,7 +92,7 @@ import kotlinx.coroutines.channels.BufferOverflow
                     .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = "${model.level}%", color = color, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+            Text(text = "${model.level}%", color = color, fontSize = LocalIslandTheme.current.batteryCubeTextSize, fontWeight = FontWeight.ExtraBold)
         }
     }
 
@@ -138,14 +138,14 @@ import kotlinx.coroutines.channels.BufferOverflow
                 Text(
                     text = music.title,
                     color = dynamicTextColor,
-                    fontSize = theme.primaryTextSize, // 🚀 Dynamic Text Size!
+                    fontSize = theme.musicTitleSize,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1, modifier = Modifier.basicMarquee()
                 )
                 Text(
                     text = music.artist,
                     color = dynamicTextColor.copy(alpha = 0.7f),
-                    fontSize = theme.secondaryTextSize, // 🚀 Dynamic Subtext Size!
+                    fontSize = theme.musicArtistSize,
                     maxLines = 1, modifier = Modifier.basicMarquee()
                 )
             }
@@ -179,8 +179,9 @@ import kotlinx.coroutines.channels.BufferOverflow
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text(text = music.title, color = dynamicTextColor, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.fillMaxWidth().basicMarquee())
-            Text(text = music.artist, color = dynamicTextColor.copy(alpha=0.8f), fontSize = 16.sp, maxLines = 1, modifier = Modifier.fillMaxWidth().basicMarquee())
+            val theme = LocalIslandTheme.current
+            Text(text = music.title, color = dynamicTextColor, fontSize = theme.musicTitleSize * 1.25f, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.fillMaxWidth().basicMarquee())
+            Text(text = music.artist, color = dynamicTextColor.copy(alpha=0.8f), fontSize = theme.musicArtistSize * 1.15f, maxLines = 1, modifier = Modifier.fillMaxWidth().basicMarquee())
             Spacer(modifier = Modifier.height(16.dp))
 
             IsolatedTimeRow(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = dynamicTextColor)
@@ -529,8 +530,9 @@ import kotlinx.coroutines.channels.BufferOverflow
             }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                 Text(text = "Time Limit Reached", color = Color.Red, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee())
-                 Text(text = "${model.appName} closing in ${remainingSeconds}s", color = Color.White, fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
+                 val theme = LocalIslandTheme.current
+                 Text(text = "Time Limit Reached", color = Color.Red, fontSize = theme.alertTitleSize, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee())
+                 Text(text = "${model.appName} closing in ${remainingSeconds}s", color = Color.White, fontSize = theme.alertMessageSize, maxLines = 1, modifier = Modifier.basicMarquee())
             }
         }
     }

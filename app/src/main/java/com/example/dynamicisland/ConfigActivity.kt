@@ -151,12 +151,12 @@ class ConfigActivity : ComponentActivity() {
                     // Y-Offset Slider
                     var offsetY by remember { mutableFloatStateOf(prefs.getFloat("tweak_offset_y", 0f)) }
                     Text(text = "Y-Axis Offset (Push down from top): ${offsetY.toInt()}px", color = Color.White)
-                    Slider(value = offsetY, onValueChange = { offsetY = it; prefs.edit().putFloat("tweak_offset_y", it).apply(); sendGestureUpdate(prefs) }, valueRange = 0f..150f)
+                    Slider(value = offsetY, onValueChange = { offsetY = it; prefs.edit().putFloat("tweak_offset_y", it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) }, valueRange = 0f..150f)
 
                     // Base Width Slider
                     var baseWidth by remember { mutableFloatStateOf(prefs.getFloat("tweak_base_width", 100f)) }
                     Text(text = "Mini Pill Width: ${baseWidth.toInt()}dp", color = Color.White)
-                    Slider(value = baseWidth, onValueChange = { baseWidth = it; prefs.edit().putFloat("tweak_base_width", it).apply(); sendGestureUpdate(prefs) }, valueRange = 50f..200f)
+                    Slider(value = baseWidth, onValueChange = { baseWidth = it; prefs.edit().putFloat("tweak_base_width", it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) }, valueRange = 50f..200f)
                 } else if (currentPrefix == "theme") {
                     Text(text = "UI Customization Engine", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text(text = "Customize the physical appearance of inner elements.", fontSize = 14.sp, color = Color.Gray)
@@ -168,17 +168,33 @@ class ConfigActivity : ComponentActivity() {
                         var value by remember { mutableFloatStateOf(prefs.getFloat(key, default)) }
                         Text(text = "$label: ${value.toInt()}", color = Color.White, modifier = Modifier.padding(top = 8.dp))
                         Slider(value = value, onValueChange = {
-                            value = it; prefs.edit().putFloat(key, it).apply(); sendGestureUpdate(prefs)
+                            value = it; prefs.edit().putFloat(key, it).apply(); sendGestureUpdate(prefs, this@ConfigActivity)
                         }, valueRange = range)
                     }
 
                     ThemeSlider("Corner Radius", "theme_corner_radius", 50f, 10f..100f)
-                    ThemeSlider("Primary Text Size (sp)", "theme_text_primary", 16f, 10f..30f)
-                    ThemeSlider("Secondary Text Size (sp)", "theme_text_secondary", 14f, 8f..24f)
-                    ThemeSlider("Progress Bar Thickness", "theme_progress_thick", 4f, 1f..15f)
-                    ThemeSlider("Ring Thickness", "theme_ring_thick", 12f, 2f..25f)
-                    ThemeSlider("Button Tap Size", "theme_button_size", 48f, 24f..72f)
-                    ThemeSlider("Element Gap (Spacing)", "theme_element_gap", 8f, 0f..32f)
+                    ThemeSlider("Global Text Size (sp)", "theme_text_primary", 16f, 10f..30f)
+                    ThemeSlider("Global Subtext Size (sp)", "theme_text_secondary", 14f, 8f..24f)
+                    ThemeSlider("Global Progress Thickness", "theme_progress_thick", 4f, 1f..15f)
+                    ThemeSlider("Global Element Gap (Spacing)", "theme_element_gap", 8f, 0f..32f)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Music Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Cyan)
+                    ThemeSlider("Title Text Size", "theme_music_title", 16f, 10f..30f)
+                    ThemeSlider("Artist Text Size", "theme_music_artist", 14f, 8f..24f)
+                    ThemeSlider("Seeker Thickness", "theme_music_seeker", 4f, 1f..15f)
+                    ThemeSlider("Control Button Size", "theme_music_btn", 48f, 24f..72f)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Battery Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Green)
+                    ThemeSlider("Cube Text Size", "theme_bat_text", 16f, 10f..30f)
+                    ThemeSlider("Cube Icon Size", "theme_bat_icon", 36f, 16f..72f)
+                    ThemeSlider("Ring Thickness", "theme_bat_ring", 12f, 2f..25f)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Notification Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Red)
+                    ThemeSlider("Alert Title Size", "theme_alert_title", 16f, 10f..30f)
+                    ThemeSlider("Alert Message Size", "theme_alert_msg", 14f, 8f..24f)
                 } else {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(text = "Configure ${tabs[selectedTab]}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -221,7 +237,7 @@ class ConfigActivity : ComponentActivity() {
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
             OutlinedTextField(value = selectedOption, onValueChange = {}, readOnly = true, label = { Text(label) }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth())
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                options.forEach { option -> DropdownMenuItem(text = { Text(option) }, onClick = { selectedOption = option; prefs.edit().putString(prefKey, option).apply(); expanded = false; sendGestureUpdate(prefs) }) }
+                options.forEach { option -> DropdownMenuItem(text = { Text(option) }, onClick = { selectedOption = option; prefs.edit().putString(prefKey, option).apply(); expanded = false; sendGestureUpdate(prefs, this@ConfigActivity) }) }
             }
         }
     }
@@ -256,12 +272,37 @@ class ConfigActivity : ComponentActivity() {
         sendBroadcast(intent)
     }
 
-    private fun sendGestureUpdate(prefs: android.content.SharedPreferences) { 
-        val intent = Intent("com.example.dynamicisland.RELOAD_PREFS").addFlags(0x01000000)
+    private fun sendGestureUpdate(prefs: android.content.SharedPreferences, context: android.content.Context) {
+        val intent = android.content.Intent("com.example.dynamicisland.RELOAD_PREFS").apply {
+            addFlags(android.content.Intent.FLAG_RECEIVER_FOREGROUND or 0x01000000)
+            // 🚀 THE FIX: Push settings directly across the IPC bridge!
+            putExtra("tweak_offset_y", prefs.getFloat("tweak_offset_y", 0f))
+            putExtra("tweak_base_width", prefs.getFloat("tweak_base_width", 100f))
+
+            putExtra("theme_corner_radius", prefs.getFloat("theme_corner_radius", 50f))
+            putExtra("theme_text_primary", prefs.getFloat("theme_text_primary", 16f))
+            putExtra("theme_text_secondary", prefs.getFloat("theme_text_secondary", 14f))
+            putExtra("theme_progress_thick", prefs.getFloat("theme_progress_thick", 4f))
+            putExtra("theme_ring_thick", prefs.getFloat("theme_ring_thick", 12f))
+            putExtra("theme_button_size", prefs.getFloat("theme_button_size", 48f))
+            putExtra("theme_element_gap", prefs.getFloat("theme_element_gap", 8f))
+
+            putExtra("theme_music_title", prefs.getFloat("theme_music_title", 16f))
+            putExtra("theme_music_artist", prefs.getFloat("theme_music_artist", 14f))
+            putExtra("theme_music_seeker", prefs.getFloat("theme_music_seeker", 4f))
+            putExtra("theme_music_btn", prefs.getFloat("theme_music_btn", 48f))
+
+            putExtra("theme_bat_text", prefs.getFloat("theme_bat_text", 16f))
+            putExtra("theme_bat_icon", prefs.getFloat("theme_bat_icon", 36f))
+            putExtra("theme_bat_ring", prefs.getFloat("theme_bat_ring", 12f))
+
+            putExtra("theme_alert_title", prefs.getFloat("theme_alert_title", 16f))
+            putExtra("theme_alert_msg", prefs.getFloat("theme_alert_msg", 14f))
+        }
         val matrix = JSONObject()
         prefs.all.forEach { (key, value) -> if (key.startsWith("TYPE_") && value is String) matrix.put(key, value) }
         intent.putExtra("gesture_payload", matrix.toString())
-        sendBroadcast(intent) 
+        context.sendBroadcast(intent)
     }
 
     private fun getDefaultWidth(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 180f; "mid" -> 320f; "max" -> 360f; "cube" -> 85f; else -> 0f }
