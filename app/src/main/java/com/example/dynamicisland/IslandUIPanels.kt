@@ -126,21 +126,39 @@ import kotlinx.coroutines.channels.BufferOverflow
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
+        val theme = LocalIslandTheme.current // Grab the theme
         val dynamicTextColor = Color(music.titleTextColor)
         val infiniteTransition = rememberInfiniteTransition(); val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart))
         val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
 
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = theme.sidePadding), // Dynamic padding
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Album Art
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(52.dp)) {
                 IsolatedCircularProgress(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor)
-                if (music.albumArt != null) { Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(44.dp).clip(CircleShape).rotate(currentRotation)) } else Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
+                if (music.albumArt != null) { Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(44.dp).clip(RoundedCornerShape(theme.cornerRadius / 4)).rotate(currentRotation)) } else Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), RoundedCornerShape(theme.cornerRadius / 4)))
             }
-            Spacer(Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(theme.elementGap)) // Dynamic gap
+
+            // Text Column
             Column(modifier = Modifier.weight(1f, fill=false)) {
-                 Text(text = music.title, color = dynamicTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee())
-                 Text(text = music.artist, color = dynamicTextColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
+                Text(
+                    text = music.title,
+                    color = dynamicTextColor,
+                    fontSize = theme.primaryTextSize, // 🚀 Dynamic Text Size!
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1, modifier = Modifier.basicMarquee()
+                )
+                Text(
+                    text = music.artist,
+                    color = dynamicTextColor.copy(alpha = 0.7f),
+                    fontSize = theme.secondaryTextSize, // 🚀 Dynamic Subtext Size!
+                    maxLines = 1, modifier = Modifier.basicMarquee()
+                )
             }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(theme.elementGap))
             IsolatedTimeText(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = dynamicTextColor.copy(alpha=0.7f))
         }
     }
@@ -302,6 +320,33 @@ import kotlinx.coroutines.channels.BufferOverflow
                     modifier = Modifier.weight(1f).height(24.dp)
                 )
             }
+
+            // --- ROW 4: Brightness Control ---
+            val resolver = context.contentResolver
+            var secondBrightness by remember {
+                mutableFloatStateOf(
+                    try { android.provider.Settings.System.getInt(resolver, android.provider.Settings.System.SCREEN_BRIGHTNESS) / 255f }
+                    catch (e: Exception) { 0.5f }
+                )
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
+                Icon(Icons.Default.BrightnessLow, contentDescription = "Brightness", tint = Color.White)
+                Spacer(modifier = Modifier.width(16.dp))
+                Slider(
+                    value = secondBrightness,
+                    onValueChange = { newValue ->
+                        secondBrightness = newValue
+                        try {
+                            // Requires WRITE_SETTINGS permission granted via adb or app settings
+                            android.provider.Settings.System.putInt(resolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (newValue * 255).toInt())
+                        } catch (e: Exception) {}
+                    },
+                    modifier = Modifier.weight(1f).height(24.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Icon(Icons.Default.BrightnessHigh, contentDescription = "Brightness", tint = Color.White)
+            }
         }
     }
 
@@ -416,16 +461,28 @@ import kotlinx.coroutines.channels.BufferOverflow
 
     @Composable
     fun IsolatedLinearProgressIndicator(durationMs: Long, posProvider: () -> Long, color: Color, trackColor: Color, modifier: Modifier = Modifier) {
+        val theme = LocalIslandTheme.current // Grab the theme
         // 🚀 MATH CORRUPTION FIX: Prevent division by zero, negative times, and streams.
         val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
         val currentPosition = posProvider().toFloat().coerceAtLeast(0f)
         val progress = (currentPosition / safeDuration).coerceIn(0f, 1f)
-        LinearProgressIndicator(
-            progress = { progress },
-            color = color,
-            trackColor = trackColor,
-            modifier = modifier
-        )
+
+        androidx.compose.foundation.Canvas(modifier = modifier.height(theme.progressBarThickness)) {
+            drawLine(
+                color = trackColor,
+                start = androidx.compose.ui.geometry.Offset(0f, size.height / 2),
+                end = androidx.compose.ui.geometry.Offset(size.width, size.height / 2),
+                strokeWidth = theme.progressBarThickness.toPx(), // 🚀 Dynamic Thickness!
+                cap = androidx.compose.ui.graphics.StrokeCap.Round
+            )
+            drawLine(
+                color = color,
+                start = androidx.compose.ui.geometry.Offset(0f, size.height / 2),
+                end = androidx.compose.ui.geometry.Offset(size.width * progress, size.height / 2),
+                strokeWidth = theme.progressBarThickness.toPx(), // 🚀 Dynamic Thickness!
+                cap = androidx.compose.ui.graphics.StrokeCap.Round
+            )
+        }
     }
 
     @Composable

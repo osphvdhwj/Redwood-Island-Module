@@ -96,6 +96,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var expandUpwards = mutableStateOf(false)
 
     var isCubeRotationEnabled = mutableStateOf(true)
+    var customOffsetY = mutableFloatStateOf(0f)
+    var customBaseWidth = mutableFloatStateOf(100f)
+    var activeTheme = mutableStateOf(IslandTheme())
     var globalBatteryLevel = mutableIntStateOf(100)
     var globalIsCharging = mutableStateOf(false)
     var currentMediaPos = mutableLongStateOf(0L)
@@ -162,6 +165,22 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     ringThickness.value = intent.getFloatExtra("ring_thickness", ringThickness.value)
                     expandUpwards.value = intent.getBooleanExtra("expand_upwards", expandUpwards.value)
                 } 
+
+                val sp = ctx.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+                customOffsetY.floatValue = sp.getFloat("tweak_offset_y", 0f)
+                customBaseWidth.floatValue = sp.getFloat("tweak_base_width", 100f)
+
+                // 🚀 READ THE THEME SETTINGS
+                activeTheme.value = IslandTheme(
+                    cornerRadius = sp.getFloat("theme_corner_radius", 50f).dp,
+                    primaryTextSize = sp.getFloat("theme_text_primary", 16f).sp,
+                    secondaryTextSize = sp.getFloat("theme_text_secondary", 14f).sp,
+                    progressBarThickness = sp.getFloat("theme_progress_thick", 4f).dp,
+                    ringThickness = sp.getFloat("theme_ring_thick", 12f).dp,
+                    buttonSize = sp.getFloat("theme_button_size", 48f).dp,
+                    elementGap = sp.getFloat("theme_element_gap", 8f).dp
+                )
+
                 val payload = intent.getStringExtra("gesture_payload")
                 if (payload != null) onGestureSettingsUpdated?.invoke(payload) else loadPreferences()
             }
@@ -199,7 +218,15 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, listener)
         } catch (e: Exception) {}
 
-        val composeView = ComposeView(context).apply { setContent { MaterialTheme(colorScheme = darkColorScheme()) { CompositionLocalProvider(LocalContext provides moduleContext) { IslandUI(islandState.value) } } } }
+        val composeView = ComposeView(context).apply {
+            setContent {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    CompositionLocalProvider(LocalContext provides moduleContext, LocalIslandTheme provides activeTheme.value) {
+                        IslandUI(islandState.value)
+                    }
+                }
+            }
+        }
         val coroutineContext = AndroidUiDispatcher.CurrentThread; val recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
         composeView.setParentCompositionContext(recomposer)
         CoroutineScope(coroutineContext).launch { recomposer.runRecomposeAndApplyChanges() }

@@ -40,7 +40,7 @@ class ConfigActivity : ComponentActivity() {
     @Composable
     fun ConfigScreen(prefs: android.content.SharedPreferences) {
         var selectedTab by remember { mutableIntStateOf(0) }
-        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures", "Pinning")
+        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures", "Pinning", "Tweaks", "Theme")
 
         var w by remember { mutableFloatStateOf(0f) }
         var h by remember { mutableFloatStateOf(0f) }
@@ -143,6 +143,42 @@ class ConfigActivity : ComponentActivity() {
                             }
                         }
                     }
+                } else if (currentPrefix == "tweaks") {
+                    Text(text = "Physical Adjustments", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Adjust the Island without recompiling code.", fontSize = 14.sp, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Y-Offset Slider
+                    var offsetY by remember { mutableFloatStateOf(prefs.getFloat("tweak_offset_y", 0f)) }
+                    Text(text = "Y-Axis Offset (Push down from top): ${offsetY.toInt()}px", color = Color.White)
+                    Slider(value = offsetY, onValueChange = { offsetY = it; prefs.edit().putFloat("tweak_offset_y", it).apply(); sendGestureUpdate(prefs) }, valueRange = 0f..150f)
+
+                    // Base Width Slider
+                    var baseWidth by remember { mutableFloatStateOf(prefs.getFloat("tweak_base_width", 100f)) }
+                    Text(text = "Mini Pill Width: ${baseWidth.toInt()}dp", color = Color.White)
+                    Slider(value = baseWidth, onValueChange = { baseWidth = it; prefs.edit().putFloat("tweak_base_width", it).apply(); sendGestureUpdate(prefs) }, valueRange = 50f..200f)
+                } else if (currentPrefix == "theme") {
+                    Text(text = "UI Customization Engine", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Customize the physical appearance of inner elements.", fontSize = 14.sp, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Helper function to create sliders easily
+                    @Composable
+                    fun ThemeSlider(label: String, key: String, default: Float, range: ClosedFloatingPointRange<Float>) {
+                        var value by remember { mutableFloatStateOf(prefs.getFloat(key, default)) }
+                        Text(text = "$label: ${value.toInt()}", color = Color.White, modifier = Modifier.padding(top = 8.dp))
+                        Slider(value = value, onValueChange = {
+                            value = it; prefs.edit().putFloat(key, it).apply(); sendGestureUpdate(prefs)
+                        }, valueRange = range)
+                    }
+
+                    ThemeSlider("Corner Radius", "theme_corner_radius", 50f, 10f..100f)
+                    ThemeSlider("Primary Text Size (sp)", "theme_text_primary", 16f, 10f..30f)
+                    ThemeSlider("Secondary Text Size (sp)", "theme_text_secondary", 14f, 8f..24f)
+                    ThemeSlider("Progress Bar Thickness", "theme_progress_thick", 4f, 1f..15f)
+                    ThemeSlider("Ring Thickness", "theme_ring_thick", 12f, 2f..25f)
+                    ThemeSlider("Button Tap Size", "theme_button_size", 48f, 24f..72f)
+                    ThemeSlider("Element Gap (Spacing)", "theme_element_gap", 8f, 0f..32f)
                 } else {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(text = "Configure ${tabs[selectedTab]}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
