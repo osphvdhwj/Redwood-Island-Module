@@ -259,8 +259,10 @@ class IslandController(private val context: Context) {
 
         view.onGestureEvent = { gesture ->
             val currentState = _islandState.value.name
-            val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
-            val actionName = prefs.getString("${currentState}_${gesture.name}", "NONE") ?: "NONE"
+
+            // 🚀 BUG 1 FIX: Read from RAM, not the blocked file!
+            // This instantly restores your Swipe to Expand (M Pill) and all other gestures.
+            val actionName = gestureMatrix["${currentState}_${gesture.name}"]?.name ?: "NONE"
 
             when (actionName) {
                 "PLAY_PAUSE" -> { if (currentMedia?.isPlaying == true) sendMediaCommand("PAUSE") else sendMediaCommand("PLAY") }
@@ -526,7 +528,14 @@ class IslandController(private val context: Context) {
         if (isPlaying && !wasPlaying) { userForceCollapsed = false; pauseFadeJob?.cancel() }
         if (isPlaying) { startMediaTicker() } else {
             stopMediaTicker()
-            if (wasPlaying) { pauseFadeJob?.cancel(); pauseFadeJob = scope.launch { delay(3000); currentMedia = null; evaluatePriority() } }
+            if (wasPlaying) {
+                pauseFadeJob?.cancel()
+                pauseFadeJob = scope.launch {
+                    delay(3000) // Wait 3 seconds after pause
+                    currentMedia = null // 🚀 BUG 2 FIX: Clear media so it collapses to R!
+                    evaluatePriority()
+                }
+            }
         }
         evaluatePriority()
     }
