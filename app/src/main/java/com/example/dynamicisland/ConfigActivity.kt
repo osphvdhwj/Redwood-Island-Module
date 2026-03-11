@@ -79,8 +79,8 @@ class ConfigActivity : ComponentActivity() {
                     val states = listOf("Ring" to "TYPE_0_RING", "Mini Pill" to "TYPE_1_MINI", "Mid Pill" to "TYPE_2_MID", "Max Pill" to "TYPE_3_MAX")
                     val gestures = IslandGesture.values()
 
-                    // Creates a clean, readable list: "None", "Play Pause", "Volume Up", etc.
-                    val actionOptions = IslandAction.values().map { it.name.replace("_", " ") }
+                    // Pass the real enum to the dropdown
+                    val actionOptions = IslandAction.values()
 
                     states.forEach { (label, stateKey) ->
                         var expanded by remember { mutableStateOf(false) }
@@ -231,13 +231,25 @@ class ConfigActivity : ComponentActivity() {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun GestureDropdown(label: String, options: List<String>, prefs: android.content.SharedPreferences, prefKey: String) {
+    fun GestureDropdown(label: String, options: Array<IslandAction>, prefs: android.content.SharedPreferences, prefKey: String) {
         var expanded by remember { mutableStateOf(false) }
         var selectedOption by remember { mutableStateOf(prefs.getString(prefKey, IslandAction.NONE.name) ?: IslandAction.NONE.name) }
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-            OutlinedTextField(value = selectedOption, onValueChange = {}, readOnly = true, label = { Text(label) }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth())
+            // UI shows spaces "PLAY PAUSE"
+            OutlinedTextField(value = selectedOption.replace("_", " "), onValueChange = {}, readOnly = true, label = { Text(label) }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth())
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                options.forEach { option -> DropdownMenuItem(text = { Text(option) }, onClick = { selectedOption = option; prefs.edit().putString(prefKey, option).apply(); expanded = false; sendGestureUpdate(prefs, this@ConfigActivity) }) }
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option.name.replace("_", " ")) },
+                        onClick = {
+                            selectedOption = option.name
+                            // 🚀 STRICT ENUM SERIALIZATION
+                            prefs.edit().putString(prefKey, option.name).apply()
+                            expanded = false
+                            sendGestureUpdate(prefs, this@ConfigActivity)
+                        }
+                    )
+                }
             }
         }
     }
