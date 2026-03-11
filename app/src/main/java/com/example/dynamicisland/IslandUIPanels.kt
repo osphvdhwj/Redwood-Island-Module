@@ -282,10 +282,9 @@ import kotlinx.coroutines.channels.BufferOverflow
                 Spacer(modifier = Modifier.width(12.dp))
                 Slider(
                     value = brightness,
-                    onValueChange = { brightness = it }, // ONLY UI STATE HERE
+                    onValueChange = { brightness = it },
                     onValueChangeFinished = {
-                        // OS DATABASE WRITE GOES HERE
-                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { 
+                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                             try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * 255).toInt()) } catch (e: Exception) {}
                         }
                     },
@@ -320,7 +319,6 @@ import kotlinx.coroutines.channels.BufferOverflow
             }
 
             // --- ROW 4: Brightness Control ---
-            // --- ROW 4: Brightness Control ---
             val resolver = context.contentResolver
             var secondBrightness by remember {
                 mutableFloatStateOf(
@@ -333,16 +331,13 @@ import kotlinx.coroutines.channels.BufferOverflow
                 Icon(Icons.Default.BrightnessLow, contentDescription = "Brightness", tint = Color.White)
                 Spacer(modifier = Modifier.width(16.dp))
                 Slider(
-                    value = secondBrightness, // 🚀 FIX: Use the correct state variable!
-                    onValueChange = { secondBrightness = it }, // 🚀 FIX: ONLY UI STATE HERE
+                    value = secondBrightness,
+                    onValueChange = { secondBrightness = it },
                     onValueChangeFinished = {
-                        // 🚀 FIX: OS DATABASE WRITE GOES HERE
-                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { 
+                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                             try { android.provider.Settings.System.putInt(resolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (secondBrightness * 255).toInt()) } catch (e: Exception) {}
                         }
                     },
-                    valueRange = 0f..1f,
-                    colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha=0.3f), thumbColor = Color.White),
                     modifier = Modifier.weight(1f).height(24.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
