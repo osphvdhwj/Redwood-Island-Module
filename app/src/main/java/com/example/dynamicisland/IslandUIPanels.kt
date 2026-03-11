@@ -282,9 +282,10 @@ import kotlinx.coroutines.channels.BufferOverflow
                 Spacer(modifier = Modifier.width(12.dp))
                 Slider(
                     value = brightness,
-                    onValueChange = { brightness = it },
+                    onValueChange = { brightness = it }, // ONLY UI STATE HERE
                     onValueChangeFinished = {
-                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                        // OS DATABASE WRITE GOES HERE
+                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { 
                             try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * 255).toInt()) } catch (e: Exception) {}
                         }
                     },
@@ -331,13 +332,16 @@ import kotlinx.coroutines.channels.BufferOverflow
                 Icon(Icons.Default.BrightnessLow, contentDescription = "Brightness", tint = Color.White)
                 Spacer(modifier = Modifier.width(16.dp))
                 Slider(
-                    value = secondBrightness,
-                    onValueChange = { secondBrightness = it },
+                    value = brightness,
+                    onValueChange = { brightness = it }, // ONLY UI STATE HERE
                     onValueChangeFinished = {
-                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                            try { android.provider.Settings.System.putInt(resolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (secondBrightness * 255).toInt()) } catch (e: Exception) {}
+                        // OS DATABASE WRITE GOES HERE
+                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { 
+                            try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * 255).toInt()) } catch (e: Exception) {}
                         }
                     },
+                    valueRange = 0f..1f,
+                    colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha=0.3f), thumbColor = Color.White),
                     modifier = Modifier.weight(1f).height(24.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
