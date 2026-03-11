@@ -77,8 +77,6 @@ import kotlin.math.abs
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.cancel
-
 
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -140,7 +138,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onSeekTo: ((Long) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
 
-    private var viewScope: CoroutineScope? = null
+    private var flowJob: kotlinx.coroutines.Job? = null
     private val lifecycleOwner = OverlayLifecycleOwner()
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
@@ -255,8 +253,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
 
         // 1. Start the layout debouncer safely
-        viewScope = CoroutineScope(AndroidUiDispatcher.CurrentThread)
-        viewScope?.launch {
+        flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
             insetsUpdateFlow.debounce(50).collect {
                 this@DynamicIslandView.requestLayout()
             }
@@ -275,8 +272,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     // 🚀 MEMORY LEAK FIX: Destroy everything when the view dies to free up RAM
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        viewScope?.cancel(null)
-        viewScope = null
+        flowJob?.cancel()
+        flowJob = null
         lifecycleOwner.destroy()
         try { context.unregisterReceiver(receiver) } catch (e: Exception) {}
 
