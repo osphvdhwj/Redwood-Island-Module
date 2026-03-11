@@ -320,6 +320,7 @@ import kotlinx.coroutines.channels.BufferOverflow
             }
 
             // --- ROW 4: Brightness Control ---
+            // --- ROW 4: Brightness Control ---
             val resolver = context.contentResolver
             var secondBrightness by remember {
                 mutableFloatStateOf(
@@ -332,12 +333,12 @@ import kotlinx.coroutines.channels.BufferOverflow
                 Icon(Icons.Default.BrightnessLow, contentDescription = "Brightness", tint = Color.White)
                 Spacer(modifier = Modifier.width(16.dp))
                 Slider(
-                    value = brightness,
-                    onValueChange = { brightness = it }, // ONLY UI STATE HERE
+                    value = secondBrightness, // 🚀 FIX: Use the correct state variable!
+                    onValueChange = { secondBrightness = it }, // 🚀 FIX: ONLY UI STATE HERE
                     onValueChangeFinished = {
-                        // OS DATABASE WRITE GOES HERE
+                        // 🚀 FIX: OS DATABASE WRITE GOES HERE
                         coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { 
-                            try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * 255).toInt()) } catch (e: Exception) {}
+                            try { android.provider.Settings.System.putInt(resolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (secondBrightness * 255).toInt()) } catch (e: Exception) {}
                         }
                     },
                     valueRange = 0f..1f,
