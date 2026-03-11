@@ -18,6 +18,7 @@ class BootReceiver : BroadcastReceiver() {
 
                 // 2. Broadcast to the Island to wake up and load prefs
                 val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+                @android.annotation.SuppressLint("WrongConstant")
                 val updateIntent = Intent("com.example.dynamicisland.RELOAD_PREFS").apply {
                     addFlags(0x01000000)
                     setPackage("com.android.systemui") // 🚀 Target SystemUI directly to prevent intent dropping

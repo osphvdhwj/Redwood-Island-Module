@@ -18,6 +18,15 @@ class IslandTileService : TileService() {
         val intent = Intent(this, ConfigActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        startActivityAndCollapse(intent)
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            val pendingIntent = android.app.PendingIntent.getActivity(
+                this, 0, intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            startActivityAndCollapse(pendingIntent)
+        } else {
+            @Suppress("DEPRECATION", "StartActivityAndCollapseDeprecated")
+            startActivityAndCollapse(intent)
+        }
     }
 }

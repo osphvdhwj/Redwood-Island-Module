@@ -84,6 +84,7 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     override val lifecycle: Lifecycle get() = lifecycleRegistry
     override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
     fun start() { savedStateRegistryController.performRestore(android.os.Bundle()); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME) }
+    fun destroy() { lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY) }
 }
 
 @OptIn(kotlinx.coroutines.FlowPreview::class) // 🚀 FIX: Opt-in to debounce preview
@@ -110,6 +111,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var globalBatteryLevel = mutableIntStateOf(100)
     var globalIsCharging = mutableStateOf(false)
     var currentMediaPos = mutableLongStateOf(0L)
+    var displayCutoutWidth = mutableFloatStateOf(0f)
 
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
@@ -245,6 +247,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
 
+        val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            windowManager?.currentWindowMetrics?.windowInsets?.displayCutout
+        } else null
+        displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
+
         // 1. Start the layout debouncer safely
         viewScope = CoroutineScope(AndroidUiDispatcher.CurrentThread)
         viewScope?.launch {
@@ -266,11 +273,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     // 🚀 MEMORY LEAK FIX: Destroy everything when the view dies to free up RAM
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-                viewScope?.cancel() // Kill the coroutine
+        viewScope?.cancel()
         viewScope = null
-        try {
-            context.unregisterReceiver(receiver) // Free the broadcast registry
-        } catch (e: Exception) {}
+        lifecycleOwner.destroy()
+        try { context.unregisterReceiver(receiver) } catch (e: Exception) {}
+
+        // 🚀 MISSING FIXES ADDED:
+        BatteryPlugin.stop(context)
+        context.sendBroadcast(android.content.Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui"))
     }
 
     @OptIn(ExperimentalAnimationApi::class)
@@ -283,12 +293,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             targetValue = if (isSquished) 0.96f else 1f,
             animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "squish"
         )
-        // 🚀 HARDWARE FIX: Prevent light bleed by clamping to physical display cutout
-        val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            windowManager?.currentWindowMetrics?.windowInsets?.displayCutout
-        } else null
-        val minWidth = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / LocalContext.current.resources.displayMetrics.density
-        val minSafeWidth = minWidth + 4f // 2px hardware padding on each side
+        val minSafeWidth = displayCutoutWidth.floatValue + 4f
 
         val rawTargetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
         val targetWidth = rawTargetWidth.coerceAtLeast(minSafeWidth)

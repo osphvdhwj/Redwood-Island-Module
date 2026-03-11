@@ -273,6 +273,7 @@ class ConfigActivity : ComponentActivity() {
 
     private fun broadcastUpdate(prefix: String, w: Float, h: Float, x: Float, y: Float, ringT: Float, expandUp: Boolean) {
         val prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+        @Suppress("WrongConstant")
         val intent = Intent("com.example.dynamicisland.RELOAD_PREFS").addFlags(0x01000000) 
         intent.putExtra("prefix", prefix).putExtra("w", w).putExtra("h", h).putExtra("x", x).putExtra("y", y).putExtra("ring_thickness", ringT).putExtra("expand_upwards", expandUp)
         intent.putExtra("pad_t", prefs.getFloat("pad_t", 0f)).putExtra("pad_b", prefs.getFloat("pad_b", 0f)).putExtra("pad_l", prefs.getFloat("pad_l", 0f)).putExtra("pad_r", prefs.getFloat("pad_r", 0f))
@@ -286,6 +287,7 @@ class ConfigActivity : ComponentActivity() {
 
     private fun sendGestureUpdate(prefs: android.content.SharedPreferences, context: android.content.Context) {
         val intent = android.content.Intent("com.example.dynamicisland.RELOAD_PREFS").apply {
+                @Suppress("WrongConstant")
             addFlags(android.content.Intent.FLAG_RECEIVER_FOREGROUND or 0x01000000)
             // 🚀 THE FIX: Push settings directly across the IPC bridge!
             putExtra("tweak_offset_y", prefs.getFloat("tweak_offset_y", 0f))

@@ -285,9 +285,11 @@ import kotlinx.coroutines.channels.BufferOverflow
                 Spacer(modifier = Modifier.width(12.dp))
                 Slider(
                     value = brightness,
-                    onValueChange = {
-                        brightness = it
-                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (it * 255).toInt()) }
+                    onValueChange = { brightness = it },
+                    onValueChangeFinished = {
+                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * 255).toInt()) } catch (e: Exception) {}
+                        }
                     },
                     valueRange = 0f..1f,
                     colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha=0.3f), thumbColor = Color.White),
@@ -333,12 +335,11 @@ import kotlinx.coroutines.channels.BufferOverflow
                 Spacer(modifier = Modifier.width(16.dp))
                 Slider(
                     value = secondBrightness,
-                    onValueChange = { newValue ->
-                        secondBrightness = newValue
-                        try {
-                            // Requires WRITE_SETTINGS permission granted via adb or app settings
-                            android.provider.Settings.System.putInt(resolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (newValue * 255).toInt())
-                        } catch (e: Exception) {}
+                    onValueChange = { secondBrightness = it },
+                    onValueChangeFinished = {
+                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            try { android.provider.Settings.System.putInt(resolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (secondBrightness * 255).toInt()) } catch (e: Exception) {}
+                        }
                     },
                     modifier = Modifier.weight(1f).height(24.dp)
                 )
