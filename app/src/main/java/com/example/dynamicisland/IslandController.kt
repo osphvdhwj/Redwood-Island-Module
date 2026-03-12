@@ -177,6 +177,7 @@ class IslandController(private val context: Context) {
 
     private val componentCallbacks = object : android.content.ComponentCallbacks2 {
         override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { isLandscape = newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE; evaluatePriority() }
+        @Suppress("OVERRIDE_DEPRECATION") // 🚀 FIX 2: Compiler Warning resolved
         override fun onLowMemory() {}
         override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
     }
@@ -317,10 +318,14 @@ class IslandController(private val context: Context) {
     }
 
     private fun evaluatePriority() {
-        if (isLandscape) {
-            val isAlertCritical = transientModel?.isCritical == true
-            if (!isAlertCritical) { _islandState.value = IslandState.HIDDEN; return }
+        // 🚀 FIX 1: Completely hide during Landscape OR Gaming mode (unless critical alert)
+        val isAlertCritical = transientModel?.isCritical == true
+        if ((isLandscape || currentHardware?.isGamingModeOn == true) && !isAlertCritical) {
+            _islandState.value = IslandState.HIDDEN
+            return
         }
+        
+        if (transientModel != null) {
         
         if (transientModel != null) {
             userForceCollapsed = false
@@ -349,11 +354,9 @@ class IslandController(private val context: Context) {
             return
         }
         
-        if (currentHardware?.isGamingModeOn == true) { _activeModel.value = currentHardware; _islandState.value = IslandState.TYPE_1_MINI; return }
-        
         _activeModel.value = null
         _islandState.value = IslandState.TYPE_0_RING
-    }
+        }
 
     fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
         transientJob?.cancel(); transientModel = model; evaluatePriority()
