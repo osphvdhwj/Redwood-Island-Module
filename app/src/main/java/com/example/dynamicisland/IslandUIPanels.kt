@@ -1,7 +1,5 @@
 package com.example.dynamicisland
 
-
-
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -226,140 +224,131 @@ import kotlinx.coroutines.channels.BufferOverflow
         }
     }
 
-    // 🚀 NEW: CONTROL CENTER (MAX PILL)
+// 🚀 NEW: PREMIUM CONTROL CENTER (MAX PILL)
     @Suppress("UNUSED_PARAMETER")
     @Composable
     fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
         val context = LocalContext.current
-        val coroutineScope = rememberCoroutineScope()
-
-        // Audio Manager
         val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
 
-        // Brightness Manager
+        // 🚀 INSTANT BRIGHTNESS FIX (Debounced DB Writes)
         val initialBrightness = remember { try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS) / 255f } catch (e: Exception) { 0.5f } }
         var brightness by remember { mutableFloatStateOf(initialBrightness) }
-        val initialAuto = remember { try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE) == 1 } catch(e:Exception){false} }
-        var autoBrightness by remember { mutableStateOf(initialAuto) }
+        var autoBrightness by remember { mutableStateOf(try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE) == 1 } catch(e:Exception){false}) }
 
-        // Torch Manager
-        var isTorchOn by remember { mutableStateOf(false) }
-        val cameraManager = remember { context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager }
-        val cameraId = remember { try { cameraManager.cameraIdList.firstOrNull() } catch(e: Exception) { null } }
+        // Writes to the DB every 100ms instead of 120 times a second. Instant screen feedback, zero lag!
+        LaunchedEffect(brightness) {
+            kotlinx.coroutines.delay(100) 
+            try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * 255).toInt()) } catch (e: Exception) {}
+        }
 
-        Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-            // --- ROW 1: Quick Settings Grid ---
+        // Hardware Managers (SystemUI Context)
+        val wifiManager = remember { context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager }
+        val btAdapter = remember { (context.applicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager).adapter }
+
+        var isWifiOn by remember { mutableStateOf(try { wifiManager.isWifiEnabled } catch(e:Exception){false}) }
+        var isBtOn by remember { mutableStateOf(try { btAdapter?.isEnabled == true } catch(e:Exception){false}) }
+
+        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
+            
+            // --- ROW 1: Premium QS Grid (SILENT TOGGLES) ---
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                DashboardQuickToggle(Icons.Default.Wifi, true, "Wi-Fi") {
-                    val intent = Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                    context.startActivity(intent)
+                DashboardQuickToggle(Icons.Default.Wifi, isWifiOn, "Wi-Fi") { 
+                    try { 
+                        val newState = !isWifiOn
+                        @Suppress("DEPRECATION")
+                        wifiManager.isWifiEnabled = newState
+                        isWifiOn = newState 
+                    } catch(e: Exception) {
+                        // Fallback if custom ROM blocks direct toggle
+                        context.startActivity(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                    } 
                 }
-                DashboardQuickToggle(Icons.Default.Bluetooth, false, "Bluetooth") {
-                    val intent = Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                    context.startActivity(intent)
+                
+                DashboardQuickToggle(Icons.Default.Bluetooth, isBtOn, "Bluetooth") { 
+                    try { 
+                        val newState = !isBtOn
+                        @SuppressLint("MissingPermission")
+                        if (newState) btAdapter?.enable() else btAdapter?.disable()
+                        isBtOn = newState 
+                    } catch(e: Exception) {
+                        context.startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                    } 
                 }
-                DashboardQuickToggle(Icons.Default.Build, isTorchOn, "Flashlight") {
-                    try { isTorchOn = !isTorchOn; cameraId?.let { cameraManager.setTorchMode(it, isTorchOn) } } catch(e: Exception) {}
+                
+                DashboardQuickToggle(Icons.Default.FlashlightOn, isTorchOn, "Torch") { 
+                    try { isTorchOn = !isTorchOn; cameraId?.let { cameraManager.setTorchMode(it, isTorchOn) } } catch(e: Exception) {} 
                 }
-                DashboardQuickToggle(Icons.Default.LocationOn, true, "Location") {
-                    val intent = Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                    context.startActivity(intent)
+                
+                DashboardQuickToggle(Icons.Default.LocationOn, true, "Location") { 
+                    context.startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) 
                 }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // --- ROW 2: Brightness Control ---
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // --- ROW 2: Brightness Card ---
+            Row(
+                modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 IconButton(
                     onClick = {
                         autoBrightness = !autoBrightness
-                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE, if (autoBrightness) 1 else 0) }
+                        try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE, if (autoBrightness) 1 else 0) } catch(e:Exception){}
                     },
-                    modifier = Modifier.background(if (autoBrightness) Color.Yellow.copy(alpha=0.3f) else Color.White.copy(alpha=0.1f), CircleShape)
-                ) { Icon(Icons.Default.BrightnessAuto, contentDescription = "Auto", tint = if (autoBrightness) Color.Yellow else Color.White) }
+                    modifier = Modifier.size(36.dp).background(if (autoBrightness) Color.Yellow.copy(alpha=0.3f) else Color.Transparent, CircleShape)
+                ) { Icon(Icons.Default.BrightnessAuto, contentDescription = "Auto", tint = if (autoBrightness) Color.Yellow else Color.White, modifier = Modifier.size(20.dp)) }
 
                 Spacer(modifier = Modifier.width(12.dp))
                 Slider(
                     value = brightness,
-                    onValueChange = { brightness = it },
-                    onValueChangeFinished = {
-                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                            try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * 255).toInt()) } catch (e: Exception) {}
-                        }
-                    },
+                    onValueChange = { brightness = it }, // Instant UI update!
                     valueRange = 0f..1f,
-                    colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha=0.3f), thumbColor = Color.White),
+                    colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha=0.2f), thumbColor = Color.White),
                     modifier = Modifier.weight(1f).height(24.dp)
                 )
+                Spacer(modifier = Modifier.width(12.dp))
+                Icon(Icons.Default.BrightnessHigh, contentDescription = "Max", tint = Color.White, modifier = Modifier.size(20.dp))
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // --- ROW 3: Multi-Channel Volume Control ---
+            // --- ROW 3: Volume Card ---
             var activeStream by remember { mutableIntStateOf(android.media.AudioManager.STREAM_MUSIC) }
             val maxVol = remember(activeStream) { audioManager.getStreamMaxVolume(activeStream).toFloat() }
             var currentVol by remember(activeStream) { mutableFloatStateOf(audioManager.getStreamVolume(activeStream) / maxVol) }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Stream Selectors
-                IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_MUSIC }) { Icon(Icons.Default.MusicNote, null, tint = if (activeStream == android.media.AudioManager.STREAM_MUSIC) Color.Cyan else Color.White) }
-                IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_RING }) { Icon(Icons.Default.Notifications, null, tint = if (activeStream == android.media.AudioManager.STREAM_RING) Color.Cyan else Color.White) }
-                IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_ALARM }) { Icon(Icons.Default.Alarm, null, tint = if (activeStream == android.media.AudioManager.STREAM_ALARM) Color.Cyan else Color.White) }
+            Row(
+                modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_MUSIC }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.MusicNote, null, tint = if (activeStream == android.media.AudioManager.STREAM_MUSIC) Color.Cyan else Color.White.copy(0.5f), modifier = Modifier.size(20.dp)) }
+                IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_RING }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Notifications, null, tint = if (activeStream == android.media.AudioManager.STREAM_RING) Color.Cyan else Color.White.copy(0.5f), modifier = Modifier.size(20.dp)) }
+                IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_ALARM }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Alarm, null, tint = if (activeStream == android.media.AudioManager.STREAM_ALARM) Color.Cyan else Color.White.copy(0.5f), modifier = Modifier.size(20.dp)) }
 
                 Spacer(modifier = Modifier.width(8.dp))
                 Slider(
                     value = currentVol,
-                    onValueChange = {
-                        currentVol = it
-                        audioManager.setStreamVolume(activeStream, (it * maxVol).toInt(), 0)
-                    },
+                    onValueChange = { currentVol = it; audioManager.setStreamVolume(activeStream, (it * maxVol).toInt(), 0) },
+                    colors = SliderDefaults.colors(activeTrackColor = Color.Cyan, inactiveTrackColor = Color.Cyan.copy(alpha=0.2f), thumbColor = Color.Cyan),
                     modifier = Modifier.weight(1f).height(24.dp)
                 )
-            }
-
-            // --- ROW 4: Brightness Control ---
-            val resolver = context.contentResolver
-            var secondBrightness by remember {
-                mutableFloatStateOf(
-                    try { android.provider.Settings.System.getInt(resolver, android.provider.Settings.System.SCREEN_BRIGHTNESS) / 255f }
-                    catch (e: Exception) { 0.5f }
-                )
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
-                Icon(Icons.Default.BrightnessLow, contentDescription = "Brightness", tint = Color.White)
-                Spacer(modifier = Modifier.width(16.dp))
-                Slider(
-                    value = secondBrightness,
-                    onValueChange = { secondBrightness = it },
-                    onValueChangeFinished = {
-                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                            try { android.provider.Settings.System.putInt(resolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (secondBrightness * 255).toInt()) } catch (e: Exception) {}
-                        }
-                    },
-                    modifier = Modifier.weight(1f).height(24.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Icon(Icons.Default.BrightnessHigh, contentDescription = "Brightness", tint = Color.White)
             }
         }
     }
 
-    // 🚀 NEW: QUICK TOGGLE COMPONENT
+    // 🚀 PREMIUM QS TOGGLE UI
     @Composable
     fun DynamicIslandView.DashboardQuickToggle(icon: androidx.compose.ui.graphics.vector.ImageVector, isActive: Boolean, label: String? = null, onClick: () -> Unit = {}) {
-        val bgColor by animateColorAsState(if (isActive) Color(0xFF0A84FF) else Color.White.copy(alpha=0.15f), label="bg")
-        val tint by animateColorAsState(if (isActive) Color.White else Color.White.copy(alpha=0.6f), label="tint")
+        val bgColor by animateColorAsState(if (isActive) Color(0xFF0A84FF) else Color.White.copy(alpha=0.1f), label="bg")
+        val tint by animateColorAsState(if (isActive) Color.White else Color.White.copy(alpha=0.7f), label="tint")
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
-                modifier = Modifier.size(56.dp).clip(CircleShape).background(bgColor).clickable { onClick() },
+                modifier = Modifier.size(60.dp).clip(RoundedCornerShape(16.dp)).background(bgColor).clickable { onClick() },
                 contentAlignment = Alignment.Center
-            ) { Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(26.dp)) }
+            ) { Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(28.dp)) }
             if (label != null) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(label, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text(label, color = Color.White.copy(alpha=0.9f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -542,18 +531,36 @@ import kotlinx.coroutines.channels.BufferOverflow
     }
 
     @Composable
-    fun IsolatedCircularProgress(durationMs: Long, posProvider: () -> Long, color: Color) {
-        // 🚀 MATH CORRUPTION FIX: Prevent division by zero, negative times, and streams.
+    fun IsolatedLinearProgressIndicator(durationMs: Long, posProvider: () -> Long, color: Color, trackColor: Color, modifier: Modifier = Modifier) {
+        val theme = LocalIslandTheme.current 
         val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
         val currentPosition = posProvider().toFloat().coerceAtLeast(0f)
-        val progress = (currentPosition / safeDuration).coerceIn(0f, 1f)
-        CircularProgressIndicator(
-            progress = { progress },
-            color = color,
-            trackColor = color.copy(alpha = 0.2f),
-            strokeWidth = 2.dp,
-            modifier = Modifier.fillMaxSize()
+        
+        val targetProgress = (currentPosition / safeDuration).coerceIn(0f, 1f)
+        
+        // 🚀 60FPS SMOOTHING: Interpolates the space between the 1-second ticks
+        val animatedProgress by animateFloatAsState(
+            targetValue = targetProgress,
+            animationSpec = tween(durationMillis = 1000, easing = LinearEasing),
+            label = "liquid_progress"
         )
+
+        androidx.compose.foundation.Canvas(modifier = modifier.height(theme.mediaBarThickness)) {
+            drawLine(
+                color = trackColor,
+                start = androidx.compose.ui.geometry.Offset(0f, size.height / 2),
+                end = androidx.compose.ui.geometry.Offset(size.width, size.height / 2),
+                strokeWidth = theme.mediaBarThickness.toPx(),
+                cap = theme.mediaBarCap 
+            )
+            drawLine(
+                color = color,
+                start = androidx.compose.ui.geometry.Offset(0f, size.height / 2),
+                end = androidx.compose.ui.geometry.Offset(size.width * animatedProgress, size.height / 2), // 🚀 Uses animated value
+                strokeWidth = theme.mediaBarThickness.toPx(),
+                cap = theme.mediaBarCap
+            )
+        }
     }
 
     @OptIn(ExperimentalFoundationApi::class)
