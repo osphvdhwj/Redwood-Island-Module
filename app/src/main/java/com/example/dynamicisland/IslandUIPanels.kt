@@ -160,62 +160,75 @@ import de.robv.android.xposed.XSharedPreferences
         }
     }
 
-    // 🚀 NEW: PREMIUM CONTROL CENTER (MAX PILL)
+    // 🚀 BULLETPROOF CONTROL CENTER (MAX PILL)
     @Suppress("UNUSED_PARAMETER")
     @Composable
     fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
         val context = LocalContext.current
         val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
-        val wifiManager = remember { context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager }
-        val btAdapter = remember { (context.applicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager).adapter }
+        
+        // 🚀 CRASH FIX 1: Null-safe Hardware Managers
+        val wifiManager = remember { try { context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager } catch(e: Throwable) { null } }
+        val btAdapter = remember { try { (context.applicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager)?.adapter } catch(e: Throwable) { null } }
 
         // Debounced Brightness State
-        val initialBrightness = remember { try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS) / 255f } catch (e: Exception) { 0.5f } }
+        val initialBrightness = remember { try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS) / 255f } catch (e: Throwable) { 0.5f } }
         var brightness by remember { mutableFloatStateOf(initialBrightness) }
-        var autoBrightness by remember { mutableStateOf(try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE) == 1 } catch(e:Exception){false}) }
+        var autoBrightness by remember { mutableStateOf(try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE) == 1 } catch(e: Throwable) { false }) }
 
         LaunchedEffect(brightness) {
             kotlinx.coroutines.delay(100) 
-            try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * 255).toInt()) } catch (e: Exception) {}
+            try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * 255).toInt()) } catch (e: Throwable) {}
         }
 
-        var isWifiOn by remember { mutableStateOf(try { wifiManager.isWifiEnabled } catch(e:Exception){false}) }
-        var isBtOn by remember { mutableStateOf(try { btAdapter?.isEnabled == true } catch(e:Exception){false}) }
+        var isWifiOn by remember { mutableStateOf(try { wifiManager?.isWifiEnabled == true } catch(e: Throwable) { false }) }
+        var isBtOn by remember { mutableStateOf(try { btAdapter?.isEnabled == true } catch(e: Throwable) { false }) }
         var isTorchOn by remember { mutableStateOf(false) }
-        val cameraManager = remember { context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager }
-        val cameraId = remember { try { cameraManager.cameraIdList.firstOrNull() } catch(e: Exception) { null } }
+        val cameraManager = remember { try { context.getSystemService(Context.CAMERA_SERVICE) as? android.hardware.camera2.CameraManager } catch(e: Throwable) { null } }
+        val cameraId = remember { try { cameraManager?.cameraIdList?.firstOrNull() } catch(e: Throwable) { null } }
 
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
             
-            // --- ROW 1: Premium QS Grid (SILENT TOGGLES) ---
+            // --- ROW 1: Premium QS Grid ---
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 DashboardQuickToggle(Icons.Default.Wifi, isWifiOn, "Wi-Fi") { 
-                    try { val newState = !isWifiOn; @Suppress("DEPRECATION") wifiManager.isWifiEnabled = newState; isWifiOn = newState } catch(e: Exception) { context.startActivity(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } 
+                    try { val newState = !isWifiOn; @Suppress("DEPRECATION") wifiManager?.isWifiEnabled = newState; isWifiOn = newState } catch(e: Throwable) { try { context.startActivity(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(ex: Throwable) {} } 
                 }
                 DashboardQuickToggle(Icons.Default.Bluetooth, isBtOn, "Bluetooth") { 
-                    try { val newState = !isBtOn; @SuppressLint("MissingPermission") if (newState) btAdapter?.enable() else btAdapter?.disable(); isBtOn = newState } catch(e: Exception) { context.startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } 
+                    try { val newState = !isBtOn; @SuppressLint("MissingPermission") if (newState) btAdapter?.enable() else btAdapter?.disable(); isBtOn = newState } catch(e: Throwable) { try { context.startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(ex: Throwable) {} } 
                 }
                 DashboardQuickToggle(Icons.Default.FlashlightOn, isTorchOn, "Torch") { 
-                    try { isTorchOn = !isTorchOn; cameraId?.let { cameraManager.setTorchMode(it, isTorchOn) } } catch(e: Exception) {} 
+                    try { isTorchOn = !isTorchOn; cameraId?.let { cameraManager?.setTorchMode(it, isTorchOn) } } catch(e: Throwable) {} 
                 }
                 DashboardQuickToggle(Icons.Default.LocationOn, true, "Location") { 
-                    context.startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) 
+                    try { context.startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {}
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- ROW 2: 🚀 THE NEW APP DOCK ---
-            val prefs = remember { try { de.robv.android.xposed.XSharedPreferences("com.example.dynamicisland", "island_prefs").apply{ makeWorldReadable(); reload() } } catch(e:Exception){null} }
+            // --- ROW 2: App Dock ---
+            // 🚀 CRASH FIX 2: Catching `Error` instead of just `Exception` for Xposed hooks
+            val prefs = remember { try { de.robv.android.xposed.XSharedPreferences("com.example.dynamicisland", "island_prefs").apply{ makeWorldReadable(); reload() } } catch(e: Throwable) { null } }
             val pm = context.packageManager
             Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                 for (i in 0..3) {
                     val pkg = prefs?.getString("pinned_app_$i", "") ?: ""
                     if (pkg.isNotEmpty()) {
-                        val iconBmp = remember(pkg) { try { pm.getApplicationIcon(pkg).toBitmap().asImageBitmap() } catch(e:Exception){null} }
+                        // 🚀 CRASH FIX 3: Safe Canvas Draw instead of fragile .toBitmap()
+                        val iconBmp = remember(pkg) { 
+                            try { 
+                                val drawable = pm.getApplicationIcon(pkg)
+                                val bmp = android.graphics.Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), android.graphics.Bitmap.Config.ARGB_8888)
+                                val canvas = android.graphics.Canvas(bmp)
+                                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                                drawable.draw(canvas)
+                                bmp.asImageBitmap()
+                            } catch(e: Throwable) { null } 
+                        }
                         if (iconBmp != null) {
                             Image(bitmap = iconBmp, contentDescription = null, modifier = Modifier.size(36.dp).clip(CircleShape).clickable {
-                                try { val launchIntent = pm.getLaunchIntentForPackage(pkg); if (launchIntent != null) { launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); context.startActivity(launchIntent) } } catch(e:Exception){}
+                                try { val launchIntent = pm.getLaunchIntentForPackage(pkg); if (launchIntent != null) { launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); context.startActivity(launchIntent) } } catch(e: Throwable) {}
                             })
                         } else Box(Modifier.size(36.dp).background(Color.White.copy(0.1f), CircleShape))
                     } else {
@@ -228,7 +241,7 @@ import de.robv.android.xposed.XSharedPreferences
 
             // --- ROW 3: Brightness Card ---
             Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { autoBrightness = !autoBrightness; try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE, if (autoBrightness) 1 else 0) } catch(e:Exception){} }, modifier = Modifier.size(36.dp).background(if (autoBrightness) Color.Yellow.copy(alpha=0.3f) else Color.Transparent, CircleShape)) { Icon(Icons.Default.BrightnessAuto, contentDescription = "Auto", tint = if (autoBrightness) Color.Yellow else Color.White, modifier = Modifier.size(20.dp)) }
+                IconButton(onClick = { autoBrightness = !autoBrightness; try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE, if (autoBrightness) 1 else 0) } catch(e: Throwable) {} }, modifier = Modifier.size(36.dp).background(if (autoBrightness) Color.Yellow.copy(alpha=0.3f) else Color.Transparent, CircleShape)) { Icon(Icons.Default.BrightnessAuto, contentDescription = "Auto", tint = if (autoBrightness) Color.Yellow else Color.White, modifier = Modifier.size(20.dp)) }
                 Spacer(modifier = Modifier.width(12.dp))
                 Slider(value = brightness, onValueChange = { brightness = it }, valueRange = 0f..1f, colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha=0.2f), thumbColor = Color.White), modifier = Modifier.weight(1f).height(24.dp))
                 Spacer(modifier = Modifier.width(12.dp))
@@ -239,15 +252,19 @@ import de.robv.android.xposed.XSharedPreferences
 
             // --- ROW 4: Volume Card ---
             var activeStream by remember { mutableIntStateOf(android.media.AudioManager.STREAM_MUSIC) }
-            val maxVol = remember(activeStream) { audioManager.getStreamMaxVolume(activeStream).toFloat() }
-            var currentVol by remember(activeStream) { mutableFloatStateOf(audioManager.getStreamVolume(activeStream) / maxVol) }
+            // 🚀 CRASH FIX 4: Prevent "NaN" divide-by-zero crashes on Slider
+            val maxVol = remember(activeStream) { 
+                val mv = audioManager.getStreamMaxVolume(activeStream).toFloat()
+                if (mv <= 0f) 1f else mv 
+            }
+            var currentVol by remember(activeStream) { mutableFloatStateOf( (audioManager.getStreamVolume(activeStream) / maxVol).coerceIn(0f, 1f) ) }
 
             Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_MUSIC }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.MusicNote, null, tint = if (activeStream == android.media.AudioManager.STREAM_MUSIC) Color.Cyan else Color.White.copy(0.5f), modifier = Modifier.size(20.dp)) }
                 IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_RING }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Notifications, null, tint = if (activeStream == android.media.AudioManager.STREAM_RING) Color.Cyan else Color.White.copy(0.5f), modifier = Modifier.size(20.dp)) }
                 IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_ALARM }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Alarm, null, tint = if (activeStream == android.media.AudioManager.STREAM_ALARM) Color.Cyan else Color.White.copy(0.5f), modifier = Modifier.size(20.dp)) }
                 Spacer(modifier = Modifier.width(8.dp))
-                Slider(value = currentVol, onValueChange = { currentVol = it; audioManager.setStreamVolume(activeStream, (it * maxVol).toInt(), 0) }, colors = SliderDefaults.colors(activeTrackColor = Color.Cyan, inactiveTrackColor = Color.Cyan.copy(alpha=0.2f), thumbColor = Color.Cyan), modifier = Modifier.weight(1f).height(24.dp))
+                Slider(value = currentVol, onValueChange = { currentVol = it; try{ audioManager.setStreamVolume(activeStream, (it * maxVol).toInt(), 0) } catch(e: Throwable){} }, colors = SliderDefaults.colors(activeTrackColor = Color.Cyan, inactiveTrackColor = Color.Cyan.copy(alpha=0.2f), thumbColor = Color.Cyan), modifier = Modifier.weight(1f).height(24.dp))
             }
         }
     }
