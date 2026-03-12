@@ -118,7 +118,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onSeekTo: ((Long) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
 
-    private var viewScope: CoroutineScope? = null
+    private var flowJob: kotlinx.coroutines.Job? = null
     private val lifecycleOwner = OverlayLifecycleOwner()
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
@@ -228,8 +228,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         } else null
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
 
-        viewScope = CoroutineScope(AndroidUiDispatcher.CurrentThread)
-        viewScope?.launch {
+        flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
             insetsUpdateFlow.debounce(50).collect {
                 this@DynamicIslandView.requestLayout()
             }
@@ -247,8 +246,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        viewScope?.cancel()
-        viewScope = null
+        flowJob?.cancel()
+        flowJob = null
         lifecycleOwner.destroy()
         try { context.unregisterReceiver(receiver) } catch (e: Exception) {}
 
