@@ -112,7 +112,7 @@ class ConfigActivity : ComponentActivity() {
                             .sortedBy { pair -> pair.first }
                     }
 
-                    val pinnedApps = listOf("Slot 1", "Slot 2", "Slot 3", "Slot 4")
+                    val pinnedApps = listOf("Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Slot 6", "Slot 7", "Slot 8")
                     pinnedApps.forEachIndexed { index, slot ->
                         var expanded by remember { mutableStateOf(false) }
                         var selectedAppPkg by remember { mutableStateOf(prefs.getString("pinned_app_$index", "") ?: "") }
@@ -288,6 +288,7 @@ class ConfigActivity : ComponentActivity() {
         } 
         intent.putExtra("prefix", prefix).putExtra("w", w).putExtra("h", h).putExtra("x", x).putExtra("y", y).putExtra("ring_thickness", ringT).putExtra("expand_upwards", expandUp)
         intent.putExtra("pad_t", prefs.getFloat("pad_t", 0f)).putExtra("pad_b", prefs.getFloat("pad_b", 0f)).putExtra("pad_l", prefs.getFloat("pad_l", 0f)).putExtra("pad_r", prefs.getFloat("pad_r", 0f))
+        for (i in 0..7) putExtra("pinned_app_$i", prefs.getString("pinned_app_$i", ""))
         
         val matrix = JSONObject()
         prefs.all.forEach { (key, value) -> if (key.startsWith("TYPE_") && value is String) matrix.put(key, value) }
@@ -319,6 +320,7 @@ class ConfigActivity : ComponentActivity() {
             putExtra("theme_bat_ring", prefs.getFloat("theme_bat_ring", 12f))
             putExtra("theme_alert_title", prefs.getFloat("theme_alert_title", 16f))
             putExtra("theme_alert_msg", prefs.getFloat("theme_alert_msg", 14f))
+            for (i in 0..7) putExtra("pinned_app_$i", prefs.getString("pinned_app_$i", ""))
 
             putExtra("enable_media", prefs.getBoolean("enable_media", true))
             putExtra("enable_charging", prefs.getBoolean("enable_charging", true))
