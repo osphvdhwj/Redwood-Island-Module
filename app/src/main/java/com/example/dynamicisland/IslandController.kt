@@ -516,7 +516,10 @@ class IslandController(private val context: Context) {
         }
 
         val albumArtBitmap = getScaledBitmap(rawAlbumArt)
-        
+        // 🚀 FIX: Recycle the massive original bitmap so SystemUI doesn't run out of memory!
+        if (rawAlbumArt != null && rawAlbumArt != albumArtBitmap) { rawAlbumArt.recycle() }
+        //fix here, low RAM fix
+    
         var appIconBitmap: Bitmap? = null
         try { 
             val pm = context.packageManager
