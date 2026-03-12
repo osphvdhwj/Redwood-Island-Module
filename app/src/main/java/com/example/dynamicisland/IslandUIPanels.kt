@@ -13,9 +13,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -74,7 +76,6 @@ import de.robv.android.xposed.XSharedPreferences
                 Spacer(Modifier.width(8.dp))
                 IsolatedTimeText(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = Color.White.copy(alpha=0.7f))
             }
-            // 🚀 FIX 3: Changed trackColor from Transparent to White 20% so you can see the end point!
             IsolatedLinearProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = Color.White.copy(alpha=0.8f), trackColor = Color.White.copy(alpha=0.2f), modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.5f).height(2.dp).padding(bottom = 1.dp).clip(CircleShape))
         }
     }
@@ -161,26 +162,6 @@ import de.robv.android.xposed.XSharedPreferences
         }
     }
 
-    // 🚀 BULLETPROOF CONTROL CENTER (MAX PILL)
-    @@OptIn(ExperimentalFoundationApi::class)
-    @Composable
-    fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
-                val infiniteTransition = rememberInfiniteTransition(); val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart))
-                val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
-                if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(24.dp).clip(CircleShape).rotate(currentRotation)) else Box(Modifier.size(24.dp).background(Color.White.copy(0.2f), CircleShape))
-                Spacer(Modifier.width(8.dp))
-                Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f, fill = false).safeMarquee(islandState.value))
-                Spacer(Modifier.width(8.dp))
-                IsolatedTimeText(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = Color.White.copy(alpha=0.7f))
-            }
-            // 🚀 FIX 3: Changed trackColor from Transparent to White 20% so you can see the end point!
-            IsolatedLinearProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = Color.White.copy(alpha=0.8f), trackColor = Color.White.copy(alpha=0.2f), modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.5f).height(2.dp).padding(bottom = 1.dp).clip(CircleShape))
-        }
-    }
-
-    // 🚀 FIX 2: Added Suppress DEPRECATION to kill compiler warnings for Bluetooth
     @Suppress("UNUSED_PARAMETER", "DEPRECATION")
     @Composable
     fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
@@ -203,7 +184,7 @@ import de.robv.android.xposed.XSharedPreferences
 
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
             
-            // --- ROW 1: 🚀 FIX 5 - SCROLLABLE QS GRID (Fits infinite tiles horizontally) ---
+            // --- ROW 1: SCROLLABLE QS GRID ---
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 DashboardQuickToggle(Icons.Default.Wifi, isWifiOn, "Wi-Fi") { try { val newState = !isWifiOn; wifiManager?.isWifiEnabled = newState; isWifiOn = newState } catch(e: Throwable) { try { context.startActivity(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(ex: Throwable) {} } }
                 DashboardQuickToggle(Icons.Default.Bluetooth, isBtOn, "Bluetooth") { try { val newState = !isBtOn; @SuppressLint("MissingPermission") if (newState) btAdapter?.enable() else btAdapter?.disable(); isBtOn = newState } catch(e: Throwable) { try { context.startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(ex: Throwable) {} } }
@@ -216,7 +197,7 @@ import de.robv.android.xposed.XSharedPreferences
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- ROW 2: 🚀 FIX 4 & 5 - SCROLLABLE 8-APP DOCK ---
+            // --- ROW 2: SCROLLABLE 8-APP DOCK ---
             val pm = context.packageManager
             Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 val validApps = pinnedApps.filter { it.isNotEmpty() }
@@ -271,8 +252,6 @@ import de.robv.android.xposed.XSharedPreferences
         }
     }
 
-            
-
     @Composable
     fun DynamicIslandView.DashboardQuickToggle(icon: androidx.compose.ui.graphics.vector.ImageVector, isActive: Boolean, label: String? = null, onClick: () -> Unit = {}) {
         val bgColor by animateColorAsState(if (isActive) Color(0xFF0A84FF) else Color.White.copy(alpha=0.1f), label="bg")
@@ -304,6 +283,7 @@ import de.robv.android.xposed.XSharedPreferences
     fun DynamicIslandView.GeneralMini(general: LiveActivityModel.General) { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) { Icon(imageVector = getIconForType(general.type), contentDescription = null, tint = Color(general.accentColor), modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text(text = "${general.title} • ${general.dataText}", color = Color.White, fontSize = 14.sp, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value)) } }
     @Composable
     fun DynamicIslandView.HardwareGaugeMini(hw: LiveActivityModel.HardwareMonitor) { val tempColor = when { hw.cpuTempCelsius > 45f -> Color.Red; hw.cpuTempCelsius > 38f -> Color.Yellow; else -> Color.Green }; Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) { Icon(imageVector = Icons.Default.Info, contentDescription = "Hardware", tint = tempColor, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); androidx.compose.material3.LinearProgressIndicator(progress = { (hw.cpuTempCelsius / 60f).coerceIn(0f, 1f) }, modifier = Modifier.width(60.dp).height(6.dp).clip(RoundedCornerShape(3.dp)), color = tempColor, trackColor = Color.White.copy(alpha=0.2f)); Spacer(Modifier.width(8.dp)); Text(text = "${hw.cpuFreqMhz} MHz", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) } }
+    
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun DynamicIslandView.UniversalMid(textColor: Color, activity: LiveActivityModel) { val infiniteTransition = rememberInfiniteTransition(label = "pulse"); val alphaPulse by infiniteTransition.animateFloat(initialValue = 0.4f, targetValue = 1f, animationSpec = infiniteRepeatable(animation = tween(800, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse), label = "alphaPulse"); val progress = when(activity) { is LiveActivityModel.General -> activity.progress; is LiveActivityModel.Charging -> activity.level / 100f; else -> null }; val colorInt = when(activity) { is LiveActivityModel.General -> activity.accentColor; is LiveActivityModel.Charging -> android.graphics.Color.GREEN; else -> android.graphics.Color.WHITE }; val title = when(activity) { is LiveActivityModel.General -> activity.title; is LiveActivityModel.Charging -> if (activity.isPluggedIn) "Charging" else "Disconnected"; else -> "" }; val dataText = when(activity) { is LiveActivityModel.General -> activity.dataText; is LiveActivityModel.Charging -> "${activity.level}%"; else -> "" }; Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) { Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) { if (progress != null) CircularProgressIndicator(progress = { progress }, color = Color(colorInt), trackColor = textColor.copy(alpha = 0.2f), modifier = Modifier.fillMaxSize()); val iconAlpha = if (activity.type == ActivityType.CHARGING) alphaPulse else 1f; Icon(imageVector = getIconForType(activity.type), contentDescription = null, tint = Color(colorInt), modifier = Modifier.size(24.dp).alpha(iconAlpha)) }; Spacer(Modifier.width(16.dp)); Column(modifier = Modifier.weight(1f)) { Text(text = title, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value)); Text(text = dataText, color = textColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value)) } } }
@@ -314,126 +294,4 @@ import de.robv.android.xposed.XSharedPreferences
     fun DynamicIslandView.setState(newState: IslandState) { islandState.value = newState }
     fun DynamicIslandView.setModel(model: LiveActivityModel?) { activeModel.value = model }
     fun DynamicIslandView.setSplitModel(model: LiveActivityModel?) { splitModel.value = model }
-    fun getIconForType(type: ActivityType): ImageVector { return when(type) { ActivityType.CALL -> Icons.Default.Phone; ActivityType.NAVIGATION -> Icons.Default.LocationOn; ActivityType.TIMER -> Icons.Default.Notifications; ActivityType.MESSAGE -> Icons.Default.Email; ActivityType.ALARM -> Icons.Default.Notifications; ActivityType.CHARGING -> Icons.Default.Add; ActivityType.BATTERY_LOW -> Icons.Default.Warning; ActivityType.BLUETOOTH -> Icons.Default.Bluetooth; ActivityType.WIFI -> Icons.Default.Wifi; ActivityType.HARDWARE -> Icons.Default.Info; else -> Icons.Default.Info } }
-
-    fun formatTime(ms: Long): String { if (ms <= 0) return "0:00"; val s = ms / 1000; return String.format("%d:%02d", s / 60, s % 60) }
-
-    @Composable
-    fun IsolatedTimeText(durationMs: Long, posProvider: () -> Long, textColor: Color, modifier: Modifier = Modifier) {
-        Text(text = "${formatTime(posProvider())} / ${formatTime(durationMs)}", color = textColor, fontSize = 12.sp, modifier = modifier)
-    }
-
-    @Composable
-    fun IsolatedTimeRow(durationMs: Long, posProvider: () -> Long, textColor: Color) {
-        val pos = posProvider()
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(text = formatTime(pos), color = textColor.copy(alpha=0.7f), fontSize = 12.sp)
-            Text(text = formatTime(durationMs), color = textColor.copy(alpha=0.7f), fontSize = 12.sp)
-        }
-    }
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    fun IsolatedMediaSlider(durationMs: Long, posProvider: () -> Long, dynamicTextColor: Color, onSeek: (Long) -> Unit) {
-        val haptic = LocalHapticFeedback.current
-        val interactionSource = remember { MutableInteractionSource() }
-        val isDragged by interactionSource.collectIsDraggedAsState()
-
-        val currentPos = posProvider().toFloat()
-        var localPosition by remember(isDragged) { mutableFloatStateOf(currentPos) }
-
-        val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
-        val currentPosition = posProvider().toFloat().coerceAtLeast(0f)
-        val safePosition = if (isDragged) localPosition else currentPosition
-
-        Slider(
-            value = (safePosition / safeDuration).coerceIn(0f, 1f),
-            onValueChange = {
-                localPosition = it * safeDuration
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            },
-            onValueChangeFinished = {
-                onSeek(localPosition.toLong())
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            },
-            interactionSource = interactionSource,
-            colors = SliderDefaults.colors(activeTrackColor = dynamicTextColor, inactiveTrackColor = dynamicTextColor.copy(alpha=0.3f), thumbColor = dynamicTextColor),
-            modifier = Modifier.fillMaxWidth().height(24.dp)
-        )
-    }
-
-    // 🚀 NEW: 60FPS LIQUID PROGRESS BAR
-    @Composable
-    fun IsolatedLinearProgressIndicator(durationMs: Long, posProvider: () -> Long, color: Color, trackColor: Color, modifier: Modifier = Modifier) {
-        val theme = LocalIslandTheme.current 
-        val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
-        val currentPosition = posProvider().toFloat().coerceAtLeast(0f)
-        
-        val targetProgress = (currentPosition / safeDuration).coerceIn(0f, 1f)
-        val animatedProgress by animateFloatAsState(targetValue = targetProgress, animationSpec = tween(durationMillis = 1000, easing = LinearEasing), label = "liquid_progress")
-
-        androidx.compose.foundation.Canvas(modifier = modifier.height(theme.mediaBarThickness)) {
-            drawLine(color = trackColor, start = androidx.compose.ui.geometry.Offset(0f, size.height / 2), end = androidx.compose.ui.geometry.Offset(size.width, size.height / 2), strokeWidth = theme.mediaBarThickness.toPx(), cap = theme.mediaBarCap)
-            drawLine(color = color, start = androidx.compose.ui.geometry.Offset(0f, size.height / 2), end = androidx.compose.ui.geometry.Offset(size.width * animatedProgress, size.height / 2), strokeWidth = theme.mediaBarThickness.toPx(), cap = theme.mediaBarCap)
-        }
-    }
-
-    @Composable
-    fun IsolatedCircularProgressIndicator(durationMs: Long, posProvider: () -> Long, color: Color, trackColor: Color, strokeWidth: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
-        val safeDuration = if (durationMs > 0) durationMs.toFloat() else 1f
-        CircularProgressIndicator(progress = { (posProvider().toFloat() / safeDuration).coerceIn(0f, 1f) }, color = color, trackColor = trackColor, strokeWidth = strokeWidth, modifier = modifier)
-    }
-
-    @OptIn(ExperimentalFoundationApi::class)
-    @Composable
-    fun DynamicIslandView.AppTimerWarningMid(model: LiveActivityModel.AppTimerWarning) {
-        var remainingSeconds by remember { mutableIntStateOf(((model.targetTimeMs - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)) }
-
-        LaunchedEffect(model.targetTimeMs) {
-            while (remainingSeconds > 0) {
-                kotlinx.coroutines.delay(1000)
-                remainingSeconds = ((model.targetTimeMs - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
-            }
-        }
-
-        val pulseTransition = rememberInfiniteTransition(label = "pulse")
-        val alertAlpha by pulseTransition.animateFloat(initialValue = 0.2f, targetValue = 0.6f, animationSpec = infiniteRepeatable(animation = tween(600, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse), label = "alertAlpha")
-
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-            Box(modifier = Modifier.size(48.dp).background(Color.Red.copy(alpha = alertAlpha), CircleShape).border(2.dp, Color.Red, CircleShape), contentAlignment = Alignment.Center) {
-                if (model.appIcon != null) { Image(bitmap = model.appIcon.asImageBitmap(), contentDescription = "App Icon", modifier = Modifier.size(36.dp).clip(CircleShape)) } else { Icon(Icons.Default.Warning, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp)) }
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                 val theme = LocalIslandTheme.current
-                 Text(text = "Time Limit Reached", color = Color.Red, fontSize = theme.titleSize, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-                 Text(text = "${model.appName} closing in ${remainingSeconds}s", color = Color.White, fontSize = (theme.titleSize * 0.85f), maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-            }
-        }
-    }
-
-    @Composable
-    fun IsolatedCircularProgress(durationMs: Long, posProvider: () -> Long, color: Color) {
-        val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
-        val currentPosition = posProvider().toFloat().coerceAtLeast(0f)
-        CircularProgressIndicator(progress = { (currentPosition / safeDuration).coerceIn(0f, 1f) }, color = color, trackColor = color.copy(alpha = 0.2f), strokeWidth = 2.dp, modifier = Modifier.fillMaxSize())
-    }
-
-    @OptIn(ExperimentalFoundationApi::class)
-    @Composable
-    fun DynamicIslandView.RealityPillMini(model: LiveActivityModel.RealityPill) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-            Icon(Icons.Default.Timer, contentDescription = "Session Time", tint = Color(0xFF00FF00), modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(text = "${model.appName} • ${model.sessionMinutes}m", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-        }
-    }
-
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-fun androidx.compose.ui.Modifier.safeMarquee(state: IslandState): androidx.compose.ui.Modifier {
-    return if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING && state != IslandState.TYPE_CUBE) {
-        this.basicMarquee()
-    } else {
-        this
-    }
-}
+    fun getIconForType(type: ActivityType): ImageVector { return when(type) { ActivityType.CALL -> Icons.Default.Phone; ActivityType.NAVIGATION -> Icons.Default.LocationOn; ActivityType.TIMER -> Icons.Default.Notifications; ActivityType.MESSAGE -> Icons.Default.Email; ActivityType.ALARM -> Icons.Default.Notifications; ActivityType.CHARGING -> Icons.Default.
