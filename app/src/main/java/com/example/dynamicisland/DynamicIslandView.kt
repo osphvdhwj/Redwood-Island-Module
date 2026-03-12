@@ -9,22 +9,14 @@ import android.widget.FrameLayout
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsDraggedAsState
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.*
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,24 +24,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
-
-
-
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -57,13 +40,7 @@ import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,12 +48,11 @@ import androidx.lifecycle.*
 import androidx.savedstate.*
 import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.cancel
 import kotlin.math.abs
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.channels.BufferOverflow
 
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -87,7 +63,7 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     fun destroy() { lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY) }
 }
 
-@OptIn(kotlinx.coroutines.FlowPreview::class) // 🚀 FIX: Opt-in to debounce preview
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 @SuppressLint("ViewConstructor")
 class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLayout(context) {
 
@@ -113,21 +89,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var currentMediaPos = mutableLongStateOf(0L)
     var displayCutoutWidth = mutableFloatStateOf(0f)
 
+    // 🚀 FIX 4: Holds the 8 pinned apps sent from Config
+    var pinnedApps = mutableStateListOf<String>("", "", "", "", "", "", "", "")
+
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
     val splitModel = mutableStateOf<LiveActivityModel?>(null) 
 
-    // 🚀 FIX: Direct update endpoints (Replaces Broadcasts)
-    fun updateTicker(pos: Long) {
-        currentMediaPos.longValue = pos
-    }
+    fun updateTicker(pos: Long) { currentMediaPos.longValue = pos }
+    fun updateBattery(level: Int, isCharging: Boolean) { globalBatteryLevel.intValue = level; globalIsCharging.value = isCharging }
 
-    fun updateBattery(level: Int, isCharging: Boolean) {
-        globalBatteryLevel.intValue = level
-        globalIsCharging.value = isCharging
-    }
-
-    // 🚀 THE UNIFIED EVENT SINK
     var onGestureEvent: ((IslandGesture) -> Unit)? = null
     var onGestureSettingsUpdated: ((String?) -> Unit)? = null
     var onSplitPillClick: (() -> Unit)? = null
@@ -138,15 +109,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onSeekTo: ((Long) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
 
-    private var viewScope: CoroutineScope? = null
+    // 🚀 Uses Job to prevent unresolvable CoroutineScope.cancel() imports
+    private var flowJob: Job? = null 
     private val lifecycleOwner = OverlayLifecycleOwner()
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
 
-    // 🚀 THE FIX: A unified, thread-safe layout trigger
-    private val insetsUpdateFlow = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(
-        replay = 1,
-        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
+    private val insetsUpdateFlow = MutableSharedFlow<Unit>(
+        replay = 1, onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
     )
 
     private fun loadPreferences() {
@@ -162,6 +132,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             ringThickness.value = pref.getFloat("ring_thickness", 6f)
             expandUpwards.value = pref.getBoolean("expand_upwards", false)
             isCubeRotationEnabled.value = pref.getBoolean("rotate_cube", true)
+            for (i in 0..7) pinnedApps[i] = pref.getString("pinned_app_$i", "") ?: ""
         } catch (e: Exception) {}
     }
 
@@ -177,7 +148,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     expandUpwards.value = intent.getBooleanExtra("expand_upwards", expandUpwards.value)
                 } 
 
-                // 🚀 THE FIX: Read directly from the Intent! No file permission issues!
+                // 🚀 FIX 4 & 5: Read all 8 slots from the Intent directly
+                for (i in 0..7) {
+                    val pkg = intent.getStringExtra("pinned_app_$i")
+                    if (pkg != null) pinnedApps[i] = pkg
+                }
+
                 customOffsetY.floatValue = intent.getFloatExtra("tweak_offset_y", customOffsetY.floatValue)
                 customBaseWidth.floatValue = intent.getFloatExtra("tweak_base_width", customBaseWidth.floatValue)
 
@@ -243,7 +219,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         lifecycleOwner.start()
     }
 
-    // 🚀 MEMORY LEAK FIX: Only listen when the view actually exists on screen
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
 
@@ -252,33 +227,29 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         } else null
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
 
-        // 1. Start the layout debouncer safely
-        viewScope = CoroutineScope(AndroidUiDispatcher.CurrentThread)
-        viewScope?.launch {
+        flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
             insetsUpdateFlow.debounce(50).collect {
                 this@DynamicIslandView.requestLayout()
             }
         }
 
-        // 2. Register the IPC Receiver
         val filter = IntentFilter("com.example.dynamicisland.RELOAD_PREFS")
+        val securePermission = "com.redwood.permission.SECURE_IPC"
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+            context.registerReceiver(receiver, filter, securePermission, null, Context.RECEIVER_EXPORTED)
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
-            context.registerReceiver(receiver, filter)
+            context.registerReceiver(receiver, filter, securePermission, null)
         }
     }
 
-    // 🚀 MEMORY LEAK FIX: Destroy everything when the view dies to free up RAM
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        viewScope?.cancel()
-        viewScope = null
+        flowJob?.cancel()
+        flowJob = null
         lifecycleOwner.destroy()
         try { context.unregisterReceiver(receiver) } catch (e: Exception) {}
 
-        // 🚀 MISSING FIXES ADDED:
         BatteryPlugin.stop(context)
         context.sendBroadcast(android.content.Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui"))
     }
@@ -286,8 +257,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     @OptIn(ExperimentalAnimationApi::class)
     @Composable
     fun IslandUI(state: IslandState) {
-        val haptic = LocalHapticFeedback.current // 🚀 FIX: Haptic Engine
-        // 🚀 FIX: Unified Squish Physics & Tap Detection
+        val haptic = LocalHapticFeedback.current
         var isSquished by remember { mutableStateOf(false) }
         val touchScale by animateFloatAsState(
             targetValue = if (isSquished) 0.96f else 1f,
@@ -321,14 +291,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.15f), animationSpec = tween(600), label = "borderColor")
 
-        // 🚀 Observe both state AND model to trigger privacy updates instantly
         LaunchedEffect(state, model) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
             val density = context.resources.displayMetrics.density
 
-            // 🚀 SECURITY FIX: Dynamic Privacy Masking for Screen Recorders
             if (model?.isSensitive == true) {
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE
             } else {
@@ -336,16 +304,20 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             }
 
             if (state == IslandState.HIDDEN) {
-                wp.width = 0; wp.height = 0; wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
+                // 🚀 FIX 6: Keep width MATCH_PARENT so it stays anchored center, just squash height to 0!
+                wp.width = WindowManager.LayoutParams.MATCH_PARENT
+                wp.height = 0 
+                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             } else {
-                wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = ((maxH.value + 150) * density).toInt(); wp.x = 0; wp.y = 0
-                // 🚀 UNFREEZE FIX: Removed dangerous FLAG_BLUR_BEHIND from Cube and Split states
+                wp.width = WindowManager.LayoutParams.MATCH_PARENT
+                wp.height = ((maxH.value + 150) * density).toInt()
+                wp.x = 0; wp.y = 0
+                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             }
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
         }
-
-        // 🚀 THE OMNI-GESTURE TRACKER
 
         val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
 
@@ -360,7 +332,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         val location = IntArray(2)
                         this@DynamicIslandView.getLocationOnScreen(location)
                         val bounds = coordinates.boundsInRoot()
-
                         val globalLeft = location[0] + bounds.left.toInt()
                         val globalTop = location[1] + bounds.top.toInt()
                         val globalRight = location[0] + bounds.right.toInt()
@@ -368,55 +339,55 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
                         if (abs(mainPillRect.left - globalLeft) > 5 || abs(mainPillRect.bottom - globalBottom) > 5 || mainPillRect.isEmpty) {
                             mainPillRect.set(globalLeft, globalTop, globalRight, globalBottom)
-                            insetsUpdateFlow.tryEmit(Unit) // 🚀 Safe emission, no direct ViewTree manipulation!
+                            insetsUpdateFlow.tryEmit(Unit)
                         }
                     }
                     .width(width).height(height)
-                    // 🚀 APPLY SQUISH PHYSICS
                     .graphicsLayer { scaleX = touchScale; scaleY = touchScale }
                     .clip(RoundedCornerShape(rad))
                     .background(bgColor).border(1.dp, borderColor, RoundedCornerShape(rad))
-                    // 🚀 UNIFIED TAP & DRAG ENGINE
+                    // 1. 🚀 NON-CONSUMING SQUISH
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(pass = PointerEventPass.Initial)
+                            isSquished = true
+                            waitForUpOrCancellation(pass = PointerEventPass.Initial)
+                            isSquished = false
+                        }
+                    }
+                    // 2. 🚀 UNIFIED TAP DETECTOR
                     .pointerInput(state) {
-                        if (state != IslandState.TYPE_3_MAX) { // 🚀 UX FIX: Disable root squish/tap in MAX state so sliders work flawlessly!
+                        if (state != IslandState.TYPE_3_MAX) {
                             detectTapGestures(
-                                onPress = {
-                                    isSquished = true
-                                    tryAwaitRelease()
-                                    isSquished = false
-                                },
                                 onTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) },
                                 onDoubleTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) },
                                 onLongPress = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) }
                             )
                         }
                     }
+                    // 3. 🚀 UNIFIED DRAG DETECTOR
                     .pointerInput(state) {
-                        val velocityTracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
-
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                val change = event.changes.firstOrNull() ?: continue
-
-                                // 🚀 DIRECTIONAL FIX: We only care about Y-Axis (Vertical) swipes for the Island!
-                                // By ignoring X-axis drags, the volume sliders in MAX work perfectly!
-                                if (change.pressed) {
-                                    velocityTracker.addPosition(change.uptimeMillis, change.position)
-                                } else if (change.previousPressed && !change.pressed) {
-                                    val velocity = velocityTracker.calculateVelocity()
-                                    if (velocity.y < -800f) {
-                                        // User swiped UP hard. Collapse it!
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
-                                    } else if (velocity.y > 800f && state != IslandState.TYPE_3_MAX) {
-                                        // User swiped DOWN hard. Expand it!
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN)
-                                    }
-                                    velocityTracker.resetTracking()
+                        var dragOffsetX = 0f
+                        var dragOffsetY = 0f
+                        
+                        detectDragGestures(
+                            onDragEnd = {
+                                if (abs(dragOffsetX) > abs(dragOffsetY)) {
+                                    if (dragOffsetX > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT)
+                                    else if (dragOffsetX < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
+                                } else {
+                                    if (dragOffsetY > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN)
+                                    else if (dragOffsetY < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
                                 }
+                                dragOffsetX = 0f; dragOffsetY = 0f
                             }
+                        ) { change, dragAmount ->
+                            // ONLY consume the touch if it's an actual drag! 
+                            if (abs(dragAmount.x) > 5f || abs(dragAmount.y) > 5f) {
+                                change.consume()
+                            }
+                            dragOffsetX += dragAmount.x
+                            dragOffsetY += dragAmount.y
                         }
                     },
                 contentAlignment = boxAlignment
@@ -430,7 +401,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     if (state != IslandState.HIDDEN) {
                         val bottomPadding by animateDpAsState(targetValue = when(state) { IslandState.TYPE_3_MAX -> 24.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> 12.dp; else -> 0.dp }, label = "bottomPadding")
                         Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
-                            // 🚀 UX FIX: Liquid morphing illusion instead of ghosting crossfades
                             AnimatedContent(
                                 targetState = state,
                                 transitionSpec = {
@@ -449,7 +419,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                             is LiveActivityModel.General -> GeneralMid(model)
                                             is LiveActivityModel.Charging -> ChargingMid(model)
                                             is LiveActivityModel.SystemAlert -> SystemAlertMid(model)
-                                            // 🚀 FIX: The missing render path!
                                             is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model)
                                             else -> {}
                                         }
@@ -459,7 +428,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                             is LiveActivityModel.Music -> MusicMini(model)
                                             is LiveActivityModel.General -> GeneralMini(model)
                                             is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model)
-                                            is LiveActivityModel.RealityPill -> RealityPillMini(model) // 🚀 RENDER PATH ADDED
+                                            is LiveActivityModel.RealityPill -> RealityPillMini(model)
                                             else -> {}
                                         }
                                     }
@@ -486,7 +455,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
                             val progress = if (isMedia) (currentMediaPos.longValue.toFloat() / safeDur) else globalBatteryLevel.intValue / 100f
                             
-                            // 🚀 FIX: Dynamic Media Colors
                             val baseColor = if (isMedia) {
                                 musicModel?.dominantColor?.let { Color(it) } ?: Color.White
                             } else if (globalIsCharging.value) {
@@ -497,7 +465,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 Color.White
                             }
 
-                            // 🚀 FIX: Charging Pulsing Animation
                             val infiniteTransition = rememberInfiniteTransition(label = "ring_pulse")
                             val pulseAlpha by infiniteTransition.animateFloat(
                                 initialValue = if (globalIsCharging.value && !isMedia) 0.3f else 1f,
@@ -509,8 +476,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
                             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
                                 val strokeW = ringThickness.value.dp.toPx() 
-
-                                // 🚀 FIX: Perfect Stroke Math to prevent thickness clipping
                                 val inset = strokeW / 2
                                 val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
                                 val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
@@ -526,7 +491,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                     useCenter = false,
                                     topLeft = arcTopLeft,
                                     size = arcSize,
-                                    style = Stroke(strokeW, cap = capStyle) // 🚀 FIX: Prevent 102% bleed!
+                                    style = Stroke(strokeW, cap = capStyle)
                                 )
                             }
                         }
@@ -550,11 +515,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 val globalBottom = location[1] + bounds.bottom.toInt()
                                 if (abs(splitCubeRect.left - globalLeft) > 5 || splitCubeRect.isEmpty) {
                                     splitCubeRect.set(globalLeft, globalTop, globalRight, globalBottom)
-                                    insetsUpdateFlow.tryEmit(Unit) // 🚀 Safe emission!
+                                    insetsUpdateFlow.tryEmit(Unit)
                                 }
                             }
                             .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape)
-                            // 🚀 UX FIX: Remove the cheap grey Android ripple effect
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
