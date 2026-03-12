@@ -74,7 +74,8 @@ import de.robv.android.xposed.XSharedPreferences
                 Spacer(Modifier.width(8.dp))
                 IsolatedTimeText(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = Color.White.copy(alpha=0.7f))
             }
-            IsolatedLinearProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = Color.White.copy(alpha=0.8f), trackColor = Color.Transparent, modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.5f).height(2.dp).padding(bottom = 1.dp).clip(CircleShape))
+            // 🚀 FIX 3: Changed trackColor from Transparent to White 20% so you can see the end point!
+            IsolatedLinearProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = Color.White.copy(alpha=0.8f), trackColor = Color.White.copy(alpha=0.2f), modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.5f).height(2.dp).padding(bottom = 1.dp).clip(CircleShape))
         }
     }
 
@@ -161,25 +162,38 @@ import de.robv.android.xposed.XSharedPreferences
     }
 
     // 🚀 BULLETPROOF CONTROL CENTER (MAX PILL)
-    @Suppress("UNUSED_PARAMETER")
+    @@OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
+                val infiniteTransition = rememberInfiniteTransition(); val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart))
+                val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
+                if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(24.dp).clip(CircleShape).rotate(currentRotation)) else Box(Modifier.size(24.dp).background(Color.White.copy(0.2f), CircleShape))
+                Spacer(Modifier.width(8.dp))
+                Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f, fill = false).safeMarquee(islandState.value))
+                Spacer(Modifier.width(8.dp))
+                IsolatedTimeText(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = Color.White.copy(alpha=0.7f))
+            }
+            // 🚀 FIX 3: Changed trackColor from Transparent to White 20% so you can see the end point!
+            IsolatedLinearProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = Color.White.copy(alpha=0.8f), trackColor = Color.White.copy(alpha=0.2f), modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.5f).height(2.dp).padding(bottom = 1.dp).clip(CircleShape))
+        }
+    }
+
+    // 🚀 FIX 2: Added Suppress DEPRECATION to kill compiler warnings for Bluetooth
+    @Suppress("UNUSED_PARAMETER", "DEPRECATION")
     @Composable
     fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
         val context = LocalContext.current
         val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
-        
-        // 🚀 CRASH FIX 1: Null-safe Hardware Managers
         val wifiManager = remember { try { context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager } catch(e: Throwable) { null } }
         val btAdapter = remember { try { (context.applicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager)?.adapter } catch(e: Throwable) { null } }
 
-        // Debounced Brightness State
         val initialBrightness = remember { try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS) / 255f } catch (e: Throwable) { 0.5f } }
         var brightness by remember { mutableFloatStateOf(initialBrightness) }
         var autoBrightness by remember { mutableStateOf(try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE) == 1 } catch(e: Throwable) { false }) }
 
-        LaunchedEffect(brightness) {
-            kotlinx.coroutines.delay(100) 
-            try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * 255).toInt()) } catch (e: Throwable) {}
-        }
+        LaunchedEffect(brightness) { kotlinx.coroutines.delay(100); try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * 255).toInt()) } catch (e: Throwable) {} }
 
         var isWifiOn by remember { mutableStateOf(try { wifiManager?.isWifiEnabled == true } catch(e: Throwable) { false }) }
         var isBtOn by remember { mutableStateOf(try { btAdapter?.isEnabled == true } catch(e: Throwable) { false }) }
@@ -189,33 +203,27 @@ import de.robv.android.xposed.XSharedPreferences
 
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
             
-            // --- ROW 1: Premium QS Grid ---
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                DashboardQuickToggle(Icons.Default.Wifi, isWifiOn, "Wi-Fi") { 
-                    try { val newState = !isWifiOn; @Suppress("DEPRECATION") wifiManager?.isWifiEnabled = newState; isWifiOn = newState } catch(e: Throwable) { try { context.startActivity(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(ex: Throwable) {} } 
-                }
-                DashboardQuickToggle(Icons.Default.Bluetooth, isBtOn, "Bluetooth") { 
-                    try { val newState = !isBtOn; @SuppressLint("MissingPermission") if (newState) btAdapter?.enable() else btAdapter?.disable(); isBtOn = newState } catch(e: Throwable) { try { context.startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(ex: Throwable) {} } 
-                }
-                DashboardQuickToggle(Icons.Default.FlashlightOn, isTorchOn, "Torch") { 
-                    try { isTorchOn = !isTorchOn; cameraId?.let { cameraManager?.setTorchMode(it, isTorchOn) } } catch(e: Throwable) {} 
-                }
-                DashboardQuickToggle(Icons.Default.LocationOn, true, "Location") { 
-                    try { context.startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {}
-                }
+            // --- ROW 1: 🚀 FIX 5 - SCROLLABLE QS GRID (Fits infinite tiles horizontally) ---
+            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                DashboardQuickToggle(Icons.Default.Wifi, isWifiOn, "Wi-Fi") { try { val newState = !isWifiOn; wifiManager?.isWifiEnabled = newState; isWifiOn = newState } catch(e: Throwable) { try { context.startActivity(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(ex: Throwable) {} } }
+                DashboardQuickToggle(Icons.Default.Bluetooth, isBtOn, "Bluetooth") { try { val newState = !isBtOn; @SuppressLint("MissingPermission") if (newState) btAdapter?.enable() else btAdapter?.disable(); isBtOn = newState } catch(e: Throwable) { try { context.startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(ex: Throwable) {} } }
+                DashboardQuickToggle(Icons.Default.FlashlightOn, isTorchOn, "Torch") { try { isTorchOn = !isTorchOn; cameraId?.let { cameraManager?.setTorchMode(it, isTorchOn) } } catch(e: Throwable) {} }
+                DashboardQuickToggle(Icons.Default.LocationOn, true, "Location") { try { context.startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
+                DashboardQuickToggle(Icons.Default.AirplanemodeActive, false, "Airplane") { try { context.startActivity(Intent(android.provider.Settings.ACTION_AIRPLANE_MODE_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
+                DashboardQuickToggle(Icons.Default.DoNotDisturbOn, false, "DND") { try { context.startActivity(Intent(android.provider.Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
+                DashboardQuickToggle(Icons.Default.Settings, true, "Settings") { try { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- ROW 2: App Dock ---
-            // 🚀 CRASH FIX 2: Catching `Error` instead of just `Exception` for Xposed hooks
-            val prefs = remember { try { de.robv.android.xposed.XSharedPreferences("com.example.dynamicisland", "island_prefs").apply{ makeWorldReadable(); reload() } } catch(e: Throwable) { null } }
+            // --- ROW 2: 🚀 FIX 4 & 5 - SCROLLABLE 8-APP DOCK ---
             val pm = context.packageManager
-            Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                for (i in 0..3) {
-                    val pkg = prefs?.getString("pinned_app_$i", "") ?: ""
-                    if (pkg.isNotEmpty()) {
-                        // 🚀 CRASH FIX 3: Safe Canvas Draw instead of fragile .toBitmap()
+            Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                val validApps = pinnedApps.filter { it.isNotEmpty() }
+                if (validApps.isEmpty()) {
+                    Box(Modifier.size(36.dp).background(Color.White.copy(0.05f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, null, tint = Color.White.copy(0.3f), modifier = Modifier.size(16.dp)) }
+                } else {
+                    validApps.forEach { pkg ->
                         val iconBmp = remember(pkg) { 
                             try { 
                                 val drawable = pm.getApplicationIcon(pkg)
@@ -230,9 +238,7 @@ import de.robv.android.xposed.XSharedPreferences
                             Image(bitmap = iconBmp, contentDescription = null, modifier = Modifier.size(36.dp).clip(CircleShape).clickable {
                                 try { val launchIntent = pm.getLaunchIntentForPackage(pkg); if (launchIntent != null) { launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); context.startActivity(launchIntent) } } catch(e: Throwable) {}
                             })
-                        } else Box(Modifier.size(36.dp).background(Color.White.copy(0.1f), CircleShape))
-                    } else {
-                        Box(Modifier.size(36.dp).background(Color.White.copy(0.05f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, null, tint = Color.White.copy(0.3f), modifier = Modifier.size(16.dp)) }
+                        }
                     }
                 }
             }
@@ -252,11 +258,7 @@ import de.robv.android.xposed.XSharedPreferences
 
             // --- ROW 4: Volume Card ---
             var activeStream by remember { mutableIntStateOf(android.media.AudioManager.STREAM_MUSIC) }
-            // 🚀 CRASH FIX 4: Prevent "NaN" divide-by-zero crashes on Slider
-            val maxVol = remember(activeStream) { 
-                val mv = audioManager.getStreamMaxVolume(activeStream).toFloat()
-                if (mv <= 0f) 1f else mv 
-            }
+            val maxVol = remember(activeStream) { val mv = audioManager.getStreamMaxVolume(activeStream).toFloat(); if (mv <= 0f) 1f else mv }
             var currentVol by remember(activeStream) { mutableFloatStateOf( (audioManager.getStreamVolume(activeStream) / maxVol).coerceIn(0f, 1f) ) }
 
             Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -268,6 +270,8 @@ import de.robv.android.xposed.XSharedPreferences
             }
         }
     }
+
+            
 
     @Composable
     fun DynamicIslandView.DashboardQuickToggle(icon: androidx.compose.ui.graphics.vector.ImageVector, isActive: Boolean, label: String? = null, onClick: () -> Unit = {}) {
