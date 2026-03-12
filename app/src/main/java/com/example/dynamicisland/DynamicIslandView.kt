@@ -9,6 +9,7 @@ import android.widget.FrameLayout
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image // 🚀 FIX: Resolved Image error
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,15 +25,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -40,19 +40,16 @@ import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.*
 import androidx.savedstate.*
 import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlin.math.abs
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.debounce
+import kotlin.math.abs
 
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -87,9 +84,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var globalBatteryLevel = mutableIntStateOf(100)
     var globalIsCharging = mutableStateOf(false)
     var currentMediaPos = mutableLongStateOf(0L)
+    
     var displayCutoutWidth = mutableFloatStateOf(0f)
-
-    // 🚀 FIX 4: Holds the 8 pinned apps sent from Config
     var pinnedApps = mutableStateListOf<String>("", "", "", "", "", "", "", "")
 
     val islandState = mutableStateOf(IslandState.HIDDEN)
@@ -109,13 +105,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onSeekTo: ((Long) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
 
-    // 🚀 Uses Job to prevent unresolvable CoroutineScope.cancel() imports
-    private var flowJob: Job? = null 
+    private var flowJob: Job? = null
     private val lifecycleOwner = OverlayLifecycleOwner()
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
 
-    private val insetsUpdateFlow = MutableSharedFlow<Unit>(
+    private val insetsUpdateFlow = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(
         replay = 1, onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
     )
 
@@ -132,7 +127,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             ringThickness.value = pref.getFloat("ring_thickness", 6f)
             expandUpwards.value = pref.getBoolean("expand_upwards", false)
             isCubeRotationEnabled.value = pref.getBoolean("rotate_cube", true)
-            for (i in 0..7) pinnedApps[i] = pref.getString("pinned_app_$i", "") ?: ""
         } catch (e: Exception) {}
     }
 
@@ -146,13 +140,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     padT.value = intent.getFloatExtra("pad_t", padT.value); padB.value = intent.getFloatExtra("pad_b", padB.value); padL.value = intent.getFloatExtra("pad_l", padL.value); padR.value = intent.getFloatExtra("pad_r", padR.value)
                     ringThickness.value = intent.getFloatExtra("ring_thickness", ringThickness.value)
                     expandUpwards.value = intent.getBooleanExtra("expand_upwards", expandUpwards.value)
+                    
+                    for (i in 0..7) { val pkg = intent.getStringExtra("pinned_app_$i"); if (pkg != null) pinnedApps[i] = pkg }
                 } 
-
-                // 🚀 FIX 4 & 5: Read all 8 slots from the Intent directly
-                for (i in 0..7) {
-                    val pkg = intent.getStringExtra("pinned_app_$i")
-                    if (pkg != null) pinnedApps[i] = pkg
-                }
 
                 customOffsetY.floatValue = intent.getFloatExtra("tweak_offset_y", customOffsetY.floatValue)
                 customBaseWidth.floatValue = intent.getFloatExtra("tweak_base_width", customBaseWidth.floatValue)
@@ -297,22 +287,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             val wm = windowManager ?: return@LaunchedEffect
             val density = context.resources.displayMetrics.density
 
-            if (model?.isSensitive == true) {
-                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE
-            } else {
-                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv()
-            }
+            if (model?.isSensitive == true) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE } else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv() }
 
             if (state == IslandState.HIDDEN) {
-                // 🚀 FIX 6: Keep width MATCH_PARENT so it stays anchored center, just squash height to 0!
-                wp.width = WindowManager.LayoutParams.MATCH_PARENT
-                wp.height = 0 
+                wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = 0 
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             } else {
-                wp.width = WindowManager.LayoutParams.MATCH_PARENT
-                wp.height = ((maxH.value + 150) * density).toInt()
-                wp.x = 0; wp.y = 0
+                wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = ((maxH.value + 150) * density).toInt(); wp.x = 0; wp.y = 0
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             }
@@ -346,7 +328,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     .graphicsLayer { scaleX = touchScale; scaleY = touchScale }
                     .clip(RoundedCornerShape(rad))
                     .background(bgColor).border(1.dp, borderColor, RoundedCornerShape(rad))
-                    // 1. 🚀 NON-CONSUMING SQUISH
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             awaitFirstDown(pass = PointerEventPass.Initial)
@@ -355,7 +336,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             isSquished = false
                         }
                     }
-                    // 2. 🚀 UNIFIED TAP DETECTOR
                     .pointerInput(state) {
                         if (state != IslandState.TYPE_3_MAX) {
                             detectTapGestures(
@@ -365,7 +345,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             )
                         }
                     }
-                    // 3. 🚀 UNIFIED DRAG DETECTOR
                     .pointerInput(state) {
                         var dragOffsetX = 0f
                         var dragOffsetY = 0f
@@ -382,7 +361,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 dragOffsetX = 0f; dragOffsetY = 0f
                             }
                         ) { change, dragAmount ->
-                            // ONLY consume the touch if it's an actual drag! 
                             if (abs(dragAmount.x) > 5f || abs(dragAmount.y) > 5f) {
                                 change.consume()
                             }
