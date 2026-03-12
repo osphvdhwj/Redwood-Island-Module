@@ -75,7 +75,7 @@ class ConfigActivity : ComponentActivity() {
                     // 🚀 THE NEW ACCORDION GESTURE MATRIX
                     Text(text = "Action Matrix", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     val states = listOf("Ring" to "TYPE_0_RING", "Mini Pill" to "TYPE_1_MINI", "Mid Pill" to "TYPE_2_MID", "Max Pill" to "TYPE_3_MAX")
                     val gestures = IslandGesture.values()
 
@@ -277,7 +277,7 @@ class ConfigActivity : ComponentActivity() {
         val intent = Intent("com.example.dynamicisland.RELOAD_PREFS").addFlags(0x01000000)
         intent.putExtra("prefix", prefix).putExtra("w", w).putExtra("h", h).putExtra("x", x).putExtra("y", y).putExtra("ring_thickness", ringT).putExtra("expand_upwards", expandUp)
         intent.putExtra("pad_t", prefs.getFloat("pad_t", 0f)).putExtra("pad_b", prefs.getFloat("pad_b", 0f)).putExtra("pad_l", prefs.getFloat("pad_l", 0f)).putExtra("pad_r", prefs.getFloat("pad_r", 0f))
-        
+
         // Serialize JSON Matrix
         val matrix = JSONObject()
         prefs.all.forEach { (key, value) -> if (key.startsWith("TYPE_") && value is String) matrix.put(key, value) }
