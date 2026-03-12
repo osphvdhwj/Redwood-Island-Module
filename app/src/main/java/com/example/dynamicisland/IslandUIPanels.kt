@@ -294,4 +294,125 @@ import de.robv.android.xposed.XSharedPreferences
     fun DynamicIslandView.setState(newState: IslandState) { islandState.value = newState }
     fun DynamicIslandView.setModel(model: LiveActivityModel?) { activeModel.value = model }
     fun DynamicIslandView.setSplitModel(model: LiveActivityModel?) { splitModel.value = model }
-    fun getIconForType(type: ActivityType): ImageVector { return when(type) { ActivityType.CALL -> Icons.Default.Phone; ActivityType.NAVIGATION -> Icons.Default.LocationOn; ActivityType.TIMER -> Icons.Default.Notifications; ActivityType.MESSAGE -> Icons.Default.Email; ActivityType.ALARM -> Icons.Default.Notifications; ActivityType.CHARGING -> Icons.Default.
+    fun getIconForType(type: ActivityType): ImageVector { return when(type) { ActivityType.CALL -> Icons.Default.Phone; ActivityType.NAVIGATION -> Icons.Default.LocationOn; ActivityType.TIMER -> Icons.Default.Notifications; ActivityType.MESSAGE -> Icons.Default.Email; ActivityType.ALARM -> Icons.Default.Notifications; ActivityType.CHARGING -> Icons.Default.Add; ActivityType.BATTERY_LOW -> Icons.Default.Warning; ActivityType.BLUETOOTH -> Icons.Default.Bluetooth; ActivityType.WIFI -> Icons.Default.Wifi; ActivityType.HARDWARE -> Icons.Default.Info; else -> Icons.Default.Info } }
+
+    fun formatTime(ms: Long): String { if (ms <= 0) return "0:00"; val s = ms / 1000; return String.format("%d:%02d", s / 60, s % 60) }
+
+    @Composable
+    fun IsolatedTimeText(durationMs: Long, posProvider: () -> Long, textColor: Color, modifier: Modifier = Modifier) {
+        Text(text = "${formatTime(posProvider())} / ${formatTime(durationMs)}", color = textColor, fontSize = 12.sp, modifier = modifier)
+    }
+
+    @Composable
+    fun IsolatedTimeRow(durationMs: Long, posProvider: () -> Long, textColor: Color) {
+        val pos = posProvider()
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(text = formatTime(pos), color = textColor.copy(alpha=0.7f), fontSize = 12.sp)
+            Text(text = formatTime(durationMs), color = textColor.copy(alpha=0.7f), fontSize = 12.sp)
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun IsolatedMediaSlider(durationMs: Long, posProvider: () -> Long, dynamicTextColor: Color, onSeek: (Long) -> Unit) {
+        val haptic = LocalHapticFeedback.current
+        val interactionSource = remember { MutableInteractionSource() }
+        val isDragged by interactionSource.collectIsDraggedAsState()
+
+        val currentPos = posProvider().toFloat()
+        var localPosition by remember(isDragged) { mutableFloatStateOf(currentPos) }
+
+        val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
+        val currentPosition = posProvider().toFloat().coerceAtLeast(0f)
+        val safePosition = if (isDragged) localPosition else currentPosition
+
+        Slider(
+            value = (safePosition / safeDuration).coerceIn(0f, 1f),
+            onValueChange = {
+                localPosition = it * safeDuration
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            },
+            onValueChangeFinished = {
+                onSeek(localPosition.toLong())
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            },
+            interactionSource = interactionSource,
+            colors = SliderDefaults.colors(activeTrackColor = dynamicTextColor, inactiveTrackColor = dynamicTextColor.copy(alpha=0.3f), thumbColor = dynamicTextColor),
+            modifier = Modifier.fillMaxWidth().height(24.dp)
+        )
+    }
+
+    @Composable
+    fun IsolatedLinearProgressIndicator(durationMs: Long, posProvider: () -> Long, color: Color, trackColor: Color, modifier: Modifier = Modifier) {
+        val theme = LocalIslandTheme.current 
+        val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
+        val currentPosition = posProvider().toFloat().coerceAtLeast(0f)
+        
+        val targetProgress = (currentPosition / safeDuration).coerceIn(0f, 1f)
+        val animatedProgress by animateFloatAsState(targetValue = targetProgress, animationSpec = tween(durationMillis = 1000, easing = LinearEasing), label = "liquid_progress")
+
+        androidx.compose.foundation.Canvas(modifier = modifier.height(theme.mediaBarThickness)) {
+            drawLine(color = trackColor, start = androidx.compose.ui.geometry.Offset(0f, size.height / 2), end = androidx.compose.ui.geometry.Offset(size.width, size.height / 2), strokeWidth = theme.mediaBarThickness.toPx(), cap = theme.mediaBarCap)
+            drawLine(color = color, start = androidx.compose.ui.geometry.Offset(0f, size.height / 2), end = androidx.compose.ui.geometry.Offset(size.width * animatedProgress, size.height / 2), strokeWidth = theme.mediaBarThickness.toPx(), cap = theme.mediaBarCap)
+        }
+    }
+
+    @Composable
+    fun IsolatedCircularProgressIndicator(durationMs: Long, posProvider: () -> Long, color: Color, trackColor: Color, strokeWidth: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+        val safeDuration = if (durationMs > 0) durationMs.toFloat() else 1f
+        CircularProgressIndicator(progress = { (posProvider().toFloat() / safeDuration).coerceIn(0f, 1f) }, color = color, trackColor = trackColor, strokeWidth = strokeWidth, modifier = modifier)
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    fun DynamicIslandView.AppTimerWarningMid(model: LiveActivityModel.AppTimerWarning) {
+        var remainingSeconds by remember { mutableIntStateOf(((model.targetTimeMs - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)) }
+
+        LaunchedEffect(model.targetTimeMs) {
+            while (remainingSeconds > 0) {
+                kotlinx.coroutines.delay(1000)
+                remainingSeconds = ((model.targetTimeMs - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
+            }
+        }
+
+        val pulseTransition = rememberInfiniteTransition(label = "pulse")
+        val alertAlpha by pulseTransition.animateFloat(initialValue = 0.2f, targetValue = 0.6f, animationSpec = infiniteRepeatable(animation = tween(600, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse), label = "alertAlpha")
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            Box(modifier = Modifier.size(48.dp).background(Color.Red.copy(alpha = alertAlpha), CircleShape).border(2.dp, Color.Red, CircleShape), contentAlignment = Alignment.Center) {
+                if (model.appIcon != null) { Image(bitmap = model.appIcon.asImageBitmap(), contentDescription = "App Icon", modifier = Modifier.size(36.dp).clip(CircleShape)) } else { Icon(Icons.Default.Warning, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp)) }
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                 val theme = LocalIslandTheme.current
+                 Text(text = "Time Limit Reached", color = Color.Red, fontSize = theme.titleSize, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+                 Text(text = "${model.appName} closing in ${remainingSeconds}s", color = Color.White, fontSize = (theme.titleSize * 0.85f), maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+            }
+        }
+    }
+
+    @Composable
+    fun IsolatedCircularProgress(durationMs: Long, posProvider: () -> Long, color: Color) {
+        val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
+        val currentPosition = posProvider().toFloat().coerceAtLeast(0f)
+        CircularProgressIndicator(progress = { (currentPosition / safeDuration).coerceIn(0f, 1f) }, color = color, trackColor = color.copy(alpha = 0.2f), strokeWidth = 2.dp, modifier = Modifier.fillMaxSize())
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    fun DynamicIslandView.RealityPillMini(model: LiveActivityModel.RealityPill) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            Icon(Icons.Default.Timer, contentDescription = "Session Time", tint = Color(0xFF00FF00), modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(text = "${model.appName} • ${model.sessionMinutes}m", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+        }
+    }
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+fun androidx.compose.ui.Modifier.safeMarquee(state: IslandState): androidx.compose.ui.Modifier {
+    return if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING && state != IslandState.TYPE_CUBE) {
+        this.basicMarquee()
+    } else {
+        this
+    }
+}
