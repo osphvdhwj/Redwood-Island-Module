@@ -40,8 +40,7 @@ class ConfigActivity : ComponentActivity() {
     @Composable
     fun ConfigScreen(prefs: android.content.SharedPreferences) {
         var selectedTab by remember { mutableIntStateOf(0) }
-        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures", "Pinning", "Tweaks", "Theme")
-
+        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures", "Pinning", "Tweaks", "Theme", "Features")
         var w by remember { mutableFloatStateOf(0f) }
         var h by remember { mutableFloatStateOf(0f) }
         var x by remember { mutableFloatStateOf(0f) }
@@ -102,10 +101,25 @@ class ConfigActivity : ComponentActivity() {
                             }
                         }
                     }
-                } else if (currentPrefix == "pinning") {
-                    Text(text = "Control Center Shortcuts", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(text = "Select 4 apps to pin to your Max Dashboard.", fontSize = 14.sp, color = Color.Gray)
+                } } else if (currentPrefix == "features") {
+                    // 🚀 NEW: MODULE KILL SWITCHES
+                    Text(text = "Active Modules", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Selectively disable Island behaviors.", fontSize = 14.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    @Composable
+                    fun FeatureSwitch(label: String, key: String, default: Boolean) {
+                        var checked by remember { mutableStateOf(prefs.getBoolean(key, default)) }
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(label, color = Color.White, fontSize = 16.sp)
+                            Switch(checked = checked, onCheckedChange = { checked = it; prefs.edit().putBoolean(key, it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) })
+                        }
+                    }
+
+                    FeatureSwitch("Enable Media Pill (Music/Spotify)", "enable_media", true)
+                    FeatureSwitch("Enable Charging Cube", "enable_charging", true)
+                    FeatureSwitch("Enable System Alerts (Battery/Temp)", "enable_alerts", true)
+                    FeatureSwitch("Enable App Timers (Wellbeing)", "enable_timers", true)
 
                     // 🚀 THE FIX: Live Native App Fetcher
                     val pm = LocalContext.current.packageManager
@@ -312,6 +326,12 @@ class ConfigActivity : ComponentActivity() {
 
             putExtra("theme_alert_title", prefs.getFloat("theme_alert_title", 16f))
             putExtra("theme_alert_msg", prefs.getFloat("theme_alert_msg", 14f))
+
+            // Inside sendGestureUpdate Intent extras:
+            putExtra("enable_media", prefs.getBoolean("enable_media", true))
+            putExtra("enable_charging", prefs.getBoolean("enable_charging", true))
+            putExtra("enable_alerts", prefs.getBoolean("enable_alerts", true))
+            putExtra("enable_timers", prefs.getBoolean("enable_timers", true))
         }
         val matrix = JSONObject()
         prefs.all.forEach { (key, value) -> if (key.startsWith("TYPE_") && value is String) matrix.put(key, value) }
