@@ -34,7 +34,7 @@ class IslandController(private val context: Context) {
     val islandState = _islandState.asStateFlow()
     private val _activeModel = MutableStateFlow<LiveActivityModel?>(null)
     val activeModel = _activeModel.asStateFlow()
-    private val _splitModel = MutableStateFlow<LiveActivityModel?>(null) 
+    private val _splitModel = MutableStateFlow<LiveActivityModel?>(null)
     val splitModel = _splitModel.asStateFlow()
 
     private var currentMedia: LiveActivityModel.Music? = null
@@ -43,10 +43,10 @@ class IslandController(private val context: Context) {
     private var transientModel: LiveActivityModel? = null
     private var transientJob: Job? = null
     private var pauseFadeJob: Job? = null
-    private var userForceCollapsed = false 
+    private var userForceCollapsed = false
     private var lastReportedBattery = -1
     private var wasCharging = false // 🚀 FIX: Track previous charging state
-    private var isScreenOn = true 
+    private var isScreenOn = true
     private var isLandscape = false
 
     private val gestureMatrix = mutableMapOf<String, IslandAction>()
@@ -270,15 +270,34 @@ class IslandController(private val context: Context) {
                 "PREV_TRACK" -> sendMediaCommand("PREV")
                 "VOL_UP" -> adjustVolume(android.media.AudioManager.ADJUST_RAISE)
                 "VOL_DOWN" -> adjustVolume(android.media.AudioManager.ADJUST_LOWER)
-                "OPEN_DASHBOARD" -> _islandState.value = IslandState.TYPE_3_MAX
-                "COLLAPSE" -> _islandState.value = IslandState.TYPE_1_MINI
+                "OPEN_DASHBOARD" -> {
+                    if (_activeModel.value == null) _activeModel.value = LiveActivityModel.Dashboard()
+                    _islandState.value = IslandState.TYPE_3_MAX
+                }
+                "COLLAPSE" -> {
+                    // 🚀 FIX: Smoothly collapse, allowing Media/Split to hide into the Ring
+                    when (_islandState.value) {
+                        IslandState.TYPE_3_MAX -> _islandState.value = IslandState.TYPE_2_MID
+                        IslandState.TYPE_2_MID -> _islandState.value = IslandState.TYPE_1_MINI
+                        IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> {
+                            userForceCollapsed = true // Tells the system NOT to auto-expand media
+                            _islandState.value = IslandState.TYPE_0_RING
+                        }
+                        else -> {}
+                    }
+                }
                 "EXPAND" -> {
                     userForceCollapsed = false
-                    _islandState.value = when (_islandState.value) {
-                        IslandState.TYPE_0_RING -> IslandState.TYPE_1_MINI
-                        IslandState.TYPE_1_MINI -> IslandState.TYPE_2_MID
-                        IslandState.TYPE_2_MID -> IslandState.TYPE_3_MAX
-                        else -> _islandState.value
+                    // 🚀 FIX: Smoothly expand step-by-step
+                    when (_islandState.value) {
+                        IslandState.TYPE_0_RING -> {
+                            if (_activeModel.value == null) _activeModel.value = LiveActivityModel.Dashboard()
+                            _islandState.value = IslandState.TYPE_1_MINI
+                        }
+                        IslandState.TYPE_1_MINI -> _islandState.value = IslandState.TYPE_2_MID
+                        IslandState.TYPE_2_MID -> _islandState.value = IslandState.TYPE_3_MAX
+                        IslandState.TYPE_SPLIT -> _islandState.value = IslandState.TYPE_3_MAX
+                        else -> {}
                     }
                 }
                 "OPEN_APP" -> {
@@ -288,14 +307,9 @@ class IslandController(private val context: Context) {
                             val launchIntent = context.packageManager.getLaunchIntentForPackage(model.appPackageName)
                             if (launchIntent != null) {
                                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-
-                                // 🚀 OS RESTRICTION FIX: Bypass Android 14 BAL restrictions!
-                                val pendingIntent = PendingIntent.getActivity(
-                                    context, 0, launchIntent,
-                                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                                )
+                                val pendingIntent = PendingIntent.getActivity(context, 0, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                                 val options = android.app.ActivityOptions.makeBasic()
-                                if (android.os.Build.VERSION.SDK_INT >= 34) { // Android 14+
+                                if (android.os.Build.VERSION.SDK_INT >= 34) {
                                     options.pendingIntentBackgroundActivityStartMode = android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
                                 }
                                 pendingIntent.send(context, 0, null, null, null, null, options.toBundle())
@@ -306,27 +320,34 @@ class IslandController(private val context: Context) {
                 "HEART_SONG" -> {
                     val heartAction = currentMedia?.customActions?.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("like", true) }
                     if (heartAction != null) activeMediaController?.transportControls?.sendCustomAction(heartAction.actionName, null)
-                    else activeMediaController?.transportControls?.setRating(Rating.newHeartRating(true))
+                    else activeMediaController?.transportControls?.setRating(android.media.Rating.newHeartRating(true))
                 }
                 "TOGGLE_TORCH" -> {
                     try {
                         val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
                         val cameraId = cameraManager.cameraIdList.firstOrNull()
-                        if (cameraId != null) {
-                            // Simplified toggle via intent if native toggle isn't tracked properly here, but typically we just toggle.
-                            // The real dashboard toggle uses state. Here we'll try to just switch it if possible.
-                            // To actually toggle without knowing state, we would need to query the CameraManager callback.
-                            // Since we lack a state variable here, we will just pass.
-                        }
+                        // Add toggle logic here if needed
                     } catch(e: Exception) {}
                 }
                 "NONE" -> {
-                    if (gesture == IslandGesture.SWIPE_UP) _islandState.value = IslandState.TYPE_1_MINI
+                    // 🚀 FIX: Default gestures now use the smooth cascade ladder!
+                    if (gesture == IslandGesture.SWIPE_UP || gesture == IslandGesture.SWIPE_LEFT || gesture == IslandGesture.SWIPE_RIGHT) {
+                        if (_islandState.value == IslandState.TYPE_3_MAX) _islandState.value = IslandState.TYPE_2_MID
+                        else if (_islandState.value == IslandState.TYPE_2_MID) _islandState.value = IslandState.TYPE_1_MINI
+                        else if (_islandState.value == IslandState.TYPE_1_MINI || _islandState.value == IslandState.TYPE_SPLIT) {
+                            userForceCollapsed = true
+                            _islandState.value = IslandState.TYPE_0_RING
+                        }
+                    }
                     if (gesture == IslandGesture.SWIPE_DOWN) {
-                        if (_islandState.value != IslandState.TYPE_3_MAX && _islandState.value != IslandState.TYPE_SPLIT) {
+                        if (_islandState.value == IslandState.TYPE_0_RING) {
+                            if (_activeModel.value == null) _activeModel.value = LiveActivityModel.Dashboard()
+                            _islandState.value = IslandState.TYPE_1_MINI
+                        } else if (_islandState.value == IslandState.TYPE_1_MINI) {
+                            _islandState.value = IslandState.TYPE_2_MID
+                        } else if (_islandState.value == IslandState.TYPE_2_MID || _islandState.value == IslandState.TYPE_SPLIT) {
                             _islandState.value = IslandState.TYPE_3_MAX
-                        } else {
-                            // Expand System Notification Shade natively
+                        } else if (_islandState.value == IslandState.TYPE_3_MAX) {
                             try {
                                 @android.annotation.SuppressLint("WrongConstant")
                                 val sbs = context.getSystemService("statusbar")
@@ -337,8 +358,7 @@ class IslandController(private val context: Context) {
                     }
                 }
             }
-        }
-        
+
         view.onAudioOutputClick = { launchAudioOutputSwitcher() }
         view.onPlayPauseClick = { if (currentMedia?.isPlaying == true) sendMediaCommand("PAUSE") else sendMediaCommand("PLAY") }
         view.onPrevClick = { sendMediaCommand("PREV") }
@@ -396,7 +416,6 @@ class IslandController(private val context: Context) {
     }
 
     private fun evaluatePriority() {
-        // 🚀 EDGE CASE FIX: Allow Critical alerts to show in Landscape!
         if (isLandscape) {
             val isAlertCritical = transientModel?.isCritical == true
             if (!isAlertCritical) {
@@ -404,9 +423,9 @@ class IslandController(private val context: Context) {
                 return
             }
         }
-        
+
         if (transientModel != null) {
-            // 🚀 GAMING FIX: Don't show battery/charging cubes if user is gaming!
+            userForceCollapsed = false // 🚀 FIX: Let popups auto-expand even if user previously forced collapse!
             if (currentHardware?.isGamingModeOn == true && transientModel is LiveActivityModel.Charging) {
                 // Ignore the popup, leave Island hidden or in mini mode
             } else if (transientModel is LiveActivityModel.SystemAlert || transientModel is LiveActivityModel.AppTimerWarning) {
@@ -428,29 +447,28 @@ class IslandController(private val context: Context) {
             }
             return
         }
-        
+
         _splitModel.value = null
+
+        // 🚀 FIX: Prevent the system from deleting the Dashboard when you open it from idle
         if (_activeModel.value is LiveActivityModel.Dashboard) return
-        
+
         if (currentMedia != null) {
             _activeModel.value = currentMedia
+            // 🚀 FIX: The !userForceCollapsed check prevents media from bouncing back to MINI if you just swiped up!
             if (!userForceCollapsed && (_islandState.value == IslandState.HIDDEN || _islandState.value == IslandState.TYPE_0_RING || _islandState.value == IslandState.TYPE_CUBE || _islandState.value == IslandState.TYPE_SPLIT)) {
                 _islandState.value = IslandState.TYPE_1_MINI
             }
             return
         }
-        
-        if (currentHardware?.isGamingModeOn == true) { _activeModel.value = currentHardware; _islandState.value = IslandState.TYPE_1_MINI; return }
-        
+
+        if (currentHardware?.isGamingModeOn == true) {
+            _activeModel.value = currentHardware; _islandState.value = IslandState.TYPE_1_MINI; return
+        }
+
         _activeModel.value = null
         _islandState.value = IslandState.TYPE_0_RING
     }
-
-    fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
-        transientJob?.cancel(); transientModel = model; evaluatePriority()
-        transientJob = scope.launch { delay(durationMs); transientModel = null; evaluatePriority() }
-    }
-
     private fun setupMediaListener() {
         try {
             mediaSessionManager.addOnActiveSessionsChangedListener(sessionListener, ComponentName(context, "com.example.dynamicisland.DummyListener"))
@@ -483,7 +501,7 @@ class IslandController(private val context: Context) {
 
         val isPlaying = pbState.state == PlaybackState.STATE_PLAYING
         val wasPlaying = currentMedia?.isPlaying == true
-        if (!isPlaying && currentMedia == null) return 
+        if (!isPlaying && currentMedia == null) return
 
         val duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
 
@@ -498,9 +516,12 @@ class IslandController(private val context: Context) {
         }
 
         val albumArtBitmap = getScaledBitmap(rawAlbumArt)
+        // 🚀 FIX: Recycle the massive original bitmap so SystemUI doesn't run out of memory!
+        if (rawAlbumArt != null && rawAlbumArt != albumArtBitmap) { rawAlbumArt.recycle() }
+        //fix here, low RAM fix
 
         var appIconBitmap: Bitmap? = null
-        try { 
+        try {
             val pm = context.packageManager
             val drawable = pm.getApplicationIcon(controller.packageName)
             val bmp = Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
@@ -570,7 +591,13 @@ class IslandController(private val context: Context) {
                     stopMediaTicker()
                     if (wasPlaying) {
                         pauseFadeJob?.cancel()
-                        pauseFadeJob = scope.launch { delay(3000); currentMedia = null; evaluatePriority() }
+                        pauseFadeJob = scope.launch {
+                            delay(3000)
+                            // 🚀 FIX: Don't delete the media! Just force it to collapse into the Ring.
+                            // Now you can still swipe down to unpause it later!
+                            userForceCollapsed = true
+                            evaluatePriority()
+                        }
                     }
                 }
                 evaluatePriority()
@@ -579,18 +606,18 @@ class IslandController(private val context: Context) {
     }
 
     private fun startMediaTicker() {
-        if (!isScreenOn) return 
+        if (!isScreenOn) return
         mediaTickerJob?.cancel()
-        mediaTickerJob = scope.launch { 
-            while (isActive) { 
-                activeMediaController?.playbackState?.position?.let { pos -> 
-                    (activeModel.value as? LiveActivityModel.Music)?.let { 
+        mediaTickerJob = scope.launch {
+            while (isActive) {
+                activeMediaController?.playbackState?.position?.let { pos ->
+                    (activeModel.value as? LiveActivityModel.Music)?.let {
                         // 🚀 FIX: Direct memory update! Zero IPC overhead!
                         islandView?.updateTicker(pos)
                     }
                 }
-                delay(1000) 
-            } 
+                delay(1000)
+            }
         }
     }
     private fun stopMediaTicker() { mediaTickerJob?.cancel() }
@@ -599,7 +626,7 @@ class IslandController(private val context: Context) {
         val filter = IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) }
         context.registerReceiver(screenStateReceiver, filter)
         context.registerComponentCallbacks(componentCallbacks)
-        
+
         // 🚀 Register Ecosystem Bridge
         // 🚀 SECURITY FIX: Register receiver with strict Signature Permission
         val ecoFilter = IntentFilter().apply {
@@ -638,13 +665,13 @@ class IslandController(private val context: Context) {
         scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; if (hw.isGamingModeOn || _activeModel.value is LiveActivityModel.HardwareMonitor) evaluatePriority() } }
     }
     init { setupHardwareMonitor(); setupMediaListener() }
-    
-    fun cleanup() { 
+
+    fun cleanup() {
         scope.cancel()
         context.unregisterReceiver(screenStateReceiver)
         context.unregisterComponentCallbacks(componentCallbacks)
         BatteryPlugin.stop(context)
-        try { mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener) } catch(e: Exception){} 
+        try { mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener) } catch(e: Exception){}
         try { context.unregisterReceiver(ecosystemReceiver) } catch(e: Exception){} // 🚀 Clean up Bridge
     }
 }
