@@ -101,7 +101,7 @@ class ConfigActivity : ComponentActivity() {
                     }
                 } else if (currentPrefix == "pinning") {
                     Text(text = "Control Center Shortcuts", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(text = "Select 4 apps to pin to your Max Dashboard.", fontSize = 14.sp, color = Color.Gray)
+                    Text(text = "Select 8 apps to pin to your Max Dashboard.", fontSize = 14.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(16.dp))
 
                     val pm = LocalContext.current.packageManager
@@ -288,11 +288,11 @@ class ConfigActivity : ComponentActivity() {
         } 
         intent.putExtra("prefix", prefix).putExtra("w", w).putExtra("h", h).putExtra("x", x).putExtra("y", y).putExtra("ring_thickness", ringT).putExtra("expand_upwards", expandUp)
         intent.putExtra("pad_t", prefs.getFloat("pad_t", 0f)).putExtra("pad_b", prefs.getFloat("pad_b", 0f)).putExtra("pad_l", prefs.getFloat("pad_l", 0f)).putExtra("pad_r", prefs.getFloat("pad_r", 0f))
-        for (i in 0..7) putExtra("pinned_app_$i", prefs.getString("pinned_app_$i", ""))
         
         val matrix = JSONObject()
         prefs.all.forEach { (key, value) -> if (key.startsWith("TYPE_") && value is String) matrix.put(key, value) }
         intent.putExtra("gesture_payload", matrix.toString())
+        for (i in 0..7) intent.putExtra("pinned_app_$i", prefs.getString("pinned_app_$i", ""))
         sendBroadcast(intent)
     }
 
@@ -320,7 +320,6 @@ class ConfigActivity : ComponentActivity() {
             putExtra("theme_bat_ring", prefs.getFloat("theme_bat_ring", 12f))
             putExtra("theme_alert_title", prefs.getFloat("theme_alert_title", 16f))
             putExtra("theme_alert_msg", prefs.getFloat("theme_alert_msg", 14f))
-            for (i in 0..7) putExtra("pinned_app_$i", prefs.getString("pinned_app_$i", ""))
 
             putExtra("enable_media", prefs.getBoolean("enable_media", true))
             putExtra("enable_charging", prefs.getBoolean("enable_charging", true))
@@ -330,6 +329,7 @@ class ConfigActivity : ComponentActivity() {
         val matrix = JSONObject()
         prefs.all.forEach { (key, value) -> if (key.startsWith("TYPE_") && value is String) matrix.put(key, value) }
         intent.putExtra("gesture_payload", matrix.toString())
+        for (i in 0..7) intent.putExtra("pinned_app_$i", prefs.getString("pinned_app_$i", ""))
         context.sendBroadcast(intent)
     }
 
