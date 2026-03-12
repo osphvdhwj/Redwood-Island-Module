@@ -49,7 +49,6 @@ class IslandController(private val context: Context) {
     private var isScreenOn = true 
     private var isLandscape = false
 
-    // 🚀 NEW: Kill Switches State
     private var isMediaEnabled = true
     private var isChargingEnabled = true
     private var isAlertsEnabled = true
@@ -62,7 +61,7 @@ class IslandController(private val context: Context) {
     private var mediaTickerJob: Job? = null
 
     private fun getBestMediaController(controllers: List<MediaController>?): MediaController? {
-        if (!isMediaEnabled) return null // 🚀 Kill-switch
+        if (!isMediaEnabled) return null 
         if (controllers.isNullOrEmpty()) return null
         return controllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
             ?: controllers.firstOrNull()
@@ -98,7 +97,7 @@ class IslandController(private val context: Context) {
         override fun onReceive(ctx: Context, intent: Intent) {
             when (intent.action) {
                 "com.crdroid.batterywellbeing.SYSTEM_OVERRIDE" -> {
-                    if (!isAlertsEnabled) return // 🚀 Kill-switch
+                    if (!isAlertsEnabled) return
                     when (intent.getStringExtra("action")) {
                         "SMART_CHARGE_LIMIT" -> {
                             val level = intent.getIntExtra("level", 100)
@@ -124,7 +123,7 @@ class IslandController(private val context: Context) {
                     postTransientNotification(LiveActivityModel.SystemAlert(id = "sys_alert_$alertType", alertType = alertType, title = title, message = message, alertColor = colorInt), 5000L)
                 }
                 "com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING" -> {
-                    if (!isTimersEnabled) return // 🚀 Kill-switch
+                    if (!isTimersEnabled) return
                     val pkg = intent.getStringExtra("package_name") ?: return
                     val providedAppName = intent.getStringExtra("app_name")
                     scope.launch(Dispatchers.IO) {
@@ -177,7 +176,7 @@ class IslandController(private val context: Context) {
 
     private val componentCallbacks = object : android.content.ComponentCallbacks2 {
         override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { isLandscape = newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE; evaluatePriority() }
-        @Suppress("OVERRIDE_DEPRECATION") // 🚀 FIX 2: Compiler Warning resolved
+        @Suppress("OVERRIDE_DEPRECATION")
         override fun onLowMemory() {}
         override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
     }
@@ -192,7 +191,6 @@ class IslandController(private val context: Context) {
 
         view.onGestureSettingsUpdated = { payload ->
             try {
-                // Read Kill-Switches from Intent
                 val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
                 isMediaEnabled = prefs.getBoolean("enable_media", true)
                 isChargingEnabled = prefs.getBoolean("enable_charging", true)
@@ -318,14 +316,11 @@ class IslandController(private val context: Context) {
     }
 
     private fun evaluatePriority() {
-        // 🚀 FIX 1: Completely hide during Landscape OR Gaming mode (unless critical alert)
         val isAlertCritical = transientModel?.isCritical == true
         if ((isLandscape || currentHardware?.isGamingModeOn == true) && !isAlertCritical) {
             _islandState.value = IslandState.HIDDEN
             return
         }
-        
-        if (transientModel != null) {
         
         if (transientModel != null) {
             userForceCollapsed = false
@@ -356,7 +351,7 @@ class IslandController(private val context: Context) {
         
         _activeModel.value = null
         _islandState.value = IslandState.TYPE_0_RING
-        }
+    }
 
     fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
         transientJob?.cancel(); transientModel = model; evaluatePriority()
@@ -404,7 +399,7 @@ class IslandController(private val context: Context) {
         } catch (e: OutOfMemoryError) { null } catch (e: Exception) { null }
 
         val albumArtBitmap = getScaledBitmap(rawAlbumArt)
-        if (rawAlbumArt != null && rawAlbumArt != albumArtBitmap) { rawAlbumArt.recycle() } // Prevent OOM leak!
+        if (rawAlbumArt != null && rawAlbumArt != albumArtBitmap) { rawAlbumArt.recycle() }
 
         var appIconBitmap: Bitmap? = null
         try { 
