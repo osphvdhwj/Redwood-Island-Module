@@ -1,0 +1,3 @@
+## 2024-03-05 - [Palette UX Improvement: Dynamic Island UI and Priorities]
+**Learning:** `androidx.compose.foundation.basicMarquee` and `androidx.compose.ui.draw.alpha` often require explicit imports in some Jetpack Compose BOM versions. Using an obsolete `evaluatePriority` with direct Model injections leads to UI race conditions; instead, a Coroutine-backed `MutableStateFlow` Priority Stack with a `ConcurrentHashMap` for transient jobs ensures stable updates and graceful degradation (e.g., from Charging back to Music).
+**Action:** Replaced `evaluatePriority()` with a Thread-safe stack processing logic. Safely imported modifiers and `ExperimentalFoundationApi` opt-ins to solve "Unresolved Reference" compilation errors.
