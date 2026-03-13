@@ -40,7 +40,7 @@ class ConfigActivity : ComponentActivity() {
     @Composable
     fun ConfigScreen(prefs: android.content.SharedPreferences) {
         var selectedTab by remember { mutableIntStateOf(0) }
-        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures", "Pinning", "Tweaks", "Theme", "Features")
+        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures", "Dashboard", "Tweaks", "Theme", "Features") // 🚀 RENAMED Pinning to Dashboard
 
         var w by remember { mutableFloatStateOf(0f) }
         var h by remember { mutableFloatStateOf(0f) }
@@ -52,7 +52,7 @@ class ConfigActivity : ComponentActivity() {
         val currentPrefix = tabs[selectedTab].lowercase()
 
         LaunchedEffect(selectedTab) {
-            if (currentPrefix != "gestures" && currentPrefix != "pinning" && currentPrefix != "tweaks" && currentPrefix != "theme" && currentPrefix != "features") {
+            if (currentPrefix != "gestures" && currentPrefix != "dashboard" && currentPrefix != "tweaks" && currentPrefix != "theme" && currentPrefix != "features") {
                 w = prefs.getFloat("${currentPrefix}_w", getDefaultWidth(currentPrefix))
                 h = prefs.getFloat("${currentPrefix}_h", getDefaultHeight(currentPrefix))
                 x = prefs.getFloat("${currentPrefix}_x", 0f)
@@ -63,7 +63,7 @@ class ConfigActivity : ComponentActivity() {
 
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxWidth().height(250.dp).background(Color.Black), contentAlignment = if (expandUpwards) Alignment.BottomCenter else Alignment.TopCenter) {
-                if (currentPrefix != "gestures" && currentPrefix != "pinning" && currentPrefix != "tweaks" && currentPrefix != "theme" && currentPrefix != "features") {
+                if (currentPrefix != "gestures" && currentPrefix != "dashboard" && currentPrefix != "tweaks" && currentPrefix != "theme" && currentPrefix != "features") {
                     Box(modifier = Modifier.offset(x = x.dp, y = y.dp).width(w.dp).height(h.dp).background(Color.White.copy(alpha = 0.6f), RoundedCornerShape(if(currentPrefix == "max") 42.dp else (h/2).dp)))
                 } else Text("Universal Matrix Config", color = Color.White, modifier = Modifier.align(Alignment.Center))
             }
@@ -99,14 +99,43 @@ class ConfigActivity : ComponentActivity() {
                             }
                         }
                     }
-                } else if (currentPrefix == "pinning") {
-                    Text(text = "Control Center Shortcuts", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(text = "Select 8 apps to pin to your Max Dashboard.", fontSize = 14.sp, color = Color.Gray)
+                } else if (currentPrefix == "dashboard") {
+                    // 🚀 ADDED DYNAMIC QS CONFIGURATION TO DASHBOARD TAB
+                    Text(text = "Quick Settings Grid", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
+                    Text(text = "Select 7 hardware toggles.", fontSize = 14.sp, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val availableQS = listOf("None", "WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
+                    val qsSlots = listOf("QS 1", "QS 2", "QS 3", "QS 4", "QS 5", "QS 6", "QS 7")
+                    qsSlots.forEachIndexed { index, slot ->
+                        var expanded by remember { mutableStateOf(false) }
+                        var selectedQS by remember { mutableStateOf(prefs.getString("qs_tile_$index", availableQS[index + 1]) ?: availableQS[index + 1]) }
+
+                        @OptIn(ExperimentalMaterial3Api::class)
+                        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                            OutlinedTextField(
+                                value = selectedQS, onValueChange = {}, readOnly = true, label = { Text(slot) },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp)
+                            )
+                            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                availableQS.forEach { tile ->
+                                    DropdownMenuItem(text = { Text(tile) }, onClick = {
+                                        selectedQS = tile; prefs.edit().putString("qs_tile_$index", tile).apply(); expanded = false
+                                        broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
+                                    })
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(text = "App Dock Pinning", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
+                    Text(text = "Select 8 apps to pin.", fontSize = 14.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(16.dp))
 
                     val pm = LocalContext.current.packageManager
                     val installedApps = remember {
-                        // 🚀 BULLETPROOF FIX: Use 0 instead of GET_META_DATA to prevent Binder crashes, catch Throwables
                         try {
                             pm.getInstalledApplications(0)
                                 .filter { appInfo -> try { pm.getLaunchIntentForPackage(appInfo.packageName) != null } catch(e:Throwable){false} }
@@ -115,7 +144,7 @@ class ConfigActivity : ComponentActivity() {
                         } catch(e: Throwable) { emptyList() }
                     }
 
-                    val pinnedApps = listOf("Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Slot 6", "Slot 7", "Slot 8")
+                    val pinnedApps = listOf("App 1", "App 2", "App 3", "App 4", "App 5", "App 6", "App 7", "App 8")
                     pinnedApps.forEachIndexed { index, slot ->
                         var expanded by remember { mutableStateOf(false) }
                         var selectedAppPkg by remember { mutableStateOf(prefs.getString("pinned_app_$index", "") ?: "") }
@@ -131,12 +160,12 @@ class ConfigActivity : ComponentActivity() {
                             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                 DropdownMenuItem(text = { Text("None") }, onClick = {
                                     selectedAppPkg = ""; prefs.edit().putString("pinned_app_$index", "").apply(); expanded = false
-                                    broadcastUpdate("pinning", 0f, 0f, 0f, 0f, 0f, false)
+                                    broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
                                 })
                                 installedApps.forEach { pair ->
                                     DropdownMenuItem(text = { Text(pair.first) }, onClick = {
                                         selectedAppPkg = pair.second; prefs.edit().putString("pinned_app_$index", pair.second).apply(); expanded = false
-                                        broadcastUpdate("pinning", 0f, 0f, 0f, 0f, 0f, false)
+                                        broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
                                     })
                                 }
                             }
@@ -296,6 +325,8 @@ class ConfigActivity : ComponentActivity() {
         prefs.all.forEach { (key, value) -> if (key.startsWith("TYPE_") && value is String) matrix.put(key, value) }
         intent.putExtra("gesture_payload", matrix.toString())
         for (i in 0..7) intent.putExtra("pinned_app_$i", prefs.getString("pinned_app_$i", ""))
+        val defaultQS = listOf("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
+        for (i in 0..6) intent.putExtra("qs_tile_$i", prefs.getString("qs_tile_$i", defaultQS[i]))
         sendBroadcast(intent)
     }
 
@@ -333,6 +364,8 @@ class ConfigActivity : ComponentActivity() {
         prefs.all.forEach { (key, value) -> if (key.startsWith("TYPE_") && value is String) matrix.put(key, value) }
         intent.putExtra("gesture_payload", matrix.toString())
         for (i in 0..7) intent.putExtra("pinned_app_$i", prefs.getString("pinned_app_$i", ""))
+        val defaultQS = listOf("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
+        for (i in 0..6) intent.putExtra("qs_tile_$i", prefs.getString("qs_tile_$i", defaultQS[i]))
         context.sendBroadcast(intent)
     }
 
