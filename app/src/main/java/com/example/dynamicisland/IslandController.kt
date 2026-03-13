@@ -117,7 +117,7 @@ class IslandController(private val context: Context) {
                     val title = intent.getStringExtra("title") ?: "System Alert"
                     val message = intent.getStringExtra("message") ?: ""
                     val colorHex = intent.getStringExtra("colorHex") ?: "#FFFFFF"
-                    val colorInt = try { android.graphics.Color.parseColor(colorHex) } catch(e: Throwable) { android.graphics.Color.WHITE }
+                    val colorInt = try { android.graphics.Color.parseColor(colorHex) } catch(e: Exception) { android.graphics.Color.WHITE }
                     postTransientNotification(LiveActivityModel.SystemAlert(id = "sys_alert_$alertType", alertType = alertType, title = title, message = message, alertColor = colorInt), 5000L)
                 }
                 "com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING" -> {
@@ -140,7 +140,7 @@ class IslandController(private val context: Context) {
                                 appIcon = getScaledBitmap(bmp, 150)
                                 if (bmp != appIcon) { bmp.recycle() }
                                 appIcon?.let { iconCache.put(pkg, it) }
-                            } catch (e: Throwable) {}
+                            } catch (e: Exception) {}
                         }
                         withContext(Dispatchers.Main) { postTransientNotification(LiveActivityModel.AppTimerWarning(packageName = pkg, appName = appName, appIcon = appIcon, targetTimeMs = System.currentTimeMillis() + 60000L), 60000L) }
                     }
@@ -165,7 +165,7 @@ class IslandController(private val context: Context) {
                             if (exemptionsCsv.length > 2000) return@launch
                             exemptedApps.clear()
                             exemptionsCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { exemptedApps.add(it) }
-                        } catch (e: Throwable) {}
+                        } catch (e: Exception) {}
                     }
                 }
             }
@@ -468,11 +468,15 @@ class IslandController(private val context: Context) {
                     script.forEach(output)
                     blurredArtBitmap = Bitmap.createBitmap(albumArtBitmap.width, albumArtBitmap.height, albumArtBitmap.config ?: Bitmap.Config.ARGB_8888)
                     output.copyTo(blurredArtBitmap)
+                    
+                    // 🚀 CRITICAL FIX: DESTROY NATIVE ALLOCATIONS TO PREVENT 30-MIN CRASH!
+                    input.destroy()
+                    output.destroy()
+                    script.destroy()
                     rs.destroy()
                 } catch (e: Throwable) { blurredArtBitmap = albumArtBitmap }
 
                 try {
-                    // 🚀 BULLETPROOF FIX: Prevent Palette crash if bitmap gets recycled mid-extraction
                     if (!albumArtBitmap.isRecycled) {
                         val palette = Palette.from(albumArtBitmap).generate()
                         val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
