@@ -25,7 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow // 🚀 FIX: Import for shadow
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -41,10 +41,10 @@ import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight // 🚀 FIX: Import for FontWeight
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp // 🚀 FIX: Import for SP text sizing
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.*
 import androidx.savedstate.*
 import de.robv.android.xposed.XSharedPreferences
@@ -130,7 +130,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             ringThickness.value = pref.getFloat("ring_thickness", 6f)
             expandUpwards.value = pref.getBoolean("expand_upwards", false)
             isCubeRotationEnabled.value = pref.getBoolean("rotate_cube", true)
-        } catch (e: Exception) {}
+        } catch (e: Throwable) {}
     }
 
     private val receiver = object : android.content.BroadcastReceiver() {
@@ -194,7 +194,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 null
             }
             viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, listener)
-        } catch (e: Exception) {}
+        } catch (e: Throwable) {}
 
         val composeView = ComposeView(context).apply {
             setContent {
@@ -215,14 +215,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
 
-        val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            windowManager?.currentWindowMetrics?.windowInsets?.displayCutout
-        } else null
+        val displayCutout = try { if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { windowManager?.currentWindowMetrics?.windowInsets?.displayCutout } else null } catch(e:Throwable){null}
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
 
         flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
             insetsUpdateFlow.debounce(50).collect {
-                this@DynamicIslandView.requestLayout()
+                try { this@DynamicIslandView.requestLayout() } catch(e:Throwable){}
             }
         }
 
@@ -241,10 +239,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         flowJob?.cancel()
         flowJob = null
         lifecycleOwner.destroy()
-        try { context.unregisterReceiver(receiver) } catch (e: Exception) {}
+        try { context.unregisterReceiver(receiver) } catch (e: Throwable) {}
 
         BatteryPlugin.stop(context)
-        context.sendBroadcast(android.content.Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui"))
+        try { context.sendBroadcast(android.content.Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui")) } catch(e:Throwable){}
     }
 
     @OptIn(ExperimentalAnimationApi::class)
@@ -285,7 +283,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.15f), animationSpec = tween(600), label = "borderColor")
 
         LaunchedEffect(state, model) {
-            if (!isAttachedToWindow) return@LaunchedEffect
+            // 🚀 BULLETPROOF FIX: Prevent Window Token Race Conditions
+            if (!isAttachedToWindow || windowToken == null) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
             val density = context.resources.displayMetrics.density
@@ -301,7 +300,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             }
-            try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
+            try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Throwable) {}
         }
 
         val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
@@ -314,18 +313,21 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             Box(
                 modifier = Modifier
                     .onGloballyPositioned { coordinates ->
-                        val location = IntArray(2)
-                        this@DynamicIslandView.getLocationOnScreen(location)
-                        val bounds = coordinates.boundsInRoot()
-                        val globalLeft = location[0] + bounds.left.toInt()
-                        val globalTop = location[1] + bounds.top.toInt()
-                        val globalRight = location[0] + bounds.right.toInt()
-                        val globalBottom = location[1] + bounds.bottom.toInt()
+                        try {
+                            if (!isAttachedToWindow) return@onGloballyPositioned
+                            val location = IntArray(2)
+                            this@DynamicIslandView.getLocationOnScreen(location)
+                            val bounds = coordinates.boundsInRoot()
+                            val globalLeft = location[0] + bounds.left.toInt()
+                            val globalTop = location[1] + bounds.top.toInt()
+                            val globalRight = location[0] + bounds.right.toInt()
+                            val globalBottom = location[1] + bounds.bottom.toInt()
 
-                        if (abs(mainPillRect.left - globalLeft) > 5 || abs(mainPillRect.bottom - globalBottom) > 5 || mainPillRect.isEmpty) {
-                            mainPillRect.set(globalLeft, globalTop, globalRight, globalBottom)
-                            insetsUpdateFlow.tryEmit(Unit)
-                        }
+                            if (abs(mainPillRect.left - globalLeft) > 5 || abs(mainPillRect.bottom - globalBottom) > 5 || mainPillRect.isEmpty) {
+                                mainPillRect.set(globalLeft, globalTop, globalRight, globalBottom)
+                                insetsUpdateFlow.tryEmit(Unit)
+                            }
+                        } catch(e: Throwable) {}
                     }
                     .width(width).height(height)
                     .graphicsLayer { scaleX = touchScale; scaleY = touchScale }
@@ -487,17 +489,20 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(modifier = Modifier.size(height)
                             .onGloballyPositioned { coordinates ->
-                                val location = IntArray(2)
-                                this@DynamicIslandView.getLocationOnScreen(location)
-                                val bounds = coordinates.boundsInRoot()
-                                val globalLeft = location[0] + bounds.left.toInt()
-                                val globalTop = location[1] + bounds.top.toInt()
-                                val globalRight = location[0] + bounds.right.toInt()
-                                val globalBottom = location[1] + bounds.bottom.toInt()
-                                if (abs(splitCubeRect.left - globalLeft) > 5 || splitCubeRect.isEmpty) {
-                                    splitCubeRect.set(globalLeft, globalTop, globalRight, globalBottom)
-                                    insetsUpdateFlow.tryEmit(Unit)
-                                }
+                                try {
+                                    if (!isAttachedToWindow) return@onGloballyPositioned
+                                    val location = IntArray(2)
+                                    this@DynamicIslandView.getLocationOnScreen(location)
+                                    val bounds = coordinates.boundsInRoot()
+                                    val globalLeft = location[0] + bounds.left.toInt()
+                                    val globalTop = location[1] + bounds.top.toInt()
+                                    val globalRight = location[0] + bounds.right.toInt()
+                                    val globalBottom = location[1] + bounds.bottom.toInt()
+                                    if (abs(splitCubeRect.left - globalLeft) > 5 || splitCubeRect.isEmpty) {
+                                        splitCubeRect.set(globalLeft, globalTop, globalRight, globalBottom)
+                                        insetsUpdateFlow.tryEmit(Unit)
+                                    }
+                                } catch(e: Throwable) {}
                             }
                             .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape)
                             .clickable(
