@@ -12,64 +12,67 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 class MainHook : IXposedHookLoadPackage {
 
+    private var islandController: IslandController? = null
+    private var isInitialized = false
+
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         if (lpparam.packageName != "com.android.systemui") return
 
+        // 🚀 BULLETPROOF FIX 1: Catch everything. Never let SystemUI crash.
         try {
-            // Hook SystemUI's creation to inject our WindowManager overlay
-            XposedHelpers.findAndHookMethod(
+            val systemUIApplicationClass = XposedHelpers.findClassIfExists(
                 "com.android.systemui.SystemUIApplication",
-                lpparam.classLoader,
+                lpparam.classLoader
+            ) ?: return
+
+            XposedHelpers.findAndHookMethod(
+                systemUIApplicationClass,
                 "onCreate",
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
-                        val context = param.thisObject as Context
-                        injectDynamicIsland(context)
+                        if (isInitialized) return
+                        
+                        try {
+                            val context = param.thisObject as Context
+                            val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+
+                            // Run on main thread safely
+                            android.os.Handler(context.mainLooper).post {
+                                try {
+                                    val layoutParams = WindowManager.LayoutParams(
+                                        WindowManager.LayoutParams.MATCH_PARENT,
+                                        WindowManager.LayoutParams.WRAP_CONTENT,
+                                        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                                                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                                                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                                                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                                        PixelFormat.TRANSLUCENT
+                                    ).apply {
+                                        gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                                        title = "Redwood Dynamic Island"
+                                        layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                                    }
+
+                                    islandController = IslandController(context)
+                                    val islandView = islandController?.createIslandView(windowManager, layoutParams)
+
+                                    if (islandView != null) {
+                                        windowManager.addView(islandView, layoutParams)
+                                        isInitialized = true
+                                    }
+                                } catch (e: Throwable) {
+                                    XposedBridge.log("DynamicIsland: FATAL UI INJECTION ERROR -> ${e.stackTraceToString()}")
+                                }
+                            }
+                        } catch (e: Throwable) {
+                            XposedBridge.log("DynamicIsland: FATAL ONCREATE ERROR -> ${e.stackTraceToString()}")
+                        }
                     }
                 }
             )
-        } catch (e: Exception) {
-            XposedBridge.log("DynamicIsland: Failed to hook SystemUI - ${e.message}")
+        } catch (e: Throwable) {
+            XposedBridge.log("DynamicIsland: FATAL HOOK ERROR -> ${e.stackTraceToString()}")
         }
-    }
-
-    private fun injectDynamicIsland(systemUiContext: Context) {
-        // Wrap in a Handler to delay execution by 15 seconds
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            try {
-                XposedBridge.log("RedwoodIsland: Starting delayed injection...")
-                val windowManager = systemUiContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-
-                // LayoutParams restored to WRAP_CONTENT to allow dynamic pill resizing
-                val layoutParams = WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.WRAP_CONTENT,
-                    WindowManager.LayoutParams.WRAP_CONTENT,
-                    2024, // TYPE_NAVIGATION_BAR_PANEL
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or // 🚀 FIX: Ignore screen bounds
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,   // 🚀 FIX: Allow drawing anywhere
-                    android.graphics.PixelFormat.TRANSLUCENT
-                ).apply {
-                    gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
-                    title = "RedwoodIslandOverlay"
-
-                    // 🚀 FIX: Force draw OVER and ABOVE the camera punch hole
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                        layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-                    }
-                }
-
-                val controller = IslandController(systemUiContext)
-                val islandView = controller.createIslandView(windowManager, layoutParams)
-
-                windowManager.addView(islandView, layoutParams)
-                XposedBridge.log("RedwoodIsland: Successfully injected overlay with dynamic bounds.")
-            } catch (e: Exception) {
-                XposedBridge.log("RedwoodIsland: FATAL ERROR during injection: ${e.message}")
-            }
-        }, 15000) // 15 Second delay gives you time to disable module if it crashes
     }
 }
