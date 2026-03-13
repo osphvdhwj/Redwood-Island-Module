@@ -27,7 +27,6 @@ import java.util.concurrent.ConcurrentHashMap
 
 class IslandController(private val context: Context) {
 
-    // 🚀 FIX: Prevent UninitializedPropertyAccessException
     private var windowManager: WindowManager? = null
     private lateinit var layoutParams: WindowManager.LayoutParams
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -75,13 +74,11 @@ class IslandController(private val context: Context) {
                 Intent.ACTION_SCREEN_OFF -> {
                     isScreenOn = false
                     stopMediaTicker()
-                    // 🚀 FIX: We NO LONGER force HIDDEN here. Forcing HIDDEN while the screen 
-                    // turns off causes Jetpack Compose to permanently freeze the layout.
                 }
                 Intent.ACTION_SCREEN_ON -> {
                     isScreenOn = true
                     if (currentMedia?.isPlaying == true && isMediaEnabled) startMediaTicker()
-                    evaluatePriority() // Restores UI safely
+                    evaluatePriority() 
                 }
             }
         }
@@ -186,7 +183,7 @@ class IslandController(private val context: Context) {
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
         val view = DynamicIslandView(context, moduleContext)
         this.islandView = view 
-        this.windowManager = wm // 🚀 FIX: Safely store windowManager
+        this.windowManager = wm 
         view.onSplitPillClick = { val sModel = _splitModel.value; if (sModel is LiveActivityModel.Charging) { _islandState.value = IslandState.TYPE_CUBE } }
         view.windowManager = wm
         view.windowParams = params
@@ -226,7 +223,6 @@ class IslandController(private val context: Context) {
                     _islandState.value = IslandState.TYPE_3_MAX
                 }
                 "COLLAPSE" -> {
-                    // 🚀 FIX: Gracefully handle returning from Dashboard
                     if (_activeModel.value is LiveActivityModel.Dashboard) {
                         _activeModel.value = currentMedia
                         evaluatePriority() 
@@ -243,12 +239,10 @@ class IslandController(private val context: Context) {
                     userForceCollapsed = false
                     when (_islandState.value) {
                         IslandState.TYPE_0_RING -> { 
-                            // 🚀 FIX: Skip empty S pill if no media is playing!
                             if (currentMedia != null) _islandState.value = IslandState.TYPE_1_MINI 
                             else { _activeModel.value = LiveActivityModel.Dashboard(); _islandState.value = IslandState.TYPE_3_MAX }
                         }
                         IslandState.TYPE_1_MINI -> {
-                            // 🚀 FIX: If paused, expanding goes to Dashboard instead of empty media player!
                             if (currentMedia != null && currentMedia?.isPlaying == false) {
                                 _activeModel.value = LiveActivityModel.Dashboard(); _islandState.value = IslandState.TYPE_3_MAX
                             } else {
@@ -268,7 +262,11 @@ class IslandController(private val context: Context) {
                                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                                 val pendingIntent = PendingIntent.getActivity(context, 0, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                                 val options = android.app.ActivityOptions.makeBasic()
-                                if (android.os.Build.VERSION.SDK_INT >= 34) { options.pendingIntentBackgroundActivityStartMode = android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED }
+                                // 🚀 API 33 COMPILER BYPASS
+                                try {
+                                    val method = android.app.ActivityOptions::class.java.getMethod("setPendingIntentBackgroundActivityStartMode", Int::class.javaPrimitiveType)
+                                    method.invoke(options, 1) 
+                                } catch (e: Throwable) {}
                                 pendingIntent.send(context, 0, null, null, null, null, options.toBundle())
                             }
                         } catch (e: Exception) {}
@@ -338,15 +336,18 @@ class IslandController(private val context: Context) {
     private fun launchAudioOutputSwitcher() {
         try {
             val intent = Intent("com.android.systemui.action.LAUNCH_SYSTEM_MEDIA_OUTPUT_DIALOG").apply { component = ComponentName("com.android.systemui", "com.android.systemui.media.dialog.MediaOutputDialogReceiver") }
-            val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, pendingIntent.FLAG_IMMUTABLE)
+            val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
             val options = android.app.ActivityOptions.makeBasic()
-            if (android.os.Build.VERSION.SDK_INT >= 34) { options.pendingIntentBackgroundActivityStartMode = android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED }
+            // 🚀 API 33 COMPILER BYPASS
+            try {
+                val method = android.app.ActivityOptions::class.java.getMethod("setPendingIntentBackgroundActivityStartMode", Int::class.javaPrimitiveType)
+                method.invoke(options, 1)
+            } catch (e: Throwable) {}
             pendingIntent.send(context, 0, null, null, null, null, options.toBundle())
         } catch (e: Exception) {}
     }
 
     private fun evaluatePriority() {
-        // 🚀 FIX: Hard check actual screen rotation to guarantee perfect Landscape/Gaming hiding
         val rotation = try { windowManager?.defaultDisplay?.rotation ?: 0 } catch(e: Throwable) { 0 }
         val isLandscapeNow = rotation == android.view.Surface.ROTATION_90 || rotation == android.view.Surface.ROTATION_270
         val isAlertCritical = transientModel?.isCritical == true
@@ -381,7 +382,6 @@ class IslandController(private val context: Context) {
                 _islandState.value = IslandState.TYPE_1_MINI
             }
             
-            // If they swipe up, we collapse down to the Ring gracefully
             if (userForceCollapsed && _islandState.value != IslandState.TYPE_0_RING) {
                 _islandState.value = IslandState.TYPE_0_RING
             }
@@ -483,7 +483,7 @@ class IslandController(private val context: Context) {
             withContext(Dispatchers.Main) {
                 currentMedia?.blurredAlbumArt?.takeIf { it != currentMedia?.albumArt }?.recycle()
 
-                val extractedActions = pbState.customActions.map { CustomMediaAction(actionName = it.action, icon = null, pendingIntent = null, isEnabled = true) }
+                val extractedActions = pbState.customActions.map { CustomMediaAction(it.action, null, null, true) }
 
                 currentMedia = LiveActivityModel.Music(
                     id = "media_main", title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown",
