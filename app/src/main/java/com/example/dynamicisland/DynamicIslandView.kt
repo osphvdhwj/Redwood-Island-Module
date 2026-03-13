@@ -90,6 +90,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     
     var displayCutoutWidth = mutableFloatStateOf(0f)
     var pinnedApps = mutableStateListOf<String>("", "", "", "", "", "", "", "")
+    var qsTiles = mutableStateListOf<String>("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
 
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
@@ -145,6 +146,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     expandUpwards.value = intent.getBooleanExtra("expand_upwards", expandUpwards.value)
                     
                     for (i in 0..7) { val pkg = intent.getStringExtra("pinned_app_$i"); if (pkg != null) pinnedApps[i] = pkg }
+                    for (i in 0..6) { val qs = intent.getStringExtra("qs_tile_$i"); if (qs != null) qsTiles[i] = qs }
                 } 
 
                 customOffsetY.floatValue = intent.getFloatExtra("tweak_offset_y", customOffsetY.floatValue)
@@ -283,7 +285,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.15f), animationSpec = tween(600), label = "borderColor")
 
         LaunchedEffect(state, model) {
-            // 🚀 BULLETPROOF FIX: Prevent Window Token Race Conditions
             if (!isAttachedToWindow || windowToken == null) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
@@ -457,13 +458,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             )
                             val progressColor = baseColor.copy(alpha = pulseAlpha)
 
+                            // 🚀 DYNAMIC RING REDESIGN: Apple-Style glowing continuous stroke
                             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
                                 val strokeW = ringThickness.value.dp.toPx() 
                                 val inset = strokeW / 2
                                 val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
                                 val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
 
-                                drawArc(color = baseColor.copy(alpha=0.15f), startAngle = -90f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
+                                drawArc(color = baseColor.copy(alpha=0.15f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
 
                                 val progressPercent = progress.coerceIn(0f, 1f)
                                 val capStyle = if (progressPercent >= 0.99f) StrokeCap.Butt else StrokeCap.Round
