@@ -106,10 +106,13 @@ class ConfigActivity : ComponentActivity() {
 
                     val pm = LocalContext.current.packageManager
                     val installedApps = remember {
-                        pm.getInstalledApplications(android.content.pm.PackageManager.GET_META_DATA)
-                            .filter { appInfo -> pm.getLaunchIntentForPackage(appInfo.packageName) != null }
-                            .map { appInfo -> Pair(appInfo.loadLabel(pm).toString(), appInfo.packageName) }
-                            .sortedBy { pair -> pair.first }
+                        // 🚀 BULLETPROOF FIX: Use 0 instead of GET_META_DATA to prevent Binder crashes, catch Throwables
+                        try {
+                            pm.getInstalledApplications(0)
+                                .filter { appInfo -> try { pm.getLaunchIntentForPackage(appInfo.packageName) != null } catch(e:Throwable){false} }
+                                .map { appInfo -> Pair(appInfo.loadLabel(pm).toString(), appInfo.packageName) }
+                                .sortedBy { pair -> pair.first }
+                        } catch(e: Throwable) { emptyList() }
                     }
 
                     val pinnedApps = listOf("Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Slot 6", "Slot 7", "Slot 8")
