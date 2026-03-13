@@ -382,15 +382,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         Image(bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(if (state == IslandState.TYPE_3_MAX) 0.65f else 0.35f).blur(if (state == IslandState.TYPE_3_MAX) 12.dp else 24.dp))
                     }
 
-                    if (state != IslandState.HIDDEN) {
+                    if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING) {
                         val bottomPadding by animateDpAsState(targetValue = when(state) { IslandState.TYPE_3_MAX -> 24.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> 12.dp; else -> 0.dp }, label = "bottomPadding")
                         Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
                             AnimatedContent(
                                 targetState = state,
                                 transitionSpec = {
                                     (fadeIn(animationSpec = tween(220, delayMillis = 90)) +
-                                     scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)))
-                                    .togetherWith(fadeOut(animationSpec = tween(90)))
+                                     scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90))) togetherWith fadeOut(animationSpec = tween(90))
                                 },
                                 label = "UI Transition"
                             ) { s ->
@@ -458,7 +457,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             )
                             val progressColor = baseColor.copy(alpha = pulseAlpha)
 
-                            // 🚀 DYNAMIC RING REDESIGN: Apple-Style glowing continuous stroke
                             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
                                 val strokeW = ringThickness.value.dp.toPx() 
                                 val inset = strokeW / 2
