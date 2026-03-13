@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput // 🚀 FIX: Added missing pointerInput import
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -116,7 +117,6 @@ import de.robv.android.xposed.XSharedPreferences
             } catch (e: Exception) { audioIcon = Icons.Default.Smartphone; audioLabel = "Phone" }
         }
 
-        // 🚀 FIX: Switched from fixed Spacers to Flex Weight so it squishes nicely!
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 if (music.appIcon != null) { Image(bitmap = music.appIcon.asImageBitmap(), contentDescription = "App Logo", modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))) } else Box(Modifier.size(36.dp).background(Color.White.copy(alpha=0.2f), RoundedCornerShape(10.dp)))
@@ -161,7 +161,6 @@ import de.robv.android.xposed.XSharedPreferences
         }
     }
 
-    // 🚀 NEW: Apple-Style Control Center UI
     @Composable
     fun AppleControlCenterSlider(value: Float, onValueChange: (Float) -> Unit, onValueChangeFinished: () -> Unit = {}, activeColor: Color, icon: ImageVector) {
         var width by remember { mutableIntStateOf(1) }
@@ -205,10 +204,8 @@ import de.robv.android.xposed.XSharedPreferences
         val cameraManager = remember { try { context.getSystemService(Context.CAMERA_SERVICE) as? android.hardware.camera2.CameraManager } catch(e: Throwable) { null } }
         val cameraId = remember { try { cameraManager?.cameraIdList?.firstOrNull() } catch(e: Throwable) { null } }
 
-        // 🚀 FIX: Flex Spacing (Weights instead of fixed heights)
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
             
-            // --- ROW 1: DYNAMIC QS GRID ---
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 val activeQS = qsTiles.filter { it.isNotEmpty() && it != "None" }
                 if (activeQS.isEmpty()) {
@@ -230,7 +227,6 @@ import de.robv.android.xposed.XSharedPreferences
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // --- ROW 2: SCROLLABLE APP DOCK ---
             val pm = context.packageManager
             Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 val validApps = pinnedApps.filter { it.isNotEmpty() }
@@ -259,7 +255,6 @@ import de.robv.android.xposed.XSharedPreferences
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // --- ROW 3 & 4: 🚀 APPLE-STYLE THICK SLIDERS ---
             AppleControlCenterSlider(value = brightness, onValueChange = { brightness = it }, activeColor = Color.Yellow, icon = Icons.Default.BrightnessHigh)
             
             Spacer(modifier = Modifier.weight(0.5f))
