@@ -117,7 +117,7 @@ class IslandController(private val context: Context) {
                     val title = intent.getStringExtra("title") ?: "System Alert"
                     val message = intent.getStringExtra("message") ?: ""
                     val colorHex = intent.getStringExtra("colorHex") ?: "#FFFFFF"
-                    val colorInt = try { android.graphics.Color.parseColor(colorHex) } catch(e: Exception) { android.graphics.Color.WHITE }
+                    val colorInt = try { android.graphics.Color.parseColor(colorHex) } catch(e: Throwable) { android.graphics.Color.WHITE }
                     postTransientNotification(LiveActivityModel.SystemAlert(id = "sys_alert_$alertType", alertType = alertType, title = title, message = message, alertColor = colorInt), 5000L)
                 }
                 "com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING" -> {
@@ -140,7 +140,7 @@ class IslandController(private val context: Context) {
                                 appIcon = getScaledBitmap(bmp, 150)
                                 if (bmp != appIcon) { bmp.recycle() }
                                 appIcon?.let { iconCache.put(pkg, it) }
-                            } catch (e: Exception) {}
+                            } catch (e: Throwable) {}
                         }
                         withContext(Dispatchers.Main) { postTransientNotification(LiveActivityModel.AppTimerWarning(packageName = pkg, appName = appName, appIcon = appIcon, targetTimeMs = System.currentTimeMillis() + 60000L), 60000L) }
                     }
@@ -165,7 +165,7 @@ class IslandController(private val context: Context) {
                             if (exemptionsCsv.length > 2000) return@launch
                             exemptedApps.clear()
                             exemptionsCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { exemptedApps.add(it) }
-                        } catch (e: Exception) {}
+                        } catch (e: Throwable) {}
                     }
                 }
             }
@@ -180,7 +180,7 @@ class IslandController(private val context: Context) {
     }
 
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
-        val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
+        val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Throwable) { context }
         val view = DynamicIslandView(context, moduleContext)
         this.islandView = view 
         this.windowManager = wm 
@@ -202,10 +202,10 @@ class IslandController(private val context: Context) {
                     val json = JSONObject(payload)
                     gestureMatrix.clear()
                     json.keys().forEach { key ->
-                        try { if (key.startsWith("TYPE_")) { gestureMatrix[key] = IslandAction.valueOf(json.getString(key)) } } catch (e: Exception) {} 
+                        try { if (key.startsWith("TYPE_")) { gestureMatrix[key] = IslandAction.valueOf(json.getString(key)) } } catch (e: Throwable) {} 
                     }
                 }
-            } catch (e: Exception) {}
+            } catch (e: Throwable) {}
         }
 
         view.onGestureEvent = { gesture ->
@@ -262,14 +262,13 @@ class IslandController(private val context: Context) {
                                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                                 val pendingIntent = PendingIntent.getActivity(context, 0, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                                 val options = android.app.ActivityOptions.makeBasic()
-                                // 🚀 API 33 COMPILER BYPASS
                                 try {
                                     val method = android.app.ActivityOptions::class.java.getMethod("setPendingIntentBackgroundActivityStartMode", Int::class.javaPrimitiveType)
-                                    method.invoke(options, 1) 
+                                    method.invoke(options, 1)
                                 } catch (e: Throwable) {}
                                 pendingIntent.send(context, 0, null, null, null, null, options.toBundle())
                             }
-                        } catch (e: Exception) {}
+                        } catch (e: Throwable) {}
                     }
                 }
                 "HEART_SONG" -> {
@@ -307,7 +306,7 @@ class IslandController(private val context: Context) {
                                 val sbs = context.getSystemService("statusbar")
                                 val expandMethod = sbs?.javaClass?.getMethod("expandNotificationsPanel")
                                 expandMethod?.invoke(sbs)
-                            } catch (e: Exception) {}
+                            } catch (e: Throwable) {}
                         }
                     }
                 }
@@ -328,23 +327,22 @@ class IslandController(private val context: Context) {
 
     private fun sendMediaCommand(command: String) {
         val controls = activeMediaController?.transportControls ?: return
-        try { when (command) { "PLAY" -> controls.play(); "PAUSE" -> controls.pause(); "NEXT" -> controls.skipToNext(); "PREV" -> controls.skipToPrevious() } } catch (e: android.os.DeadObjectException) { currentMedia = null; evaluatePriority() } catch (e: Exception) {}
+        try { when (command) { "PLAY" -> controls.play(); "PAUSE" -> controls.pause(); "NEXT" -> controls.skipToNext(); "PREV" -> controls.skipToPrevious() } } catch (e: android.os.DeadObjectException) { currentMedia = null; evaluatePriority() } catch (e: Throwable) {}
     }
 
-    private fun adjustVolume(direction: Int) { try { val am = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager; am.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, direction, android.media.AudioManager.FLAG_SHOW_UI) } catch (e: Exception) {} }
+    private fun adjustVolume(direction: Int) { try { val am = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager; am.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, direction, android.media.AudioManager.FLAG_SHOW_UI) } catch (e: Throwable) {} }
 
     private fun launchAudioOutputSwitcher() {
         try {
             val intent = Intent("com.android.systemui.action.LAUNCH_SYSTEM_MEDIA_OUTPUT_DIALOG").apply { component = ComponentName("com.android.systemui", "com.android.systemui.media.dialog.MediaOutputDialogReceiver") }
             val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
             val options = android.app.ActivityOptions.makeBasic()
-            // 🚀 API 33 COMPILER BYPASS
             try {
                 val method = android.app.ActivityOptions::class.java.getMethod("setPendingIntentBackgroundActivityStartMode", Int::class.javaPrimitiveType)
                 method.invoke(options, 1)
             } catch (e: Throwable) {}
             pendingIntent.send(context, 0, null, null, null, null, options.toBundle())
-        } catch (e: Exception) {}
+        } catch (e: Throwable) {}
     }
 
     private fun evaluatePriority() {
@@ -401,7 +399,7 @@ class IslandController(private val context: Context) {
         try {
             mediaSessionManager.addOnActiveSessionsChangedListener(sessionListener, ComponentName(context, "com.example.dynamicisland.DummyListener"))
             updateActiveMediaController(getBestMediaController(mediaSessionManager.getActiveSessions(ComponentName(context, "com.example.dynamicisland.DummyListener"))))
-        } catch (e: Exception) {}
+        } catch (e: Throwable) {}
     }
 
     private fun updateActiveMediaController(controller: MediaController?) {
@@ -417,9 +415,11 @@ class IslandController(private val context: Context) {
 
     private fun getScaledBitmap(bitmap: Bitmap?, maxDim: Int = 400): Bitmap? {
         if (bitmap == null) return null
-        val ratio = Math.min(maxDim.toFloat() / bitmap.width, maxDim.toFloat() / bitmap.height)
-        if (ratio >= 1.0f) return bitmap
-        return Bitmap.createScaledBitmap(bitmap, (bitmap.width * ratio).toInt(), (bitmap.height * ratio).toInt(), true)
+        try {
+            val ratio = Math.min(maxDim.toFloat() / bitmap.width, maxDim.toFloat() / bitmap.height)
+            if (ratio >= 1.0f) return bitmap
+            return Bitmap.createScaledBitmap(bitmap, (bitmap.width * ratio).toInt(), (bitmap.height * ratio).toInt(), true)
+        } catch(e: Throwable) { return null }
     }
 
     private fun extractMediaData(controller: MediaController?) {
@@ -435,10 +435,10 @@ class IslandController(private val context: Context) {
 
         val rawAlbumArt = try {
             metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
-        } catch (e: OutOfMemoryError) { null } catch (e: Exception) { null }
+        } catch (e: Throwable) { null }
 
         val albumArtBitmap = getScaledBitmap(rawAlbumArt)
-        if (rawAlbumArt != null && rawAlbumArt != albumArtBitmap) { rawAlbumArt.recycle() }
+        if (rawAlbumArt != null && rawAlbumArt != albumArtBitmap) { try { rawAlbumArt.recycle() } catch(e:Throwable){} }
 
         var appIconBitmap: Bitmap? = null
         try { 
@@ -450,13 +450,13 @@ class IslandController(private val context: Context) {
             drawable.draw(canvas)
             appIconBitmap = getScaledBitmap(bmp, 150)
             if (bmp != appIconBitmap) { bmp.recycle() }
-        } catch (e: Exception) {}
+        } catch (e: Throwable) {}
 
         scope.launch(Dispatchers.IO) {
             var blurredArtBitmap: Bitmap? = null
             var bgColor: Int? = null; var txtColor: Int = android.graphics.Color.WHITE
 
-            if (albumArtBitmap != null) {
+            if (albumArtBitmap != null && !albumArtBitmap.isRecycled) {
                 @Suppress("DEPRECATION")
                 try {
                     val rs = android.renderscript.RenderScript.create(context)
@@ -469,19 +469,24 @@ class IslandController(private val context: Context) {
                     blurredArtBitmap = Bitmap.createBitmap(albumArtBitmap.width, albumArtBitmap.height, albumArtBitmap.config ?: Bitmap.Config.ARGB_8888)
                     output.copyTo(blurredArtBitmap)
                     rs.destroy()
-                } catch (e: Exception) { blurredArtBitmap = albumArtBitmap }
+                } catch (e: Throwable) { blurredArtBitmap = albumArtBitmap }
 
-                val palette = Palette.from(albumArtBitmap).generate()
-                val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
-                if (swatch != null) {
-                    bgColor = swatch.rgb
-                    val luminance = androidx.core.graphics.ColorUtils.calculateLuminance(bgColor)
-                    txtColor = if (luminance > 0.5) android.graphics.Color.BLACK else android.graphics.Color.WHITE
-                }
+                try {
+                    // 🚀 BULLETPROOF FIX: Prevent Palette crash if bitmap gets recycled mid-extraction
+                    if (!albumArtBitmap.isRecycled) {
+                        val palette = Palette.from(albumArtBitmap).generate()
+                        val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
+                        if (swatch != null) {
+                            bgColor = swatch.rgb
+                            val luminance = androidx.core.graphics.ColorUtils.calculateLuminance(bgColor)
+                            txtColor = if (luminance > 0.5) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+                        }
+                    }
+                } catch (e: Throwable) {}
             }
 
             withContext(Dispatchers.Main) {
-                currentMedia?.blurredAlbumArt?.takeIf { it != currentMedia?.albumArt }?.recycle()
+                currentMedia?.blurredAlbumArt?.takeIf { it != currentMedia?.albumArt }?.let { try{ it.recycle() }catch(e:Throwable){} }
 
                 val extractedActions = pbState.customActions.map { CustomMediaAction(it.action, null, null, true) }
 
@@ -516,11 +521,13 @@ class IslandController(private val context: Context) {
         mediaTickerJob?.cancel()
         mediaTickerJob = scope.launch { 
             while (isActive) { 
-                activeMediaController?.playbackState?.position?.let { pos -> 
-                    (activeModel.value as? LiveActivityModel.Music)?.let { 
-                        islandView?.updateTicker(pos)
+                try {
+                    activeMediaController?.playbackState?.position?.let { pos -> 
+                        (activeModel.value as? LiveActivityModel.Music)?.let { 
+                            islandView?.updateTicker(pos)
+                        }
                     }
-                }
+                } catch(e: Throwable){}
                 delay(1000) 
             } 
         }
@@ -570,10 +577,10 @@ class IslandController(private val context: Context) {
     
     fun cleanup() { 
         scope.cancel()
-        context.unregisterReceiver(screenStateReceiver)
-        context.unregisterComponentCallbacks(componentCallbacks)
+        try { context.unregisterReceiver(screenStateReceiver) } catch(e: Throwable){}
+        try { context.unregisterComponentCallbacks(componentCallbacks) } catch(e: Throwable){}
         BatteryPlugin.stop(context)
-        try { mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener) } catch(e: Exception){} 
-        try { context.unregisterReceiver(ecosystemReceiver) } catch(e: Exception){} 
+        try { mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener) } catch(e: Throwable){} 
+        try { context.unregisterReceiver(ecosystemReceiver) } catch(e: Throwable){} 
     }
 }
