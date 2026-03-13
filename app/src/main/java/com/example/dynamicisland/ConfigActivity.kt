@@ -188,13 +188,21 @@ class ConfigActivity : ComponentActivity() {
                     Text(text = "Customize the physical appearance of inner elements.", fontSize = 14.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // INSIDE THE THEME TAB:
                     @Composable
                     fun ThemeSlider(label: String, key: String, default: Float, range: ClosedFloatingPointRange<Float>) {
                         var value by remember { mutableFloatStateOf(prefs.getFloat(key, default)) }
                         Text(text = "$label: ${value.toInt()}", color = Color.White, modifier = Modifier.padding(top = 8.dp))
-                        Slider(value = value, onValueChange = {
-                            value = it; prefs.edit().putFloat(key, it).apply(); sendGestureUpdate(prefs, this@ConfigActivity)
-                        }, valueRange = range)
+                        Slider(
+                            value = value, 
+                            onValueChange = { value = it }, // 🚀 ONLY updates local UI while dragging
+                            onValueChangeFinished = { 
+                                // 🚀 ONLY saves and broadcasts when finger lifts! Saves CPU.
+                                prefs.edit().putFloat(key, value).apply() 
+                                sendGestureUpdate(prefs, this@ConfigActivity) 
+                            }, 
+                            valueRange = range
+                        )
                     }
 
                     ThemeSlider("Corner Radius", "theme_corner_radius", 50f, 10f..100f)
@@ -295,14 +303,36 @@ class ConfigActivity : ComponentActivity() {
         }
     }
 
+    // AT THE BOTTOM OF THE FILE:
     @Composable
     fun PrecisionSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onValueChange: (Float) -> Unit, onValueChangeFinished: () -> Unit) {
+        var localValue by remember(value) { mutableFloatStateOf(value) } // 🚀 Track local drag state
+        
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text(label, modifier = Modifier.width(60.dp), fontSize = 14.sp)
-            IconButton(onClick = { onValueChange((value - 1f).coerceIn(range)); onValueChangeFinished() }) { Icon(Icons.Default.Remove, contentDescription = "-") }
-            Slider(value = value, onValueChange = onValueChange, onValueChangeFinished = onValueChangeFinished, modifier = Modifier.weight(1f), valueRange = range)
-            IconButton(onClick = { onValueChange((value + 1f).coerceIn(range)); onValueChangeFinished() }) { Icon(Icons.Default.Add, contentDescription = "+") }
-            Text(String.format("%.0f", value), modifier = Modifier.width(40.dp), fontSize = 14.sp)
+            IconButton(onClick = { 
+                localValue = (localValue - 1f).coerceIn(range)
+                onValueChange(localValue)
+                onValueChangeFinished() 
+            }) { Icon(Icons.Default.Remove, contentDescription = "-") }
+            
+            Slider(
+                value = localValue, 
+                onValueChange = { localValue = it }, // 🚀 Only UI updates during drag
+                onValueChangeFinished = { 
+                    onValueChange(localValue) // 🚀 Send final value
+                    onValueChangeFinished()   // 🚀 Broadcast to SystemUI
+                }, 
+                modifier = Modifier.weight(1f), 
+                valueRange = range
+            )
+            
+            IconButton(onClick = { 
+                localValue = (localValue + 1f).coerceIn(range)
+                onValueChange(localValue)
+                onValueChangeFinished() 
+            }) { Icon(Icons.Default.Add, contentDescription = "+") }
+            Text(String.format("%.0f", localValue), modifier = Modifier.width(40.dp), fontSize = 14.sp)
         }
     }
 
