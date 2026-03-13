@@ -27,7 +27,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 class IslandController(private val context: Context) {
 
-    private lateinit var windowManager: WindowManager
+    // 🚀 FIX: Prevent UninitializedPropertyAccessException
+    private var windowManager: WindowManager? = null
     private lateinit var layoutParams: WindowManager.LayoutParams
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val _islandState = MutableStateFlow(IslandState.TYPE_0_RING)
@@ -47,7 +48,6 @@ class IslandController(private val context: Context) {
     private var lastReportedBattery = -1
     private var wasCharging = false 
     private var isScreenOn = true 
-    private var isLandscape = false
 
     private var isMediaEnabled = true
     private var isChargingEnabled = true
@@ -75,12 +75,13 @@ class IslandController(private val context: Context) {
                 Intent.ACTION_SCREEN_OFF -> {
                     isScreenOn = false
                     stopMediaTicker()
-                    _islandState.value = IslandState.HIDDEN
+                    // 🚀 FIX: We NO LONGER force HIDDEN here. Forcing HIDDEN while the screen 
+                    // turns off causes Jetpack Compose to permanently freeze the layout.
                 }
                 Intent.ACTION_SCREEN_ON -> {
                     isScreenOn = true
                     if (currentMedia?.isPlaying == true && isMediaEnabled) startMediaTicker()
-                    evaluatePriority()
+                    evaluatePriority() // Restores UI safely
                 }
             }
         }
@@ -175,7 +176,7 @@ class IslandController(private val context: Context) {
     }
 
     private val componentCallbacks = object : android.content.ComponentCallbacks2 {
-        override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { isLandscape = newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE; evaluatePriority() }
+        override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { evaluatePriority() }
         @Suppress("OVERRIDE_DEPRECATION")
         override fun onLowMemory() {}
         override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
@@ -185,6 +186,7 @@ class IslandController(private val context: Context) {
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
         val view = DynamicIslandView(context, moduleContext)
         this.islandView = view 
+        this.windowManager = wm // 🚀 FIX: Safely store windowManager
         view.onSplitPillClick = { val sModel = _splitModel.value; if (sModel is LiveActivityModel.Charging) { _islandState.value = IslandState.TYPE_CUBE } }
         view.windowManager = wm
         view.windowParams = params
@@ -224,20 +226,36 @@ class IslandController(private val context: Context) {
                     _islandState.value = IslandState.TYPE_3_MAX
                 }
                 "COLLAPSE" -> {
-                    when (_islandState.value) {
-                        IslandState.TYPE_3_MAX -> _islandState.value = IslandState.TYPE_2_MID
-                        IslandState.TYPE_2_MID -> _islandState.value = IslandState.TYPE_1_MINI
-                        IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING }
-                        else -> {}
+                    // 🚀 FIX: Gracefully handle returning from Dashboard
+                    if (_activeModel.value is LiveActivityModel.Dashboard) {
+                        _activeModel.value = currentMedia
+                        evaluatePriority() 
+                    } else {
+                        when (_islandState.value) {
+                            IslandState.TYPE_3_MAX -> _islandState.value = IslandState.TYPE_2_MID
+                            IslandState.TYPE_2_MID -> _islandState.value = IslandState.TYPE_1_MINI
+                            IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { userForceCollapsed = true; evaluatePriority() }
+                            else -> {}
+                        }
                     }
                 }
                 "EXPAND" -> {
                     userForceCollapsed = false
                     when (_islandState.value) {
-                        IslandState.TYPE_0_RING -> { if (_activeModel.value == null) _activeModel.value = LiveActivityModel.Dashboard(); _islandState.value = IslandState.TYPE_1_MINI }
-                        IslandState.TYPE_1_MINI -> _islandState.value = IslandState.TYPE_2_MID
-                        IslandState.TYPE_2_MID -> _islandState.value = IslandState.TYPE_3_MAX
-                        IslandState.TYPE_SPLIT -> _islandState.value = IslandState.TYPE_3_MAX
+                        IslandState.TYPE_0_RING -> { 
+                            // 🚀 FIX: Skip empty S pill if no media is playing!
+                            if (currentMedia != null) _islandState.value = IslandState.TYPE_1_MINI 
+                            else { _activeModel.value = LiveActivityModel.Dashboard(); _islandState.value = IslandState.TYPE_3_MAX }
+                        }
+                        IslandState.TYPE_1_MINI -> {
+                            // 🚀 FIX: If paused, expanding goes to Dashboard instead of empty media player!
+                            if (currentMedia != null && currentMedia?.isPlaying == false) {
+                                _activeModel.value = LiveActivityModel.Dashboard(); _islandState.value = IslandState.TYPE_3_MAX
+                            } else {
+                                _islandState.value = IslandState.TYPE_2_MID
+                            }
+                        }
+                        IslandState.TYPE_2_MID, IslandState.TYPE_SPLIT -> _islandState.value = IslandState.TYPE_3_MAX
                         else -> {}
                     }
                 }
@@ -263,15 +281,27 @@ class IslandController(private val context: Context) {
                 }
                 "NONE" -> {
                     if (gesture == IslandGesture.SWIPE_UP || gesture == IslandGesture.SWIPE_LEFT || gesture == IslandGesture.SWIPE_RIGHT) {
-                        if (_islandState.value == IslandState.TYPE_3_MAX) _islandState.value = IslandState.TYPE_2_MID
-                        else if (_islandState.value == IslandState.TYPE_2_MID) _islandState.value = IslandState.TYPE_1_MINI
-                        else if (_islandState.value == IslandState.TYPE_1_MINI || _islandState.value == IslandState.TYPE_SPLIT) { userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING }
+                        if (_activeModel.value is LiveActivityModel.Dashboard) {
+                            _activeModel.value = currentMedia
+                            evaluatePriority() 
+                        } else {
+                            if (_islandState.value == IslandState.TYPE_3_MAX) _islandState.value = IslandState.TYPE_2_MID
+                            else if (_islandState.value == IslandState.TYPE_2_MID) _islandState.value = IslandState.TYPE_1_MINI
+                            else if (_islandState.value == IslandState.TYPE_1_MINI || _islandState.value == IslandState.TYPE_SPLIT) { userForceCollapsed = true; evaluatePriority() }
+                        }
                     }
                     if (gesture == IslandGesture.SWIPE_DOWN) {
                         if (_islandState.value == IslandState.TYPE_0_RING) {
-                            if (_activeModel.value == null) _activeModel.value = LiveActivityModel.Dashboard()
-                            _islandState.value = IslandState.TYPE_1_MINI
-                        } else if (_islandState.value == IslandState.TYPE_1_MINI) { _islandState.value = IslandState.TYPE_2_MID } 
+                            if (currentMedia != null) _islandState.value = IslandState.TYPE_1_MINI 
+                            else { _activeModel.value = LiveActivityModel.Dashboard(); _islandState.value = IslandState.TYPE_3_MAX }
+                        } 
+                        else if (_islandState.value == IslandState.TYPE_1_MINI) { 
+                            if (currentMedia != null && currentMedia?.isPlaying == false) {
+                                _activeModel.value = LiveActivityModel.Dashboard(); _islandState.value = IslandState.TYPE_3_MAX
+                            } else {
+                                _islandState.value = IslandState.TYPE_2_MID 
+                            }
+                        } 
                         else if (_islandState.value == IslandState.TYPE_2_MID || _islandState.value == IslandState.TYPE_SPLIT) { _islandState.value = IslandState.TYPE_3_MAX } 
                         else if (_islandState.value == IslandState.TYPE_3_MAX) {
                             try {
@@ -308,7 +338,7 @@ class IslandController(private val context: Context) {
     private fun launchAudioOutputSwitcher() {
         try {
             val intent = Intent("com.android.systemui.action.LAUNCH_SYSTEM_MEDIA_OUTPUT_DIALOG").apply { component = ComponentName("com.android.systemui", "com.android.systemui.media.dialog.MediaOutputDialogReceiver") }
-            val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+            val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, pendingIntent.FLAG_IMMUTABLE)
             val options = android.app.ActivityOptions.makeBasic()
             if (android.os.Build.VERSION.SDK_INT >= 34) { options.pendingIntentBackgroundActivityStartMode = android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED }
             pendingIntent.send(context, 0, null, null, null, null, options.toBundle())
@@ -316,8 +346,12 @@ class IslandController(private val context: Context) {
     }
 
     private fun evaluatePriority() {
+        // 🚀 FIX: Hard check actual screen rotation to guarantee perfect Landscape/Gaming hiding
+        val rotation = try { windowManager?.defaultDisplay?.rotation ?: 0 } catch(e: Throwable) { 0 }
+        val isLandscapeNow = rotation == android.view.Surface.ROTATION_90 || rotation == android.view.Surface.ROTATION_270
         val isAlertCritical = transientModel?.isCritical == true
-        if ((isLandscape || currentHardware?.isGamingModeOn == true) && !isAlertCritical) {
+        
+        if ((isLandscapeNow || currentHardware?.isGamingModeOn == true) && !isAlertCritical) {
             _islandState.value = IslandState.HIDDEN
             return
         }
@@ -345,6 +379,11 @@ class IslandController(private val context: Context) {
             _activeModel.value = currentMedia
             if (!userForceCollapsed && (_islandState.value == IslandState.HIDDEN || _islandState.value == IslandState.TYPE_0_RING || _islandState.value == IslandState.TYPE_CUBE || _islandState.value == IslandState.TYPE_SPLIT)) {
                 _islandState.value = IslandState.TYPE_1_MINI
+            }
+            
+            // If they swipe up, we collapse down to the Ring gracefully
+            if (userForceCollapsed && _islandState.value != IslandState.TYPE_0_RING) {
+                _islandState.value = IslandState.TYPE_0_RING
             }
             return
         }
@@ -525,7 +564,7 @@ class IslandController(private val context: Context) {
              islandView?.updateBattery(level, isCharging)
         }
         BatteryPlugin.start(context)
-        scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; if (hw.isGamingModeOn || _activeModel.value is LiveActivityModel.HardwareMonitor) evaluatePriority() } }
+        scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; evaluatePriority() } }
     }
     init { setupHardwareMonitor(); setupMediaListener() }
     
