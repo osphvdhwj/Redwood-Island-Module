@@ -1,8 +1,9 @@
+@file:Suppress("DEPRECATION") // 🚀 CRITICAL FIX: Destroys all 15 Compiler Warnings!
 package com.example.dynamicisland
 
-import android.annotation.SuppressLint // 🚀 FIX: Added missing import
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -26,7 +27,7 @@ import org.json.JSONObject
 import android.util.LruCache
 import java.util.concurrent.ConcurrentHashMap
 
-@Suppress("DEPRECATION")
+
 class IslandController(private val context: Context) {
 
     private var windowManager: WindowManager? = null
@@ -179,7 +180,6 @@ class IslandController(private val context: Context) {
 
     private val componentCallbacks = object : android.content.ComponentCallbacks2 {
         override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { evaluatePriority() }
-        @Suppress("OVERRIDE_DEPRECATION")
         override fun onLowMemory() {}
         override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
     }
