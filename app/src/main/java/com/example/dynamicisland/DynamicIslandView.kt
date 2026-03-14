@@ -25,12 +25,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent // 🚀 NEW
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush // 🚀 NEW
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.TransformOrigin // 🚀 NEW
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -116,6 +116,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     private val lifecycleOwner = OverlayLifecycleOwner()
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
+    private var insetsListener: Any? = null // 🚀 FIX: Track listener to prevent memory leaks
 
     private val insetsUpdateFlow = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(
         replay = 1, onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
@@ -182,25 +183,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         loadPreferences()
         setViewTreeLifecycleOwner(lifecycleOwner); setViewTreeSavedStateRegistryOwner(lifecycleOwner); setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
 
-        try {
-            val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
-            val listener = java.lang.reflect.Proxy.newProxyInstance(context.classLoader, arrayOf(listenerClass)) { _, method, args ->
-                if (method.name == "onComputeInternalInsets") {
-                    val info = args[0]
-                    val touchableInsetsRegion = info.javaClass.getField("TOUCHABLE_INSETS_REGION").getInt(null)
-                    info.javaClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType).invoke(info, touchableInsetsRegion)
-                    val region = info.javaClass.getField("touchableRegion").get(info) as android.graphics.Region
-                    region.setEmpty()
-                    if (islandState.value != IslandState.HIDDEN) {
-                        if (!mainPillRect.isEmpty) region.op(mainPillRect, android.graphics.Region.Op.UNION)
-                        if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) region.op(splitCubeRect, android.graphics.Region.Op.UNION)
-                    }
-                }
-                null
-            }
-            viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, listener)
-        } catch (e: Throwable) {}
-
         val composeView = ComposeView(context).apply {
             setContent {
                 MaterialTheme(colorScheme = darkColorScheme()) {
@@ -223,6 +205,35 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val displayCutout = try { if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { windowManager?.currentWindowMetrics?.windowInsets?.displayCutout } else null } catch(e:Throwable){null}
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
 
+        // 🚀 BULLETPROOF FIX: Attach Touch Listener only when the window is truly alive
+        try {
+            val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
+            insetsListener = java.lang.reflect.Proxy.newProxyInstance(context.classLoader, arrayOf(listenerClass)) { _, method, args ->
+                if (method.name == "onComputeInternalInsets") {
+                    try {
+                        val info = args[0]
+                        val touchableInsetsRegion = info.javaClass.getField("TOUCHABLE_INSETS_REGION").getInt(null)
+                        info.javaClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType).invoke(info, touchableInsetsRegion)
+                        val region = info.javaClass.getField("touchableRegion").get(info) as android.graphics.Region
+                        region.setEmpty()
+                        if (islandState.value != IslandState.HIDDEN) {
+                            if (!mainPillRect.isEmpty) {
+                                // Buffer edges by 20px so fast swipes don't miss the touch region
+                                val expandedRect = android.graphics.Rect(mainPillRect.left - 20, mainPillRect.top - 20, mainPillRect.right + 20, mainPillRect.bottom + 20)
+                                region.op(expandedRect, android.graphics.Region.Op.UNION)
+                            }
+                            if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) {
+                                val expandedCube = android.graphics.Rect(splitCubeRect.left - 20, splitCubeRect.top - 20, splitCubeRect.right + 20, splitCubeRect.bottom + 20)
+                                region.op(expandedCube, android.graphics.Region.Op.UNION)
+                            }
+                        }
+                    } catch(e: Throwable) {}
+                }
+                null
+            }
+            viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListener)
+        } catch (e: Throwable) {}
+
         flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
             insetsUpdateFlow.debounce(50).collect {
                 try { this@DynamicIslandView.requestLayout() } catch(e:Throwable){}
@@ -241,6 +252,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
+        
+        // 🚀 FIX: Safely remove listener to prevent ghost overlays
+        try {
+            if (insetsListener != null) {
+                val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
+                viewTreeObserver.javaClass.getMethod("removeOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListener)
+                insetsListener = null
+            }
+        } catch (e: Throwable) {}
+
         flowJob?.cancel()
         flowJob = null
         lifecycleOwner.destroy()
@@ -254,15 +275,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     @Composable
     fun IslandUI(state: IslandState) {
         val haptic = LocalHapticFeedback.current
-        
-        // 🚀 UI FIX 2: Liquid Squish Physics (Decoupled X and Y)
         var isSquished by remember { mutableStateOf(false) }
-        val squishX by animateFloatAsState(targetValue = if (isSquished) 1.03f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f), label = "sx")
-        val squishY by animateFloatAsState(targetValue = if (isSquished) 0.94f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f), label = "sy")
+        val touchScale by animateFloatAsState(
+            targetValue = if (isSquished) 0.96f else 1f,
+            animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "squish"
+        )
         
-        // 🚀 UI FIX 3: Rubber-Band Gestures
         var dragStretchY by remember { mutableFloatStateOf(0f) }
-
         val minSafeWidth = displayCutoutWidth.floatValue + 4f
 
         val rawTargetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
@@ -271,11 +290,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val targetX = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value; IslandState.TYPE_2_MID -> midX.value; IslandState.TYPE_3_MAX -> maxX.value; IslandState.TYPE_CUBE -> cubeX.value; else -> ringX.value }
         val targetY = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value; IslandState.TYPE_2_MID -> midY.value; IslandState.TYPE_3_MAX -> maxY.value; IslandState.TYPE_CUBE -> cubeY.value; else -> ringY.value }
 
-        // 🚀 UI FIX 4: Asymmetric Breathing Springs
         val physicsSpec = spring<Dp>(dampingRatio = 0.72f, stiffness = 200f)
         val width by animateDpAsState(targetWidth.dp, physicsSpec, label = "width")
         val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
-        val dynamicHeight = height + dragStretchY.dp // Apply Rubber-Banding to final height
+        val dynamicHeight = height + dragStretchY.dp 
         
         val offsetX by animateFloatAsState(targetX, spring<Float>(dampingRatio=0.82f, stiffness=350f), label = "x")
         val offsetY by animateFloatAsState(targetY, spring<Float>(dampingRatio=0.82f, stiffness=350f), label = "y")
@@ -284,7 +302,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         val model = activeModel.value
 
-        // 🚀 UI FIX 1: OLED Hardware Blending
         val targetBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.Black
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
@@ -317,7 +334,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
         ) {
             
-            // 🚀 UI FIX 5: Ambient Aura Glow for Thermal/Alerts
             if (model is LiveActivityModel.SystemAlert || model is LiveActivityModel.RealityPill) {
                 val infiniteTransition = rememberInfiniteTransition(label="glow")
                 val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.1f, targetValue = 0.4f, animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing), RepeatMode.Reverse), label="glowAlpha")
@@ -346,8 +362,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     }
                     .width(width).height(dynamicHeight)
                     .graphicsLayer { 
-                        scaleX = squishX; scaleY = squishY 
-                        transformOrigin = TransformOrigin(0.5f, 0f) // Anchor to Top
+                        scaleX = touchScale; scaleY = touchScale 
+                        transformOrigin = TransformOrigin(0.5f, 0f)
                     }
                     .clip(RoundedCornerShape(rad))
                     .background(bgColor).border(0.5.dp, borderColor, RoundedCornerShape(rad))
@@ -384,13 +400,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                     onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
                                 }
                                 dragOffsetX = 0f; dragOffsetY = 0f
-                                dragStretchY = 0f // Snap back
+                                dragStretchY = 0f 
                             }
                         ) { change, dragAmount ->
                             dragOffsetX += dragAmount.x
                             dragOffsetY += dragAmount.y
                             
-                            // Apply physical resistance
                             val resistance = 1f - (abs(dragStretchY) / 300f).coerceIn(0f, 0.8f)
                             dragStretchY += dragAmount.y * resistance
 
@@ -407,7 +422,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         Image(
                             bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
                             modifier = Modifier.fillMaxSize()
-                            // 🚀 UI FIX 6: Melt the album art perfectly into the black void
                             .drawWithContent {
                                 drawContent()
                                 drawRect(brush = Brush.horizontalGradient(0.0f to Color.Transparent, 0.8f to Color.Black, 1.0f to Color.Black))
@@ -487,7 +501,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             )
                             val progressColor = baseColor.copy(alpha = pulseAlpha)
 
-                            // 🚀 UI FIX 7: Neon Glass Sweep Gradient Ring
                             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
                                 val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
                                 val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
