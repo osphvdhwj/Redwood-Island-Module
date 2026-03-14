@@ -219,8 +219,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         var isSquished by remember { mutableStateOf(false) }
         val squishX by animateFloatAsState(targetValue = if (isSquished) 1.03f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f), label = "sx")
         val squishY by animateFloatAsState(targetValue = if (isSquished) 0.94f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f), label = "sy")
-        
-        var dragStretchY by remember { mutableFloatStateOf(0f) }
 
         val minSafeWidth = displayCutoutWidth.floatValue + 4f
 
@@ -234,9 +232,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val width by animateDpAsState(targetWidth.dp, physicsSpec, label = "width")
         val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
         
-        // Ensure negative drag doesn't crash layout
-        val dynamicHeight = (height + dragStretchY.dp).coerceAtLeast(0.dp) 
-        
         val offsetX by animateFloatAsState(targetX, spring<Float>(dampingRatio=0.82f, stiffness=350f), label = "x")
         val offsetY by animateFloatAsState(targetY, spring<Float>(dampingRatio=0.82f, stiffness=350f), label = "y")
         val radTarget = when (state) { IslandState.TYPE_3_MAX -> 42.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_CUBE -> 24.dp; else -> (targetHeight / 2).dp }
@@ -248,12 +243,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
 
-        // 🚀 BULLETPROOF FIX: The Window is exactly the size of the Pill + Drag Stretch.
-        // Invisible boundaries are physically gone.
+        // 🚀 BULLETPROOF FIX: The window exactly hugs the animated pill height. 
+        // No massive invisible boundary blocking screen touches!
         val localDensity = LocalDensity.current
-        val targetWindowHeight = remember(state, dynamicHeight, offsetY) {
+        val targetWindowHeight = remember(state, height.value, offsetY) {
             if (state == IslandState.HIDDEN) 0 
-            else with(localDensity) { (offsetY.dp + dynamicHeight + 30.dp).toPx().toInt() } // 30dp padding for shadows
+            else with(localDensity) { (offsetY.dp + height + 40.dp).toPx().toInt() } // 40dp padding for shadow/glows
         }
 
         LaunchedEffect(targetWindowHeight, state, model) {
@@ -267,10 +262,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 wp.width = WindowManager.LayoutParams.MATCH_PARENT
                 wp.height = 0 
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             } else {
                 wp.width = WindowManager.LayoutParams.MATCH_PARENT
-                wp.height = targetWindowHeight // 🚀 60FPS Hardware Resizing tracking your finger
+                wp.height = targetWindowHeight // 🚀 Window physically resizes
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
@@ -285,7 +279,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             modifier = Modifier
                 .fillMaxWidth()
                 .offset(x = offsetX.dp, y = offsetY.dp)
-                .height(dynamicHeight + 20.dp), // Tightly wrap the height
+                .wrapContentHeight(), // 🚀 FIX: Lets the root wrap the pill cleanly
             horizontalArrangement = Arrangement.Center, 
             verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
         ) {
@@ -294,12 +288,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 val infiniteTransition = rememberInfiniteTransition(label="glow")
                 val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.1f, targetValue = 0.4f, animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing), RepeatMode.Reverse), label="glowAlpha")
                 val alertColor = (model as? LiveActivityModel.SystemAlert)?.alertColor?.let { Color(it) } ?: Color(0xFF00FFCC)
-                Box(modifier = Modifier.width(width).height(dynamicHeight).blur(32.dp).background(Brush.radialGradient(colors = listOf(alertColor.copy(alpha = glowAlpha), Color.Transparent))))
+                Box(modifier = Modifier.width(width).height(height).blur(32.dp).background(Brush.radialGradient(colors = listOf(alertColor.copy(alpha = glowAlpha), Color.Transparent))))
             }
 
             Box(
                 modifier = Modifier
-                    .width(width).height(dynamicHeight)
+                    .width(width).height(height)
                     .graphicsLayer { 
                         scaleX = squishX; scaleY = squishY 
                         transformOrigin = TransformOrigin(0.5f, 0f)
@@ -329,25 +323,18 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         
                         detectDragGestures(
                             onDragEnd = {
-                                if (dragStretchY > 50f) {
-                                    onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN)
-                                } else if (dragStretchY < -50f) {
-                                    onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
-                                } else if (dragOffsetX > 40f) {
-                                    onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT)
-                                } else if (dragOffsetX < -40f) {
-                                    onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
+                                if (abs(dragOffsetX) > abs(dragOffsetY)) {
+                                    if (dragOffsetX > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT)
+                                    else if (dragOffsetX < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
+                                } else {
+                                    if (dragOffsetY > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN)
+                                    else if (dragOffsetY < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
                                 }
                                 dragOffsetX = 0f; dragOffsetY = 0f
-                                dragStretchY = 0f 
                             }
                         ) { change, dragAmount ->
                             dragOffsetX += dragAmount.x
                             dragOffsetY += dragAmount.y
-                            
-                            val resistance = 1f - (abs(dragStretchY) / 300f).coerceIn(0f, 0.8f)
-                            dragStretchY += dragAmount.y * resistance
-
                             if (abs(dragOffsetX) > 30f || abs(dragOffsetY) > 30f) {
                                 change.consume()
                             }
