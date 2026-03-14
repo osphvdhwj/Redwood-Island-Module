@@ -129,23 +129,27 @@ class ConfigActivity : ComponentActivity() {
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text(text = "App Dock Pinning", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
-                    Text(text = "Select 8 apps to pin.", fontSize = 14.sp, color = Color.Gray)
-                    Spacer(modifier = Modifier.height(16.dp))
-
                     val pm = LocalContext.current.packageManager
-                    val installedApps = remember {
-                        try {
-                            pm.getInstalledApplications(0)
-                                .filter { appInfo -> try { pm.getLaunchIntentForPackage(appInfo.packageName) != null } catch(e:Throwable){false} }
-                                .map { appInfo -> Pair(appInfo.loadLabel(pm).toString(), appInfo.packageName) }
-                                .sortedBy { pair -> pair.first }
-                        } catch(e: Throwable) { emptyList() }
+                    // 🚀 PHASE 5: Asynchronous App Loading to prevent Settings UI freeze
+                    var installedApps by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+                    
+                    LaunchedEffect(Unit) {
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            try {
+                                val apps = pm.getInstalledApplications(0)
+                                    .filter { appInfo -> try { pm.getLaunchIntentForPackage(appInfo.packageName) != null } catch(e:Throwable){false} }
+                                    .map { appInfo -> Pair(appInfo.loadLabel(pm).toString(), appInfo.packageName) }
+                                    .sortedBy { pair -> pair.first }
+                                installedApps = apps
+                            } catch(e: Throwable) {}
+                        }
                     }
 
-                    val pinnedApps = listOf("App 1", "App 2", "App 3", "App 4", "App 5", "App 6", "App 7", "App 8")
-                    pinnedApps.forEachIndexed { index, slot ->
+                    if (installedApps.isEmpty()) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp))
+                    } else {
+                        val pinnedApps = listOf("App 1", "App 2", "App 3", "App 4", "App 5", "App 6", "App 7", "App 8")
+                        pinnedApps.forEachIndexed { index, slot ->
                         var expanded by remember { mutableStateOf(false) }
                         var selectedAppPkg by remember { mutableStateOf(prefs.getString("pinned_app_$index", "") ?: "") }
                         val selectedAppName = installedApps.find { it.second == selectedAppPkg }?.first ?: "None"
