@@ -51,6 +51,7 @@ import androidx.lifecycle.*
 import androidx.savedstate.*
 import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -63,7 +64,6 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     fun destroy() { lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY) }
 }
 
-@OptIn(kotlinx.coroutines.FlowPreview::class)
 @SuppressLint("ViewConstructor")
 class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLayout(context) {
 
@@ -219,8 +219,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         var isSquished by remember { mutableStateOf(false) }
         val squishX by animateFloatAsState(targetValue = if (isSquished) 1.03f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f), label = "sx")
         val squishY by animateFloatAsState(targetValue = if (isSquished) 0.94f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f), label = "sy")
-        
-        var dragStretchY by remember { mutableFloatStateOf(0f) }
 
         val minSafeWidth = displayCutoutWidth.floatValue + 4f
 
@@ -234,8 +232,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val width by animateDpAsState(targetWidth.dp, physicsSpec, label = "width")
         val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
         
-        val dynamicHeight = (height + dragStretchY.dp).coerceAtLeast(0.dp) 
-        
         val offsetX by animateFloatAsState(targetX, spring<Float>(dampingRatio=0.82f, stiffness=350f), label = "x")
         val offsetY by animateFloatAsState(targetY, spring<Float>(dampingRatio=0.82f, stiffness=350f), label = "y")
         val radTarget = when (state) { IslandState.TYPE_3_MAX -> 42.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_CUBE -> 24.dp; else -> (targetHeight / 2).dp }
@@ -247,8 +243,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
 
-        // 🚀 BULLETPROOF FIX: Manage Window properties to ensure it exactly aligns with user config 
-        // AND completely destroys the invisible touch barrier by remaining WRAP_CONTENT.
+        // 🚀 BULLETPROOF FIX: By using WRAP_CONTENT, the physical window strictly hugs the Compose bounds.
+        // Screen touches pass perfectly through the rest of the screen.
         LaunchedEffect(state, model, expandUpwards.value) {
             if (!isAttachedToWindow || windowToken == null) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
@@ -261,36 +257,44 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 wp.height = 0 
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
             } else {
-                wp.width = WindowManager.LayoutParams.WRAP_CONTENT
-                wp.height = WindowManager.LayoutParams.WRAP_CONTENT
+                wp.width = WindowManager.LayoutParams.MATCH_PARENT
+                wp.height = WindowManager.LayoutParams.WRAP_CONTENT 
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
             }
             
-            // Dynamically flip gravity to align 1:1 with Settings preview!
+            // Align the Window Gravity to match your Settings perfectly
             wp.gravity = if (expandUpwards.value) (Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL) else (Gravity.TOP or Gravity.CENTER_HORIZONTAL)
-            
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Throwable) {}
         }
 
-        // 🚀 NEW HIERARCHY: No "fillMaxWidth". Native Window bounds will shrink-wrap to exactly this padding area.
-        Row(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp), // 24dp buffer protects shadows/glows from clipping
-            horizontalArrangement = Arrangement.Center, 
-            verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
+        val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
+        val verticalPadding = if (expandUpwards.value) Modifier.padding(bottom = offsetY.dp) else Modifier.padding(top = offsetY.dp)
+
+        // 🚀 The UI Root uses padding to push the pill up/down dynamically, preserving WRAP_CONTENT height.
+        Box(
+            modifier = Modifier.fillMaxWidth().then(verticalPadding),
+            contentAlignment = boxAlignment
         ) {
-            
-            Box { // Container for glow and pill
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp) // Generous buffer for glows/shadows to not clip
+                    .offset(x = offsetX.dp),
+                horizontalArrangement = Arrangement.Center, 
+                verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
+            ) {
+                
                 if (model is LiveActivityModel.SystemAlert || model is LiveActivityModel.RealityPill) {
                     val infiniteTransition = rememberInfiniteTransition(label="glow")
                     val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.1f, targetValue = 0.4f, animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing), RepeatMode.Reverse), label="glowAlpha")
                     val alertColor = (model as? LiveActivityModel.SystemAlert)?.alertColor?.let { Color(it) } ?: Color(0xFF00FFCC)
-                    Box(modifier = Modifier.offset(x = offsetX.dp, y = offsetY.dp).width(width).height(dynamicHeight).blur(32.dp).background(Brush.radialGradient(colors = listOf(alertColor.copy(alpha = glowAlpha), Color.Transparent))))
+                    Box(modifier = Modifier.width(width).height(height).blur(32.dp).background(Brush.radialGradient(colors = listOf(alertColor.copy(alpha = glowAlpha), Color.Transparent))))
                 }
 
+                // 🚀 Removed all Reflection bounds calculations!
                 Box(
                     modifier = Modifier
-                        .offset(x = offsetX.dp, y = offsetY.dp) // Apply Custom User Coordinates safely
-                        .width(width).height(dynamicHeight)
+                        .width(width).height(height)
                         .graphicsLayer { 
                             scaleX = squishX; scaleY = squishY 
                             transformOrigin = TransformOrigin(0.5f, 0f)
@@ -318,11 +322,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             var dragOffsetX = 0f
                             var dragOffsetY = 0f
                             
+                            // 🚀 Restored the stable drag detection physics
                             detectDragGestures(
                                 onDragEnd = {
-                                    if (dragStretchY > 50f) {
+                                    if (dragOffsetY > 40f) {
                                         onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN)
-                                    } else if (dragStretchY < -50f) {
+                                    } else if (dragOffsetY < -40f) {
                                         onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
                                     } else if (dragOffsetX > 40f) {
                                         onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT)
@@ -330,21 +335,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                         onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
                                     }
                                     dragOffsetX = 0f; dragOffsetY = 0f
-                                    dragStretchY = 0f 
                                 }
                             ) { change, dragAmount ->
                                 dragOffsetX += dragAmount.x
                                 dragOffsetY += dragAmount.y
-                                
-                                val resistance = 1f - (abs(dragStretchY) / 300f).coerceIn(0f, 0.8f)
-                                dragStretchY += dragAmount.y * resistance
-
                                 if (abs(dragOffsetX) > 30f || abs(dragOffsetY) > 30f) {
                                     change.consume()
                                 }
                             }
                         },
-                    contentAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
+                    contentAlignment = boxAlignment
                 ) {
                     Box(modifier = Modifier.fillMaxSize().padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp)) {
                         
@@ -451,21 +451,21 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         }
                     }
                 }
-            }
 
-            AnimatedVisibility(visible = state == IslandState.TYPE_SPLIT, enter = scaleIn(spring(dampingRatio=0.8f, stiffness=300f)) + fadeIn(), exit = scaleOut() + fadeOut()) {
-                val sModel = splitModel.value
-                val splitBg = if (sModel is LiveActivityModel.Charging) { if (sModel.isPluggedIn) Color.Green.copy(alpha=0.2f) else if (sModel.level <= 20) Color.Red.copy(alpha=0.2f) else Color(0xFF121212).copy(alpha=0.75f) } else Color(0xFF121212).copy(alpha=0.75f)
-                Row(modifier = Modifier.offset(y = offsetY.dp)) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Box(modifier = Modifier.size(height)
-                            .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { onSplitPillClick?.invoke() },
-                        contentAlignment = Alignment.Center) {
-                        if (sModel is LiveActivityModel.Charging) { val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White; Text(text = "${sModel.level}%", color = iconColor, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                AnimatedVisibility(visible = state == IslandState.TYPE_SPLIT, enter = scaleIn(spring(dampingRatio=0.8f, stiffness=300f)) + fadeIn(), exit = scaleOut() + fadeOut()) {
+                    val sModel = splitModel.value
+                    val splitBg = if (sModel is LiveActivityModel.Charging) { if (sModel.isPluggedIn) Color.Green.copy(alpha=0.2f) else if (sModel.level <= 20) Color.Red.copy(alpha=0.2f) else Color(0xFF121212).copy(alpha=0.75f) } else Color(0xFF121212).copy(alpha=0.75f)
+                    Row {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(modifier = Modifier.size(height)
+                                .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { onSplitPillClick?.invoke() },
+                            contentAlignment = Alignment.Center) {
+                            if (sModel is LiveActivityModel.Charging) { val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White; Text(text = "${sModel.level}%", color = iconColor, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                        }
                     }
                 }
             }
