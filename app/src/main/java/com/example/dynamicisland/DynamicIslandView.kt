@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.view.Gravity
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.animation.*
@@ -39,6 +38,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
@@ -53,6 +54,7 @@ import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.debounce
 import kotlin.math.abs
 
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
@@ -64,6 +66,7 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     fun destroy() { lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY) }
 }
 
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 @SuppressLint("ViewConstructor")
 class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLayout(context) {
 
@@ -109,7 +112,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onSeekTo: ((Long) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
 
+    private var flowJob: Job? = null
     private val lifecycleOwner = OverlayLifecycleOwner()
+    private val mainPillRect = android.graphics.Rect()
+    private val splitCubeRect = android.graphics.Rect()
+
+    private val insetsUpdateFlow = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(
+        replay = 1, onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
+    )
 
     private fun loadPreferences() {
         try {
@@ -172,6 +182,25 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         loadPreferences()
         setViewTreeLifecycleOwner(lifecycleOwner); setViewTreeSavedStateRegistryOwner(lifecycleOwner); setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
 
+        try {
+            val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
+            val listener = java.lang.reflect.Proxy.newProxyInstance(context.classLoader, arrayOf(listenerClass)) { _, method, args ->
+                if (method.name == "onComputeInternalInsets") {
+                    val info = args[0]
+                    val touchableInsetsRegion = info.javaClass.getField("TOUCHABLE_INSETS_REGION").getInt(null)
+                    info.javaClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType).invoke(info, touchableInsetsRegion)
+                    val region = info.javaClass.getField("touchableRegion").get(info) as android.graphics.Region
+                    region.setEmpty()
+                    if (islandState.value != IslandState.HIDDEN) {
+                        if (!mainPillRect.isEmpty) region.op(mainPillRect, android.graphics.Region.Op.UNION)
+                        if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) region.op(splitCubeRect, android.graphics.Region.Op.UNION)
+                    }
+                }
+                null
+            }
+            viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, listener)
+        } catch (e: Throwable) {}
+
         val composeView = ComposeView(context).apply {
             setContent {
                 MaterialTheme(colorScheme = darkColorScheme()) {
@@ -190,8 +219,15 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+
         val displayCutout = try { if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { windowManager?.currentWindowMetrics?.windowInsets?.displayCutout } else null } catch(e:Throwable){null}
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
+
+        flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
+            insetsUpdateFlow.debounce(50).collect {
+                try { this@DynamicIslandView.requestLayout() } catch(e:Throwable){}
+            }
+        }
 
         val filter = IntentFilter("com.example.dynamicisland.RELOAD_PREFS")
         val securePermission = "com.redwood.permission.SECURE_IPC"
@@ -205,6 +241,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
+        flowJob?.cancel()
+        flowJob = null
         lifecycleOwner.destroy()
         try { context.unregisterReceiver(receiver) } catch (e: Throwable) {}
         BatteryPlugin.stop(context)
@@ -243,229 +281,252 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
 
-        // 🚀 BULLETPROOF FIX: By using WRAP_CONTENT, the physical window strictly hugs the Compose bounds.
-        // Screen touches pass perfectly through the rest of the screen.
-        LaunchedEffect(state, model, expandUpwards.value) {
+        LaunchedEffect(state, model) {
             if (!isAttachedToWindow || windowToken == null) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
+            val density = context.resources.displayMetrics.density
 
             if (model?.isSensitive == true) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE } else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv() }
 
             if (state == IslandState.HIDDEN) {
-                wp.width = 0 
+                wp.width = WindowManager.LayoutParams.MATCH_PARENT
                 wp.height = 0 
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             } else {
                 wp.width = WindowManager.LayoutParams.MATCH_PARENT
-                wp.height = WindowManager.LayoutParams.WRAP_CONTENT 
+                wp.height = ((maxH.value + 150) * density).toInt() 
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             }
-            
-            // Align the Window Gravity to match your Settings perfectly
-            wp.gravity = if (expandUpwards.value) (Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL) else (Gravity.TOP or Gravity.CENTER_HORIZONTAL)
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Throwable) {}
         }
 
         val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
-        val verticalPadding = if (expandUpwards.value) Modifier.padding(bottom = offsetY.dp) else Modifier.padding(top = offsetY.dp)
 
-        // 🚀 The UI Root uses padding to push the pill up/down dynamically, preserving WRAP_CONTENT height.
-        Box(
-            modifier = Modifier.fillMaxWidth().then(verticalPadding),
-            contentAlignment = boxAlignment
+        // 🚀 REVERTED: Offset physical repositioning (Handles negative animation bounds safely)
+        Row(
+            modifier = Modifier.fillMaxWidth().offset(x = offsetX.dp, y = offsetY.dp).height(maxH.value.dp), 
+            horizontalArrangement = Arrangement.Center, 
+            verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp) // Generous buffer for glows/shadows to not clip
-                    .offset(x = offsetX.dp),
-                horizontalArrangement = Arrangement.Center, 
-                verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
-            ) {
-                
-                if (model is LiveActivityModel.SystemAlert || model is LiveActivityModel.RealityPill) {
-                    val infiniteTransition = rememberInfiniteTransition(label="glow")
-                    val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.1f, targetValue = 0.4f, animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing), RepeatMode.Reverse), label="glowAlpha")
-                    val alertColor = (model as? LiveActivityModel.SystemAlert)?.alertColor?.let { Color(it) } ?: Color(0xFF00FFCC)
-                    Box(modifier = Modifier.width(width).height(height).blur(32.dp).background(Brush.radialGradient(colors = listOf(alertColor.copy(alpha = glowAlpha), Color.Transparent))))
-                }
+            
+            if (model is LiveActivityModel.SystemAlert || model is LiveActivityModel.RealityPill) {
+                val infiniteTransition = rememberInfiniteTransition(label="glow")
+                val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.1f, targetValue = 0.4f, animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing), RepeatMode.Reverse), label="glowAlpha")
+                val alertColor = (model as? LiveActivityModel.SystemAlert)?.alertColor?.let { Color(it) } ?: Color(0xFF00FFCC)
+                Box(modifier = Modifier.width(width).height(height).blur(32.dp).background(Brush.radialGradient(colors = listOf(alertColor.copy(alpha = glowAlpha), Color.Transparent))))
+            }
 
-                // 🚀 Removed all Reflection bounds calculations!
-                Box(
-                    modifier = Modifier
-                        .width(width).height(height)
-                        .graphicsLayer { 
-                            scaleX = squishX; scaleY = squishY 
-                            transformOrigin = TransformOrigin(0.5f, 0f)
-                        }
-                        .clip(RoundedCornerShape(rad))
-                        .background(bgColor).border(0.5.dp, borderColor, RoundedCornerShape(rad))
-                        .pointerInput(Unit) {
-                            awaitEachGesture {
-                                awaitFirstDown(pass = PointerEventPass.Initial)
-                                isSquished = true
-                                waitForUpOrCancellation(pass = PointerEventPass.Initial)
-                                isSquished = false
+            Box(
+                modifier = Modifier
+                    .onGloballyPositioned { coordinates ->
+                        try {
+                            if (!isAttachedToWindow) return@onGloballyPositioned
+                            // 🚀 FIX: Window-Relative Touch Bounds!
+                            val bounds = coordinates.boundsInRoot()
+                            val globalLeft = bounds.left.toInt()
+                            val globalTop = bounds.top.toInt()
+                            val globalRight = bounds.right.toInt()
+                            val globalBottom = bounds.bottom.toInt()
+
+                            if (abs(mainPillRect.left - globalLeft) > 5 || abs(mainPillRect.bottom - globalBottom) > 5 || mainPillRect.isEmpty) {
+                                mainPillRect.set(globalLeft, globalTop, globalRight, globalBottom)
+                                insetsUpdateFlow.tryEmit(Unit)
                             }
+                        } catch(e: Throwable) {}
+                    }
+                    .width(width).height(height)
+                    .graphicsLayer { 
+                        scaleX = squishX; scaleY = squishY 
+                        transformOrigin = TransformOrigin(0.5f, 0f)
+                    }
+                    .clip(RoundedCornerShape(rad))
+                    .background(bgColor).border(0.5.dp, borderColor, RoundedCornerShape(rad))
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(pass = PointerEventPass.Initial)
+                            isSquished = true
+                            waitForUpOrCancellation(pass = PointerEventPass.Initial)
+                            isSquished = false
                         }
-                        .pointerInput(state) {
-                            if (state != IslandState.TYPE_3_MAX) {
-                                detectTapGestures(
-                                    onTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) },
-                                    onDoubleTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) },
-                                    onLongPress = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) }
-                                )
-                            }
-                        }
-                        .pointerInput(state) {
-                            var dragOffsetX = 0f
-                            var dragOffsetY = 0f
-                            
-                            // 🚀 Restored the stable drag detection physics
-                            detectDragGestures(
-                                onDragEnd = {
-                                    if (dragOffsetY > 40f) {
-                                        onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN)
-                                    } else if (dragOffsetY < -40f) {
-                                        onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
-                                    } else if (dragOffsetX > 40f) {
-                                        onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT)
-                                    } else if (dragOffsetX < -40f) {
-                                        onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
-                                    }
-                                    dragOffsetX = 0f; dragOffsetY = 0f
-                                }
-                            ) { change, dragAmount ->
-                                dragOffsetX += dragAmount.x
-                                dragOffsetY += dragAmount.y
-                                if (abs(dragOffsetX) > 30f || abs(dragOffsetY) > 30f) {
-                                    change.consume()
-                                }
-                            }
-                        },
-                    contentAlignment = boxAlignment
-                ) {
-                    Box(modifier = Modifier.fillMaxSize().padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp)) {
-                        
-                        if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
-                            Image(
-                                bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
-                                modifier = Modifier.fillMaxSize()
-                                .drawWithContent {
-                                    drawContent()
-                                    drawRect(brush = Brush.horizontalGradient(0.0f to Color.Transparent, 0.8f to Color.Black, 1.0f to Color.Black))
-                                }
-                                .alpha(if (state == IslandState.TYPE_3_MAX) 0.65f else 0.35f).blur(if (state == IslandState.TYPE_3_MAX) 12.dp else 24.dp)
+                    }
+                    .pointerInput(state) {
+                        if (state != IslandState.TYPE_3_MAX) {
+                            detectTapGestures(
+                                onTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) },
+                                onDoubleTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) },
+                                onLongPress = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) }
                             )
                         }
-
-                        if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING) {
-                            val bottomPadding by animateDpAsState(targetValue = when(state) { IslandState.TYPE_3_MAX -> 24.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> 12.dp; else -> 0.dp }, label = "bottomPadding")
-                            Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
-                                AnimatedContent(
-                                    targetState = state,
-                                    transitionSpec = {
-                                        (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90))) togetherWith fadeOut(animationSpec = tween(90))
-                                    },
-                                    label = "UI Transition"
-                                ) { s ->
-                                    when (s) {
-                                        IslandState.TYPE_3_MAX -> { if (model is LiveActivityModel.Dashboard) DashboardMax(model) else if (model is LiveActivityModel.Music) MusicMax(model) }
-                                        IslandState.TYPE_2_MID -> { 
-                                            when (model) {
-                                                is LiveActivityModel.Dashboard -> DashboardMid(model)
-                                                is LiveActivityModel.Music -> MusicMid(model)
-                                                is LiveActivityModel.General -> GeneralMid(model)
-                                                is LiveActivityModel.Charging -> ChargingMid(model)
-                                                is LiveActivityModel.SystemAlert -> SystemAlertMid(model)
-                                                is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model)
-                                                else -> {}
-                                            }
-                                        }
-                                        IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> {
-                                            when (model) {
-                                                is LiveActivityModel.Music -> MusicMini(model)
-                                                is LiveActivityModel.General -> GeneralMini(model)
-                                                is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model)
-                                                is LiveActivityModel.RealityPill -> RealityPillMini(model)
-                                                else -> {}
-                                            }
-                                        }
-                                        IslandState.TYPE_CUBE -> { if (model is LiveActivityModel.Charging) ChargingCube(model) }
-                                        else -> {} 
-                                    }
+                    }
+                    .pointerInput(state) {
+                        var dragOffsetX = 0f
+                        var dragOffsetY = 0f
+                        
+                        // 🚀 REVERTED: Proven stable drag bounds without rubber-band
+                        detectDragGestures(
+                            onDragEnd = {
+                                if (abs(dragOffsetX) > abs(dragOffsetY)) {
+                                    if (dragOffsetX > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT)
+                                    else if (dragOffsetX < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
+                                } else {
+                                    if (dragOffsetY > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN)
+                                    else if (dragOffsetY < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
                                 }
+                                dragOffsetX = 0f; dragOffsetY = 0f
                             }
+                        ) { change, dragAmount ->
+                            if (abs(dragAmount.x) > 5f || abs(dragAmount.y) > 5f) {
+                                change.consume()
+                            }
+                            dragOffsetX += dragAmount.x
+                            dragOffsetY += dragAmount.y
+                        }
+                    },
+                contentAlignment = boxAlignment
+            ) {
+                // 🚀 PREVENT NEGATIVE PADDING CRASHES FROM USER CONFIG
+                Box(modifier = Modifier.fillMaxSize().padding(
+                    start = padL.value.coerceAtLeast(0f).dp, 
+                    top = padT.value.coerceAtLeast(0f).dp, 
+                    end = padR.value.coerceAtLeast(0f).dp, 
+                    bottom = padB.value.coerceAtLeast(0f).dp
+                )) {
+                    
+                    if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
+                        Image(
+                            bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
+                            modifier = Modifier.fillMaxSize()
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(brush = Brush.horizontalGradient(0.0f to Color.Transparent, 0.8f to Color.Black, 1.0f to Color.Black))
+                            }
+                            .alpha(if (state == IslandState.TYPE_3_MAX) 0.65f else 0.35f).blur(if (state == IslandState.TYPE_3_MAX) 12.dp else 24.dp)
+                        )
+                    }
 
-                            if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX || state == IslandState.TYPE_SPLIT) {
-                                Box(
-                                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(when(state) { IslandState.TYPE_3_MAX -> 32.dp; IslandState.TYPE_2_MID -> 20.dp; else -> 16.dp }),
-                                    contentAlignment = Alignment.Center
-                                ) { Box(modifier = Modifier.width(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 24.dp else 40.dp).height(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 3.dp else 5.dp).shadow(2.dp, CircleShape).background(Color.White.copy(alpha=0.8f), CircleShape)) }
+                    if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING) {
+                        val bottomPadding by animateDpAsState(targetValue = when(state) { IslandState.TYPE_3_MAX -> 24.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> 12.dp; else -> 0.dp }, label = "bottomPadding")
+                        Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
+                            AnimatedContent(
+                                targetState = state,
+                                transitionSpec = {
+                                    (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90))) togetherWith fadeOut(animationSpec = tween(90))
+                                },
+                                label = "UI Transition"
+                            ) { s ->
+                                when (s) {
+                                    IslandState.TYPE_3_MAX -> { if (model is LiveActivityModel.Dashboard) DashboardMax(model) else if (model is LiveActivityModel.Music) MusicMax(model) }
+                                    IslandState.TYPE_2_MID -> { 
+                                        when (model) {
+                                            is LiveActivityModel.Dashboard -> DashboardMid(model)
+                                            is LiveActivityModel.Music -> MusicMid(model)
+                                            is LiveActivityModel.General -> GeneralMid(model)
+                                            is LiveActivityModel.Charging -> ChargingMid(model)
+                                            is LiveActivityModel.SystemAlert -> SystemAlertMid(model)
+                                            is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model)
+                                            else -> {}
+                                        }
+                                    }
+                                    IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> {
+                                        when (model) {
+                                            is LiveActivityModel.Music -> MusicMini(model)
+                                            is LiveActivityModel.General -> GeneralMini(model)
+                                            is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model)
+                                            is LiveActivityModel.RealityPill -> RealityPillMini(model)
+                                            else -> {}
+                                        }
+                                    }
+                                    IslandState.TYPE_CUBE -> { if (model is LiveActivityModel.Charging) ChargingCube(model) }
+                                    else -> {} 
+                                }
                             }
                         }
-                        
-                        if (state == IslandState.TYPE_0_RING) {
-                            val musicModel = model as? LiveActivityModel.Music
-                            val isMedia = musicModel != null && musicModel.isPlaying
-                            val shouldShowRing = isMedia || globalIsCharging.value || globalBatteryLevel.intValue <= 20
 
-                            if (shouldShowRing) {
-                                val baseColor = if (isMedia) {
-                                    musicModel?.dominantColor?.let { Color(it) } ?: Color.White
-                                } else if (globalIsCharging.value) {
-                                    Color.Green
-                                } else if (globalBatteryLevel.intValue <= 20) {
-                                    Color.Red
-                                } else {
-                                    Color.White
-                                }
+                        if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX || state == IslandState.TYPE_SPLIT) {
+                            Box(
+                                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(when(state) { IslandState.TYPE_3_MAX -> 32.dp; IslandState.TYPE_2_MID -> 20.dp; else -> 16.dp }),
+                                contentAlignment = Alignment.Center
+                            ) { Box(modifier = Modifier.width(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 24.dp else 40.dp).height(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 3.dp else 5.dp).shadow(2.dp, CircleShape).background(Color.White.copy(alpha=0.8f), CircleShape)) }
+                        }
+                    }
+                    
+                    if (state == IslandState.TYPE_0_RING) {
+                        val musicModel = model as? LiveActivityModel.Music
+                        val isMedia = musicModel != null && musicModel.isPlaying
+                        val shouldShowRing = isMedia || globalIsCharging.value || globalBatteryLevel.intValue <= 20
 
-                                val infiniteTransition = rememberInfiniteTransition(label = "ring_pulse")
-                                val pulseAlpha by infiniteTransition.animateFloat(
-                                    initialValue = if (globalIsCharging.value && !isMedia) 0.3f else 1f,
-                                    targetValue = 1f,
-                                    animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-                                    label = "alpha"
-                                )
-                                val progressColor = baseColor.copy(alpha = pulseAlpha)
+                        if (shouldShowRing) {
+                            val baseColor = if (isMedia) {
+                                musicModel?.dominantColor?.let { Color(it) } ?: Color.White
+                            } else if (globalIsCharging.value) {
+                                Color.Green
+                            } else if (globalBatteryLevel.intValue <= 20) {
+                                Color.Red
+                            } else {
+                                Color.White
+                            }
 
-                                Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
-                                    val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
-                                    val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
-                                    val strokeW = ringThickness.value.dp.toPx() 
-                                    val inset = strokeW / 2
-                                    val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
-                                    val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
-                                    val progressPercent = progress.coerceIn(0f, 1f)
-                                    val capStyle = if (progressPercent >= 0.99f) StrokeCap.Butt else StrokeCap.Round
+                            val infiniteTransition = rememberInfiniteTransition(label = "ring_pulse")
+                            val pulseAlpha by infiniteTransition.animateFloat(
+                                initialValue = if (globalIsCharging.value && !isMedia) 0.3f else 1f,
+                                targetValue = 1f,
+                                animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                                label = "alpha"
+                            )
+                            val progressColor = baseColor.copy(alpha = pulseAlpha)
 
-                                    val sweepGradient = Brush.sweepGradient(0.0f to progressColor.copy(alpha = 0.2f), 0.8f to progressColor, 1.0f to progressColor.copy(alpha = 0.2f))
+                            Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
+                                val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
+                                val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
+                                val strokeW = ringThickness.value.dp.toPx() 
+                                val inset = strokeW / 2
+                                val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
+                                val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
+                                val progressPercent = progress.coerceIn(0f, 1f)
+                                val capStyle = if (progressPercent >= 0.99f) StrokeCap.Butt else StrokeCap.Round
 
-                                    drawArc(color = baseColor.copy(alpha=0.15f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
-                                    drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW + 6f, cap = capStyle), alpha = 0.4f)
-                                    drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = capStyle))
-                                }
+                                val sweepGradient = Brush.sweepGradient(0.0f to progressColor.copy(alpha = 0.2f), 0.8f to progressColor, 1.0f to progressColor.copy(alpha = 0.2f))
+
+                                drawArc(color = baseColor.copy(alpha=0.15f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
+                                drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW + 6f, cap = capStyle), alpha = 0.4f)
+                                drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = capStyle))
                             }
                         }
                     }
                 }
+            }
 
-                AnimatedVisibility(visible = state == IslandState.TYPE_SPLIT, enter = scaleIn(spring(dampingRatio=0.8f, stiffness=300f)) + fadeIn(), exit = scaleOut() + fadeOut()) {
-                    val sModel = splitModel.value
-                    val splitBg = if (sModel is LiveActivityModel.Charging) { if (sModel.isPluggedIn) Color.Green.copy(alpha=0.2f) else if (sModel.level <= 20) Color.Red.copy(alpha=0.2f) else Color(0xFF121212).copy(alpha=0.75f) } else Color(0xFF121212).copy(alpha=0.75f)
-                    Row {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Box(modifier = Modifier.size(height)
-                                .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { onSplitPillClick?.invoke() },
-                            contentAlignment = Alignment.Center) {
-                            if (sModel is LiveActivityModel.Charging) { val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White; Text(text = "${sModel.level}%", color = iconColor, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
-                        }
+            AnimatedVisibility(visible = state == IslandState.TYPE_SPLIT, enter = scaleIn(spring(dampingRatio=0.8f, stiffness=300f)) + fadeIn(), exit = scaleOut() + fadeOut()) {
+                val sModel = splitModel.value
+                val splitBg = if (sModel is LiveActivityModel.Charging) { if (sModel.isPluggedIn) Color.Green.copy(alpha=0.2f) else if (sModel.level <= 20) Color.Red.copy(alpha=0.2f) else Color(0xFF121212).copy(alpha=0.75f) } else Color(0xFF121212).copy(alpha=0.75f)
+                Row {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(modifier = Modifier.size(height)
+                            .onGloballyPositioned { coordinates ->
+                                try {
+                                    if (!isAttachedToWindow) return@onGloballyPositioned
+                                    val bounds = coordinates.boundsInRoot()
+                                    val globalLeft = bounds.left.toInt()
+                                    val globalTop = bounds.top.toInt()
+                                    val globalRight = bounds.right.toInt()
+                                    val globalBottom = bounds.bottom.toInt()
+                                    if (abs(splitCubeRect.left - globalLeft) > 5 || abs(splitCubeRect.bottom - globalBottom) > 5 || splitCubeRect.isEmpty) {
+                                        splitCubeRect.set(globalLeft, globalTop, globalRight, globalBottom)
+                                        insetsUpdateFlow.tryEmit(Unit)
+                                    }
+                                } catch(e: Throwable) {}
+                            }
+                            .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onSplitPillClick?.invoke() },
+                        contentAlignment = Alignment.Center) {
+                        if (sModel is LiveActivityModel.Charging) { val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White; Text(text = "${sModel.level}%", color = iconColor, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
                     }
                 }
             }
