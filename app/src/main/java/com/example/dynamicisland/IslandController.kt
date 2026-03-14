@@ -43,6 +43,7 @@ class IslandController(private val context: Context) {
     private var transientModel: LiveActivityModel? = null
     private var transientJob: Job? = null
     private var pauseFadeJob: Job? = null
+    private var hardwareMonitorJob: Job? = null // 🚀 FIX: Track hardware job
     private var userForceCollapsed = false 
     private var lastReportedBattery = -1
     private var wasCharging = false 
@@ -74,10 +75,12 @@ class IslandController(private val context: Context) {
                 Intent.ACTION_SCREEN_OFF -> {
                     isScreenOn = false
                     stopMediaTicker()
+                    hardwareMonitorJob?.cancel() // 🚀 FIX: Let CPU sleep when screen is off
                 }
                 Intent.ACTION_SCREEN_ON -> {
                     isScreenOn = true
                     if (currentMedia?.isPlaying == true && isMediaEnabled) startMediaTicker()
+                    startHardwareMonitor() // 🚀 FIX: Resume tracking only when screen is active
                     evaluatePriority() 
                 }
             }
@@ -117,7 +120,7 @@ class IslandController(private val context: Context) {
                     val title = intent.getStringExtra("title") ?: "System Alert"
                     val message = intent.getStringExtra("message") ?: ""
                     val colorHex = intent.getStringExtra("colorHex") ?: "#FFFFFF"
-                    val colorInt = try { android.graphics.Color.parseColor(colorHex) } catch(e: Exception) { android.graphics.Color.WHITE }
+                    val colorInt = try { android.graphics.Color.parseColor(colorHex) } catch(e: Throwable) { android.graphics.Color.WHITE }
                     postTransientNotification(LiveActivityModel.SystemAlert(id = "sys_alert_$alertType", alertType = alertType, title = title, message = message, alertColor = colorInt), 5000L)
                 }
                 "com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING" -> {
@@ -140,7 +143,7 @@ class IslandController(private val context: Context) {
                                 appIcon = getScaledBitmap(bmp, 150)
                                 if (bmp != appIcon) { bmp.recycle() }
                                 appIcon?.let { iconCache.put(pkg, it) }
-                            } catch (e: Exception) {}
+                            } catch (e: Throwable) {}
                         }
                         withContext(Dispatchers.Main) { postTransientNotification(LiveActivityModel.AppTimerWarning(packageName = pkg, appName = appName, appIcon = appIcon, targetTimeMs = System.currentTimeMillis() + 60000L), 60000L) }
                     }
@@ -165,7 +168,7 @@ class IslandController(private val context: Context) {
                             if (exemptionsCsv.length > 2000) return@launch
                             exemptedApps.clear()
                             exemptionsCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { exemptedApps.add(it) }
-                        } catch (e: Exception) {}
+                        } catch (e: Throwable) {}
                     }
                 }
             }
@@ -457,24 +460,34 @@ class IslandController(private val context: Context) {
             var bgColor: Int? = null; var txtColor: Int = android.graphics.Color.WHITE
 
             if (albumArtBitmap != null && !albumArtBitmap.isRecycled) {
+                
+                // 🚀 BULLETPROOF FIX: Prevent RenderScript from leaking C++ Memory by guaranteeing destruction in finally block
                 @Suppress("DEPRECATION")
+                var rs: android.renderscript.RenderScript? = null
+                var input: android.renderscript.Allocation? = null
+                var output: android.renderscript.Allocation? = null
+                var script: android.renderscript.ScriptIntrinsicBlur? = null
+                
                 try {
-                    val rs = android.renderscript.RenderScript.create(context)
-                    val input = android.renderscript.Allocation.createFromBitmap(rs, albumArtBitmap)
-                    val output = android.renderscript.Allocation.createTyped(rs, input.type)
-                    val script = android.renderscript.ScriptIntrinsicBlur.create(rs, android.renderscript.Element.U8_4(rs))
+                    rs = android.renderscript.RenderScript.create(context)
+                    input = android.renderscript.Allocation.createFromBitmap(rs, albumArtBitmap)
+                    output = android.renderscript.Allocation.createTyped(rs, input.type)
+                    script = android.renderscript.ScriptIntrinsicBlur.create(rs, android.renderscript.Element.U8_4(rs))
+                    
                     script.setRadius(24f)
                     script.setInput(input)
                     script.forEach(output)
+                    
                     blurredArtBitmap = Bitmap.createBitmap(albumArtBitmap.width, albumArtBitmap.height, albumArtBitmap.config ?: Bitmap.Config.ARGB_8888)
                     output.copyTo(blurredArtBitmap)
-                    
-                    // 🚀 CRITICAL FIX: DESTROY NATIVE ALLOCATIONS TO PREVENT 30-MIN CRASH!
-                    input.destroy()
-                    output.destroy()
-                    script.destroy()
-                    rs.destroy()
-                } catch (e: Throwable) { blurredArtBitmap = albumArtBitmap }
+                } catch (e: Throwable) { 
+                    blurredArtBitmap = albumArtBitmap 
+                } finally {
+                    input?.destroy()
+                    output?.destroy()
+                    script?.destroy()
+                    rs?.destroy()
+                }
 
                 try {
                     if (!albumArtBitmap.isRecycled) {
@@ -538,6 +551,15 @@ class IslandController(private val context: Context) {
     }
     private fun stopMediaTicker() { mediaTickerJob?.cancel() }
 
+    private fun startHardwareMonitor() {
+        hardwareMonitorJob?.cancel()
+        hardwareMonitorJob = scope.launch { 
+            HardwareMonitors.startMonitoring().collect { hw -> 
+                currentHardware = hw; evaluatePriority() 
+            } 
+        }
+    }
+
     private fun setupHardwareMonitor() {
         val filter = IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) }
         context.registerReceiver(screenStateReceiver, filter)
@@ -575,7 +597,7 @@ class IslandController(private val context: Context) {
              islandView?.updateBattery(level, isCharging)
         }
         BatteryPlugin.start(context)
-        scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; evaluatePriority() } }
+        startHardwareMonitor() // 🚀 FIX: Start job tracked correctly 
     }
     init { setupHardwareMonitor(); setupMediaListener() }
     
