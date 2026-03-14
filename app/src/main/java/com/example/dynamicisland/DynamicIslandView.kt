@@ -38,11 +38,10 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -52,7 +51,6 @@ import androidx.lifecycle.*
 import androidx.savedstate.*
 import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -112,9 +110,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onAudioOutputClick: (() -> Unit)? = null
 
     private val lifecycleOwner = OverlayLifecycleOwner()
-    private val mainPillRect = android.graphics.Rect()
-    private val splitCubeRect = android.graphics.Rect()
-    private var insetsListener: Any? = null 
 
     private fun loadPreferences() {
         try {
@@ -195,52 +190,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-
         val displayCutout = try { if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { windowManager?.currentWindowMetrics?.windowInsets?.displayCutout } else null } catch(e:Throwable){null}
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
-
-        // 🚀 BULLETPROOF FIX: Use pure Java Reflection with generous padding for Rubber-Banding
-        try {
-            val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
-            insetsListener = java.lang.reflect.Proxy.newProxyInstance(
-                context.classLoader,
-                arrayOf(listenerClass)
-            ) { _, method, args ->
-                if (method.name == "onComputeInternalInsets") {
-                    try {
-                        val info = args[0]
-                        val touchableInsetsRegion = info.javaClass.getField("TOUCHABLE_INSETS_REGION").getInt(null)
-                        info.javaClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType).invoke(info, touchableInsetsRegion)
-                        
-                        val region = info.javaClass.getField("touchableRegion").get(info) as android.graphics.Region
-                        region.setEmpty()
-                        
-                        if (islandState.value != IslandState.HIDDEN) {
-                            if (!mainPillRect.isEmpty) {
-                                val expandedRect = android.graphics.Rect(
-                                    mainPillRect.left - 40,
-                                    mainPillRect.top - 40,
-                                    mainPillRect.right + 40,
-                                    mainPillRect.bottom + 100 // Massively expand bottom to catch fast drag gestures
-                                )
-                                region.op(expandedRect, android.graphics.Region.Op.UNION)
-                            }
-                            if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) {
-                                val expandedCube = android.graphics.Rect(
-                                    splitCubeRect.left - 40, 
-                                    splitCubeRect.top - 40, 
-                                    splitCubeRect.right + 40, 
-                                    splitCubeRect.bottom + 100
-                                )
-                                region.op(expandedCube, android.graphics.Region.Op.UNION)
-                            }
-                        }
-                    } catch(e: Throwable) {}
-                }
-                null
-            }
-            viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListener)
-        } catch (e: Throwable) {}
 
         val filter = IntentFilter("com.example.dynamicisland.RELOAD_PREFS")
         val securePermission = "com.redwood.permission.SECURE_IPC"
@@ -254,18 +205,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        
-        try {
-            if (insetsListener != null) {
-                val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
-                viewTreeObserver.javaClass.getMethod("removeOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListener)
-                insetsListener = null
-            }
-        } catch (e: Throwable) {}
-
         lifecycleOwner.destroy()
         try { context.unregisterReceiver(receiver) } catch (e: Throwable) {}
-
         BatteryPlugin.stop(context)
         try { context.sendBroadcast(android.content.Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui")) } catch(e:Throwable){}
     }
@@ -292,7 +233,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val physicsSpec = spring<Dp>(dampingRatio = 0.72f, stiffness = 200f)
         val width by animateDpAsState(targetWidth.dp, physicsSpec, label = "width")
         val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
-        val dynamicHeight = height + dragStretchY.dp 
+        
+        // Ensure negative drag doesn't crash layout
+        val dynamicHeight = (height + dragStretchY.dp).coerceAtLeast(0.dp) 
         
         val offsetX by animateFloatAsState(targetX, spring<Float>(dampingRatio=0.82f, stiffness=350f), label = "x")
         val offsetY by animateFloatAsState(targetY, spring<Float>(dampingRatio=0.82f, stiffness=350f), label = "y")
@@ -305,20 +248,29 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
 
-        LaunchedEffect(state, model) {
+        // 🚀 BULLETPROOF FIX: The Window is exactly the size of the Pill + Drag Stretch.
+        // Invisible boundaries are physically gone.
+        val localDensity = LocalDensity.current
+        val targetWindowHeight = remember(state, dynamicHeight, offsetY) {
+            if (state == IslandState.HIDDEN) 0 
+            else with(localDensity) { (offsetY.dp + dynamicHeight + 30.dp).toPx().toInt() } // 30dp padding for shadows
+        }
+
+        LaunchedEffect(targetWindowHeight, state, model) {
             if (!isAttachedToWindow || windowToken == null) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
-            val density = context.resources.displayMetrics.density
 
             if (model?.isSensitive == true) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE } else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv() }
 
             if (state == IslandState.HIDDEN) {
-                wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = 0 
+                wp.width = WindowManager.LayoutParams.MATCH_PARENT
+                wp.height = 0 
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             } else {
-                wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = ((maxH.value + 150) * density).toInt(); wp.x = 0; wp.y = 0
+                wp.width = WindowManager.LayoutParams.MATCH_PARENT
+                wp.height = targetWindowHeight // 🚀 60FPS Hardware Resizing tracking your finger
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
@@ -330,7 +282,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
 
         Row(
-            modifier = Modifier.fillMaxWidth().offset(x = offsetX.dp, y = offsetY.dp).height(maxH.value.dp), 
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset(x = offsetX.dp, y = offsetY.dp)
+                .height(dynamicHeight + 20.dp), // Tightly wrap the height
             horizontalArrangement = Arrangement.Center, 
             verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
         ) {
@@ -344,20 +299,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
             Box(
                 modifier = Modifier
-                    .onGloballyPositioned { coordinates ->
-                        // 🚀 BULLETPROOF FIX: Use Window-Relative Coordinates and request layout efficiently
-                        try {
-                            if (!isAttachedToWindow) return@onGloballyPositioned
-                            val bounds = coordinates.boundsInRoot()
-                            val newBottom = bounds.bottom.toInt()
-                            val newRight = bounds.right.toInt()
-
-                            if (abs(mainPillRect.bottom - newBottom) > 2 || abs(mainPillRect.right - newRight) > 2 || mainPillRect.isEmpty) {
-                                mainPillRect.set(bounds.left.toInt(), bounds.top.toInt(), newRight, newBottom)
-                                this@DynamicIslandView.requestLayout()
-                            }
-                        } catch(e: Throwable) {}
-                    }
                     .width(width).height(dynamicHeight)
                     .graphicsLayer { 
                         scaleX = squishX; scaleY = squishY 
@@ -526,18 +467,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 Row {
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(modifier = Modifier.size(height)
-                            .onGloballyPositioned { coordinates ->
-                                try {
-                                    if (!isAttachedToWindow) return@onGloballyPositioned
-                                    val bounds = coordinates.boundsInRoot()
-                                    val newBottom = bounds.bottom.toInt()
-                                    val newRight = bounds.right.toInt()
-                                    if (abs(splitCubeRect.bottom - newBottom) > 2 || abs(splitCubeRect.right - newRight) > 2 || splitCubeRect.isEmpty) {
-                                        splitCubeRect.set(bounds.left.toInt(), bounds.top.toInt(), newRight, newBottom)
-                                        this@DynamicIslandView.requestLayout()
-                                    }
-                                } catch(e: Throwable) {}
-                            }
                             .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
