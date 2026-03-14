@@ -205,15 +205,19 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val displayCutout = try { if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { windowManager?.currentWindowMetrics?.windowInsets?.displayCutout } else null } catch(e:Throwable){null}
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
 
-        // 🚀 CRITICAL UI FIX: Bypassing Hidden API to force Touch Cutout Geometry
+        // 🚀 BULLETPROOF TOUCH FIX: Pure Java Reflection bypasses Xposed/SystemUI classloader issues completely.
         try {
-            val listenerClass = de.robv.android.xposed.XposedHelpers.findClass("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener", context.classLoader)
-            insetsListener = java.lang.reflect.Proxy.newProxyInstance(context.classLoader, arrayOf(listenerClass)) { _, method, args ->
+            val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
+            insetsListener = java.lang.reflect.Proxy.newProxyInstance(
+                context.classLoader,
+                arrayOf(listenerClass)
+            ) { _, method, args ->
                 if (method.name == "onComputeInternalInsets") {
                     try {
                         val info = args[0]
-                        de.robv.android.xposed.XposedHelpers.callMethod(info, "setTouchableInsets", 3) // 3 = TOUCHABLE_INSETS_REGION
-                        val region = de.robv.android.xposed.XposedHelpers.getObjectField(info, "touchableRegion") as android.graphics.Region
+                        val touchableInsetsRegion = info.javaClass.getField("TOUCHABLE_INSETS_REGION").getInt(null)
+                        info.javaClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType).invoke(info, touchableInsetsRegion)
+                        val region = info.javaClass.getField("touchableRegion").get(info) as android.graphics.Region
                         region.setEmpty()
                         
                         if (islandState.value != IslandState.HIDDEN) {
@@ -230,10 +234,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 }
                 null
             }
-            de.robv.android.xposed.XposedHelpers.callMethod(viewTreeObserver, "addOnComputeInternalInsetsListener", insetsListener)
+            viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListener)
         } catch (e: Throwable) {}
 
-        // 🚀 Increased refresh rate of the cutout mask calculation
         flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
             insetsUpdateFlow.debounce(10).collect {
                 try { this@DynamicIslandView.requestLayout() } catch(e:Throwable){}
@@ -255,8 +258,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         
         try {
             if (insetsListener != null) {
-                val listenerClass = de.robv.android.xposed.XposedHelpers.findClass("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener", context.classLoader)
-                de.robv.android.xposed.XposedHelpers.callMethod(viewTreeObserver, "removeOnComputeInternalInsetsListener", insetsListener)
+                val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
+                viewTreeObserver.javaClass.getMethod("removeOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListener)
                 insetsListener = null
             }
         } catch (e: Throwable) {}
@@ -320,6 +323,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             } else {
                 wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = ((maxH.value + 150) * density).toInt(); wp.x = 0; wp.y = 0
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+                // 🚀 UI FIX: Explicitly enforce non-modal touches so the rest of the screen is usable!
+                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             }
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Throwable) {}
