@@ -18,12 +18,8 @@ class MainHook : IXposedHookLoadPackage {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
-        // ==========================================
-        // 🧠 PROCESS 1: SYSTEM_SERVER (Logic & OTPs)
-        // ==========================================
         if (lpparam.packageName == "android") {
             try {
-                // PHASE 4: Zen Mode (ATMS Hook)
                 val atmsClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader)
                 if (atmsClass != null) {
                     XposedHelpers.findAndHookMethod(atmsClass, "setResumedActivityUncheckLocked",
@@ -33,8 +29,6 @@ class MainHook : IXposedHookLoadPackage {
                                 try {
                                     val activityRecord = param.args[0] ?: return
                                     val packageName = XposedHelpers.getObjectField(activityRecord, "packageName") as? String ?: return
-                                    // Note: We need a system context to send broadcasts from here. 
-                                    // Usually accessible via mContext inside ATMS.
                                     val mContext = XposedHelpers.getObjectField(param.thisObject, "mContext") as? Context
                                     mContext?.sendBroadcast(Intent("com.example.dynamicisland.APP_CHANGED").putExtra("pkg", packageName))
                                 } catch (e: Throwable) {}
@@ -43,7 +37,6 @@ class MainHook : IXposedHookLoadPackage {
                     )
                 }
 
-                // PHASE 2: OTP Catcher (NMS Hook)
                 val nmsClass = XposedHelpers.findClassIfExists("com.android.server.notification.NotificationManagerService", lpparam.classLoader)
                 if (nmsClass != null) {
                     XposedHelpers.findAndHookMethod(nmsClass, "enqueueNotificationInternal", 
@@ -56,7 +49,6 @@ class MainHook : IXposedHookLoadPackage {
                                     val notification = param.args[6] as? android.app.Notification ?: return
                                     val text = notification.extras.getString(android.app.Notification.EXTRA_TEXT) ?: return
                                     
-                                    // 🚀 Refined Regex: Looks specifically for OTP keywords nearby to avoid false positives
                                     if (text.contains("OTP", true) || text.contains("code", true) || text.contains("verification", true)) {
                                         val otpRegex = Regex("\\b\\d{4,8}\\b")
                                         val match = otpRegex.find(text)
@@ -76,9 +68,6 @@ class MainHook : IXposedHookLoadPackage {
             return
         }
 
-        // ==========================================
-        // 👁️ PROCESS 2: SYSTEM_UI (Visuals & Island)
-        // ==========================================
         if (lpparam.packageName == "com.android.systemui") {
             try {
                 val systemUIApplicationClass = XposedHelpers.findClassIfExists("com.android.systemui.SystemUIApplication", lpparam.classLoader) ?: return
@@ -99,8 +88,9 @@ class MainHook : IXposedHookLoadPackage {
                                             WindowManager.LayoutParams.MATCH_PARENT,
                                             WindowManager.LayoutParams.WRAP_CONTENT,
                                             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                                            // 🚀 PHASE 1 prep: FLAG_WATCH_OUTSIDE_TOUCH added for Drag & Drop later
+                                            // 🚀 CRITICAL FIX: FLAG_NOT_TOUCH_MODAL added to allow background touches!
                                             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                                                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or 
                                                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                                                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                                                     WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
