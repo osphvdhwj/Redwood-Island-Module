@@ -25,6 +25,7 @@ import org.json.JSONObject
 import android.util.LruCache
 import java.util.concurrent.ConcurrentHashMap
 
+@Suppress("DEPRECATION") // 🚀 FIX: Silence all RenderScript and Display SDK Warnings
 class IslandController(private val context: Context) {
 
     private var windowManager: WindowManager? = null
@@ -43,7 +44,7 @@ class IslandController(private val context: Context) {
     private var transientModel: LiveActivityModel? = null
     private var transientJob: Job? = null
     private var pauseFadeJob: Job? = null
-    private var hardwareMonitorJob: Job? = null // 🚀 FIX: Track hardware job
+    private var hardwareMonitorJob: Job? = null
     private var userForceCollapsed = false 
     private var lastReportedBattery = -1
     private var wasCharging = false 
@@ -75,12 +76,12 @@ class IslandController(private val context: Context) {
                 Intent.ACTION_SCREEN_OFF -> {
                     isScreenOn = false
                     stopMediaTicker()
-                    hardwareMonitorJob?.cancel() // 🚀 FIX: Let CPU sleep when screen is off
+                    hardwareMonitorJob?.cancel() 
                 }
                 Intent.ACTION_SCREEN_ON -> {
                     isScreenOn = true
                     if (currentMedia?.isPlaying == true && isMediaEnabled) startMediaTicker()
-                    startHardwareMonitor() // 🚀 FIX: Resume tracking only when screen is active
+                    startHardwareMonitor() 
                     evaluatePriority() 
                 }
             }
@@ -177,7 +178,6 @@ class IslandController(private val context: Context) {
 
     private val componentCallbacks = object : android.content.ComponentCallbacks2 {
         override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { evaluatePriority() }
-        @Suppress("OVERRIDE_DEPRECATION")
         override fun onLowMemory() {}
         override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
     }
@@ -305,7 +305,7 @@ class IslandController(private val context: Context) {
                         else if (_islandState.value == IslandState.TYPE_2_MID || _islandState.value == IslandState.TYPE_SPLIT) { _islandState.value = IslandState.TYPE_3_MAX } 
                         else if (_islandState.value == IslandState.TYPE_3_MAX) {
                             try {
-                                @android.annotation.SuppressLint("WrongConstant")
+                                @SuppressLint("WrongConstant")
                                 val sbs = context.getSystemService("statusbar")
                                 val expandMethod = sbs?.javaClass?.getMethod("expandNotificationsPanel")
                                 expandMethod?.invoke(sbs)
@@ -461,8 +461,6 @@ class IslandController(private val context: Context) {
 
             if (albumArtBitmap != null && !albumArtBitmap.isRecycled) {
                 
-                // 🚀 BULLETPROOF FIX: Prevent RenderScript from leaking C++ Memory by guaranteeing destruction in finally block
-                @Suppress("DEPRECATION")
                 var rs: android.renderscript.RenderScript? = null
                 var input: android.renderscript.Allocation? = null
                 var output: android.renderscript.Allocation? = null
@@ -597,7 +595,7 @@ class IslandController(private val context: Context) {
              islandView?.updateBattery(level, isCharging)
         }
         BatteryPlugin.start(context)
-        startHardwareMonitor() // 🚀 FIX: Start job tracked correctly 
+        startHardwareMonitor()  
     }
     init { setupHardwareMonitor(); setupMediaListener() }
     
