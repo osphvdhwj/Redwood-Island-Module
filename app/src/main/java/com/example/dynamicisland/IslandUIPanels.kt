@@ -37,7 +37,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput // 🚀 FIX: Added missing pointerInput import
+import androidx.compose.ui.input.pointer.pointerInput 
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -269,10 +269,11 @@ import de.robv.android.xposed.XSharedPreferences
         }
     }
 
+    // 🚀 UI FIX 8: Glassmorphism active/inactive Tile States
     @Composable
     fun DynamicIslandView.DashboardQuickToggle(icon: androidx.compose.ui.graphics.vector.ImageVector, isActive: Boolean, label: String? = null, onClick: () -> Unit = {}) {
-        val bgColor by animateColorAsState(if (isActive) Color(0xFF0A84FF) else Color.White.copy(alpha=0.1f), label="bg")
-        val tint by animateColorAsState(if (isActive) Color.White else Color.White.copy(alpha=0.7f), label="tint")
+        val bgColor by animateColorAsState(if (isActive) Color(0xFF00FFCC) else Color.White.copy(alpha=0.1f), label="bg")
+        val tint by animateColorAsState(if (isActive) Color.Black else Color.White, label="tint")
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(modifier = Modifier.size(60.dp).clip(RoundedCornerShape(16.dp)).background(bgColor).clickable { onClick() }, contentAlignment = Alignment.Center) { Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(28.dp)) }
             if (label != null) { Spacer(modifier = Modifier.height(8.dp)); Text(label, color = Color.White.copy(alpha=0.9f), fontSize = 12.sp, fontWeight = FontWeight.Medium) }
