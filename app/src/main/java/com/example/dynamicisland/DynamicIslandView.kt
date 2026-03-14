@@ -54,7 +54,6 @@ import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.debounce
 import kotlin.math.abs
 
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
@@ -112,15 +111,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onSeekTo: ((Long) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
 
-    private var flowJob: Job? = null
     private val lifecycleOwner = OverlayLifecycleOwner()
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
     private var insetsListener: Any? = null 
-
-    private val insetsUpdateFlow = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(
-        replay = 1, onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
-    )
 
     private fun loadPreferences() {
         try {
@@ -205,7 +199,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val displayCutout = try { if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { windowManager?.currentWindowMetrics?.windowInsets?.displayCutout } else null } catch(e:Throwable){null}
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
 
-        // 🚀 BULLETPROOF TOUCH FIX: Pure Java Reflection bypasses Xposed/SystemUI classloader issues completely.
+        // 🚀 BULLETPROOF FIX: Use pure Java Reflection with generous padding for Rubber-Banding
         try {
             val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
             insetsListener = java.lang.reflect.Proxy.newProxyInstance(
@@ -217,16 +211,27 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         val info = args[0]
                         val touchableInsetsRegion = info.javaClass.getField("TOUCHABLE_INSETS_REGION").getInt(null)
                         info.javaClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType).invoke(info, touchableInsetsRegion)
+                        
                         val region = info.javaClass.getField("touchableRegion").get(info) as android.graphics.Region
                         region.setEmpty()
                         
                         if (islandState.value != IslandState.HIDDEN) {
                             if (!mainPillRect.isEmpty) {
-                                val expandedRect = android.graphics.Rect(mainPillRect.left - 20, mainPillRect.top - 20, mainPillRect.right + 20, mainPillRect.bottom + 40)
+                                val expandedRect = android.graphics.Rect(
+                                    mainPillRect.left - 40,
+                                    mainPillRect.top - 40,
+                                    mainPillRect.right + 40,
+                                    mainPillRect.bottom + 100 // Massively expand bottom to catch fast drag gestures
+                                )
                                 region.op(expandedRect, android.graphics.Region.Op.UNION)
                             }
                             if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) {
-                                val expandedCube = android.graphics.Rect(splitCubeRect.left - 20, splitCubeRect.top - 20, splitCubeRect.right + 20, splitCubeRect.bottom + 40)
+                                val expandedCube = android.graphics.Rect(
+                                    splitCubeRect.left - 40, 
+                                    splitCubeRect.top - 40, 
+                                    splitCubeRect.right + 40, 
+                                    splitCubeRect.bottom + 100
+                                )
                                 region.op(expandedCube, android.graphics.Region.Op.UNION)
                             }
                         }
@@ -236,12 +241,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             }
             viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListener)
         } catch (e: Throwable) {}
-
-        flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
-            insetsUpdateFlow.debounce(10).collect {
-                try { this@DynamicIslandView.requestLayout() } catch(e:Throwable){}
-            }
-        }
 
         val filter = IntentFilter("com.example.dynamicisland.RELOAD_PREFS")
         val securePermission = "com.redwood.permission.SECURE_IPC"
@@ -264,8 +263,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             }
         } catch (e: Throwable) {}
 
-        flowJob?.cancel()
-        flowJob = null
         lifecycleOwner.destroy()
         try { context.unregisterReceiver(receiver) } catch (e: Throwable) {}
 
@@ -323,8 +320,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             } else {
                 wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = ((maxH.value + 150) * density).toInt(); wp.x = 0; wp.y = 0
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
-                // 🚀 UI FIX: Explicitly enforce non-modal touches so the rest of the screen is usable!
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             }
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Throwable) {}
@@ -348,19 +345,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             Box(
                 modifier = Modifier
                     .onGloballyPositioned { coordinates ->
+                        // 🚀 BULLETPROOF FIX: Use Window-Relative Coordinates and request layout efficiently
                         try {
                             if (!isAttachedToWindow) return@onGloballyPositioned
-                            val location = IntArray(2)
-                            this@DynamicIslandView.getLocationOnScreen(location)
                             val bounds = coordinates.boundsInRoot()
-                            val globalLeft = location[0] + bounds.left.toInt()
-                            val globalTop = location[1] + bounds.top.toInt()
-                            val globalRight = location[0] + bounds.right.toInt()
-                            val globalBottom = location[1] + bounds.bottom.toInt()
+                            val newBottom = bounds.bottom.toInt()
+                            val newRight = bounds.right.toInt()
 
-                            if (abs(mainPillRect.left - globalLeft) > 5 || abs(mainPillRect.bottom - globalBottom) > 5 || mainPillRect.isEmpty) {
-                                mainPillRect.set(globalLeft, globalTop, globalRight, globalBottom)
-                                insetsUpdateFlow.tryEmit(Unit)
+                            if (abs(mainPillRect.bottom - newBottom) > 2 || abs(mainPillRect.right - newRight) > 2 || mainPillRect.isEmpty) {
+                                mainPillRect.set(bounds.left.toInt(), bounds.top.toInt(), newRight, newBottom)
+                                this@DynamicIslandView.requestLayout()
                             }
                         } catch(e: Throwable) {}
                     }
@@ -535,16 +529,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             .onGloballyPositioned { coordinates ->
                                 try {
                                     if (!isAttachedToWindow) return@onGloballyPositioned
-                                    val location = IntArray(2)
-                                    this@DynamicIslandView.getLocationOnScreen(location)
                                     val bounds = coordinates.boundsInRoot()
-                                    val globalLeft = location[0] + bounds.left.toInt()
-                                    val globalTop = location[1] + bounds.top.toInt()
-                                    val globalRight = location[0] + bounds.right.toInt()
-                                    val globalBottom = location[1] + bounds.bottom.toInt()
-                                    if (abs(splitCubeRect.left - globalLeft) > 5 || splitCubeRect.isEmpty) {
-                                        splitCubeRect.set(globalLeft, globalTop, globalRight, globalBottom)
-                                        insetsUpdateFlow.tryEmit(Unit)
+                                    val newBottom = bounds.bottom.toInt()
+                                    val newRight = bounds.right.toInt()
+                                    if (abs(splitCubeRect.bottom - newBottom) > 2 || abs(splitCubeRect.right - newRight) > 2 || splitCubeRect.isEmpty) {
+                                        splitCubeRect.set(bounds.left.toInt(), bounds.top.toInt(), newRight, newBottom)
+                                        this@DynamicIslandView.requestLayout()
                                     }
                                 } catch(e: Throwable) {}
                             }
