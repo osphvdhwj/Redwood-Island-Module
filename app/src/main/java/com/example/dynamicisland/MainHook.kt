@@ -85,16 +85,15 @@ class MainHook : IXposedHookLoadPackage {
                                 android.os.Handler(context.mainLooper).post {
                                     try {
                                         val layoutParams = WindowManager.LayoutParams(
-                                            // 🚀 BULLETPROOF FIX: WRAP_CONTENT destroys the invisible touch barrier natively!
-                                            WindowManager.LayoutParams.WRAP_CONTENT,
+                                            // 🚀 REVERTED TO STABLE: MATCH_PARENT width, WRAP_CONTENT height. 
+                                            // Completely destroys the invisible touch barrier.
+                                            WindowManager.LayoutParams.MATCH_PARENT,
                                             WindowManager.LayoutParams.WRAP_CONTENT,
                                             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                                             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                                                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or 
                                                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                                                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                                                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
-                                                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH, 
+                                                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                                             PixelFormat.TRANSLUCENT
                                         ).apply {
                                             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
