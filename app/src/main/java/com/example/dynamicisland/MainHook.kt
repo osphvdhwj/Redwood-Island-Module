@@ -88,7 +88,6 @@ class MainHook : IXposedHookLoadPackage {
                                             WindowManager.LayoutParams.MATCH_PARENT,
                                             WindowManager.LayoutParams.WRAP_CONTENT,
                                             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                                            // 🚀 CRITICAL FIX: FLAG_NOT_TOUCH_MODAL added to allow background touches!
                                             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                                                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or 
                                                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
