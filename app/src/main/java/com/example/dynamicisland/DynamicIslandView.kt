@@ -25,9 +25,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent // 🚀 NEW
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush // 🚀 NEW
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.TransformOrigin // 🚀 NEW
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -251,11 +254,15 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     @Composable
     fun IslandUI(state: IslandState) {
         val haptic = LocalHapticFeedback.current
+        
+        // 🚀 UI FIX 2: Liquid Squish Physics (Decoupled X and Y)
         var isSquished by remember { mutableStateOf(false) }
-        val touchScale by animateFloatAsState(
-            targetValue = if (isSquished) 0.96f else 1f,
-            animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "squish"
-        )
+        val squishX by animateFloatAsState(targetValue = if (isSquished) 1.03f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f), label = "sx")
+        val squishY by animateFloatAsState(targetValue = if (isSquished) 0.94f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f), label = "sy")
+        
+        // 🚀 UI FIX 3: Rubber-Band Gestures
+        var dragStretchY by remember { mutableFloatStateOf(0f) }
+
         val minSafeWidth = displayCutoutWidth.floatValue + 4f
 
         val rawTargetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
@@ -264,9 +271,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val targetX = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value; IslandState.TYPE_2_MID -> midX.value; IslandState.TYPE_3_MAX -> maxX.value; IslandState.TYPE_CUBE -> cubeX.value; else -> ringX.value }
         val targetY = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value; IslandState.TYPE_2_MID -> midY.value; IslandState.TYPE_3_MAX -> maxY.value; IslandState.TYPE_CUBE -> cubeY.value; else -> ringY.value }
 
-        val physicsSpec = spring<Dp>(dampingRatio = 0.82f, stiffness = 350f)
+        // 🚀 UI FIX 4: Asymmetric Breathing Springs
+        val physicsSpec = spring<Dp>(dampingRatio = 0.72f, stiffness = 200f)
         val width by animateDpAsState(targetWidth.dp, physicsSpec, label = "width")
         val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
+        val dynamicHeight = height + dragStretchY.dp // Apply Rubber-Banding to final height
+        
         val offsetX by animateFloatAsState(targetX, spring<Float>(dampingRatio=0.82f, stiffness=350f), label = "x")
         val offsetY by animateFloatAsState(targetY, spring<Float>(dampingRatio=0.82f, stiffness=350f), label = "y")
         val radTarget = when (state) { IslandState.TYPE_3_MAX -> 42.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_CUBE -> 24.dp; else -> (targetHeight / 2).dp }
@@ -274,15 +284,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         val model = activeModel.value
 
-        val targetBgColor = if (state == IslandState.HIDDEN) Color.Transparent 
-        else if (state == IslandState.TYPE_0_RING) Color.Black.copy(alpha = 0.01f) 
-        else {
-            if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor).copy(alpha = 0.65f) 
-            else if (state == IslandState.TYPE_3_MAX) Color(0xFF121212).copy(alpha = 0.4f) 
-            else Color(0xFF121212).copy(alpha = 0.75f) 
-        }
+        // 🚀 UI FIX 1: OLED Hardware Blending
+        val targetBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.Black
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
-        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.15f), animationSpec = tween(600), label = "borderColor")
+        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
 
         LaunchedEffect(state, model) {
             if (!isAttachedToWindow || windowToken == null) return@LaunchedEffect
@@ -311,6 +316,15 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             horizontalArrangement = Arrangement.Center, 
             verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
         ) {
+            
+            // 🚀 UI FIX 5: Ambient Aura Glow for Thermal/Alerts
+            if (model is LiveActivityModel.SystemAlert || model is LiveActivityModel.RealityPill) {
+                val infiniteTransition = rememberInfiniteTransition(label="glow")
+                val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.1f, targetValue = 0.4f, animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing), RepeatMode.Reverse), label="glowAlpha")
+                val alertColor = (model as? LiveActivityModel.SystemAlert)?.alertColor?.let { Color(it) } ?: Color(0xFF00FFCC)
+                Box(modifier = Modifier.width(width).height(dynamicHeight).blur(32.dp).background(Brush.radialGradient(colors = listOf(alertColor.copy(alpha = glowAlpha), Color.Transparent))))
+            }
+
             Box(
                 modifier = Modifier
                     .onGloballyPositioned { coordinates ->
@@ -330,10 +344,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             }
                         } catch(e: Throwable) {}
                     }
-                    .width(width).height(height)
-                    .graphicsLayer { scaleX = touchScale; scaleY = touchScale }
+                    .width(width).height(dynamicHeight)
+                    .graphicsLayer { 
+                        scaleX = squishX; scaleY = squishY 
+                        transformOrigin = TransformOrigin(0.5f, 0f) // Anchor to Top
+                    }
                     .clip(RoundedCornerShape(rad))
-                    .background(bgColor).border(1.dp, borderColor, RoundedCornerShape(rad))
+                    .background(bgColor).border(0.5.dp, borderColor, RoundedCornerShape(rad))
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             awaitFirstDown(pass = PointerEventPass.Initial)
@@ -357,21 +374,29 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         
                         detectDragGestures(
                             onDragEnd = {
-                                if (abs(dragOffsetX) > abs(dragOffsetY)) {
-                                    if (dragOffsetX > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT)
-                                    else if (dragOffsetX < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
-                                } else {
-                                    if (dragOffsetY > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN)
-                                    else if (dragOffsetY < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
+                                if (dragStretchY > 50f) {
+                                    onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN)
+                                } else if (dragStretchY < -50f) {
+                                    onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
+                                } else if (dragOffsetX > 40f) {
+                                    onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT)
+                                } else if (dragOffsetX < -40f) {
+                                    onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
                                 }
                                 dragOffsetX = 0f; dragOffsetY = 0f
+                                dragStretchY = 0f // Snap back
                             }
                         ) { change, dragAmount ->
-                            if (abs(dragAmount.x) > 5f || abs(dragAmount.y) > 5f) {
-                                change.consume()
-                            }
                             dragOffsetX += dragAmount.x
                             dragOffsetY += dragAmount.y
+                            
+                            // Apply physical resistance
+                            val resistance = 1f - (abs(dragStretchY) / 300f).coerceIn(0f, 0.8f)
+                            dragStretchY += dragAmount.y * resistance
+
+                            if (abs(dragOffsetX) > 30f || abs(dragOffsetY) > 30f) {
+                                change.consume()
+                            }
                         }
                     },
                 contentAlignment = boxAlignment
@@ -379,7 +404,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 Box(modifier = Modifier.fillMaxSize().padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp)) {
                     
                     if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
-                        Image(bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(if (state == IslandState.TYPE_3_MAX) 0.65f else 0.35f).blur(if (state == IslandState.TYPE_3_MAX) 12.dp else 24.dp))
+                        Image(
+                            bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
+                            modifier = Modifier.fillMaxSize()
+                            // 🚀 UI FIX 6: Melt the album art perfectly into the black void
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(brush = Brush.horizontalGradient(0.0f to Color.Transparent, 0.8f to Color.Black, 1.0f to Color.Black))
+                            }
+                            .alpha(if (state == IslandState.TYPE_3_MAX) 0.65f else 0.35f).blur(if (state == IslandState.TYPE_3_MAX) 12.dp else 24.dp)
+                        )
                     }
 
                     if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING) {
@@ -388,8 +422,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             AnimatedContent(
                                 targetState = state,
                                 transitionSpec = {
-                                    (fadeIn(animationSpec = tween(220, delayMillis = 90)) +
-                                     scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90))) togetherWith fadeOut(animationSpec = tween(90))
+                                    (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90))) togetherWith fadeOut(animationSpec = tween(90))
                                 },
                                 label = "UI Transition"
                             ) { s ->
@@ -435,9 +468,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         val shouldShowRing = isMedia || globalIsCharging.value || globalBatteryLevel.intValue <= 20
 
                         if (shouldShowRing) {
-                            val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
-                            val progress = if (isMedia) (currentMediaPos.longValue.toFloat() / safeDur) else globalBatteryLevel.intValue / 100f
-                            
                             val baseColor = if (isMedia) {
                                 musicModel?.dominantColor?.let { Color(it) } ?: Color.White
                             } else if (globalIsCharging.value) {
@@ -457,25 +487,22 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             )
                             val progressColor = baseColor.copy(alpha = pulseAlpha)
 
+                            // 🚀 UI FIX 7: Neon Glass Sweep Gradient Ring
                             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
+                                val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
+                                val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
                                 val strokeW = ringThickness.value.dp.toPx() 
                                 val inset = strokeW / 2
                                 val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
                                 val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
-
-                                drawArc(color = baseColor.copy(alpha=0.15f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
-
                                 val progressPercent = progress.coerceIn(0f, 1f)
                                 val capStyle = if (progressPercent >= 0.99f) StrokeCap.Butt else StrokeCap.Round
-                                drawArc(
-                                    color = progressColor,
-                                    startAngle = -90f,
-                                    sweepAngle = 360f * progressPercent,
-                                    useCenter = false,
-                                    topLeft = arcTopLeft,
-                                    size = arcSize,
-                                    style = Stroke(strokeW, cap = capStyle)
-                                )
+
+                                val sweepGradient = Brush.sweepGradient(0.0f to progressColor.copy(alpha = 0.2f), 0.8f to progressColor, 1.0f to progressColor.copy(alpha = 0.2f))
+
+                                drawArc(color = baseColor.copy(alpha=0.15f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
+                                drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW + 6f, cap = capStyle), alpha = 0.4f)
+                                drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = capStyle))
                             }
                         }
                     }
