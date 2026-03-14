@@ -85,7 +85,8 @@ class MainHook : IXposedHookLoadPackage {
                                 android.os.Handler(context.mainLooper).post {
                                     try {
                                         val layoutParams = WindowManager.LayoutParams(
-                                            WindowManager.LayoutParams.MATCH_PARENT,
+                                            // 🚀 BULLETPROOF FIX: WRAP_CONTENT destroys the invisible touch barrier natively!
+                                            WindowManager.LayoutParams.WRAP_CONTENT,
                                             WindowManager.LayoutParams.WRAP_CONTENT,
                                             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                                             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
