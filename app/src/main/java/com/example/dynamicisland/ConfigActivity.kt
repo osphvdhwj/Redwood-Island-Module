@@ -40,7 +40,7 @@ class ConfigActivity : ComponentActivity() {
     @Composable
     fun ConfigScreen(prefs: android.content.SharedPreferences) {
         var selectedTab by remember { mutableIntStateOf(0) }
-        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures", "Dashboard", "Tweaks", "Theme", "Features") // 🚀 RENAMED Pinning to Dashboard
+        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures", "Dashboard", "Tweaks", "Theme", "Features")
 
         var w by remember { mutableFloatStateOf(0f) }
         var h by remember { mutableFloatStateOf(0f) }
@@ -100,7 +100,6 @@ class ConfigActivity : ComponentActivity() {
                         }
                     }
                 } else if (currentPrefix == "dashboard") {
-                    // 🚀 ADDED DYNAMIC QS CONFIGURATION TO DASHBOARD TAB
                     Text(text = "Quick Settings Grid", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
                     Text(text = "Select 7 hardware toggles.", fontSize = 14.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(16.dp))
@@ -129,8 +128,12 @@ class ConfigActivity : ComponentActivity() {
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(text = "App Dock Pinning", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
+                    Text(text = "Select 8 apps to pin.", fontSize = 14.sp, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     val pm = LocalContext.current.packageManager
-                    // 🚀 PHASE 5: Asynchronous App Loading to prevent Settings UI freeze
                     var installedApps by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
                     
                     LaunchedEffect(Unit) {
@@ -150,27 +153,28 @@ class ConfigActivity : ComponentActivity() {
                     } else {
                         val pinnedApps = listOf("App 1", "App 2", "App 3", "App 4", "App 5", "App 6", "App 7", "App 8")
                         pinnedApps.forEachIndexed { index, slot ->
-                        var expanded by remember { mutableStateOf(false) }
-                        var selectedAppPkg by remember { mutableStateOf(prefs.getString("pinned_app_$index", "") ?: "") }
-                        val selectedAppName = installedApps.find { it.second == selectedAppPkg }?.first ?: "None"
+                            var expanded by remember { mutableStateOf(false) }
+                            var selectedAppPkg by remember { mutableStateOf(prefs.getString("pinned_app_$index", "") ?: "") }
+                            val selectedAppName = installedApps.find { it.second == selectedAppPkg }?.first ?: "None"
 
-                        @OptIn(ExperimentalMaterial3Api::class)
-                        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-                            OutlinedTextField(
-                                value = selectedAppName, onValueChange = {}, readOnly = true, label = { Text(slot) },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp)
-                            )
-                            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                DropdownMenuItem(text = { Text("None") }, onClick = {
-                                    selectedAppPkg = ""; prefs.edit().putString("pinned_app_$index", "").apply(); expanded = false
-                                    broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
-                                })
-                                installedApps.forEach { pair ->
-                                    DropdownMenuItem(text = { Text(pair.first) }, onClick = {
-                                        selectedAppPkg = pair.second; prefs.edit().putString("pinned_app_$index", pair.second).apply(); expanded = false
+                            @OptIn(ExperimentalMaterial3Api::class)
+                            ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                                OutlinedTextField(
+                                    value = selectedAppName, onValueChange = {}, readOnly = true, label = { Text(slot) },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp)
+                                )
+                                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                    DropdownMenuItem(text = { Text("None") }, onClick = {
+                                        selectedAppPkg = ""; prefs.edit().putString("pinned_app_$index", "").apply(); expanded = false
                                         broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
                                     })
+                                    installedApps.forEach { pair ->
+                                        DropdownMenuItem(text = { Text(pair.first) }, onClick = {
+                                            selectedAppPkg = pair.second; prefs.edit().putString("pinned_app_$index", pair.second).apply(); expanded = false
+                                            broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
+                                        })
+                                    }
                                 }
                             }
                         }
@@ -192,46 +196,29 @@ class ConfigActivity : ComponentActivity() {
                     Text(text = "Customize the physical appearance of inner elements.", fontSize = 14.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // INSIDE THE THEME TAB:
-                    @Composable
-                    fun ThemeSlider(label: String, key: String, default: Float, range: ClosedFloatingPointRange<Float>) {
-                        var value by remember { mutableFloatStateOf(prefs.getFloat(key, default)) }
-                        Text(text = "$label: ${value.toInt()}", color = Color.White, modifier = Modifier.padding(top = 8.dp))
-                        Slider(
-                            value = value, 
-                            onValueChange = { value = it }, // 🚀 ONLY updates local UI while dragging
-                            onValueChangeFinished = { 
-                                // 🚀 ONLY saves and broadcasts when finger lifts! Saves CPU.
-                                prefs.edit().putFloat(key, value).apply() 
-                                sendGestureUpdate(prefs, this@ConfigActivity) 
-                            }, 
-                            valueRange = range
-                        )
-                    }
-
-                    ThemeSlider("Corner Radius", "theme_corner_radius", 50f, 10f..100f)
-                    ThemeSlider("Global Text Size (sp)", "theme_text_primary", 16f, 10f..30f)
-                    ThemeSlider("Global Subtext Size (sp)", "theme_text_secondary", 14f, 8f..24f)
-                    ThemeSlider("Global Progress Thickness", "theme_progress_thick", 4f, 1f..15f)
-                    ThemeSlider("Global Element Gap (Spacing)", "theme_element_gap", 8f, 0f..32f)
+                    ThemeSlider("Corner Radius", "theme_corner_radius", 50f, 10f..100f, prefs)
+                    ThemeSlider("Global Text Size (sp)", "theme_text_primary", 16f, 10f..30f, prefs)
+                    ThemeSlider("Global Subtext Size (sp)", "theme_text_secondary", 14f, 8f..24f, prefs)
+                    ThemeSlider("Global Progress Thickness", "theme_progress_thick", 4f, 1f..15f, prefs)
+                    ThemeSlider("Global Element Gap (Spacing)", "theme_element_gap", 8f, 0f..32f, prefs)
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Music Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Cyan)
-                    ThemeSlider("Title Text Size", "theme_music_title", 16f, 10f..30f)
-                    ThemeSlider("Artist Text Size", "theme_music_artist", 14f, 8f..24f)
-                    ThemeSlider("Seeker Thickness", "theme_music_seeker", 4f, 1f..15f)
-                    ThemeSlider("Control Button Size", "theme_music_btn", 48f, 24f..72f)
+                    ThemeSlider("Title Text Size", "theme_music_title", 16f, 10f..30f, prefs)
+                    ThemeSlider("Artist Text Size", "theme_music_artist", 14f, 8f..24f, prefs)
+                    ThemeSlider("Seeker Thickness", "theme_music_seeker", 4f, 1f..15f, prefs)
+                    ThemeSlider("Control Button Size", "theme_music_btn", 48f, 24f..72f, prefs)
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Battery Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Green)
-                    ThemeSlider("Cube Text Size", "theme_bat_text", 16f, 10f..30f)
-                    ThemeSlider("Cube Icon Size", "theme_bat_icon", 36f, 16f..72f)
-                    ThemeSlider("Ring Thickness", "theme_bat_ring", 12f, 2f..25f)
+                    ThemeSlider("Cube Text Size", "theme_bat_text", 16f, 10f..30f, prefs)
+                    ThemeSlider("Cube Icon Size", "theme_bat_icon", 36f, 16f..72f, prefs)
+                    ThemeSlider("Ring Thickness", "theme_bat_ring", 12f, 2f..25f, prefs)
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Notification Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Red)
-                    ThemeSlider("Alert Title Size", "theme_alert_title", 16f, 10f..30f)
-                    ThemeSlider("Alert Message Size", "theme_alert_msg", 14f, 8f..24f)
+                    ThemeSlider("Alert Title Size", "theme_alert_title", 16f, 10f..30f, prefs)
+                    ThemeSlider("Alert Message Size", "theme_alert_msg", 14f, 8f..24f, prefs)
                 } else if (currentPrefix == "features") {
                     Text(text = "Active Modules", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text(text = "Selectively disable Island behaviors.", fontSize = 14.sp, color = Color.Gray)
@@ -284,6 +271,21 @@ class ConfigActivity : ComponentActivity() {
         }
     }
 
+    @Composable
+    fun ThemeSlider(label: String, key: String, default: Float, range: ClosedFloatingPointRange<Float>, prefs: android.content.SharedPreferences) {
+        var localValue by remember { mutableFloatStateOf(prefs.getFloat(key, default)) }
+        Text(text = "$label: ${localValue.toInt()}", color = Color.White, modifier = Modifier.padding(top = 8.dp))
+        Slider(
+            value = localValue, 
+            onValueChange = { localValue = it }, 
+            onValueChangeFinished = { 
+                prefs.edit().putFloat(key, localValue).apply() 
+                sendGestureUpdate(prefs, this@ConfigActivity) 
+            }, 
+            valueRange = range
+        )
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun GestureDropdown(label: String, options: Array<IslandAction>, prefs: android.content.SharedPreferences, prefKey: String) {
@@ -307,10 +309,9 @@ class ConfigActivity : ComponentActivity() {
         }
     }
 
-    // AT THE BOTTOM OF THE FILE:
     @Composable
     fun PrecisionSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onValueChange: (Float) -> Unit, onValueChangeFinished: () -> Unit) {
-        var localValue by remember(value) { mutableFloatStateOf(value) } // 🚀 Track local drag state
+        var localValue by remember(value) { mutableFloatStateOf(value) } 
         
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text(label, modifier = Modifier.width(60.dp), fontSize = 14.sp)
@@ -322,10 +323,10 @@ class ConfigActivity : ComponentActivity() {
             
             Slider(
                 value = localValue, 
-                onValueChange = { localValue = it }, // 🚀 Only UI updates during drag
+                onValueChange = { localValue = it }, 
                 onValueChangeFinished = { 
-                    onValueChange(localValue) // 🚀 Send final value
-                    onValueChangeFinished()   // 🚀 Broadcast to SystemUI
+                    onValueChange(localValue) 
+                    onValueChangeFinished()   
                 }, 
                 modifier = Modifier.weight(1f), 
                 valueRange = range
