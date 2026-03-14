@@ -116,7 +116,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     private val lifecycleOwner = OverlayLifecycleOwner()
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
-    private var insetsListener: Any? = null // 🚀 FIX: Track listener to prevent memory leaks
+    private var insetsListener: Any? = null 
 
     private val insetsUpdateFlow = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(
         replay = 1, onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
@@ -205,25 +205,24 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val displayCutout = try { if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { windowManager?.currentWindowMetrics?.windowInsets?.displayCutout } else null } catch(e:Throwable){null}
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
 
-        // 🚀 BULLETPROOF FIX: Attach Touch Listener only when the window is truly alive
+        // 🚀 CRITICAL UI FIX: Bypassing Hidden API to force Touch Cutout Geometry
         try {
-            val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
+            val listenerClass = de.robv.android.xposed.XposedHelpers.findClass("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener", context.classLoader)
             insetsListener = java.lang.reflect.Proxy.newProxyInstance(context.classLoader, arrayOf(listenerClass)) { _, method, args ->
                 if (method.name == "onComputeInternalInsets") {
                     try {
                         val info = args[0]
-                        val touchableInsetsRegion = info.javaClass.getField("TOUCHABLE_INSETS_REGION").getInt(null)
-                        info.javaClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType).invoke(info, touchableInsetsRegion)
-                        val region = info.javaClass.getField("touchableRegion").get(info) as android.graphics.Region
+                        de.robv.android.xposed.XposedHelpers.callMethod(info, "setTouchableInsets", 3) // 3 = TOUCHABLE_INSETS_REGION
+                        val region = de.robv.android.xposed.XposedHelpers.getObjectField(info, "touchableRegion") as android.graphics.Region
                         region.setEmpty()
+                        
                         if (islandState.value != IslandState.HIDDEN) {
                             if (!mainPillRect.isEmpty) {
-                                // Buffer edges by 20px so fast swipes don't miss the touch region
-                                val expandedRect = android.graphics.Rect(mainPillRect.left - 20, mainPillRect.top - 20, mainPillRect.right + 20, mainPillRect.bottom + 20)
+                                val expandedRect = android.graphics.Rect(mainPillRect.left - 20, mainPillRect.top - 20, mainPillRect.right + 20, mainPillRect.bottom + 40)
                                 region.op(expandedRect, android.graphics.Region.Op.UNION)
                             }
                             if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) {
-                                val expandedCube = android.graphics.Rect(splitCubeRect.left - 20, splitCubeRect.top - 20, splitCubeRect.right + 20, splitCubeRect.bottom + 20)
+                                val expandedCube = android.graphics.Rect(splitCubeRect.left - 20, splitCubeRect.top - 20, splitCubeRect.right + 20, splitCubeRect.bottom + 40)
                                 region.op(expandedCube, android.graphics.Region.Op.UNION)
                             }
                         }
@@ -231,11 +230,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 }
                 null
             }
-            viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListener)
+            de.robv.android.xposed.XposedHelpers.callMethod(viewTreeObserver, "addOnComputeInternalInsetsListener", insetsListener)
         } catch (e: Throwable) {}
 
+        // 🚀 Increased refresh rate of the cutout mask calculation
         flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
-            insetsUpdateFlow.debounce(50).collect {
+            insetsUpdateFlow.debounce(10).collect {
                 try { this@DynamicIslandView.requestLayout() } catch(e:Throwable){}
             }
         }
@@ -253,11 +253,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         
-        // 🚀 FIX: Safely remove listener to prevent ghost overlays
         try {
             if (insetsListener != null) {
-                val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
-                viewTreeObserver.javaClass.getMethod("removeOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListener)
+                val listenerClass = de.robv.android.xposed.XposedHelpers.findClass("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener", context.classLoader)
+                de.robv.android.xposed.XposedHelpers.callMethod(viewTreeObserver, "removeOnComputeInternalInsetsListener", insetsListener)
                 insetsListener = null
             }
         } catch (e: Throwable) {}
@@ -275,13 +274,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     @Composable
     fun IslandUI(state: IslandState) {
         val haptic = LocalHapticFeedback.current
+        
         var isSquished by remember { mutableStateOf(false) }
-        val touchScale by animateFloatAsState(
-            targetValue = if (isSquished) 0.96f else 1f,
-            animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "squish"
-        )
+        val squishX by animateFloatAsState(targetValue = if (isSquished) 1.03f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f), label = "sx")
+        val squishY by animateFloatAsState(targetValue = if (isSquished) 0.94f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f), label = "sy")
         
         var dragStretchY by remember { mutableFloatStateOf(0f) }
+
         val minSafeWidth = displayCutoutWidth.floatValue + 4f
 
         val rawTargetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
@@ -362,7 +361,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     }
                     .width(width).height(dynamicHeight)
                     .graphicsLayer { 
-                        scaleX = touchScale; scaleY = touchScale 
+                        scaleX = squishX; scaleY = squishY 
                         transformOrigin = TransformOrigin(0.5f, 0f)
                     }
                     .clip(RoundedCornerShape(rad))
