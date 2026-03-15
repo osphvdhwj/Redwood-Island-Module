@@ -18,6 +18,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -97,8 +98,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var expandUpwards = mutableStateOf(false)
 
     var isCubeRotationEnabled = mutableStateOf(true)
-    var customOffsetY = mutableFloatStateOf(0f)
-    var customBaseWidth = mutableFloatStateOf(100f)
     var activeTheme = mutableStateOf(IslandTheme())
     var globalBatteryLevel = mutableIntStateOf(100)
     var globalIsCharging = mutableStateOf(false)
@@ -267,8 +266,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     fun IslandUI(state: IslandState) {
         val haptic = LocalHapticFeedback.current
         var isSquished by remember { mutableStateOf(false) }
-        val squishX by animateFloatAsState(targetValue = if (isSquished) 1.03f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f), label = "sx")
-        val squishY by animateFloatAsState(targetValue = if (isSquished) 0.94f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f), label = "sy")
+        val touchScale by animateFloatAsState(
+            targetValue = if (isSquished) 0.96f else 1f,
+            animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "squish"
+        )
         
         val minSafeWidth = displayCutoutWidth.floatValue + 4f
 
@@ -293,26 +294,34 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val radTarget = when (state) { IslandState.TYPE_3_MAX -> 42.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_CUBE -> 24.dp; else -> (targetHeight / 2).dp }
         val rad by animateDpAsState(radTarget, physicsSpec, label = "rad")
 
-        val targetBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.Black
+        val targetBgColor = if (state == IslandState.HIDDEN) Color.Transparent 
+        else if (state == IslandState.TYPE_0_RING) Color.Black.copy(alpha = 0.01f) 
+        else {
+            if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor).copy(alpha = 0.65f) 
+            else if (state == IslandState.TYPE_3_MAX) Color(0xFF121212).copy(alpha = 0.4f) 
+            else Color(0xFF121212).copy(alpha = 0.75f) 
+        }
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
-        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
+        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.15f), animationSpec = tween(600), label = "borderColor")
 
         LaunchedEffect(state, model) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
-            val density = context.resources.displayMetrics.density
 
             if (model?.isSensitive == true) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE } else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv() }
 
+            // 🚀 PROVEN STABLE: WindowManager Size Restoration
             if (state == IslandState.HIDDEN) {
                 wp.width = 0 
                 wp.height = 0 
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             } else {
                 wp.width = WindowManager.LayoutParams.MATCH_PARENT
                 wp.height = WindowManager.LayoutParams.MATCH_PARENT
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             }
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
         }
@@ -320,12 +329,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .graphicsLayer {
-                    translationX = offsetX.dp.toPx()
-                    translationY = offsetY.coerceAtLeast(0f).dp.toPx()
-                }, 
+            // 🚀 RESTORED: .offset coordinates required for OnComputeInternalInsets bounds calculation!
+            modifier = Modifier.fillMaxWidth().offset(x = offsetX.dp, y = offsetY.coerceAtLeast(0f).dp).height(maxH.value.dp), 
             horizontalArrangement = Arrangement.Center, 
             verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
         ) {
@@ -347,11 +352,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     }
                     .width(width).height(height)
                     .graphicsLayer { 
-                        scaleX = squishX; scaleY = squishY 
+                        scaleX = touchScale; scaleY = touchScale
                         transformOrigin = TransformOrigin(0.5f, 0f)
                     }
                     .clip(RoundedCornerShape(rad))
-                    .background(bgColor).border(0.5.dp, borderColor, RoundedCornerShape(rad))
+                    .background(bgColor).border(1.dp, borderColor, RoundedCornerShape(rad))
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             awaitFirstDown(pass = PointerEventPass.Initial)
