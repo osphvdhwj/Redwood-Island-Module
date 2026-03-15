@@ -6,11 +6,11 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.Gravity
 import android.view.WindowManager
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
@@ -21,6 +21,7 @@ class MainHook : IXposedHookLoadPackage {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
+        // 1. SYSTEM SERVER HOOKS (Detects Gaming Mode & OTPs)
         if (lpparam.packageName == "android") {
             try {
                 val atmsClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader)
@@ -39,39 +40,43 @@ class MainHook : IXposedHookLoadPackage {
                         }
                     )
                 }
-            } catch (e: Throwable) { Log.e("Redwood", "System server hook failed", e) }
+            } catch (e: Throwable) { XposedBridge.log("Redwood: System server hook failed -> ${e.message}") }
             return
         }
 
+        // 2. SYSTEM_UI VISUAL HOOK
         if (lpparam.packageName == "com.android.systemui") {
-            Log.d("Redwood", "Targeting SystemUI Process. Injecting Instrumentation Hook...")
+            XposedBridge.log("Redwood: Injecting into SystemUI...")
             
             try {
-                // 🚀 BULLETPROOF FIX: Hooking the lowest-level app creation event. 
-                // It is impossible for SystemUI to bypass this.
+                // 🚀 THE UNIVERSAL HOOK: We hook the base Application.onCreate. 
+                // Every single Android app MUST pass through this, making it 100% immune to ROM obfuscation.
                 XposedHelpers.findAndHookMethod(
-                    "android.app.Instrumentation",
-                    lpparam.classLoader,
-                    "callApplicationOnCreate",
                     Application::class.java,
+                    "onCreate",
                     object : XC_MethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {
-                            val app = param.args[0] as Application
+                            val app = param.thisObject as Application
+                            
+                            // Ensure we are strictly inside SystemUI
                             if (app.packageName == "com.android.systemui") {
                                 if (isInitialized) return
-                                Log.d("Redwood", "SystemUI Application onCreate detected! Initiating boot delay...")
+                                isInitialized = true
                                 
-                                // Delay 3 seconds to let SystemUI fully stabilize its UI thread
+                                XposedBridge.log("Redwood: SystemUI Application Booted! Starting 2-second UI delay...")
+                                
+                                // Delay allows SystemUI's massive internal components (like Status Bar) to finish booting first
                                 Handler(Looper.getMainLooper()).postDelayed({
                                     try {
-                                        Log.d("Redwood", "Injecting WindowManager LayoutParams...")
+                                        XposedBridge.log("Redwood: Requesting WindowManager...")
                                         val windowManager = app.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
                                         val layoutParams = WindowManager.LayoutParams(
-                                            WindowManager.LayoutParams.WRAP_CONTENT, // 🚀 Pure WRAP_CONTENT width
-                                            WindowManager.LayoutParams.WRAP_CONTENT, // 🚀 Pure WRAP_CONTENT height
+                                            WindowManager.LayoutParams.WRAP_CONTENT, // 🚀 Pure WRAP_CONTENT
+                                            WindowManager.LayoutParams.WRAP_CONTENT, // 🚀 Pure WRAP_CONTENT
                                             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                                             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                                                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                                                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                                                     WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
                                                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or 
@@ -83,29 +88,26 @@ class MainHook : IXposedHookLoadPackage {
                                             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
                                         }
 
-                                        Log.d("Redwood", "Initializing IslandController...")
+                                        XposedBridge.log("Redwood: Mounting IslandController and Jetpack Compose...")
                                         islandController = IslandController(app)
-                                        
-                                        Log.d("Redwood", "Creating ComposeView...")
                                         val islandView = islandController?.createIslandView(windowManager, layoutParams)
 
                                         if (islandView != null) {
                                             windowManager.addView(islandView, layoutParams)
-                                            isInitialized = true
-                                            Log.d("Redwood", "SUCCESS! Island View added to WindowManager.")
+                                            XposedBridge.log("Redwood: SUCCESS! Island is officially on the screen.")
                                         } else {
-                                            Log.e("Redwood", "ERROR: IslandView creation returned null.")
+                                            XposedBridge.log("Redwood ERROR: Compose View failed to build.")
                                         }
                                     } catch (e: Throwable) {
-                                        Log.e("Redwood", "FATAL ERROR during UI injection", e)
+                                        XposedBridge.log("Redwood FATAL INJECTION ERROR: ${e.stackTraceToString()}")
                                     }
-                                }, 3000)
+                                }, 2000)
                             }
                         }
                     }
                 )
             } catch (e: Throwable) {
-                Log.e("Redwood", "FATAL ERROR setting up Instrumentation hook", e)
+                XposedBridge.log("Redwood FATAL HOOK ERROR: ${e.stackTraceToString()}")
             }
         }
     }
