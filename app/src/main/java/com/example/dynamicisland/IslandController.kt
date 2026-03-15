@@ -18,7 +18,6 @@ import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.util.Log
-import android.view.OrientationEventListener
 import android.view.WindowManager
 import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
@@ -53,7 +52,6 @@ class IslandController(private val context: Context) {
     private var lastReportedBattery = -1
     private var wasCharging = false 
     private var isScreenOn = true 
-    private var isLandscapeNow = false 
     private var topAppPackage = "" 
 
     private var isMediaEnabled = true
@@ -66,17 +64,6 @@ class IslandController(private val context: Context) {
     private val mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
     private var activeMediaController: MediaController? = null
     private var mediaTickerJob: Job? = null
-
-    private val orientationEventListener = object : OrientationEventListener(context, android.hardware.SensorManager.SENSOR_DELAY_NORMAL) {
-        override fun onOrientationChanged(orientation: Int) {
-            val rotation = try { windowManager?.defaultDisplay?.rotation ?: 0 } catch(e:Throwable){0}
-            val landscape = rotation == android.view.Surface.ROTATION_90 || rotation == android.view.Surface.ROTATION_270
-            if (isLandscapeNow != landscape) {
-                isLandscapeNow = landscape
-                evaluatePriority()
-            }
-        }
-    }
 
     private fun getBestMediaController(controllers: List<MediaController>?): MediaController? {
         if (!isMediaEnabled) return null 
@@ -198,7 +185,7 @@ class IslandController(private val context: Context) {
     }
 
     private val componentCallbacks = object : android.content.ComponentCallbacks2 {
-        override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {}
+        override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { evaluatePriority() }
         override fun onLowMemory() {}
         override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
     }
@@ -209,6 +196,7 @@ class IslandController(private val context: Context) {
         this.islandView = view 
         this.windowManager = wm 
         
+        // 🚀 FEATURE: Battery Wellbeing Intent on Long-Click
         view.onSplitPillClick = { 
             val sModel = _splitModel.value; 
             if (sModel is LiveActivityModel.Charging) { 
@@ -381,16 +369,16 @@ class IslandController(private val context: Context) {
         } catch (e: Throwable) {}
     }
 
+    // 🚀 BULLETPROOF FIX: Safely reads live orientation to fix Landscape sticking!
     private fun evaluatePriority() {
         val isAlertCritical = transientModel?.isCritical == true
         val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
         val blacklistedGames = prefs.getString("gaming_blacklist", "com.dts.freefiremax,com.tencent.ig") ?: ""
         
-        // 🚀 CRITICAL FIX 1: Ensure topAppPackage is not empty before checking the blacklist!
+        val rotation = try { windowManager?.defaultDisplay?.rotation ?: 0 } catch(e:Throwable){0}
+        val isLandscapeNow = rotation == android.view.Surface.ROTATION_90 || rotation == android.view.Surface.ROTATION_270
         val isBlacklistedAppActive = topAppPackage.isNotEmpty() && blacklistedGames.contains(topAppPackage)
         
-        // 🚀 CRITICAL FIX 2: Only hide if in Landscape or Playing a Blacklisted Game.
-        // (CPU Frequency was spiking randomly and hiding the island, so it has been removed here).
         if ((isLandscapeNow || isBlacklistedAppActive) && !isAlertCritical) {
             _islandState.value = IslandState.HIDDEN
             return
@@ -605,7 +593,6 @@ class IslandController(private val context: Context) {
         }
         context.registerReceiver(screenStateReceiver, filter)
         context.registerComponentCallbacks(componentCallbacks)
-        orientationEventListener.enable() 
         
         val ecoFilter = IntentFilter().apply {
             addAction("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE")
@@ -646,7 +633,6 @@ class IslandController(private val context: Context) {
     
     fun cleanup() { 
         scope.cancel()
-        orientationEventListener.disable()
         try { context.unregisterReceiver(screenStateReceiver) } catch(e: Throwable){}
         try { context.unregisterComponentCallbacks(componentCallbacks) } catch(e: Throwable){}
         BatteryPlugin.stop(context)
