@@ -1,7 +1,9 @@
+@file:Suppress("DEPRECATION")
 package com.example.dynamicisland
 
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -9,12 +11,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
+import android.hardware.camera2.CameraManager
 import android.media.MediaMetadata
 import android.media.Rating
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.util.Log
+import android.view.OrientationEventListener
 import android.view.WindowManager
 import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
@@ -24,6 +28,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 import android.util.LruCache
 import java.util.concurrent.ConcurrentHashMap
+
 
 class IslandController(private val context: Context) {
 
@@ -43,10 +48,14 @@ class IslandController(private val context: Context) {
     private var transientModel: LiveActivityModel? = null
     private var transientJob: Job? = null
     private var pauseFadeJob: Job? = null
+    private var hardwareMonitorJob: Job? = null
+    
     private var userForceCollapsed = false 
     private var lastReportedBattery = -1
     private var wasCharging = false 
     private var isScreenOn = true 
+    private var isLandscapeNow = false // 🚀 Track orientation safely
+    private var topAppPackage = "" // 🚀 Track foreground app
 
     private var isMediaEnabled = true
     private var isChargingEnabled = true
@@ -58,6 +67,18 @@ class IslandController(private val context: Context) {
     private val mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
     private var activeMediaController: MediaController? = null
     private var mediaTickerJob: Job? = null
+
+    // 🚀 NEW: Failsafe Orientation Listener (Fixes the "Stuck Pill" bug in landscape/games)
+    private val orientationEventListener = object : OrientationEventListener(context, android.hardware.SensorManager.SENSOR_DELAY_NORMAL) {
+        override fun onOrientationChanged(orientation: Int) {
+            val rotation = try { windowManager?.defaultDisplay?.rotation ?: 0 } catch(e:Throwable){0}
+            val landscape = rotation == android.view.Surface.ROTATION_90 || rotation == android.view.Surface.ROTATION_270
+            if (isLandscapeNow != landscape) {
+                isLandscapeNow = landscape
+                evaluatePriority()
+            }
+        }
+    }
 
     private fun getBestMediaController(controllers: List<MediaController>?): MediaController? {
         if (!isMediaEnabled) return null 
@@ -74,10 +95,12 @@ class IslandController(private val context: Context) {
                 Intent.ACTION_SCREEN_OFF -> {
                     isScreenOn = false
                     stopMediaTicker()
+                    hardwareMonitorJob?.cancel() 
                 }
                 Intent.ACTION_SCREEN_ON -> {
                     isScreenOn = true
                     if (currentMedia?.isPlaying == true && isMediaEnabled) startMediaTicker()
+                    startHardwareMonitor() 
                     evaluatePriority() 
                 }
             }
@@ -91,9 +114,15 @@ class IslandController(private val context: Context) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
 
+    // 🚀 UPDATED: Now receives OTPs and App Changes from system_server
     private val ecosystemReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             when (intent.action) {
+                "com.example.dynamicisland.APP_CHANGED" -> {
+                    topAppPackage = intent.getStringExtra("pkg") ?: ""
+                    evaluatePriority() // Triggers hide if game is blacklisted
+                }
+                // (Phase 2 will implement the specific OTP model logic here)
                 "com.crdroid.batterywellbeing.SYSTEM_OVERRIDE" -> {
                     if (!isAlertsEnabled) return
                     when (intent.getStringExtra("action")) {
@@ -173,8 +202,7 @@ class IslandController(private val context: Context) {
     }
 
     private val componentCallbacks = object : android.content.ComponentCallbacks2 {
-        override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { evaluatePriority() }
-        @Suppress("OVERRIDE_DEPRECATION")
+        override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {}
         override fun onLowMemory() {}
         override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
     }
@@ -184,7 +212,20 @@ class IslandController(private val context: Context) {
         val view = DynamicIslandView(context, moduleContext)
         this.islandView = view 
         this.windowManager = wm 
-        view.onSplitPillClick = { val sModel = _splitModel.value; if (sModel is LiveActivityModel.Charging) { _islandState.value = IslandState.TYPE_CUBE } }
+        
+        // 🚀 FEATURE 5: Long Click Charging Pill -> Opens Battery Wellbeing
+        view.onSplitPillClick = { 
+            val sModel = _splitModel.value; 
+            if (sModel is LiveActivityModel.Charging) { 
+                try {
+                    val intent = Intent().setComponent(ComponentName("com.crdroid.batterywellbeing", "com.crdroid.batterywellbeing.MainActivity"))
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    context.startActivity(intent)
+                } catch(e: Throwable) {
+                    _islandState.value = IslandState.TYPE_CUBE 
+                }
+            } 
+        }
         view.windowManager = wm
         view.windowParams = params
 
@@ -302,7 +343,7 @@ class IslandController(private val context: Context) {
                         else if (_islandState.value == IslandState.TYPE_2_MID || _islandState.value == IslandState.TYPE_SPLIT) { _islandState.value = IslandState.TYPE_3_MAX } 
                         else if (_islandState.value == IslandState.TYPE_3_MAX) {
                             try {
-                                @android.annotation.SuppressLint("WrongConstant")
+                                @SuppressLint("WrongConstant")
                                 val sbs = context.getSystemService("statusbar")
                                 val expandMethod = sbs?.javaClass?.getMethod("expandNotificationsPanel")
                                 expandMethod?.invoke(sbs)
@@ -345,12 +386,15 @@ class IslandController(private val context: Context) {
         } catch (e: Throwable) {}
     }
 
+    // 🚀 BULLETPROOF FIX: Safely checks landscape and active game modes to force hide
     private fun evaluatePriority() {
-        val rotation = try { windowManager?.defaultDisplay?.rotation ?: 0 } catch(e: Throwable) { 0 }
-        val isLandscapeNow = rotation == android.view.Surface.ROTATION_90 || rotation == android.view.Surface.ROTATION_270
         val isAlertCritical = transientModel?.isCritical == true
+        val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+        val blacklistedGames = prefs.getString("gaming_blacklist", "com.dts.freefiremax,com.tencent.ig") ?: ""
+        val isBlacklistedAppActive = blacklistedGames.contains(topAppPackage)
         
-        if ((isLandscapeNow || currentHardware?.isGamingModeOn == true) && !isAlertCritical) {
+        // Hide instantly if in landscape, playing a blacklisted game, or gaming mode is on
+        if ((isLandscapeNow || currentHardware?.isGamingModeOn == true || isBlacklistedAppActive) && !isAlertCritical) {
             _islandState.value = IslandState.HIDDEN
             return
         }
@@ -457,22 +501,34 @@ class IslandController(private val context: Context) {
             var bgColor: Int? = null; var txtColor: Int = android.graphics.Color.WHITE
 
             if (albumArtBitmap != null && !albumArtBitmap.isRecycled) {
-                @Suppress("DEPRECATION")
+                
+                var rs: android.renderscript.RenderScript? = null
+                var input: android.renderscript.Allocation? = null
+                var output: android.renderscript.Allocation? = null
+                var script: android.renderscript.ScriptIntrinsicBlur? = null
+                
                 try {
-                    val rs = android.renderscript.RenderScript.create(context)
-                    val input = android.renderscript.Allocation.createFromBitmap(rs, albumArtBitmap)
-                    val output = android.renderscript.Allocation.createTyped(rs, input.type)
-                    val script = android.renderscript.ScriptIntrinsicBlur.create(rs, android.renderscript.Element.U8_4(rs))
+                    rs = android.renderscript.RenderScript.create(context)
+                    input = android.renderscript.Allocation.createFromBitmap(rs, albumArtBitmap)
+                    output = android.renderscript.Allocation.createTyped(rs, input.type)
+                    script = android.renderscript.ScriptIntrinsicBlur.create(rs, android.renderscript.Element.U8_4(rs))
+                    
                     script.setRadius(24f)
                     script.setInput(input)
                     script.forEach(output)
+                    
                     blurredArtBitmap = Bitmap.createBitmap(albumArtBitmap.width, albumArtBitmap.height, albumArtBitmap.config ?: Bitmap.Config.ARGB_8888)
                     output.copyTo(blurredArtBitmap)
-                    rs.destroy()
-                } catch (e: Throwable) { blurredArtBitmap = albumArtBitmap }
+                } catch (e: Throwable) { 
+                    blurredArtBitmap = albumArtBitmap 
+                } finally {
+                    input?.destroy()
+                    output?.destroy()
+                    script?.destroy()
+                    rs?.destroy()
+                }
 
                 try {
-                    // 🚀 BULLETPROOF FIX: Prevent Palette crash if bitmap gets recycled mid-extraction
                     if (!albumArtBitmap.isRecycled) {
                         val palette = Palette.from(albumArtBitmap).generate()
                         val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
@@ -534,10 +590,25 @@ class IslandController(private val context: Context) {
     }
     private fun stopMediaTicker() { mediaTickerJob?.cancel() }
 
+    private fun startHardwareMonitor() {
+        hardwareMonitorJob?.cancel()
+        hardwareMonitorJob = scope.launch { 
+            HardwareMonitors.startMonitoring().collect { hw -> 
+                currentHardware = hw; evaluatePriority() 
+            } 
+        }
+    }
+
     private fun setupHardwareMonitor() {
-        val filter = IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) }
+        val filter = IntentFilter().apply { 
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON) 
+            addAction("com.example.dynamicisland.APP_CHANGED") // Add custom receiver
+            addAction("com.example.dynamicisland.OTP_CAUGHT")
+        }
         context.registerReceiver(screenStateReceiver, filter)
         context.registerComponentCallbacks(componentCallbacks)
+        orientationEventListener.enable() // 🚀 FIX: Start listening for orientation changes!
         
         val ecoFilter = IntentFilter().apply {
             addAction("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE")
@@ -545,6 +616,7 @@ class IslandController(private val context: Context) {
             addAction("com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING")
             addAction("com.crdroid.batterywellbeing.REALITY_PILL_TICK")
             addAction("com.crdroid.batterywellbeing.SYNC_CONFIG")
+            addAction("com.example.dynamicisland.APP_CHANGED")
         }
 
         val securePermission = "com.redwood.permission.SECURE_IPC"
@@ -571,12 +643,13 @@ class IslandController(private val context: Context) {
              islandView?.updateBattery(level, isCharging)
         }
         BatteryPlugin.start(context)
-        scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; evaluatePriority() } }
+        startHardwareMonitor()  
     }
     init { setupHardwareMonitor(); setupMediaListener() }
     
     fun cleanup() { 
         scope.cancel()
+        orientationEventListener.disable()
         try { context.unregisterReceiver(screenStateReceiver) } catch(e: Throwable){}
         try { context.unregisterComponentCallbacks(componentCallbacks) } catch(e: Throwable){}
         BatteryPlugin.stop(context)
