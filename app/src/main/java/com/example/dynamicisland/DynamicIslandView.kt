@@ -4,9 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.Bundle
-import android.view.Gravity
-import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.animation.*
@@ -29,11 +26,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.shadow 
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -47,10 +43,10 @@ import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontWeight 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp 
 import androidx.lifecycle.*
 import androidx.savedstate.*
 import de.robv.android.xposed.XSharedPreferences
@@ -87,8 +83,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var expandUpwards = mutableStateOf(false)
 
     var isCubeRotationEnabled = mutableStateOf(true)
-    var customOffsetY = mutableFloatStateOf(0f)
-    var customBaseWidth = mutableFloatStateOf(100f)
     var activeTheme = mutableStateOf(IslandTheme())
     var globalBatteryLevel = mutableIntStateOf(100)
     var globalIsCharging = mutableStateOf(false)
@@ -96,7 +90,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     
     var displayCutoutWidth = mutableFloatStateOf(0f)
     var pinnedApps = mutableStateListOf<String>("", "", "", "", "", "", "", "")
-    var qsTiles = mutableStateListOf<String>("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
+    var qsTiles = mutableStateListOf<String>("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings") 
 
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
@@ -119,6 +113,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     private val lifecycleOwner = OverlayLifecycleOwner()
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
+    
+    // 🚀 ADVANCED AUDIT: Prevent SystemUI memory leak
+    private var insetsListenerProxy: Any? = null
 
     private val insetsUpdateFlow = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(
         replay = 1, onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
@@ -150,13 +147,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     padT.value = intent.getFloatExtra("pad_t", padT.value); padB.value = intent.getFloatExtra("pad_b", padB.value); padL.value = intent.getFloatExtra("pad_l", padL.value); padR.value = intent.getFloatExtra("pad_r", padR.value)
                     ringThickness.value = intent.getFloatExtra("ring_thickness", ringThickness.value)
                     expandUpwards.value = intent.getBooleanExtra("expand_upwards", expandUpwards.value)
-                    
                     for (i in 0..7) { val pkg = intent.getStringExtra("pinned_app_$i"); if (pkg != null) pinnedApps[i] = pkg }
-                    for (i in 0..6) { val qs = intent.getStringExtra("qs_tile_$i"); if (qs != null) qsTiles[i] = qs }
+                    for (i in 0..6) { val qs = intent.getStringExtra("qs_tile_$i"); if (qs != null) qsTiles[i] = qs } 
                 } 
-
-                customOffsetY.floatValue = intent.getFloatExtra("tweak_offset_y", customOffsetY.floatValue)
-                customBaseWidth.floatValue = intent.getFloatExtra("tweak_base_width", customBaseWidth.floatValue)
 
                 val capString = intent.getStringExtra("theme_media_cap") ?: "Round"
                 val parsedCap = if (capString == "Square") StrokeCap.Square else StrokeCap.Round
@@ -172,7 +165,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     batteryRingThickness = intent.getFloatExtra("theme_bat_ring", 12f).dp,
                     cornerRadius = intent.getFloatExtra("theme_corner_radius", 50f).dp,
                     albumArtSize = intent.getFloatExtra("theme_album_art_size", 44f).dp,
-                    
                     buttonSize = intent.getFloatExtra("theme_button_size", 48f).dp,
                     buttonSpacing = intent.getFloatExtra("theme_button_spacing", 16f).dp,
                     buttonCornerRadius = intent.getFloatExtra("theme_button_radius", 50f).dp,
@@ -191,7 +183,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         try {
             val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
-            val listener = java.lang.reflect.Proxy.newProxyInstance(context.classLoader, arrayOf(listenerClass)) { _, method, args ->
+            insetsListenerProxy = java.lang.reflect.Proxy.newProxyInstance(context.classLoader, arrayOf(listenerClass)) { _, method, args ->
                 if (method.name == "onComputeInternalInsets") {
                     val info = args[0]
                     val touchableInsetsRegion = info.javaClass.getField("TOUCHABLE_INSETS_REGION").getInt(null)
@@ -205,7 +197,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 }
                 null
             }
-            viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, listener)
+            viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListenerProxy)
         } catch (e: Exception) {}
 
         val composeView = ComposeView(context).apply {
@@ -226,16 +218,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-
-        val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            windowManager?.currentWindowMetrics?.windowInsets?.displayCutout
-        } else null
+        val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { windowManager?.currentWindowMetrics?.windowInsets?.displayCutout } else null
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
 
         flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
-            insetsUpdateFlow.debounce(50).collect {
-                this@DynamicIslandView.requestLayout()
-            }
+            insetsUpdateFlow.debounce(50).collect { this@DynamicIslandView.requestLayout() }
         }
 
         val filter = IntentFilter("com.example.dynamicisland.RELOAD_PREFS")
@@ -250,6 +237,15 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
+        
+        // 🚀 ADVANCED AUDIT: Wipe ViewTreeObserver Native Reference
+        try {
+            if (insetsListenerProxy != null) {
+                val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
+                viewTreeObserver.javaClass.getMethod("removeOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListenerProxy)
+            }
+        } catch (e: Exception) {}
+
         flowJob?.cancel()
         flowJob = null
         lifecycleOwner.destroy()
@@ -271,19 +267,25 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         val rawTargetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
         val targetWidth = rawTargetWidth.coerceAtLeast(minSafeWidth)
-        val targetHeight = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniH.value; IslandState.TYPE_2_MID -> midH.value; IslandState.TYPE_3_MAX -> maxH.value; IslandState.TYPE_CUBE -> cubeH.value; else -> ringH.value }
+        val model = activeModel.value
+        val targetHeight = when (state) { 
+            IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniH.value
+            IslandState.TYPE_2_MID -> midH.value
+            IslandState.TYPE_3_MAX -> if (model is LiveActivityModel.Music) (maxH.value * 0.70f) else maxH.value
+            IslandState.TYPE_CUBE -> cubeH.value 
+            else -> ringH.value 
+        }
         val targetX = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value; IslandState.TYPE_2_MID -> midX.value; IslandState.TYPE_3_MAX -> maxX.value; IslandState.TYPE_CUBE -> cubeX.value; else -> ringX.value }
         val targetY = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value; IslandState.TYPE_2_MID -> midY.value; IslandState.TYPE_3_MAX -> maxY.value; IslandState.TYPE_CUBE -> cubeY.value; else -> ringY.value }
 
-        val physicsSpec = spring<Dp>(dampingRatio = 0.72f, stiffness = 200f)
+        // 🚀 ADVANCED AUDIT: Refined Fluid Drag & Elastic Physics
+        val physicsSpec = spring<Dp>(dampingRatio = 0.65f, stiffness = 250f)
         val width by animateDpAsState(targetWidth.dp, physicsSpec, label = "width")
         val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
-        val offsetX by animateFloatAsState(targetX, spring<Float>(dampingRatio=0.82f, stiffness=350f), label = "x")
-        val offsetY by animateFloatAsState(targetY, spring<Float>(dampingRatio=0.82f, stiffness=350f), label = "y")
+        val offsetX by animateFloatAsState(targetX, spring<Float>(dampingRatio=0.65f, stiffness=250f), label = "x")
+        val offsetY by animateFloatAsState(targetY, spring<Float>(dampingRatio=0.65f, stiffness=250f), label = "y")
         val radTarget = when (state) { IslandState.TYPE_3_MAX -> 42.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_CUBE -> 24.dp; else -> (targetHeight / 2).dp }
         val rad by animateDpAsState(radTarget, physicsSpec, label = "rad")
-
-        val model = activeModel.value
 
         val targetBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.Black
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
@@ -312,7 +314,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
 
         Row(
-            modifier = Modifier.fillMaxWidth().offset(x = offsetX.dp, y = offsetY.dp).height(maxH.value.dp), 
+            modifier = Modifier
+                .fillMaxWidth()
+                // 🚀 ADVANCED AUDIT: Zero-Recomposition Translation (60fps lock)
+                .graphicsLayer {
+                    translationX = offsetX.dp.toPx()
+                    translationY = offsetY.coerceAtLeast(0f).dp.toPx()
+                }
+                .height(maxH.value.dp), 
             horizontalArrangement = Arrangement.Center, 
             verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
         ) {
@@ -372,9 +381,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 dragOffsetX = 0f; dragOffsetY = 0f
                             }
                         ) { change, dragAmount ->
-                            if (abs(dragAmount.x) > 5f || abs(dragAmount.y) > 5f) {
-                                change.consume()
-                            }
+                            if (abs(dragAmount.x) > 5f || abs(dragAmount.y) > 5f) { change.consume() }
                             dragOffsetX += dragAmount.x
                             dragOffsetY += dragAmount.y
                         }
@@ -415,6 +422,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                             is LiveActivityModel.Charging -> ChargingMid(model)
                                             is LiveActivityModel.SystemAlert -> SystemAlertMid(model)
                                             is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model)
+                                            is LiveActivityModel.OngoingTask -> OngoingTaskMid(model)
                                             else -> {}
                                         }
                                     }
@@ -448,8 +456,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
                         if (shouldShowRing) {
                             val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
-                            val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
-                            
                             val baseColor = if (isMedia) {
                                 musicModel?.dominantColor?.let { Color(it) } ?: Color.White
                             } else if (globalIsCharging.value) {
@@ -470,18 +476,31 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             val progressColor = baseColor.copy(alpha = pulseAlpha)
 
                             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
+                                // 🚀 ADVANCED AUDIT: Deferred State Reading inside Draw Phase eliminates recomposition!
+                                val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
                                 val strokeW = ringThickness.value.dp.toPx() 
                                 val inset = strokeW / 2
                                 val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
                                 val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
                                 val progressPercent = progress.coerceIn(0f, 1f)
-                                val capStyle = if (progressPercent >= 0.99f) StrokeCap.Butt else StrokeCap.Round
 
-                                val sweepGradient = Brush.sweepGradient(0.0f to progressColor.copy(alpha = 0.2f), 0.8f to progressColor, 1.0f to progressColor.copy(alpha = 0.2f))
+                                val sweepGradient = Brush.sweepGradient(0.0f to progressColor.copy(alpha = 0.4f), 0.8f to progressColor, 1.0f to progressColor.copy(alpha = 0.4f))
 
-                                drawArc(color = baseColor.copy(alpha=0.15f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
-                                drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW + 6f, cap = capStyle), alpha = 0.4f)
-                                drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = capStyle))
+                                drawArc(color = baseColor.copy(alpha=0.35f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
+                                drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Butt), alpha = 0.95f)
+
+                                val markerLength = strokeW * 1.3f
+                                val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+                                val radius = (size.width - strokeW) / 2
+                                
+                                drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(center.x, center.y - radius - markerLength/2), end = androidx.compose.ui.geometry.Offset(center.x, center.y - radius + markerLength/2), strokeWidth = 4f)
+                                
+                                val angleRad = Math.toRadians((-90f + 360f * progressPercent).toDouble())
+                                val mStartX = center.x + (radius - markerLength/2) * Math.cos(angleRad).toFloat()
+                                val mStartY = center.y + (radius - markerLength/2) * Math.sin(angleRad).toFloat()
+                                val mEndX = center.x + (radius + markerLength/2) * Math.cos(angleRad).toFloat()
+                                val mEndY = center.y + (radius + markerLength/2) * Math.sin(angleRad).toFloat()
+                                drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(mStartX, mStartY), end = androidx.compose.ui.geometry.Offset(mEndX, mEndY), strokeWidth = 4f)
                             }
                         }
                     }
