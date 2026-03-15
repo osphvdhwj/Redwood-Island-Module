@@ -1,6 +1,7 @@
 package com.example.dynamicisland
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.PixelFormat
 import android.view.Gravity
 import android.view.WindowManager
@@ -12,64 +13,110 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 class MainHook : IXposedHookLoadPackage {
 
+    private var islandController: IslandController? = null
+    private var isInitialized = false
+
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
-        if (lpparam.packageName != "com.android.systemui") return
-
-        try {
-            // Hook SystemUI's creation to inject our WindowManager overlay
-            XposedHelpers.findAndHookMethod(
-                "com.android.systemui.SystemUIApplication",
-                lpparam.classLoader,
-                "onCreate",
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        val context = param.thisObject as Context
-                        injectDynamicIsland(context)
-                    }
-                }
-            )
-        } catch (e: Exception) {
-            XposedBridge.log("DynamicIsland: Failed to hook SystemUI - ${e.message}")
-        }
-    }
-
-    private fun injectDynamicIsland(systemUiContext: Context) {
-        // Wrap in a Handler to delay execution by 15 seconds
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+        
+        // 🧠 PROCESS 1: SYSTEM_SERVER (Hooks logic for OTPs and Gaming)
+        if (lpparam.packageName == "android") {
             try {
-                XposedBridge.log("RedwoodIsland: Starting delayed injection...")
-                val windowManager = systemUiContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-
-                // LayoutParams restored to WRAP_CONTENT to allow dynamic pill resizing
-                val layoutParams = WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.WRAP_CONTENT,
-                    WindowManager.LayoutParams.WRAP_CONTENT,
-                    2024, // TYPE_NAVIGATION_BAR_PANEL
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or // 🚀 FIX: Ignore screen bounds
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,   // 🚀 FIX: Allow drawing anywhere
-                    android.graphics.PixelFormat.TRANSLUCENT
-                ).apply {
-                    gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
-                    title = "RedwoodIslandOverlay"
-
-                    // 🚀 FIX: Force draw OVER and ABOVE the camera punch hole
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                        layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-                    }
+                // Hook 1: Activity Manager (Detects when a game is opened)
+                val atmsClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader)
+                if (atmsClass != null) {
+                    XposedHelpers.findAndHookMethod(atmsClass, "setResumedActivityUncheckLocked",
+                        "com.android.server.wm.ActivityRecord", String::class.java,
+                        object : XC_MethodHook() {
+                            override fun afterHookedMethod(param: MethodHookParam) {
+                                try {
+                                    val activityRecord = param.args[0] ?: return
+                                    val packageName = XposedHelpers.getObjectField(activityRecord, "packageName") as? String ?: return
+                                    val mContext = XposedHelpers.getObjectField(param.thisObject, "mContext") as? Context
+                                    mContext?.sendBroadcast(Intent("com.example.dynamicisland.APP_CHANGED").putExtra("pkg", packageName))
+                                } catch (e: Throwable) {}
+                            }
+                        }
+                    )
                 }
 
-                val controller = IslandController(systemUiContext)
-                val islandView = controller.createIslandView(windowManager, layoutParams)
-
-                windowManager.addView(islandView, layoutParams)
-                XposedBridge.log("RedwoodIsland: Successfully injected overlay with dynamic bounds.")
-            } catch (e: Exception) {
-                XposedBridge.log("RedwoodIsland: FATAL ERROR during injection: ${e.message}")
+                // Hook 2: Notification Manager (Catches OTPs silently)
+                val nmsClass = XposedHelpers.findClassIfExists("com.android.server.notification.NotificationManagerService", lpparam.classLoader)
+                if (nmsClass != null) {
+                    XposedHelpers.findAndHookMethod(nmsClass, "enqueueNotificationInternal", 
+                        String::class.java, String::class.java, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, 
+                        String::class.java, Int::class.javaPrimitiveType, android.app.Notification::class.java, Int::class.javaPrimitiveType,
+                        object : XC_MethodHook() {
+                            override fun afterHookedMethod(param: MethodHookParam) {
+                                try {
+                                    val pkgName = param.args[0] as? String ?: return
+                                    val notification = param.args[6] as? android.app.Notification ?: return
+                                    val text = notification.extras.getString(android.app.Notification.EXTRA_TEXT) ?: return
+                                    
+                                    if (text.contains("OTP", true) || text.contains("code", true) || text.contains("verification", true)) {
+                                        val otpRegex = Regex("\\b\\d{4,8}\\b")
+                                        val match = otpRegex.find(text)
+                                        if (match != null) {
+                                            val mContext = XposedHelpers.getObjectField(param.thisObject, "mContext") as? Context
+                                            mContext?.sendBroadcast(Intent("com.example.dynamicisland.OTP_CAUGHT").putExtra("otp", match.value).putExtra("pkg", pkgName))
+                                        }
+                                    }
+                                } catch (e: Throwable) {}
+                            }
+                        }
+                    )
+                }
+            } catch (e: Throwable) {
+                XposedBridge.log("DynamicIsland: system_server hook failed -> ${e.message}")
             }
-        }, 15000) // 15 Second delay gives you time to disable module if it crashes
+            return
+        }
+
+        // 👁️ PROCESS 2: SYSTEM_UI (Injects the visual pill)
+        if (lpparam.packageName == "com.android.systemui") {
+            try {
+                val systemUIApplicationClass = XposedHelpers.findClassIfExists("com.android.systemui.SystemUIApplication", lpparam.classLoader) ?: return
+
+                XposedHelpers.findAndHookMethod(
+                    systemUIApplicationClass,
+                    "onCreate",
+                    object : XC_MethodHook() {
+                        override fun afterHookedMethod(param: MethodHookParam) {
+                            if (isInitialized) return
+                            try {
+                                val context = param.thisObject as Context
+                                val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+
+                                android.os.Handler(context.mainLooper).post {
+                                    try {
+                                        val layoutParams = WindowManager.LayoutParams(
+                                            WindowManager.LayoutParams.MATCH_PARENT,
+                                            WindowManager.LayoutParams.WRAP_CONTENT,
+                                            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                                            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                                                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                                                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                                                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                                            PixelFormat.TRANSLUCENT
+                                        ).apply {
+                                            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                                            title = "Redwood Dynamic Island"
+                                            layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                                        }
+
+                                        islandController = IslandController(context)
+                                        val islandView = islandController?.createIslandView(windowManager, layoutParams)
+
+                                        if (islandView != null) {
+                                            windowManager.addView(islandView, layoutParams)
+                                            isInitialized = true
+                                        }
+                                    } catch (e: Throwable) {}
+                                }
+                            } catch (e: Throwable) {}
+                        }
+                    }
+                )
+            } catch (e: Throwable) {}
+        }
     }
 }
