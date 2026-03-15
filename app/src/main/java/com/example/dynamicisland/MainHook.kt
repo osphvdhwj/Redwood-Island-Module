@@ -21,6 +21,7 @@ class MainHook : IXposedHookLoadPackage {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
+        // 1. SYSTEM SERVER HOOKS (Gaming Blacklist, OTPs, Live Activities)
         if (lpparam.packageName == "android") {
             try {
                 val atmsClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader)
@@ -57,7 +58,7 @@ class MainHook : IXposedHookLoadPackage {
                                     val title = extras.getString(android.app.Notification.EXTRA_TITLE) ?: ""
                                     val isOngoing = (notification.flags and android.app.Notification.FLAG_ONGOING_EVENT) != 0
 
-                                    // 🚀 ADVANCED AUDIT: Live Activity Interception
+                                    // Catch Live Activities (Maps, Downloads, etc)
                                     if (isOngoing && pkgName != "com.android.systemui" && pkgName != "android") {
                                         val progress = extras.getInt(android.app.Notification.EXTRA_PROGRESS, -1)
                                         val progressMax = extras.getInt(android.app.Notification.EXTRA_PROGRESS_MAX, -1)
@@ -72,6 +73,7 @@ class MainHook : IXposedHookLoadPackage {
                                         mContext?.sendBroadcast(intent)
                                     }
 
+                                    // Catch OTPs
                                     if (text.contains("OTP", true) || text.contains("code", true) || text.contains("verification", true)) {
                                         val otpRegex = Regex("\\b\\d{4,8}\\b")
                                         val match = otpRegex.find(text)
@@ -88,6 +90,7 @@ class MainHook : IXposedHookLoadPackage {
             return
         }
 
+        // 2. SYSTEM UI HOOK (Using the un-bypassable Instrumentation target)
         if (lpparam.packageName == "com.android.systemui") {
             try {
                 XposedHelpers.findAndHookMethod(
@@ -105,9 +108,9 @@ class MainHook : IXposedHookLoadPackage {
                                         val windowManager = app.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
                                         val layoutParams = WindowManager.LayoutParams(
-                                            WindowManager.LayoutParams.WRAP_CONTENT,
-                                            WindowManager.LayoutParams.WRAP_CONTENT,
-                                            2024,
+                                            WindowManager.LayoutParams.MATCH_PARENT, // Width matches screen for centering
+                                            WindowManager.LayoutParams.MATCH_PARENT, // Height matches screen for touches
+                                            2024, // TYPE_NAVIGATION_BAR_PANEL
                                             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                                                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                                                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
@@ -128,9 +131,10 @@ class MainHook : IXposedHookLoadPackage {
 
                                         if (islandView != null) {
                                             windowManager.addView(islandView, layoutParams)
+                                            XposedBridge.log("Redwood: Successfully injected overlay.")
                                         }
                                     } catch (e: Throwable) { }
-                                }, 3000)
+                                }, 3000) // Delay to let SystemUI boot fully
                             }
                         }
                     }
