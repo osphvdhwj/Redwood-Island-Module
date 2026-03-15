@@ -27,7 +27,6 @@ class IslandController(private val context: Context) {
     private var windowManager: WindowManager? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     
-    // Concurrency-safe StateFlows
     private val _islandState = MutableStateFlow(IslandState.TYPE_0_RING)
     val islandState = _islandState.asStateFlow()
     private val _activeModel = MutableStateFlow<LiveActivityModel?>(null)
@@ -95,6 +94,12 @@ class IslandController(private val context: Context) {
                     val progressMax = intent.getIntExtra("progressMax", -1)
                     if (progress != -1 && progressMax > 0) postTransientNotification(LiveActivityModel.OngoingTask(pkgName = pkg, title = title, text = text, progress = progress, progressMax = progressMax), 4000L)
                 }
+                // 🚀 NEW: Visual OTP Catcher Intercept
+                "com.example.dynamicisland.OTP_CAUGHT" -> {
+                    val otpCode = intent.getStringExtra("otp") ?: return
+                    val pkg = intent.getStringExtra("pkg") ?: "System"
+                    postTransientNotification(LiveActivityModel.Otp(code = otpCode, sourceApp = pkg), 8000L) // 8 second visibility
+                }
                 "com.crdroid.batterywellbeing.SYSTEM_OVERRIDE" -> {
                     if (!isAlertsEnabled) return
                     when (intent.getStringExtra("action")) {
@@ -159,23 +164,44 @@ class IslandController(private val context: Context) {
                 "NEXT_TRACK" -> sendMediaCommand("NEXT")
                 "PREV_TRACK" -> sendMediaCommand("PREV")
                 "OPEN_DASHBOARD" -> { _activeModel.update { LiveActivityModel.Dashboard() }; _islandState.update { IslandState.TYPE_3_MAX } }
+                
+                // 🚀 REFINED UX: Graceful Step-by-Step Collapse (Max -> Mid -> Mini/Ring)
                 "COLLAPSE" -> {
-                    if (_activeModel.value is LiveActivityModel.Dashboard && currentMedia != null) {
-                        userForceCollapsed = currentMedia?.isPlaying == false
-                        _islandState.update { if (currentMedia?.isPlaying == true) IslandState.TYPE_1_MINI else IslandState.TYPE_0_RING }
-                        _activeModel.update { currentMedia }
-                    } else {
-                        userForceCollapsed = true
+                    if (_activeModel.value is LiveActivityModel.Dashboard) {
                         _islandState.update { IslandState.TYPE_0_RING }
+                        userForceCollapsed = true
+                    } else {
+                        when (_islandState.value) {
+                            IslandState.TYPE_3_MAX -> _islandState.update { IslandState.TYPE_2_MID }
+                            IslandState.TYPE_2_MID -> {
+                                if (currentMedia?.isPlaying == true) {
+                                    _islandState.update { IslandState.TYPE_1_MINI }
+                                } else {
+                                    userForceCollapsed = true
+                                    _islandState.update { IslandState.TYPE_0_RING }
+                                }
+                            }
+                            IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> {
+                                userForceCollapsed = true
+                                _islandState.update { IslandState.TYPE_0_RING }
+                            }
+                            else -> {}
+                        }
                     }
                     evaluatePriority()
                 }
+                
+                // 🚀 REFINED UX: Graceful Step-by-Step Expand
                 "EXPAND" -> {
                     userForceCollapsed = false
                     when (_islandState.value) {
-                        IslandState.TYPE_0_RING -> { if (currentMedia != null) _islandState.update { IslandState.TYPE_1_MINI } else { _activeModel.update { LiveActivityModel.Dashboard() }; _islandState.update { IslandState.TYPE_3_MAX } } }
-                        IslandState.TYPE_1_MINI -> { if (currentMedia?.isPlaying == false) { _activeModel.update { LiveActivityModel.Dashboard() }; _islandState.update { IslandState.TYPE_3_MAX } } else _islandState.update { IslandState.TYPE_2_MID } }
-                        IslandState.TYPE_2_MID, IslandState.TYPE_SPLIT -> _islandState.update { IslandState.TYPE_3_MAX }
+                        IslandState.TYPE_0_RING -> { 
+                            if (currentMedia != null) _islandState.update { IslandState.TYPE_1_MINI } 
+                            else { _activeModel.update { LiveActivityModel.Dashboard() }; _islandState.update { IslandState.TYPE_2_MID } } 
+                        }
+                        IslandState.TYPE_1_MINI -> _islandState.update { IslandState.TYPE_2_MID }
+                        IslandState.TYPE_2_MID -> _islandState.update { IslandState.TYPE_3_MAX }
+                        IslandState.TYPE_SPLIT -> _islandState.update { IslandState.TYPE_2_MID }
                         else -> {}
                     }
                 }
@@ -187,6 +213,10 @@ class IslandController(private val context: Context) {
         view.onPrevClick = { sendMediaCommand("PREV") }
         view.onNextClick = { sendMediaCommand("NEXT") }
         view.onSeekTo = { position -> activeMediaController?.transportControls?.seekTo(position) }
+
+        // 🚀 NEW: Drag Handle Gestures from View
+        view.onDragHandleExpand = { view.onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN) }
+        view.onDragHandleCollapse = { view.onGestureEvent?.invoke(IslandGesture.SWIPE_UP) }
 
         scope.launch { islandState.collect { state -> view.setState(state) } }
         scope.launch { activeModel.collect { model -> view.setModel(model) } }
@@ -212,7 +242,7 @@ class IslandController(private val context: Context) {
         if (transientModel != null) {
             userForceCollapsed = false
             if (currentHardware?.isGamingModeOn == true && transientModel is LiveActivityModel.Charging) { } 
-            else if (transientModel is LiveActivityModel.SystemAlert || transientModel is LiveActivityModel.AppTimerWarning || transientModel is LiveActivityModel.OngoingTask) {
+            else if (transientModel is LiveActivityModel.SystemAlert || transientModel is LiveActivityModel.AppTimerWarning || transientModel is LiveActivityModel.OngoingTask || transientModel is LiveActivityModel.Otp) {
                 _activeModel.update { transientModel }; _splitModel.update { null }; _islandState.update { IslandState.TYPE_2_MID }
             } else if (transientModel is LiveActivityModel.RealityPill) {
                 _activeModel.update { transientModel }; _splitModel.update { null }; _islandState.update { IslandState.TYPE_1_MINI }
@@ -290,12 +320,8 @@ class IslandController(private val context: Context) {
                     script.setRadius(24f); script.setInput(input); script.forEach(output)
                     blurredArtBitmap = Bitmap.createBitmap(albumArtBitmap.width, albumArtBitmap.height, albumArtBitmap.config ?: Bitmap.Config.ARGB_8888)
                     output.copyTo(blurredArtBitmap)
-                } catch (e: Exception) { 
-                    blurredArtBitmap = albumArtBitmap 
-                } finally { 
-                    // 🚀 The Memory Leak Fix!
-                    input?.destroy(); output?.destroy(); script?.destroy(); rs?.destroy() 
-                }
+                } catch (e: Exception) { blurredArtBitmap = albumArtBitmap 
+                } finally { input?.destroy(); output?.destroy(); script?.destroy(); rs?.destroy() }
 
                 val palette = Palette.from(albumArtBitmap).generate()
                 (palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch)?.let { swatch ->
@@ -336,7 +362,7 @@ class IslandController(private val context: Context) {
         context.registerReceiver(screenStateReceiver, IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) })
         context.registerComponentCallbacks(componentCallbacks)
         
-        val ecoFilter = IntentFilter().apply { listOf("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE", "com.crdroid.batterywellbeing.SYSTEM_ALERT", "com.example.dynamicisland.APP_CHANGED", "com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT").forEach { addAction(it) } }
+        val ecoFilter = IntentFilter().apply { listOf("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE", "com.crdroid.batterywellbeing.SYSTEM_ALERT", "com.example.dynamicisland.APP_CHANGED", "com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT", "com.example.dynamicisland.OTP_CAUGHT").forEach { addAction(it) } }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) context.registerReceiver(ecosystemReceiver, ecoFilter, "com.redwood.permission.SECURE_IPC", null, Context.RECEIVER_EXPORTED) else @Suppress("UnspecifiedRegisterReceiverFlag") context.registerReceiver(ecosystemReceiver, ecoFilter, "com.redwood.permission.SECURE_IPC", null)
 
         BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
