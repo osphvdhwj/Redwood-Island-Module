@@ -205,6 +205,7 @@ import de.robv.android.xposed.XSharedPreferences
     @Suppress("UNUSED_PARAMETER") 
     @Composable
     fun DynamicIslandView.DashboardMid(model: LiveActivityModel.Dashboard) {
+        val theme = LocalIslandTheme.current
         Row(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
             DashboardQuickToggle(Icons.Default.Wifi, true)
             DashboardQuickToggle(Icons.Default.Bluetooth, false)
@@ -261,7 +262,6 @@ import de.robv.android.xposed.XSharedPreferences
         val cameraManager = remember { try { context.getSystemService(Context.CAMERA_SERVICE) as? android.hardware.camera2.CameraManager } catch(e: Throwable) { null } }
         val cameraId = remember { try { cameraManager?.cameraIdList?.firstOrNull() } catch(e: Throwable) { null } }
 
-        // 🚀 FEATURE: Torch Brightness Support
         var torchLevel by remember { mutableIntStateOf(1) }
         var maxTorchLevel by remember { mutableIntStateOf(1) }
         
@@ -327,7 +327,6 @@ import de.robv.android.xposed.XSharedPreferences
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // 🚀 FEATURE: Only show Torch brightness if on and supported
             if (isTorchOn && maxTorchLevel > 1) {
                 AppleControlCenterSlider(
                     value = torchLevel.toFloat() / maxTorchLevel.toFloat(), 
