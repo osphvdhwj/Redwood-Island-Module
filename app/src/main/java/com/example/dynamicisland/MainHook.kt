@@ -3,6 +3,8 @@ package com.example.dynamicisland
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.WindowManager
 import de.robv.android.xposed.IXposedHookLoadPackage
@@ -18,10 +20,8 @@ class MainHook : IXposedHookLoadPackage {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
-        // 🧠 PROCESS 1: SYSTEM_SERVER (Hooks logic for OTPs and Gaming)
         if (lpparam.packageName == "android") {
             try {
-                // Hook 1: Activity Manager (Detects when a game is opened)
                 val atmsClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader)
                 if (atmsClass != null) {
                     XposedHelpers.findAndHookMethod(atmsClass, "setResumedActivityUncheckLocked",
@@ -39,7 +39,6 @@ class MainHook : IXposedHookLoadPackage {
                     )
                 }
 
-                // Hook 2: Notification Manager (Catches OTPs silently)
                 val nmsClass = XposedHelpers.findClassIfExists("com.android.server.notification.NotificationManagerService", lpparam.classLoader)
                 if (nmsClass != null) {
                     XposedHelpers.findAndHookMethod(nmsClass, "enqueueNotificationInternal", 
@@ -71,7 +70,6 @@ class MainHook : IXposedHookLoadPackage {
             return
         }
 
-        // 👁️ PROCESS 2: SYSTEM_UI (Injects the visual pill)
         if (lpparam.packageName == "com.android.systemui") {
             try {
                 val systemUIApplicationClass = XposedHelpers.findClassIfExists("com.android.systemui.SystemUIApplication", lpparam.classLoader) ?: return
@@ -86,7 +84,9 @@ class MainHook : IXposedHookLoadPackage {
                                 val context = param.thisObject as Context
                                 val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-                                android.os.Handler(context.mainLooper).post {
+                                // 🚀 FIX 3: Safe Looper Dispatch to prevent boot timing deadlocks
+                                val handler = Handler(Looper.getMainLooper())
+                                handler.post {
                                     try {
                                         val layoutParams = WindowManager.LayoutParams(
                                             WindowManager.LayoutParams.MATCH_PARENT,
