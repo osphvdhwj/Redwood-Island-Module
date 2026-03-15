@@ -113,8 +113,8 @@ import de.robv.android.xposed.XSharedPreferences
                 Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f, fill = false).safeMarquee(islandState.value))
             }
             
-            // 🚀 FEATURE: Timestamps elegantly framing the drag handle at the bottom
-            Row(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 32.dp, bottom = 2.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            // 🚀 FIX: Chained padding modifiers
+            Row(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 32.dp).padding(bottom = 2.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(text = formatTime(currentMediaPos.longValue), color = Color.White.copy(alpha=0.7f), fontSize = 9.sp)
                 Text(text = formatTime(music.durationMs), color = Color.White.copy(alpha=0.7f), fontSize = 9.sp)
             }
@@ -144,8 +144,8 @@ import de.robv.android.xposed.XSharedPreferences
                 }
             }
 
-            // 🚀 FEATURE: Timestamps elegantly framing the drag handle at the bottom
-            Row(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 48.dp, bottom = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            // 🚀 FIX: Chained padding modifiers
+            Row(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 48.dp).padding(bottom = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(text = formatTime(currentMediaPos.longValue), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 10.sp)
                 Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 10.sp)
             }
@@ -169,7 +169,6 @@ import de.robv.android.xposed.XSharedPreferences
             } catch (e: Exception) { audioIcon = Icons.Default.Smartphone; audioLabel = "Phone" }
         }
 
-        // 🚀 REVERTED: Original stable MusicMax layout restored!
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 if (music.appIcon != null) { Image(bitmap = music.appIcon.asImageBitmap(), contentDescription = "App Logo", modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))) } else Box(Modifier.size(36.dp).background(Color.White.copy(alpha=0.2f), RoundedCornerShape(10.dp)))
