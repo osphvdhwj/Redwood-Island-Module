@@ -50,8 +50,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import de.robv.android.xposed.XSharedPreferences
 
-
-    // 🚀 NEW: The Master Micro-Interaction Engine
     @Composable
     fun InteractiveIconButton(icon: ImageVector, tint: Color, baseSize: Dp, bgAlpha: Float = 0f, onClick: () -> Unit) {
         val theme = LocalIslandTheme.current
@@ -179,7 +177,6 @@ import de.robv.android.xposed.XSharedPreferences
 
             Spacer(modifier = Modifier.weight(1f))
             
-            // 🚀 UPDATED: Perfectly spaced and customized Media Buttons using new Config
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(theme.buttonSpacing, Alignment.CenterHorizontally)) {
                 val favoriteAction = music.customActions.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("thumb", true) }
                 if (favoriteAction != null) {
@@ -263,9 +260,9 @@ import de.robv.android.xposed.XSharedPreferences
 
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
             
-            // 🚀 UPDATED: Perfectly spaced QS Grid using custom config gaps
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(theme.buttonSpacing, Alignment.CenterHorizontally)) {
-                val activeQS = qsTiles.filter { it.isNotEmpty() && it != "None" }
+                // 🚀 EXPLICIT MAPPING to prevent Unresolved Reference errors
+                val activeQS = this@DynamicIslandView.qsTiles.filter { it.isNotEmpty() && it != "None" }
                 if (activeQS.isEmpty()) {
                     DashboardQuickToggle(Icons.Default.Settings, true, "Settings") { try { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
                 } else {
@@ -287,7 +284,7 @@ import de.robv.android.xposed.XSharedPreferences
 
             val pm = context.packageManager
             Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                val validApps = pinnedApps.filter { it.isNotEmpty() }
+                val validApps = this@DynamicIslandView.pinnedApps.filter { it.isNotEmpty() }
                 if (validApps.isEmpty()) {
                     Box(Modifier.size(36.dp).background(Color.White.copy(0.05f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, null, tint = Color.White.copy(0.3f), modifier = Modifier.size(16.dp)) }
                 } else {
@@ -327,7 +324,6 @@ import de.robv.android.xposed.XSharedPreferences
         }
     }
 
-    // 🚀 UPDATED: Tiles now strictly respect user Config sizes, shapes, and spacing
     @Composable
     fun DynamicIslandView.DashboardQuickToggle(icon: androidx.compose.ui.graphics.vector.ImageVector, isActive: Boolean, label: String? = null, onClick: () -> Unit = {}) {
         val theme = LocalIslandTheme.current
