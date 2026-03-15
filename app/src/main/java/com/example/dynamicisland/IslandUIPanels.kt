@@ -205,7 +205,6 @@ import de.robv.android.xposed.XSharedPreferences
     @Suppress("UNUSED_PARAMETER") 
     @Composable
     fun DynamicIslandView.DashboardMid(model: LiveActivityModel.Dashboard) {
-        val theme = LocalIslandTheme.current
         Row(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
             DashboardQuickToggle(Icons.Default.Wifi, true)
             DashboardQuickToggle(Icons.Default.Bluetooth, false)
@@ -244,7 +243,6 @@ import de.robv.android.xposed.XSharedPreferences
         val context = LocalContext.current
         val theme = LocalIslandTheme.current
         
-        // 🚀 EXPLICIT SCOPE CAPTURE: Pre-extracting lists to avoid lambda ambiguity
         val safeQsTiles: List<String> = this.qsTiles.toList()
         val safePinnedApps: List<String> = this.pinnedApps.toList()
 
@@ -262,6 +260,19 @@ import de.robv.android.xposed.XSharedPreferences
         var isTorchOn by remember { mutableStateOf(false) }
         val cameraManager = remember { try { context.getSystemService(Context.CAMERA_SERVICE) as? android.hardware.camera2.CameraManager } catch(e: Throwable) { null } }
         val cameraId = remember { try { cameraManager?.cameraIdList?.firstOrNull() } catch(e: Throwable) { null } }
+
+        // 🚀 FEATURE: Torch Brightness Support
+        var torchLevel by remember { mutableIntStateOf(1) }
+        var maxTorchLevel by remember { mutableIntStateOf(1) }
+        
+        LaunchedEffect(Unit) {
+            try {
+                if (cameraId != null) {
+                    val characteristics = cameraManager?.getCameraCharacteristics(cameraId)
+                    maxTorchLevel = characteristics?.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_STRENGTH_MAXIMUM_LEVEL) ?: 1
+                }
+            } catch(e: Throwable) {}
+        }
 
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
             
@@ -316,9 +327,22 @@ import de.robv.android.xposed.XSharedPreferences
 
             Spacer(modifier = Modifier.weight(1f))
 
-            AppleControlCenterSlider(value = brightness, onValueChange = { brightness = it }, activeColor = Color.Yellow, icon = Icons.Default.BrightnessHigh)
-            
-            Spacer(modifier = Modifier.weight(0.5f))
+            // 🚀 FEATURE: Only show Torch brightness if on and supported
+            if (isTorchOn && maxTorchLevel > 1) {
+                AppleControlCenterSlider(
+                    value = torchLevel.toFloat() / maxTorchLevel.toFloat(), 
+                    onValueChange = { 
+                        torchLevel = (it * maxTorchLevel).toInt().coerceAtLeast(1)
+                        try { cameraId?.let { id -> cameraManager?.turnOnTorchWithStrengthLevel(id, torchLevel) } } catch(e:Throwable){}
+                    }, 
+                    activeColor = Color.White, 
+                    icon = Icons.Default.FlashlightOn
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            } else {
+                AppleControlCenterSlider(value = brightness, onValueChange = { brightness = it }, activeColor = Color.Yellow, icon = Icons.Default.BrightnessHigh)
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
             var activeStream by remember { mutableIntStateOf(android.media.AudioManager.STREAM_MUSIC) }
             val maxVol = remember(activeStream) { val mv = audioManager.getStreamMaxVolume(activeStream).toFloat(); if (mv <= 0f) 1f else mv }
