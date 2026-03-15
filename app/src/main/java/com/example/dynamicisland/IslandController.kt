@@ -29,7 +29,6 @@ import org.json.JSONObject
 import android.util.LruCache
 import java.util.concurrent.ConcurrentHashMap
 
-
 class IslandController(private val context: Context) {
 
     private var windowManager: WindowManager? = null
@@ -54,8 +53,8 @@ class IslandController(private val context: Context) {
     private var lastReportedBattery = -1
     private var wasCharging = false 
     private var isScreenOn = true 
-    private var isLandscapeNow = false // 🚀 Track orientation safely
-    private var topAppPackage = "" // 🚀 Track foreground app
+    private var isLandscapeNow = false 
+    private var topAppPackage = "" 
 
     private var isMediaEnabled = true
     private var isChargingEnabled = true
@@ -68,7 +67,6 @@ class IslandController(private val context: Context) {
     private var activeMediaController: MediaController? = null
     private var mediaTickerJob: Job? = null
 
-    // 🚀 NEW: Failsafe Orientation Listener (Fixes the "Stuck Pill" bug in landscape/games)
     private val orientationEventListener = object : OrientationEventListener(context, android.hardware.SensorManager.SENSOR_DELAY_NORMAL) {
         override fun onOrientationChanged(orientation: Int) {
             val rotation = try { windowManager?.defaultDisplay?.rotation ?: 0 } catch(e:Throwable){0}
@@ -114,15 +112,13 @@ class IslandController(private val context: Context) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
 
-    // 🚀 UPDATED: Now receives OTPs and App Changes from system_server
     private val ecosystemReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             when (intent.action) {
                 "com.example.dynamicisland.APP_CHANGED" -> {
                     topAppPackage = intent.getStringExtra("pkg") ?: ""
-                    evaluatePriority() // Triggers hide if game is blacklisted
+                    evaluatePriority() 
                 }
-                // (Phase 2 will implement the specific OTP model logic here)
                 "com.crdroid.batterywellbeing.SYSTEM_OVERRIDE" -> {
                     if (!isAlertsEnabled) return
                     when (intent.getStringExtra("action")) {
@@ -213,7 +209,6 @@ class IslandController(private val context: Context) {
         this.islandView = view 
         this.windowManager = wm 
         
-        // 🚀 FEATURE 5: Long Click Charging Pill -> Opens Battery Wellbeing
         view.onSplitPillClick = { 
             val sModel = _splitModel.value; 
             if (sModel is LiveActivityModel.Charging) { 
@@ -386,15 +381,17 @@ class IslandController(private val context: Context) {
         } catch (e: Throwable) {}
     }
 
-    // 🚀 BULLETPROOF FIX: Safely checks landscape and active game modes to force hide
     private fun evaluatePriority() {
         val isAlertCritical = transientModel?.isCritical == true
         val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
         val blacklistedGames = prefs.getString("gaming_blacklist", "com.dts.freefiremax,com.tencent.ig") ?: ""
-        val isBlacklistedAppActive = blacklistedGames.contains(topAppPackage)
         
-        // Hide instantly if in landscape, playing a blacklisted game, or gaming mode is on
-        if ((isLandscapeNow || currentHardware?.isGamingModeOn == true || isBlacklistedAppActive) && !isAlertCritical) {
+        // 🚀 CRITICAL FIX 1: Ensure topAppPackage is not empty before checking the blacklist!
+        val isBlacklistedAppActive = topAppPackage.isNotEmpty() && blacklistedGames.contains(topAppPackage)
+        
+        // 🚀 CRITICAL FIX 2: Only hide if in Landscape or Playing a Blacklisted Game.
+        // (CPU Frequency was spiking randomly and hiding the island, so it has been removed here).
+        if ((isLandscapeNow || isBlacklistedAppActive) && !isAlertCritical) {
             _islandState.value = IslandState.HIDDEN
             return
         }
@@ -603,12 +600,12 @@ class IslandController(private val context: Context) {
         val filter = IntentFilter().apply { 
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON) 
-            addAction("com.example.dynamicisland.APP_CHANGED") // Add custom receiver
+            addAction("com.example.dynamicisland.APP_CHANGED") 
             addAction("com.example.dynamicisland.OTP_CAUGHT")
         }
         context.registerReceiver(screenStateReceiver, filter)
         context.registerComponentCallbacks(componentCallbacks)
-        orientationEventListener.enable() // 🚀 FIX: Start listening for orientation changes!
+        orientationEventListener.enable() 
         
         val ecoFilter = IntentFilter().apply {
             addAction("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE")
