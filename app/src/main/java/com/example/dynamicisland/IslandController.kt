@@ -1,9 +1,6 @@
 @file:Suppress("DEPRECATION")
 package com.example.dynamicisland
 
-import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -11,16 +8,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
-import android.hardware.camera2.CameraManager
 import android.media.MediaMetadata
 import android.media.Rating
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.util.Log
-import android.view.OrientationEventListener
 import android.view.WindowManager
-import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -105,6 +99,7 @@ class IslandController(private val context: Context) {
             when (intent.action) {
                 "com.example.dynamicisland.APP_CHANGED" -> {
                     topAppPackage = intent.getStringExtra("pkg") ?: ""
+                    Log.d("Redwood", "App Changed: $topAppPackage")
                     evaluatePriority() 
                 }
                 "com.crdroid.batterywellbeing.SYSTEM_OVERRIDE" -> {
@@ -132,54 +127,6 @@ class IslandController(private val context: Context) {
                     val colorHex = intent.getStringExtra("colorHex") ?: "#FFFFFF"
                     val colorInt = try { android.graphics.Color.parseColor(colorHex) } catch(e: Throwable) { android.graphics.Color.WHITE }
                     postTransientNotification(LiveActivityModel.SystemAlert(id = "sys_alert_$alertType", alertType = alertType, title = title, message = message, alertColor = colorInt), 5000L)
-                }
-                "com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING" -> {
-                    if (!isTimersEnabled) return
-                    val pkg = intent.getStringExtra("package_name") ?: return
-                    val providedAppName = intent.getStringExtra("app_name")
-                    scope.launch(Dispatchers.IO) {
-                        val pm = context.packageManager
-                        var appName = providedAppName ?: pkg
-                        var appIcon: Bitmap? = iconCache.get(pkg)
-                        if (appIcon == null) {
-                            try {
-                                val appInfo = pm.getApplicationInfo(pkg, 0)
-                                if (providedAppName == null) appName = pm.getApplicationLabel(appInfo).toString()
-                                val drawable = pm.getApplicationIcon(appInfo)
-                                val bmp = Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
-                                val canvas = android.graphics.Canvas(bmp)
-                                drawable.setBounds(0, 0, canvas.width, canvas.height)
-                                drawable.draw(canvas)
-                                appIcon = getScaledBitmap(bmp, 150)
-                                if (bmp != appIcon) { bmp.recycle() }
-                                appIcon?.let { iconCache.put(pkg, it) }
-                            } catch (e: Throwable) {}
-                        }
-                        withContext(Dispatchers.Main) { postTransientNotification(LiveActivityModel.AppTimerWarning(packageName = pkg, appName = appName, appIcon = appIcon, targetTimeMs = System.currentTimeMillis() + 60000L), 60000L) }
-                    }
-                }
-                "com.crdroid.batterywellbeing.REALITY_PILL_TICK" -> {
-                    if (!isTimersEnabled) return
-                    val appName = intent.getStringExtra("app_name") ?: "App"
-                    val sessionMinutes = intent.getIntExtra("session_minutes", 0)
-                    if (exemptedApps.contains(appName)) return
-                    postTransientNotification(LiveActivityModel.RealityPill(appName = appName, sessionMinutes = sessionMinutes), 3000L)
-                }
-                "com.crdroid.batterywellbeing.SYNC_CONFIG" -> {
-                    scope.launch(Dispatchers.IO) {
-                        try {
-                            val timersJson = intent.getStringExtra("timers_json") ?: "{}"
-                            if (timersJson.length > 5000) return@launch
-                            val json = org.json.JSONObject(timersJson)
-                            activeAppTimers.clear()
-                            json.keys().forEach { activeAppTimers[it] = json.getLong(it) }
-
-                            val exemptionsCsv = intent.getStringExtra("exemptions_csv") ?: ""
-                            if (exemptionsCsv.length > 2000) return@launch
-                            exemptedApps.clear()
-                            exemptionsCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { exemptedApps.add(it) }
-                        } catch (e: Throwable) {}
-                    }
                 }
             }
         }
@@ -277,63 +224,6 @@ class IslandController(private val context: Context) {
                         else -> {}
                     }
                 }
-                "OPEN_APP" -> {
-                    val model = _activeModel.value
-                    if (model is LiveActivityModel.Music && model.appPackageName.isNotEmpty()) {
-                        try {
-                            val launchIntent = context.packageManager.getLaunchIntentForPackage(model.appPackageName)
-                            if (launchIntent != null) {
-                                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                                val pendingIntent = PendingIntent.getActivity(context, 0, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-                                val options = android.app.ActivityOptions.makeBasic()
-                                try {
-                                    val method = android.app.ActivityOptions::class.java.getMethod("setPendingIntentBackgroundActivityStartMode", Int::class.javaPrimitiveType)
-                                    method.invoke(options, 1)
-                                } catch (e: Throwable) {}
-                                pendingIntent.send(context, 0, null, null, null, null, options.toBundle())
-                            }
-                        } catch (e: Throwable) {}
-                    }
-                }
-                "HEART_SONG" -> {
-                    val heartAction = currentMedia?.customActions?.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("like", true) }
-                    if (heartAction != null) activeMediaController?.transportControls?.sendCustomAction(heartAction.actionName, null)
-                    else activeMediaController?.transportControls?.setRating(Rating.newHeartRating(true))
-                }
-                "NONE" -> {
-                    if (gesture == IslandGesture.SWIPE_UP || gesture == IslandGesture.SWIPE_LEFT || gesture == IslandGesture.SWIPE_RIGHT) {
-                        if (_activeModel.value is LiveActivityModel.Dashboard) {
-                            _activeModel.value = currentMedia
-                            evaluatePriority() 
-                        } else {
-                            if (_islandState.value == IslandState.TYPE_3_MAX) _islandState.value = IslandState.TYPE_2_MID
-                            else if (_islandState.value == IslandState.TYPE_2_MID) _islandState.value = IslandState.TYPE_1_MINI
-                            else if (_islandState.value == IslandState.TYPE_1_MINI || _islandState.value == IslandState.TYPE_SPLIT) { userForceCollapsed = true; evaluatePriority() }
-                        }
-                    }
-                    if (gesture == IslandGesture.SWIPE_DOWN) {
-                        if (_islandState.value == IslandState.TYPE_0_RING) {
-                            if (currentMedia != null) _islandState.value = IslandState.TYPE_1_MINI 
-                            else { _activeModel.value = LiveActivityModel.Dashboard(); _islandState.value = IslandState.TYPE_3_MAX }
-                        } 
-                        else if (_islandState.value == IslandState.TYPE_1_MINI) { 
-                            if (currentMedia != null && currentMedia?.isPlaying == false) {
-                                _activeModel.value = LiveActivityModel.Dashboard(); _islandState.value = IslandState.TYPE_3_MAX
-                            } else {
-                                _islandState.value = IslandState.TYPE_2_MID 
-                            }
-                        } 
-                        else if (_islandState.value == IslandState.TYPE_2_MID || _islandState.value == IslandState.TYPE_SPLIT) { _islandState.value = IslandState.TYPE_3_MAX } 
-                        else if (_islandState.value == IslandState.TYPE_3_MAX) {
-                            try {
-                                @SuppressLint("WrongConstant")
-                                val sbs = context.getSystemService("statusbar")
-                                val expandMethod = sbs?.javaClass?.getMethod("expandNotificationsPanel")
-                                expandMethod?.invoke(sbs)
-                            } catch (e: Throwable) {}
-                        }
-                    }
-                }
             }
         }
         
@@ -351,7 +241,7 @@ class IslandController(private val context: Context) {
 
     private fun sendMediaCommand(command: String) {
         val controls = activeMediaController?.transportControls ?: return
-        try { when (command) { "PLAY" -> controls.play(); "PAUSE" -> controls.pause(); "NEXT" -> controls.skipToNext(); "PREV" -> controls.skipToPrevious() } } catch (e: android.os.DeadObjectException) { currentMedia = null; evaluatePriority() } catch (e: Throwable) {}
+        try { when (command) { "PLAY" -> controls.play(); "PAUSE" -> controls.pause(); "NEXT" -> controls.skipToNext(); "PREV" -> controls.skipToPrevious() } } catch (e: Throwable) {}
     }
 
     private fun adjustVolume(direction: Int) { try { val am = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager; am.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, direction, android.media.AudioManager.FLAG_SHOW_UI) } catch (e: Throwable) {} }
@@ -360,16 +250,13 @@ class IslandController(private val context: Context) {
         try {
             val intent = Intent("com.android.systemui.action.LAUNCH_SYSTEM_MEDIA_OUTPUT_DIALOG").apply { component = ComponentName("com.android.systemui", "com.android.systemui.media.dialog.MediaOutputDialogReceiver") }
             val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
-            val options = android.app.ActivityOptions.makeBasic()
-            try {
-                val method = android.app.ActivityOptions::class.java.getMethod("setPendingIntentBackgroundActivityStartMode", Int::class.javaPrimitiveType)
-                method.invoke(options, 1)
-            } catch (e: Throwable) {}
-            pendingIntent.send(context, 0, null, null, null, null, options.toBundle())
+            pendingIntent.send()
         } catch (e: Throwable) {}
     }
 
+    // 🚀 BULLETPROOF TRACKING: Will tell us exactly why the island is hiding!
     private fun evaluatePriority() {
+        Log.d("Redwood", "--- Evaluating Priority ---")
         val isAlertCritical = transientModel?.isCritical == true
         val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
         val blacklistedGames = prefs.getString("gaming_blacklist", "com.dts.freefiremax,com.tencent.ig") ?: ""
@@ -378,7 +265,10 @@ class IslandController(private val context: Context) {
         val isLandscapeNow = rotation == android.view.Surface.ROTATION_90 || rotation == android.view.Surface.ROTATION_270
         val isBlacklistedAppActive = topAppPackage.isNotEmpty() && blacklistedGames.contains(topAppPackage)
         
+        Log.d("Redwood", "Landscape: $isLandscapeNow | App: $topAppPackage | GameActive: $isBlacklistedAppActive | Transient: ${transientModel != null}")
+
         if ((isLandscapeNow || isBlacklistedAppActive) && !isAlertCritical) {
+            Log.d("Redwood", "HIDING: Landscape or Blacklisted Game is active.")
             _islandState.value = IslandState.HIDDEN
             return
         }
@@ -396,6 +286,7 @@ class IslandController(private val context: Context) {
             } else {
                 _activeModel.value = transientModel; _splitModel.value = null; _islandState.value = IslandState.TYPE_CUBE
             }
+            Log.d("Redwood", "STATE SET (Transient): ${_islandState.value.name}")
             return
         }
         
@@ -411,11 +302,13 @@ class IslandController(private val context: Context) {
             if (userForceCollapsed && _islandState.value != IslandState.TYPE_0_RING) {
                 _islandState.value = IslandState.TYPE_0_RING
             }
+            Log.d("Redwood", "STATE SET (Media): ${_islandState.value.name}")
             return
         }
         
         _activeModel.value = null
         _islandState.value = IslandState.TYPE_0_RING
+        Log.d("Redwood", "STATE SET (Idle): TYPE_0_RING")
     }
 
     fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
@@ -423,12 +316,11 @@ class IslandController(private val context: Context) {
         transientJob = scope.launch { delay(durationMs); transientModel = null; evaluatePriority() }
     }
 
-    // 🚀 FIX 4: Explicitly pass null for ComponentName to bypass SystemUI permission spoofing errors!
     private fun setupMediaListener() {
         try {
             mediaSessionManager.addOnActiveSessionsChangedListener(sessionListener, null)
             updateActiveMediaController(getBestMediaController(mediaSessionManager.getActiveSessions(null)))
-        } catch (e: Throwable) {}
+        } catch (e: Throwable) { Log.e("Redwood", "Failed to attach media listener", e) }
     }
 
     private fun updateActiveMediaController(controller: MediaController?) {
@@ -461,81 +353,29 @@ class IslandController(private val context: Context) {
         if (!isPlaying && currentMedia == null) return 
 
         val duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
-
-        val rawAlbumArt = try {
-            metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
-        } catch (e: Throwable) { null }
-
+        val rawAlbumArt = try { metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART) } catch (e: Throwable) { null }
         val albumArtBitmap = getScaledBitmap(rawAlbumArt)
         if (rawAlbumArt != null && rawAlbumArt != albumArtBitmap) { try { rawAlbumArt.recycle() } catch(e:Throwable){} }
 
-        var appIconBitmap: Bitmap? = null
-        try { 
-            val pm = context.packageManager
-            val drawable = pm.getApplicationIcon(controller.packageName)
-            val bmp = Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
-            val canvas = android.graphics.Canvas(bmp)
-            drawable.setBounds(0, 0, canvas.width, canvas.height)
-            drawable.draw(canvas)
-            appIconBitmap = getScaledBitmap(bmp, 150)
-            if (bmp != appIconBitmap) { bmp.recycle() }
-        } catch (e: Throwable) {}
-
         scope.launch(Dispatchers.IO) {
-            var blurredArtBitmap: Bitmap? = null
             var bgColor: Int? = null; var txtColor: Int = android.graphics.Color.WHITE
-
             if (albumArtBitmap != null && !albumArtBitmap.isRecycled) {
-                
-                var rs: android.renderscript.RenderScript? = null
-                var input: android.renderscript.Allocation? = null
-                var output: android.renderscript.Allocation? = null
-                var script: android.renderscript.ScriptIntrinsicBlur? = null
-                
                 try {
-                    rs = android.renderscript.RenderScript.create(context)
-                    input = android.renderscript.Allocation.createFromBitmap(rs, albumArtBitmap)
-                    output = android.renderscript.Allocation.createTyped(rs, input.type)
-                    script = android.renderscript.ScriptIntrinsicBlur.create(rs, android.renderscript.Element.U8_4(rs))
-                    
-                    script.setRadius(24f)
-                    script.setInput(input)
-                    script.forEach(output)
-                    
-                    blurredArtBitmap = Bitmap.createBitmap(albumArtBitmap.width, albumArtBitmap.height, albumArtBitmap.config ?: Bitmap.Config.ARGB_8888)
-                    output.copyTo(blurredArtBitmap)
-                } catch (e: Throwable) { 
-                    blurredArtBitmap = albumArtBitmap 
-                } finally {
-                    input?.destroy()
-                    output?.destroy()
-                    script?.destroy()
-                    rs?.destroy()
-                }
-
-                try {
-                    if (!albumArtBitmap.isRecycled) {
-                        val palette = Palette.from(albumArtBitmap).generate()
-                        val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
-                        if (swatch != null) {
-                            bgColor = swatch.rgb
-                            val luminance = androidx.core.graphics.ColorUtils.calculateLuminance(bgColor)
-                            txtColor = if (luminance > 0.5) android.graphics.Color.BLACK else android.graphics.Color.WHITE
-                        }
+                    val palette = Palette.from(albumArtBitmap).generate()
+                    val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
+                    if (swatch != null) {
+                        bgColor = swatch.rgb
+                        txtColor = if (androidx.core.graphics.ColorUtils.calculateLuminance(bgColor) > 0.5) android.graphics.Color.BLACK else android.graphics.Color.WHITE
                     }
                 } catch (e: Throwable) {}
             }
 
             withContext(Dispatchers.Main) {
-                currentMedia?.blurredAlbumArt?.takeIf { it != currentMedia?.albumArt }?.let { try{ it.recycle() }catch(e:Throwable){} }
-
                 val extractedActions = pbState.customActions.map { CustomMediaAction(it.action, null, null, true) }
-
                 currentMedia = LiveActivityModel.Music(
                     id = "media_main", title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown",
                     artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
-                    albumArt = albumArtBitmap, blurredAlbumArt = blurredArtBitmap,
-                    appIcon = appIconBitmap, dominantColor = bgColor, titleTextColor = txtColor,
+                    albumArt = albumArtBitmap, blurredAlbumArt = null, appIcon = null, dominantColor = bgColor, titleTextColor = txtColor,
                     isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position,
                     appPackageName = controller.packageName, customActions = extractedActions
                 )
@@ -545,11 +385,7 @@ class IslandController(private val context: Context) {
                     stopMediaTicker()
                     if (wasPlaying) {
                         pauseFadeJob?.cancel()
-                        pauseFadeJob = scope.launch { 
-                            delay(3000)
-                            userForceCollapsed = true 
-                            evaluatePriority() 
-                        }
+                        pauseFadeJob = scope.launch { delay(3000); userForceCollapsed = true; evaluatePriority() }
                     }
                 }
                 evaluatePriority()
@@ -564,9 +400,7 @@ class IslandController(private val context: Context) {
             while (isActive) { 
                 try {
                     activeMediaController?.playbackState?.position?.let { pos -> 
-                        (activeModel.value as? LiveActivityModel.Music)?.let { 
-                            islandView?.updateTicker(pos)
-                        }
+                        (activeModel.value as? LiveActivityModel.Music)?.let { islandView?.updateTicker(pos) }
                     }
                 } catch(e: Throwable){}
                 delay(1000) 
@@ -577,66 +411,29 @@ class IslandController(private val context: Context) {
 
     private fun startHardwareMonitor() {
         hardwareMonitorJob?.cancel()
-        hardwareMonitorJob = scope.launch { 
-            HardwareMonitors.startMonitoring().collect { hw -> 
-                currentHardware = hw; evaluatePriority() 
-            } 
-        }
+        hardwareMonitorJob = scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; evaluatePriority() } }
     }
 
     private fun setupHardwareMonitor() {
         val filter = IntentFilter().apply { 
-            addAction(Intent.ACTION_SCREEN_OFF)
-            addAction(Intent.ACTION_SCREEN_ON) 
-            addAction("com.example.dynamicisland.APP_CHANGED") 
-            addAction("com.example.dynamicisland.OTP_CAUGHT")
+            addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) 
+            addAction("com.example.dynamicisland.APP_CHANGED")
         }
         context.registerReceiver(screenStateReceiver, filter)
         context.registerComponentCallbacks(componentCallbacks)
         
-        val ecoFilter = IntentFilter().apply {
-            addAction("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE")
-            addAction("com.crdroid.batterywellbeing.SYSTEM_ALERT")
-            addAction("com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING")
-            addAction("com.crdroid.batterywellbeing.REALITY_PILL_TICK")
-            addAction("com.crdroid.batterywellbeing.SYNC_CONFIG")
-            addAction("com.example.dynamicisland.APP_CHANGED")
-        }
-
-        val securePermission = "com.redwood.permission.SECURE_IPC"
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(ecosystemReceiver, ecoFilter, securePermission, null, Context.RECEIVER_EXPORTED)
-        } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            context.registerReceiver(ecosystemReceiver, ecoFilter, securePermission, null)
-        }
-
         BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
              if (isChargingEnabled) {
-                 if (isCharging && !wasCharging) {
-                     postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true), 4000L)
-                 } else if (!isCharging) {
-                     if (lastReportedBattery != -1 && level < lastReportedBattery) {
-                         if (level == 20 || level == 10 || level == 5) postTransientNotification(LiveActivityModel.Charging(id = "sys_battery_low", level = level, isPluggedIn = false, isTransient = true).copy(type = ActivityType.BATTERY_LOW), 6000L)
-                     }
+                 if (isCharging && !wasCharging) { postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true), 4000L)
+                 } else if (!isCharging && lastReportedBattery != -1 && level < lastReportedBattery) {
+                     if (level == 20 || level == 10 || level == 5) postTransientNotification(LiveActivityModel.Charging(id = "sys_battery_low", level = level, isPluggedIn = false, isTransient = true).copy(type = ActivityType.BATTERY_LOW), 6000L)
                  }
              }
-             wasCharging = isCharging
-             lastReportedBattery = level
+             wasCharging = isCharging; lastReportedBattery = level
              islandView?.updateBattery(level, isCharging)
         }
         BatteryPlugin.start(context)
         startHardwareMonitor()  
     }
     init { setupHardwareMonitor(); setupMediaListener() }
-    
-    fun cleanup() { 
-        scope.cancel()
-        try { context.unregisterReceiver(screenStateReceiver) } catch(e: Throwable){}
-        try { context.unregisterComponentCallbacks(componentCallbacks) } catch(e: Throwable){}
-        BatteryPlugin.stop(context)
-        try { mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener) } catch(e: Throwable){} 
-        try { context.unregisterReceiver(ecosystemReceiver) } catch(e: Throwable){} 
-    }
 }
