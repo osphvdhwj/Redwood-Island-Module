@@ -18,7 +18,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -307,13 +306,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             if (model?.isSensitive == true) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE } else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv() }
 
             if (state == IslandState.HIDDEN) {
-                wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = 0 
+                wp.width = 0 
+                wp.height = 0 
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             } else {
-                wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = ((maxH.value + 150) * density).toInt(); wp.x = 0; wp.y = 0
+                wp.width = WindowManager.LayoutParams.MATCH_PARENT
+                wp.height = WindowManager.LayoutParams.MATCH_PARENT
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
-                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             }
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
         }
@@ -326,8 +325,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 .graphicsLayer {
                     translationX = offsetX.dp.toPx()
                     translationY = offsetY.coerceAtLeast(0f).dp.toPx()
-                }
-                .height(maxH.value.dp), 
+                }, 
             horizontalArrangement = Arrangement.Center, 
             verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
         ) {
@@ -462,6 +460,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
                         if (shouldShowRing) {
                             val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
+                            val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
+                            
                             val baseColor = if (isMedia) {
                                 musicModel?.dominantColor?.let { Color(it) } ?: Color.White
                             } else if (globalIsCharging.value) {
@@ -482,7 +482,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             val progressColor = baseColor.copy(alpha = pulseAlpha)
 
                             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
-                                val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
                                 val strokeW = ringThickness.value.dp.toPx() 
                                 val inset = strokeW / 2
                                 val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
