@@ -32,6 +32,7 @@ sealed class LiveActivityModel {
 
     data class RealityPill(override val id: String = "reality_pill", override val type: ActivityType = ActivityType.TIMER, val appName: String, val sessionMinutes: Int, override val isTransient: Boolean = true, override val isCritical: Boolean = false, override val isSensitive: Boolean = false) : LiveActivityModel()
 
-    // 🚀 NEW: The Live Activity Engine Model
     data class OngoingTask(override val id: String = "ongoing_task", override val type: ActivityType = ActivityType.ONGOING_TASK, val pkgName: String, val title: String, val text: String, val progress: Int, val progressMax: Int, override val isTransient: Boolean = true, override val isCritical: Boolean = false, override val isSensitive: Boolean = false) : LiveActivityModel()
+
+    data class Otp(override val id: String = "otp", override val type: ActivityType = ActivityType.MESSAGE, val code: String, val sourceApp: String, override val isTransient: Boolean = true, override val isCritical: Boolean = true, override val isSensitive: Boolean = true) : LiveActivityModel()
 }
