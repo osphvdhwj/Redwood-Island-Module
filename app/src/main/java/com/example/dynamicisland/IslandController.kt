@@ -18,6 +18,7 @@ import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.util.Log
+import android.view.OrientationEventListener
 import android.view.WindowManager
 import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
@@ -196,7 +197,6 @@ class IslandController(private val context: Context) {
         this.islandView = view 
         this.windowManager = wm 
         
-        // 🚀 FEATURE: Battery Wellbeing Intent on Long-Click
         view.onSplitPillClick = { 
             val sModel = _splitModel.value; 
             if (sModel is LiveActivityModel.Charging) { 
@@ -369,7 +369,6 @@ class IslandController(private val context: Context) {
         } catch (e: Throwable) {}
     }
 
-    // 🚀 BULLETPROOF FIX: Safely reads live orientation to fix Landscape sticking!
     private fun evaluatePriority() {
         val isAlertCritical = transientModel?.isCritical == true
         val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
@@ -424,10 +423,11 @@ class IslandController(private val context: Context) {
         transientJob = scope.launch { delay(durationMs); transientModel = null; evaluatePriority() }
     }
 
+    // 🚀 FIX 4: Explicitly pass null for ComponentName to bypass SystemUI permission spoofing errors!
     private fun setupMediaListener() {
         try {
-            mediaSessionManager.addOnActiveSessionsChangedListener(sessionListener, ComponentName(context, "com.example.dynamicisland.DummyListener"))
-            updateActiveMediaController(getBestMediaController(mediaSessionManager.getActiveSessions(ComponentName(context, "com.example.dynamicisland.DummyListener"))))
+            mediaSessionManager.addOnActiveSessionsChangedListener(sessionListener, null)
+            updateActiveMediaController(getBestMediaController(mediaSessionManager.getActiveSessions(null)))
         } catch (e: Throwable) {}
     }
 
