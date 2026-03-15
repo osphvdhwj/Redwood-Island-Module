@@ -1,11 +1,8 @@
 package com.example.dynamicisland
 
-import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
-import android.os.Handler
-import android.os.Looper
 import android.view.Gravity
 import android.view.WindowManager
 import de.robv.android.xposed.IXposedHookLoadPackage
@@ -15,9 +12,6 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 class MainHook : IXposedHookLoadPackage {
-
-    private var islandController: IslandController? = null
-    private var isInitialized = false
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
@@ -90,56 +84,61 @@ class MainHook : IXposedHookLoadPackage {
             return
         }
 
-        // 2. SYSTEM UI HOOK (Using the un-bypassable Instrumentation target)
-        if (lpparam.packageName == "com.android.systemui") {
-            try {
-                XposedHelpers.findAndHookMethod(
-                    Application::class.java,
-                    "onCreate",
-                    object : XC_MethodHook() {
-                        override fun afterHookedMethod(param: MethodHookParam) {
-                            val app = param.thisObject as Application
-                            if (app.packageName == "com.android.systemui") {
-                                if (isInitialized) return
-                                isInitialized = true
-                                
-                                Handler(Looper.getMainLooper()).postDelayed({
-                                    try {
-                                        val windowManager = app.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        // 2. SYSTEM UI HOOK (Restored to perfectly stable 15s delay & SystemUIApplication)
+        if (lpparam.packageName != "com.android.systemui") return
 
-                                        val layoutParams = WindowManager.LayoutParams(
-                                            WindowManager.LayoutParams.MATCH_PARENT, // Width matches screen for centering
-                                            WindowManager.LayoutParams.MATCH_PARENT, // Height matches screen for touches
-                                            2024, // TYPE_NAVIGATION_BAR_PANEL
-                                            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                                                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                                                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                                                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
-                                                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or 
-                                                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
-                                            PixelFormat.TRANSLUCENT
-                                        ).apply {
-                                            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                                            title = "Redwood Dynamic Island"
-                                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                                                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-                                            }
-                                        }
-
-                                        islandController = IslandController(app)
-                                        val islandView = islandController?.createIslandView(windowManager, layoutParams)
-
-                                        if (islandView != null) {
-                                            windowManager.addView(islandView, layoutParams)
-                                            XposedBridge.log("Redwood: Successfully injected overlay.")
-                                        }
-                                    } catch (e: Throwable) { }
-                                }, 3000) // Delay to let SystemUI boot fully
-                            }
-                        }
+        try {
+            XposedHelpers.findAndHookMethod(
+                "com.android.systemui.SystemUIApplication",
+                lpparam.classLoader,
+                "onCreate",
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        val context = param.thisObject as Context
+                        injectDynamicIsland(context)
                     }
-                )
-            } catch (e: Throwable) { }
+                }
+            )
+        } catch (e: Exception) {
+            XposedBridge.log("DynamicIsland: Failed to hook SystemUI - ${e.message}")
         }
+    }
+
+    private fun injectDynamicIsland(systemUiContext: Context) {
+        // 🚀 PROVEN STABLE: 15 Second delay ensures SystemUI finishes building its internal components first!
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            try {
+                XposedBridge.log("RedwoodIsland: Starting delayed injection...")
+                val windowManager = systemUiContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+
+                val layoutParams = WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    2024, // TYPE_NAVIGATION_BAR_PANEL
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or 
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,   
+                    android.graphics.PixelFormat.TRANSLUCENT
+                ).apply {
+                    gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
+                    title = "RedwoodIslandOverlay"
+
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                        layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                    }
+                }
+
+                val controller = IslandController(systemUiContext)
+                val islandView = controller.createIslandView(windowManager, layoutParams)
+
+                windowManager.addView(islandView, layoutParams)
+                XposedBridge.log("RedwoodIsland: Successfully injected overlay with dynamic bounds.")
+            } catch (e: Exception) {
+                XposedBridge.log("RedwoodIsland: FATAL ERROR during injection: ${e.message}")
+            }
+        }, 15000) 
     }
 }
