@@ -4,6 +4,9 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Bundle
+import android.view.Gravity
+import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.animation.*
@@ -30,6 +33,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.TransformOrigin // explicitly imported
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -59,10 +63,20 @@ import kotlin.math.abs
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
+    init { savedStateRegistryController.performRestore(Bundle()) }
     override val lifecycle: Lifecycle get() = lifecycleRegistry
     override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
-    fun start() { savedStateRegistryController.performRestore(android.os.Bundle()); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME) }
-    fun destroy() { lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY) }
+    
+    fun attach() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+    }
+    fun detach() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    }
 }
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
@@ -83,6 +97,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var expandUpwards = mutableStateOf(false)
 
     var isCubeRotationEnabled = mutableStateOf(true)
+    var customOffsetY = mutableFloatStateOf(0f)
+    var customBaseWidth = mutableFloatStateOf(100f)
     var activeTheme = mutableStateOf(IslandTheme())
     var globalBatteryLevel = mutableIntStateOf(100)
     var globalIsCharging = mutableStateOf(false)
@@ -114,7 +130,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
     
-    // 🚀 ADVANCED AUDIT: Prevent SystemUI memory leak
     private var insetsListenerProxy: Any? = null
 
     private val insetsUpdateFlow = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(
@@ -151,20 +166,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     for (i in 0..6) { val qs = intent.getStringExtra("qs_tile_$i"); if (qs != null) qsTiles[i] = qs } 
                 } 
 
-                val capString = intent.getStringExtra("theme_media_cap") ?: "Round"
-                val parsedCap = if (capString == "Square") StrokeCap.Square else StrokeCap.Round
-
                 activeTheme.value = IslandTheme(
-                    mediaBarCap = parsedCap,
-                    mediaBarThickness = intent.getFloatExtra("theme_media_thick", 4f).dp,
-                    titleOffsetX = intent.getFloatExtra("theme_title_x", 0f).dp,
-                    titleOffsetY = intent.getFloatExtra("theme_title_y", 0f).dp,
-                    titleSize = intent.getFloatExtra("theme_title_size", 16f).sp,
-                    timeTextSize = intent.getFloatExtra("theme_time_size", 12f).sp,
-                    timeTextOffsetX = intent.getFloatExtra("theme_time_x", 0f).dp,
-                    batteryRingThickness = intent.getFloatExtra("theme_bat_ring", 12f).dp,
-                    cornerRadius = intent.getFloatExtra("theme_corner_radius", 50f).dp,
-                    albumArtSize = intent.getFloatExtra("theme_album_art_size", 44f).dp,
                     buttonSize = intent.getFloatExtra("theme_button_size", 48f).dp,
                     buttonSpacing = intent.getFloatExtra("theme_button_spacing", 16f).dp,
                     buttonCornerRadius = intent.getFloatExtra("theme_button_radius", 50f).dp,
@@ -238,7 +240,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         
-        // 🚀 ADVANCED AUDIT: Wipe ViewTreeObserver Native Reference
         try {
             if (insetsListenerProxy != null) {
                 val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
@@ -278,7 +279,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val targetX = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value; IslandState.TYPE_2_MID -> midX.value; IslandState.TYPE_3_MAX -> maxX.value; IslandState.TYPE_CUBE -> cubeX.value; else -> ringX.value }
         val targetY = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value; IslandState.TYPE_2_MID -> midY.value; IslandState.TYPE_3_MAX -> maxY.value; IslandState.TYPE_CUBE -> cubeY.value; else -> ringY.value }
 
-        // 🚀 ADVANCED AUDIT: Refined Fluid Drag & Elastic Physics
         val physicsSpec = spring<Dp>(dampingRatio = 0.65f, stiffness = 250f)
         val width by animateDpAsState(targetWidth.dp, physicsSpec, label = "width")
         val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
@@ -316,7 +316,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                // 🚀 ADVANCED AUDIT: Zero-Recomposition Translation (60fps lock)
                 .graphicsLayer {
                     translationX = offsetX.dp.toPx()
                     translationY = offsetY.coerceAtLeast(0f).dp.toPx()
@@ -344,7 +343,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     .width(width).height(height)
                     .graphicsLayer { 
                         scaleX = squishX; scaleY = squishY 
-                        transformOrigin = TransformOrigin(0.5f, 0f)
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)
                     }
                     .clip(RoundedCornerShape(rad))
                     .background(bgColor).border(0.5.dp, borderColor, RoundedCornerShape(rad))
@@ -476,7 +475,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             val progressColor = baseColor.copy(alpha = pulseAlpha)
 
                             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
-                                // 🚀 ADVANCED AUDIT: Deferred State Reading inside Draw Phase eliminates recomposition!
                                 val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
                                 val strokeW = ringThickness.value.dp.toPx() 
                                 val inset = strokeW / 2
