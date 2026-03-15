@@ -164,7 +164,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     batteryRingThickness = intent.getFloatExtra("theme_bat_ring", 12f).dp,
                     cornerRadius = intent.getFloatExtra("theme_corner_radius", 50f).dp,
                     albumArtSize = intent.getFloatExtra("theme_album_art_size", 44f).dp,
-                    buttonSize = intent.getFloatExtra("theme_button_size", 48f).dp
+                    buttonSize = intent.getFloatExtra("theme_button_size", 48f).dp,
+                    buttonSpacing = intent.getFloatExtra("theme_button_spacing", 16f).dp,
+                    buttonCornerRadius = intent.getFloatExtra("theme_button_radius", 50f).dp,
+                    actionAnimType = intent.getStringExtra("theme_anim_type") ?: "BOUNCE"
                 )
 
                 val payload = intent.getStringExtra("gesture_payload")
