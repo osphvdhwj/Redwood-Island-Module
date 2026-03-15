@@ -40,7 +40,7 @@ class ConfigActivity : ComponentActivity() {
     @Composable
     fun ConfigScreen(prefs: android.content.SharedPreferences) {
         var selectedTab by remember { mutableIntStateOf(0) }
-        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures", "Pinning", "Tweaks", "Theme", "Features")
+        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures", "Dashboard", "Tweaks", "Theme", "Features")
 
         var w by remember { mutableFloatStateOf(0f) }
         var h by remember { mutableFloatStateOf(0f) }
@@ -52,7 +52,7 @@ class ConfigActivity : ComponentActivity() {
         val currentPrefix = tabs[selectedTab].lowercase()
 
         LaunchedEffect(selectedTab) {
-            if (currentPrefix != "gestures" && currentPrefix != "pinning" && currentPrefix != "tweaks" && currentPrefix != "theme" && currentPrefix != "features") {
+            if (currentPrefix != "gestures" && currentPrefix != "dashboard" && currentPrefix != "tweaks" && currentPrefix != "theme" && currentPrefix != "features") {
                 w = prefs.getFloat("${currentPrefix}_w", getDefaultWidth(currentPrefix))
                 h = prefs.getFloat("${currentPrefix}_h", getDefaultHeight(currentPrefix))
                 x = prefs.getFloat("${currentPrefix}_x", 0f)
@@ -63,7 +63,7 @@ class ConfigActivity : ComponentActivity() {
 
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxWidth().height(250.dp).background(Color.Black), contentAlignment = if (expandUpwards) Alignment.BottomCenter else Alignment.TopCenter) {
-                if (currentPrefix != "gestures" && currentPrefix != "pinning" && currentPrefix != "tweaks" && currentPrefix != "theme" && currentPrefix != "features") {
+                if (currentPrefix != "gestures" && currentPrefix != "dashboard" && currentPrefix != "tweaks" && currentPrefix != "theme" && currentPrefix != "features") {
                     Box(modifier = Modifier.offset(x = x.dp, y = y.dp).width(w.dp).height(h.dp).background(Color.White.copy(alpha = 0.6f), RoundedCornerShape(if(currentPrefix == "max") 42.dp else (h/2).dp)))
                 } else Text("Universal Matrix Config", color = Color.White, modifier = Modifier.align(Alignment.Center))
             }
@@ -99,45 +99,82 @@ class ConfigActivity : ComponentActivity() {
                             }
                         }
                     }
-                } else if (currentPrefix == "pinning") {
-                    Text(text = "Control Center Shortcuts", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(text = "Select 8 apps to pin to your Max Dashboard.", fontSize = 14.sp, color = Color.Gray)
+                } else if (currentPrefix == "dashboard") {
+                    Text(text = "Quick Settings Grid", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
+                    Text(text = "Select 7 hardware toggles.", fontSize = 14.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    val pm = LocalContext.current.packageManager
-                    val installedApps = remember {
-                        // 🚀 BULLETPROOF FIX: Use 0 instead of GET_META_DATA to prevent Binder crashes, catch Throwables
-                        try {
-                            pm.getInstalledApplications(0)
-                                .filter { appInfo -> try { pm.getLaunchIntentForPackage(appInfo.packageName) != null } catch(e:Throwable){false} }
-                                .map { appInfo -> Pair(appInfo.loadLabel(pm).toString(), appInfo.packageName) }
-                                .sortedBy { pair -> pair.first }
-                        } catch(e: Throwable) { emptyList() }
-                    }
-
-                    val pinnedApps = listOf("Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Slot 6", "Slot 7", "Slot 8")
-                    pinnedApps.forEachIndexed { index, slot ->
+                    val availableQS = listOf("None", "WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
+                    val qsSlots = listOf("QS 1", "QS 2", "QS 3", "QS 4", "QS 5", "QS 6", "QS 7")
+                    qsSlots.forEachIndexed { index, slot ->
                         var expanded by remember { mutableStateOf(false) }
-                        var selectedAppPkg by remember { mutableStateOf(prefs.getString("pinned_app_$index", "") ?: "") }
-                        val selectedAppName = installedApps.find { it.second == selectedAppPkg }?.first ?: "None"
+                        var selectedQS by remember { mutableStateOf(prefs.getString("qs_tile_$index", availableQS[index + 1]) ?: availableQS[index + 1]) }
 
                         @OptIn(ExperimentalMaterial3Api::class)
                         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                             OutlinedTextField(
-                                value = selectedAppName, onValueChange = {}, readOnly = true, label = { Text(slot) },
+                                value = selectedQS, onValueChange = {}, readOnly = true, label = { Text(slot) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                                 modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp)
                             )
                             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                DropdownMenuItem(text = { Text("None") }, onClick = {
-                                    selectedAppPkg = ""; prefs.edit().putString("pinned_app_$index", "").apply(); expanded = false
-                                    broadcastUpdate("pinning", 0f, 0f, 0f, 0f, 0f, false)
-                                })
-                                installedApps.forEach { pair ->
-                                    DropdownMenuItem(text = { Text(pair.first) }, onClick = {
-                                        selectedAppPkg = pair.second; prefs.edit().putString("pinned_app_$index", pair.second).apply(); expanded = false
-                                        broadcastUpdate("pinning", 0f, 0f, 0f, 0f, 0f, false)
+                                availableQS.forEach { tile ->
+                                    DropdownMenuItem(text = { Text(tile) }, onClick = {
+                                        selectedQS = tile; prefs.edit().putString("qs_tile_$index", tile).apply(); expanded = false
+                                        broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
                                     })
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(text = "App Dock Pinning", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
+                    Text(text = "Select 8 apps to pin.", fontSize = 14.sp, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val pm = LocalContext.current.packageManager
+                    var installedApps by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+                    
+                    LaunchedEffect(Unit) {
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            try {
+                                val apps = pm.getInstalledApplications(0)
+                                    .filter { appInfo -> try { pm.getLaunchIntentForPackage(appInfo.packageName) != null } catch(e:Throwable){false} }
+                                    .map { appInfo -> Pair(appInfo.loadLabel(pm).toString(), appInfo.packageName) }
+                                    .sortedBy { pair -> pair.first }
+                                installedApps = apps
+                            } catch(e: Throwable) {}
+                        }
+                    }
+
+                    if (installedApps.isEmpty()) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp))
+                    } else {
+                        val pinnedApps = listOf("App 1", "App 2", "App 3", "App 4", "App 5", "App 6", "App 7", "App 8")
+                        pinnedApps.forEachIndexed { index, slot ->
+                            var expanded by remember { mutableStateOf(false) }
+                            var selectedAppPkg by remember { mutableStateOf(prefs.getString("pinned_app_$index", "") ?: "") }
+                            val selectedAppName = installedApps.find { it.second == selectedAppPkg }?.first ?: "None"
+
+                            @OptIn(ExperimentalMaterial3Api::class)
+                            ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                                OutlinedTextField(
+                                    value = selectedAppName, onValueChange = {}, readOnly = true, label = { Text(slot) },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp)
+                                )
+                                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                    DropdownMenuItem(text = { Text("None") }, onClick = {
+                                        selectedAppPkg = ""; prefs.edit().putString("pinned_app_$index", "").apply(); expanded = false
+                                        broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
+                                    })
+                                    installedApps.forEach { pair ->
+                                        DropdownMenuItem(text = { Text(pair.first) }, onClick = {
+                                            selectedAppPkg = pair.second; prefs.edit().putString("pinned_app_$index", pair.second).apply(); expanded = false
+                                            broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
+                                        })
+                                    }
                                 }
                             }
                         }
@@ -159,38 +196,48 @@ class ConfigActivity : ComponentActivity() {
                     Text(text = "Customize the physical appearance of inner elements.", fontSize = 14.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    @Composable
-                    fun ThemeSlider(label: String, key: String, default: Float, range: ClosedFloatingPointRange<Float>) {
-                        var value by remember { mutableFloatStateOf(prefs.getFloat(key, default)) }
-                        Text(text = "$label: ${value.toInt()}", color = Color.White, modifier = Modifier.padding(top = 8.dp))
-                        Slider(value = value, onValueChange = {
-                            value = it; prefs.edit().putFloat(key, it).apply(); sendGestureUpdate(prefs, this@ConfigActivity)
-                        }, valueRange = range)
+                    // 🚀 NEW: Big Pill Button Settings
+                    Text("Interactive Buttons (Max Pill)", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF00FFCC))
+                    
+                    var animExpanded by remember { mutableStateOf(false) }
+                    var selectedAnim by remember { mutableStateOf(prefs.getString("theme_anim_type", "BOUNCE") ?: "BOUNCE") }
+                    @OptIn(ExperimentalMaterial3Api::class)
+                    ExposedDropdownMenuBox(expanded = animExpanded, onExpandedChange = { animExpanded = !animExpanded }) {
+                        OutlinedTextField(value = selectedAnim, onValueChange = {}, readOnly = true, label = { Text("Click Animation Type") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = animExpanded) }, modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 8.dp))
+                        ExposedDropdownMenu(expanded = animExpanded, onDismissRequest = { animExpanded = false }) {
+                            listOf("CHECKMARK", "BOUNCE", "PULSE", "NONE").forEach { opt ->
+                                DropdownMenuItem(text = { Text(opt) }, onClick = { selectedAnim = opt; prefs.edit().putString("theme_anim_type", opt).apply(); animExpanded = false; sendGestureUpdate(prefs, this@ConfigActivity) })
+                            }
+                        }
                     }
 
-                    ThemeSlider("Corner Radius", "theme_corner_radius", 50f, 10f..100f)
-                    ThemeSlider("Global Text Size (sp)", "theme_text_primary", 16f, 10f..30f)
-                    ThemeSlider("Global Subtext Size (sp)", "theme_text_secondary", 14f, 8f..24f)
-                    ThemeSlider("Global Progress Thickness", "theme_progress_thick", 4f, 1f..15f)
-                    ThemeSlider("Global Element Gap (Spacing)", "theme_element_gap", 8f, 0f..32f)
+                    ThemeSlider("Button Icon Size (dp)", "theme_button_size", 48f, 20f..80f, prefs)
+                    ThemeSlider("Gap Between Buttons (dp)", "theme_button_spacing", 16f, 0f..40f, prefs)
+                    ThemeSlider("Button Shape (0=Square, 50=Circle)", "theme_button_radius", 50f, 0f..50f, prefs)
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    ThemeSlider("Corner Radius", "theme_corner_radius", 50f, 10f..100f, prefs)
+                    ThemeSlider("Global Text Size (sp)", "theme_text_primary", 16f, 10f..30f, prefs)
+                    ThemeSlider("Global Subtext Size (sp)", "theme_text_secondary", 14f, 8f..24f, prefs)
+                    ThemeSlider("Global Progress Thickness", "theme_progress_thick", 4f, 1f..15f, prefs)
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Music Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Cyan)
-                    ThemeSlider("Title Text Size", "theme_music_title", 16f, 10f..30f)
-                    ThemeSlider("Artist Text Size", "theme_music_artist", 14f, 8f..24f)
-                    ThemeSlider("Seeker Thickness", "theme_music_seeker", 4f, 1f..15f)
-                    ThemeSlider("Control Button Size", "theme_music_btn", 48f, 24f..72f)
+                    ThemeSlider("Title Text Size", "theme_music_title", 16f, 10f..30f, prefs)
+                    ThemeSlider("Artist Text Size", "theme_music_artist", 14f, 8f..24f, prefs)
+                    ThemeSlider("Seeker Thickness", "theme_music_seeker", 4f, 1f..15f, prefs)
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Battery Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Green)
-                    ThemeSlider("Cube Text Size", "theme_bat_text", 16f, 10f..30f)
-                    ThemeSlider("Cube Icon Size", "theme_bat_icon", 36f, 16f..72f)
-                    ThemeSlider("Ring Thickness", "theme_bat_ring", 12f, 2f..25f)
+                    ThemeSlider("Cube Text Size", "theme_bat_text", 16f, 10f..30f, prefs)
+                    ThemeSlider("Cube Icon Size", "theme_bat_icon", 36f, 16f..72f, prefs)
+                    ThemeSlider("Ring Thickness", "theme_bat_ring", 12f, 2f..25f, prefs)
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Notification Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Red)
-                    ThemeSlider("Alert Title Size", "theme_alert_title", 16f, 10f..30f)
-                    ThemeSlider("Alert Message Size", "theme_alert_msg", 14f, 8f..24f)
+                    ThemeSlider("Alert Title Size", "theme_alert_title", 16f, 10f..30f, prefs)
+                    ThemeSlider("Alert Message Size", "theme_alert_msg", 14f, 8f..24f, prefs)
                 } else if (currentPrefix == "features") {
                     Text(text = "Active Modules", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text(text = "Selectively disable Island behaviors.", fontSize = 14.sp, color = Color.Gray)
@@ -243,6 +290,21 @@ class ConfigActivity : ComponentActivity() {
         }
     }
 
+    @Composable
+    fun ThemeSlider(label: String, key: String, default: Float, range: ClosedFloatingPointRange<Float>, prefs: android.content.SharedPreferences) {
+        var localValue by remember { mutableFloatStateOf(prefs.getFloat(key, default)) }
+        Text(text = "$label: ${localValue.toInt()}", color = Color.White, modifier = Modifier.padding(top = 8.dp))
+        Slider(
+            value = localValue, 
+            onValueChange = { localValue = it }, 
+            onValueChangeFinished = { 
+                prefs.edit().putFloat(key, localValue).apply() 
+                sendGestureUpdate(prefs, this@ConfigActivity) 
+            }, 
+            valueRange = range
+        )
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun GestureDropdown(label: String, options: Array<IslandAction>, prefs: android.content.SharedPreferences, prefKey: String) {
@@ -268,12 +330,33 @@ class ConfigActivity : ComponentActivity() {
 
     @Composable
     fun PrecisionSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onValueChange: (Float) -> Unit, onValueChangeFinished: () -> Unit) {
+        var localValue by remember(value) { mutableFloatStateOf(value) } 
+        
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text(label, modifier = Modifier.width(60.dp), fontSize = 14.sp)
-            IconButton(onClick = { onValueChange((value - 1f).coerceIn(range)); onValueChangeFinished() }) { Icon(Icons.Default.Remove, contentDescription = "-") }
-            Slider(value = value, onValueChange = onValueChange, onValueChangeFinished = onValueChangeFinished, modifier = Modifier.weight(1f), valueRange = range)
-            IconButton(onClick = { onValueChange((value + 1f).coerceIn(range)); onValueChangeFinished() }) { Icon(Icons.Default.Add, contentDescription = "+") }
-            Text(String.format("%.0f", value), modifier = Modifier.width(40.dp), fontSize = 14.sp)
+            IconButton(onClick = { 
+                localValue = (localValue - 1f).coerceIn(range)
+                onValueChange(localValue)
+                onValueChangeFinished() 
+            }) { Icon(Icons.Default.Remove, contentDescription = "-") }
+            
+            Slider(
+                value = localValue, 
+                onValueChange = { localValue = it }, 
+                onValueChangeFinished = { 
+                    onValueChange(localValue) 
+                    onValueChangeFinished()   
+                }, 
+                modifier = Modifier.weight(1f), 
+                valueRange = range
+            )
+            
+            IconButton(onClick = { 
+                localValue = (localValue + 1f).coerceIn(range)
+                onValueChange(localValue)
+                onValueChangeFinished() 
+            }) { Icon(Icons.Default.Add, contentDescription = "+") }
+            Text(String.format("%.0f", localValue), modifier = Modifier.width(40.dp), fontSize = 14.sp)
         }
     }
 
@@ -296,6 +379,8 @@ class ConfigActivity : ComponentActivity() {
         prefs.all.forEach { (key, value) -> if (key.startsWith("TYPE_") && value is String) matrix.put(key, value) }
         intent.putExtra("gesture_payload", matrix.toString())
         for (i in 0..7) intent.putExtra("pinned_app_$i", prefs.getString("pinned_app_$i", ""))
+        val defaultQS = listOf("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
+        for (i in 0..6) intent.putExtra("qs_tile_$i", prefs.getString("qs_tile_$i", defaultQS[i]))
         sendBroadcast(intent)
     }
 
@@ -307,17 +392,21 @@ class ConfigActivity : ComponentActivity() {
             
             putExtra("tweak_offset_y", prefs.getFloat("tweak_offset_y", 0f))
             putExtra("tweak_base_width", prefs.getFloat("tweak_base_width", 100f))
+            
+            putExtra("theme_button_size", prefs.getFloat("theme_button_size", 48f))
+            putExtra("theme_button_spacing", prefs.getFloat("theme_button_spacing", 16f))
+            putExtra("theme_button_radius", prefs.getFloat("theme_button_radius", 50f))
+            putExtra("theme_anim_type", prefs.getString("theme_anim_type", "BOUNCE"))
+
             putExtra("theme_corner_radius", prefs.getFloat("theme_corner_radius", 50f))
             putExtra("theme_text_primary", prefs.getFloat("theme_text_primary", 16f))
             putExtra("theme_text_secondary", prefs.getFloat("theme_text_secondary", 14f))
             putExtra("theme_progress_thick", prefs.getFloat("theme_progress_thick", 4f))
             putExtra("theme_ring_thick", prefs.getFloat("theme_ring_thick", 12f))
-            putExtra("theme_button_size", prefs.getFloat("theme_button_size", 48f))
             putExtra("theme_element_gap", prefs.getFloat("theme_element_gap", 8f))
             putExtra("theme_music_title", prefs.getFloat("theme_music_title", 16f))
             putExtra("theme_music_artist", prefs.getFloat("theme_music_artist", 14f))
             putExtra("theme_music_seeker", prefs.getFloat("theme_music_seeker", 4f))
-            putExtra("theme_music_btn", prefs.getFloat("theme_music_btn", 48f))
             putExtra("theme_bat_text", prefs.getFloat("theme_bat_text", 16f))
             putExtra("theme_bat_icon", prefs.getFloat("theme_bat_icon", 36f))
             putExtra("theme_bat_ring", prefs.getFloat("theme_bat_ring", 12f))
@@ -333,6 +422,8 @@ class ConfigActivity : ComponentActivity() {
         prefs.all.forEach { (key, value) -> if (key.startsWith("TYPE_") && value is String) matrix.put(key, value) }
         intent.putExtra("gesture_payload", matrix.toString())
         for (i in 0..7) intent.putExtra("pinned_app_$i", prefs.getString("pinned_app_$i", ""))
+        val defaultQS = listOf("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
+        for (i in 0..6) intent.putExtra("qs_tile_$i", prefs.getString("qs_tile_$i", defaultQS[i]))
         context.sendBroadcast(intent)
     }
 
