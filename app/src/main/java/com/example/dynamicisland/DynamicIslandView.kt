@@ -51,16 +51,28 @@ import androidx.lifecycle.*
 import androidx.savedstate.*
 import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+// 🚀 FIX 1: Explicitly manage Lifecycle states so Compose doesn't pause its render thread
 class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
+    init { savedStateRegistryController.performRestore(android.os.Bundle()) }
     override val lifecycle: Lifecycle get() = lifecycleRegistry
     override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
-    fun start() { savedStateRegistryController.performRestore(android.os.Bundle()); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME) }
-    fun destroy() { lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY) }
+    
+    fun attach() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+    }
+    fun detach() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    }
 }
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
@@ -81,13 +93,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var expandUpwards = mutableStateOf(false)
 
     var isCubeRotationEnabled = mutableStateOf(true)
+    var customOffsetY = mutableFloatStateOf(0f)
+    var customBaseWidth = mutableFloatStateOf(100f)
     var activeTheme = mutableStateOf(IslandTheme())
     var globalBatteryLevel = mutableIntStateOf(100)
     var globalIsCharging = mutableStateOf(false)
     var currentMediaPos = mutableLongStateOf(0L)
     
-    var qsTiles = mutableStateListOf<String>("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
+    var displayCutoutWidth = mutableFloatStateOf(0f)
     var pinnedApps = mutableStateListOf<String>("", "", "", "", "", "", "", "")
+    var qsTiles = mutableStateListOf<String>("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
 
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
@@ -183,11 +198,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         composeView.setParentCompositionContext(recomposer)
         CoroutineScope(coroutineContext).launch { recomposer.runRecomposeAndApplyChanges() }
         addView(composeView)
-        lifecycleOwner.start()
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        // 🚀 FIX 1.5: Explicitly wake up Compose
+        lifecycleOwner.attach()
+        
+        val displayCutout = try { if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { windowManager?.currentWindowMetrics?.windowInsets?.displayCutout } else null } catch(e:Throwable){null}
+        displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
+
         val filter = IntentFilter("com.example.dynamicisland.RELOAD_PREFS")
         val securePermission = "com.redwood.permission.SECURE_IPC"
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
@@ -200,7 +220,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        lifecycleOwner.destroy()
+        lifecycleOwner.detach()
         try { context.unregisterReceiver(receiver) } catch (e: Throwable) {}
         BatteryPlugin.stop(context)
         try { context.sendBroadcast(android.content.Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui")) } catch(e:Throwable){}
@@ -236,9 +256,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
 
-        // 🚀 BULLETPROOF FIX: Safely resize layout and eradicate invisible blocks
-        LaunchedEffect(state, model) {
-            if (!isAttachedToWindow || windowToken == null) return@LaunchedEffect
+        // 🚀 FIX 2: Safely update window layout and ignore null windowTokens
+        LaunchedEffect(state, model, expandUpwards.value) {
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
 
@@ -252,15 +271,21 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 wp.width = WindowManager.LayoutParams.MATCH_PARENT
                 wp.height = WindowManager.LayoutParams.WRAP_CONTENT 
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
-                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
             }
-            try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Throwable) {}
+            
+            wp.gravity = if (expandUpwards.value) (Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL) else (Gravity.TOP or Gravity.CENTER_HORIZONTAL)
+            
+            try { 
+                wm.updateViewLayout(this@DynamicIslandView, wp) 
+            } catch (e: IllegalArgumentException) {
+                // View is in tree but token isn't ready. Yield frame and try again!
+                kotlinx.coroutines.yield()
+                try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (ignore: Exception) {}
+            } catch (e: Exception) {}
         }
 
         val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
 
-        // 🚀 Re-instated the original, stable padding layout!
         Box(
             modifier = Modifier.fillMaxWidth().padding(top = offsetY.coerceAtLeast(0f).dp).padding(bottom = 20.dp),
             contentAlignment = boxAlignment
