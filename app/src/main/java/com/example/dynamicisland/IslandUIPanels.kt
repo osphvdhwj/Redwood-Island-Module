@@ -243,6 +243,11 @@ import de.robv.android.xposed.XSharedPreferences
     fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
         val context = LocalContext.current
         val theme = LocalIslandTheme.current
+        
+        // 🚀 EXPLICIT SCOPE CAPTURE: Pre-extracting lists to avoid lambda ambiguity
+        val safeQsTiles: List<String> = this.qsTiles.toList()
+        val safePinnedApps: List<String> = this.pinnedApps.toList()
+
         val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
         val wifiManager = remember { try { context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager } catch(e: Throwable) { null } }
         val btAdapter = remember { try { (context.applicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager)?.adapter } catch(e: Throwable) { null } }
@@ -261,12 +266,12 @@ import de.robv.android.xposed.XSharedPreferences
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
             
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(theme.buttonSpacing, Alignment.CenterHorizontally)) {
-                // 🚀 EXPLICIT MAPPING to prevent Unresolved Reference errors
-                val activeQS = this@DynamicIslandView.qsTiles.filter { it.isNotEmpty() && it != "None" }
+                val activeQS = safeQsTiles.filter { it.isNotEmpty() && it != "None" }
                 if (activeQS.isEmpty()) {
                     DashboardQuickToggle(Icons.Default.Settings, true, "Settings") { try { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
                 } else {
-                    activeQS.forEach { tile ->
+                    activeQS.forEach { tileStr ->
+                        val tile: String = tileStr
                         when (tile) {
                             "WiFi" -> DashboardQuickToggle(Icons.Default.Wifi, isWifiOn, "Wi-Fi") { try { val newState = !isWifiOn; wifiManager?.isWifiEnabled = newState; isWifiOn = newState } catch(e: Throwable) { try { context.startActivity(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(ex: Throwable) {} } }
                             "Bluetooth" -> DashboardQuickToggle(Icons.Default.Bluetooth, isBtOn, "Bluetooth") { try { val newState = !isBtOn; @SuppressLint("MissingPermission") if (newState) btAdapter?.enable() else btAdapter?.disable(); isBtOn = newState } catch(e: Throwable) { try { context.startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(ex: Throwable) {} } }
@@ -284,11 +289,12 @@ import de.robv.android.xposed.XSharedPreferences
 
             val pm = context.packageManager
             Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                val validApps = this@DynamicIslandView.pinnedApps.filter { it.isNotEmpty() }
+                val validApps = safePinnedApps.filter { it.isNotEmpty() }
                 if (validApps.isEmpty()) {
                     Box(Modifier.size(36.dp).background(Color.White.copy(0.05f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, null, tint = Color.White.copy(0.3f), modifier = Modifier.size(16.dp)) }
                 } else {
-                    validApps.forEach { pkg ->
+                    validApps.forEach { pkgStr ->
+                        val pkg: String = pkgStr
                         val iconBmp = remember(pkg) { 
                             try { 
                                 val drawable = pm.getApplicationIcon(pkg)
