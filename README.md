@@ -103,3 +103,55 @@ layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_
 * Reboot SystemUI (or device).
 
 ---
+
+# Redwood Dynamic Island Module
+
+An advanced, high-performance LSPosed module that injects a fluid, interactive "Dynamic Island" overlay directly into Android 14's SystemUI. 
+
+**New Updates:**
+This module features Live Activities (Maps, Downloads), OTP Catching, Hardware Monitoring, Apple-grade spring physics, and dynamic pill resizing.
+
+---
+
+## ⚠️ CRITICAL DEVELOPER ARCHITECTURE NOTES ⚠️
+**DO NOT ALTER THE CORE INJECTION LOGIC.** This module was specifically engineered to bypass strict Android 14 tapjacking protections and custom ROM (e.g., CrDroid) initialization obfuscations. Changing these rules will cause the module to become invisible or fail to hook.
+
+### 1. The Injection Target (`MainHook.kt`)
+* **DO NOT** hook `com.android.systemui.SystemUIApplication`. Custom ROMs often bypass or obfuscate this class during boot, causing the module to fail silently.
+* **MUST USE:** Hook the base `android.app.Application` class's `onCreate` method, then check if `app.packageName == "com.android.systemui"`. This is un-bypassable by the OS.
+* **Delay:** The Compose View injection must be delayed by at least `3000ms` using `Handler(Looper.getMainLooper()).postDelayed`. Injecting instantly will cause SystemUI to overwrite or crash the view during its own status bar initialization.
+
+### 2. The WindowManager Parameters (`MainHook.kt`)
+* **Window Type:** MUST use `2024` (`TYPE_NAVIGATION_BAR_PANEL`). Using `TYPE_APPLICATION_OVERLAY` will be blocked by Android 12+ Tapjacking/Secure Window protections.
+* **Window Dimensions:** MUST be `MATCH_PARENT` for both Width and Height.
+* **DO NOT** use `WRAP_CONTENT` with Type 2024. The strict system WindowManager will reject dynamic coordinate resizing and silently collapse the window to `0x0` pixels (making the island invisible).
+
+### 3. Touch Passthrough Engine (`DynamicIslandView.kt`)
+Because the WindowManager layout is `MATCH_PARENT` (covering the entire screen), it blocks all touches to the phone. 
+* **The Solution:** We use Java Reflection to attach an `OnComputeInternalInsetsListener` to the `viewTreeObserver`.
+* **How it works:** As the Compose UI animates, `onGloballyPositioned` tracks the exact `Rect` coordinates of the Island. The internal insets listener reads this `Rect` and dynamically punches a "touch hole" through the rest of the screen, allowing normal phone usage while keeping the Island interactive.
+* **Memory Leak Warning:** The `insetsListenerProxy` MUST be explicitly removed in `onDetachedFromWindow()` via reflection. Failing to do so will leak the entire Compose ViewTree and eventually crash `system_server`.
+
+### 4. Layout Translations (60+ FPS Rule)
+* **DO NOT** use `Modifier.offset(x, y)` to animate the Island's X/Y coordinates. This forces a full Layout Phase recomposition on every frame and drops the frame rate.
+* **MUST USE:** `Modifier.graphicsLayer { translationX = ... ; translationY = ... }`. This pushes the spatial movement entirely to the GPU render phase, keeping animations buttery smooth.
+
+### 5. System Server Hooks (Live Activities & App Tracking)
+To track what apps are open and catch incoming ongoing notifications (for Live Activities), the module also hooks the `android` package (System Server).
+* Hooks `ActivityTaskManagerService` to broadcast `APP_CHANGED` (powers the Gaming Blacklist).
+* Hooks `NotificationManagerService` to intercept `FLAG_ONGOING_EVENT` and OTP messages before they reach the status bar.
+
+---
+
+## 🛠️ Features
+* **Smart Track Peek:** Temporarily expands the island to show track changes before hiding again.
+* **Gaming Blacklist:** Automatically hides the island when specific packages (like Free Fire Max) are brought to the foreground.
+* **Battery Wellbeing Integration:** Long-pressing the charging cube deep-links into custom battery management apps.
+* **Luminance Clamping:** Dynamically guarantees ring and text visibility even when extracting colors from pitch-black album art.
+
+## 📦 Build Instructions
+1. Clone the repository.
+2. Open in Android Studio or compile via Gradle (`./gradlew assembleRelease`).
+3. Install the APK and enable in LSPosed Manager.
+4. **Important:** After installing or updating, you must perform a **Hard Reboot** of the device to clear the SystemUI and LSPosed cache. Simply restarting SystemUI via terminal is not enough for structural changes.
+---
