@@ -18,6 +18,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,7 +34,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.TransformOrigin // explicitly imported
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -181,7 +182,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     init {
         loadPreferences()
-        setViewTreeLifecycleOwner(lifecycleOwner); setViewTreeSavedStateRegistryOwner(lifecycleOwner); setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
 
         try {
             val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
@@ -203,6 +203,15 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         } catch (e: Exception) {}
 
         val composeView = ComposeView(context).apply {
+            setViewTreeLifecycleOwner(lifecycleOwner)
+            setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+            setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
+
+            addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) { lifecycleOwner.attach() }
+                override fun onViewDetachedFromWindow(v: View) { lifecycleOwner.detach() }
+            })
+
             setContent {
                 MaterialTheme(colorScheme = darkColorScheme()) {
                     CompositionLocalProvider(LocalContext provides moduleContext, LocalIslandTheme provides activeTheme.value) {
@@ -215,7 +224,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         composeView.setParentCompositionContext(recomposer)
         CoroutineScope(coroutineContext).launch { recomposer.runRecomposeAndApplyChanges() }
         addView(composeView)
-        lifecycleOwner.start()
     }
 
     override fun onAttachedToWindow() {
@@ -249,7 +257,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         flowJob?.cancel()
         flowJob = null
-        lifecycleOwner.destroy()
         try { context.unregisterReceiver(receiver) } catch (e: Exception) {}
 
         BatteryPlugin.stop(context)
@@ -343,7 +350,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     .width(width).height(height)
                     .graphicsLayer { 
                         scaleX = squishX; scaleY = squishY 
-                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)
+                        transformOrigin = TransformOrigin(0.5f, 0f)
                     }
                     .clip(RoundedCornerShape(rad))
                     .background(bgColor).border(0.5.dp, borderColor, RoundedCornerShape(rad))
