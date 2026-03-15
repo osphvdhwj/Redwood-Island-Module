@@ -37,25 +37,65 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput 
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import de.robv.android.xposed.XSharedPreferences
 
+
+    // 🚀 NEW: The Master Micro-Interaction Engine
+    @Composable
+    fun InteractiveIconButton(icon: ImageVector, tint: Color, baseSize: Dp, bgAlpha: Float = 0f, onClick: () -> Unit) {
+        val theme = LocalIslandTheme.current
+        var isClicked by remember { mutableStateOf(false) }
+        val haptic = LocalHapticFeedback.current
+
+        LaunchedEffect(isClicked) {
+            if (isClicked) {
+                kotlinx.coroutines.delay(if(theme.actionAnimType == "CHECKMARK") 1000 else 300)
+                isClicked = false
+            }
+        }
+
+        val scale by animateFloatAsState(if (isClicked && theme.actionAnimType == "BOUNCE") 1.3f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f), label="scale")
+        val alpha by animateFloatAsState(if (isClicked && theme.actionAnimType == "PULSE") 0.3f else 1f, tween(150), label="alpha")
+        val currentIcon = if (isClicked && theme.actionAnimType == "CHECKMARK") Icons.Default.Check else icon
+        val currentTint = if (isClicked && theme.actionAnimType == "CHECKMARK") Color.Green else tint
+
+        Box(
+            modifier = Modifier
+                .size(baseSize)
+                .clip(RoundedCornerShape(theme.buttonCornerRadius))
+                .background(currentTint.copy(alpha = bgAlpha))
+                .clickable { 
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    isClicked = true
+                    onClick() 
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = currentIcon,
+                contentDescription = null,
+                tint = currentTint.copy(alpha = alpha),
+                modifier = Modifier.size(baseSize * 0.55f).graphicsLayer { scaleX = scale; scaleY = scale }
+            )
+        }
+    }
+
     @Composable
     fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
         val color = if (model.isPluggedIn) Color.Green else if (model.level <= 20) Color.Red else Color.White
         val infiniteTransition = rememberInfiniteTransition(label = "cube_pulse")
-        val pulseScale by infiniteTransition.animateFloat(
-            initialValue = 0.85f, targetValue = 1.15f,
-            animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-            label = "scale"
-        )
+        val pulseScale by infiniteTransition.animateFloat(initialValue = 0.85f, targetValue = 1.15f, animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "scale")
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Icon(imageVector = if (model.isPluggedIn) Icons.Default.Add else Icons.Default.Warning, contentDescription = null, tint = color, modifier = Modifier.size(36.dp).graphicsLayer { scaleX = pulseScale; scaleY = pulseScale })
             Spacer(modifier = Modifier.height(4.dp))
@@ -107,6 +147,7 @@ import de.robv.android.xposed.XSharedPreferences
     @Composable
     fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
         val dynamicTextColor = Color.White
+        val theme = LocalIslandTheme.current
         var audioIcon by remember { mutableStateOf(Icons.Default.Smartphone) }; var audioLabel by remember { mutableStateOf("Phone") }
 
         LaunchedEffect(music) {
@@ -119,34 +160,47 @@ import de.robv.android.xposed.XSharedPreferences
             } catch (e: Exception) { audioIcon = Icons.Default.Smartphone; audioLabel = "Phone" }
         }
 
-        Column(modifier = Modifier.fillMaxSize().padding(start = 24.dp, end = 24.dp, top = 20.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 if (music.appIcon != null) { Image(bitmap = music.appIcon.asImageBitmap(), contentDescription = "App Logo", modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))) } else Box(Modifier.size(36.dp).background(Color.White.copy(alpha=0.2f), RoundedCornerShape(10.dp)))
                 Row(modifier = Modifier.background(Color.White.copy(alpha=0.2f), RoundedCornerShape(12.dp)).clip(RoundedCornerShape(12.dp)).clickable { onAudioOutputClick?.invoke() }.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(audioIcon, contentDescription = "Output", tint = dynamicTextColor, modifier = Modifier.size(16.dp)); Spacer(modifier = Modifier.width(6.dp)); Text(audioLabel, color = dynamicTextColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            val theme = LocalIslandTheme.current
+            Spacer(modifier = Modifier.weight(0.5f))
+            
             Text(text = music.title, color = dynamicTextColor, fontSize = theme.titleSize * 1.25f, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.fillMaxWidth().safeMarquee(islandState.value))
             Text(text = music.artist, color = dynamicTextColor.copy(alpha=0.8f), fontSize = (theme.titleSize * 0.85f) * 1.15f, maxLines = 1, modifier = Modifier.fillMaxWidth().safeMarquee(islandState.value))
-            Spacer(modifier = Modifier.height(16.dp))
+            
+            Spacer(modifier = Modifier.weight(0.5f))
 
             IsolatedTimeRow(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = dynamicTextColor)
             IsolatedMediaSlider(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, dynamicTextColor = dynamicTextColor, onSeek = { onSeekTo?.invoke(it) })
 
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+            Spacer(modifier = Modifier.weight(1f))
+            
+            // 🚀 UPDATED: Perfectly spaced and customized Media Buttons using new Config
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(theme.buttonSpacing, Alignment.CenterHorizontally)) {
                 val favoriteAction = music.customActions.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("thumb", true) }
-                if (favoriteAction != null) Icon(Icons.Default.Favorite, null, tint = dynamicTextColor, modifier = Modifier.size(24.dp)) else Spacer(Modifier.width(24.dp))
-
-                Box(modifier = Modifier.size(36.dp).clip(CircleShape).clickable { onPrevClick?.invoke() }, contentAlignment = Alignment.Center) { Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev", tint = dynamicTextColor, modifier = Modifier.size(28.dp)) }
+                if (favoriteAction != null) {
+                    InteractiveIconButton(icon = Icons.Default.Favorite, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) {}
+                } else {
+                    Spacer(Modifier.width(theme.buttonSize))
+                }
+                
+                InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) { onPrevClick?.invoke() }
+                
                 val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
-                Box(modifier = Modifier.size(56.dp).clip(CircleShape).background(dynamicTextColor.copy(alpha = 0.2f)).clickable { onPlayPauseClick?.invoke() }, contentAlignment = Alignment.Center) { Icon(imageVector = playIcon, contentDescription = "Play/Pause", tint = dynamicTextColor, modifier = Modifier.size(32.dp)) }
-                Box(modifier = Modifier.size(36.dp).clip(CircleShape).clickable { onNextClick?.invoke() }, contentAlignment = Alignment.Center) { Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next", tint = dynamicTextColor, modifier = Modifier.size(28.dp)) }
+                InteractiveIconButton(icon = playIcon, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0.2f) { onPlayPauseClick?.invoke() }
+                
+                InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowForward, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) { onNextClick?.invoke() }
 
                 val repeatAction = music.customActions.find { it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) }
-                if (repeatAction != null) Icon(Icons.Default.Refresh, null, tint = dynamicTextColor, modifier = Modifier.size(24.dp)) else Spacer(Modifier.width(24.dp))
+                if (repeatAction != null) {
+                    InteractiveIconButton(icon = Icons.Default.Refresh, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) {}
+                } else {
+                    Spacer(Modifier.width(theme.buttonSize))
+                }
             }
         }
     }
@@ -154,6 +208,7 @@ import de.robv.android.xposed.XSharedPreferences
     @Suppress("UNUSED_PARAMETER") 
     @Composable
     fun DynamicIslandView.DashboardMid(model: LiveActivityModel.Dashboard) {
+        val theme = LocalIslandTheme.current
         Row(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
             DashboardQuickToggle(Icons.Default.Wifi, true)
             DashboardQuickToggle(Icons.Default.Bluetooth, false)
@@ -162,17 +217,41 @@ import de.robv.android.xposed.XSharedPreferences
         }
     }
 
+    @Composable
+    fun AppleControlCenterSlider(value: Float, onValueChange: (Float) -> Unit, onValueChangeFinished: () -> Unit = {}, activeColor: Color, icon: ImageVector) {
+        var width by remember { mutableIntStateOf(1) }
+        Box(modifier = Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha=0.15f))
+            .onGloballyPositioned { width = it.size.width.coerceAtLeast(1) }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragEnd = { onValueChangeFinished() }
+                ) { change, _ ->
+                    change.consume()
+                    onValueChange((change.position.x / width).coerceIn(0f, 1f))
+                }
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { offset -> onValueChange((offset.x / width).coerceIn(0f, 1f)); onValueChangeFinished() }
+                )
+            }
+        ) {
+            Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(fraction = value.coerceIn(0f, 1f)).background(activeColor))
+            Icon(icon, null, modifier = Modifier.align(Alignment.CenterStart).padding(start=14.dp).size(22.dp), tint = if (value > 0.15f) Color.Black else Color.White)
+        }
+    }
+
     @Suppress("UNUSED_PARAMETER", "DEPRECATION")
     @Composable
     fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
         val context = LocalContext.current
+        val theme = LocalIslandTheme.current
         val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
         val wifiManager = remember { try { context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager } catch(e: Throwable) { null } }
         val btAdapter = remember { try { (context.applicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager)?.adapter } catch(e: Throwable) { null } }
 
         val initialBrightness = remember { try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS) / 255f } catch (e: Throwable) { 0.5f } }
         var brightness by remember { mutableFloatStateOf(initialBrightness) }
-        var autoBrightness by remember { mutableStateOf(try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE) == 1 } catch(e: Throwable) { false }) }
 
         LaunchedEffect(brightness) { kotlinx.coroutines.delay(100); try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * 255).toInt()) } catch (e: Throwable) {} }
 
@@ -184,20 +263,28 @@ import de.robv.android.xposed.XSharedPreferences
 
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
             
-            // --- ROW 1: SCROLLABLE QS GRID ---
-            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                DashboardQuickToggle(Icons.Default.Wifi, isWifiOn, "Wi-Fi") { try { val newState = !isWifiOn; wifiManager?.isWifiEnabled = newState; isWifiOn = newState } catch(e: Throwable) { try { context.startActivity(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(ex: Throwable) {} } }
-                DashboardQuickToggle(Icons.Default.Bluetooth, isBtOn, "Bluetooth") { try { val newState = !isBtOn; @SuppressLint("MissingPermission") if (newState) btAdapter?.enable() else btAdapter?.disable(); isBtOn = newState } catch(e: Throwable) { try { context.startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(ex: Throwable) {} } }
-                DashboardQuickToggle(Icons.Default.FlashlightOn, isTorchOn, "Torch") { try { isTorchOn = !isTorchOn; cameraId?.let { cameraManager?.setTorchMode(it, isTorchOn) } } catch(e: Throwable) {} }
-                DashboardQuickToggle(Icons.Default.LocationOn, true, "Location") { try { context.startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
-                DashboardQuickToggle(Icons.Default.AirplanemodeActive, false, "Airplane") { try { context.startActivity(Intent(android.provider.Settings.ACTION_AIRPLANE_MODE_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
-                DashboardQuickToggle(Icons.Default.DoNotDisturbOn, false, "DND") { try { context.startActivity(Intent(android.provider.Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
-                DashboardQuickToggle(Icons.Default.Settings, true, "Settings") { try { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
+            // 🚀 UPDATED: Perfectly spaced QS Grid using custom config gaps
+            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(theme.buttonSpacing, Alignment.CenterHorizontally)) {
+                val activeQS = qsTiles.filter { it.isNotEmpty() && it != "None" }
+                if (activeQS.isEmpty()) {
+                    DashboardQuickToggle(Icons.Default.Settings, true, "Settings") { try { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
+                } else {
+                    activeQS.forEach { tile ->
+                        when (tile) {
+                            "WiFi" -> DashboardQuickToggle(Icons.Default.Wifi, isWifiOn, "Wi-Fi") { try { val newState = !isWifiOn; wifiManager?.isWifiEnabled = newState; isWifiOn = newState } catch(e: Throwable) { try { context.startActivity(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(ex: Throwable) {} } }
+                            "Bluetooth" -> DashboardQuickToggle(Icons.Default.Bluetooth, isBtOn, "Bluetooth") { try { val newState = !isBtOn; @SuppressLint("MissingPermission") if (newState) btAdapter?.enable() else btAdapter?.disable(); isBtOn = newState } catch(e: Throwable) { try { context.startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(ex: Throwable) {} } }
+                            "Torch" -> DashboardQuickToggle(Icons.Default.FlashlightOn, isTorchOn, "Torch") { try { isTorchOn = !isTorchOn; cameraId?.let { cameraManager?.setTorchMode(it, isTorchOn) } } catch(e: Throwable) {} }
+                            "Location" -> DashboardQuickToggle(Icons.Default.LocationOn, true, "Location") { try { context.startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
+                            "Airplane" -> DashboardQuickToggle(Icons.Default.AirplanemodeActive, false, "Airplane") { try { context.startActivity(Intent(android.provider.Settings.ACTION_AIRPLANE_MODE_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
+                            "DND" -> DashboardQuickToggle(Icons.Default.DoNotDisturbOn, false, "DND") { try { context.startActivity(Intent(android.provider.Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
+                            "Settings" -> DashboardQuickToggle(Icons.Default.Settings, true, "Settings") { try { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch(e: Throwable) {} }
+                        }
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
-            // --- ROW 2: SCROLLABLE 8-APP DOCK ---
             val pm = context.packageManager
             Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 val validApps = pinnedApps.filter { it.isNotEmpty() }
@@ -224,41 +311,32 @@ import de.robv.android.xposed.XSharedPreferences
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
-            // --- ROW 3: Brightness Card ---
-            Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { autoBrightness = !autoBrightness; try { android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE, if (autoBrightness) 1 else 0) } catch(e: Throwable) {} }, modifier = Modifier.size(36.dp).background(if (autoBrightness) Color.Yellow.copy(alpha=0.3f) else Color.Transparent, CircleShape)) { Icon(Icons.Default.BrightnessAuto, contentDescription = "Auto", tint = if (autoBrightness) Color.Yellow else Color.White, modifier = Modifier.size(20.dp)) }
-                Spacer(modifier = Modifier.width(12.dp))
-                Slider(value = brightness, onValueChange = { brightness = it }, valueRange = 0f..1f, colors = SliderDefaults.colors(activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha=0.2f), thumbColor = Color.White), modifier = Modifier.weight(1f).height(24.dp))
-                Spacer(modifier = Modifier.width(12.dp))
-                Icon(Icons.Default.BrightnessHigh, contentDescription = "Max", tint = Color.White, modifier = Modifier.size(20.dp))
-            }
+            AppleControlCenterSlider(value = brightness, onValueChange = { brightness = it }, activeColor = Color.Yellow, icon = Icons.Default.BrightnessHigh)
+            
+            Spacer(modifier = Modifier.weight(0.5f))
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // --- ROW 4: Volume Card ---
             var activeStream by remember { mutableIntStateOf(android.media.AudioManager.STREAM_MUSIC) }
             val maxVol = remember(activeStream) { val mv = audioManager.getStreamMaxVolume(activeStream).toFloat(); if (mv <= 0f) 1f else mv }
             var currentVol by remember(activeStream) { mutableFloatStateOf( (audioManager.getStreamVolume(activeStream) / maxVol).coerceIn(0f, 1f) ) }
-
-            Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_MUSIC }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.MusicNote, null, tint = if (activeStream == android.media.AudioManager.STREAM_MUSIC) Color.Cyan else Color.White.copy(0.5f), modifier = Modifier.size(20.dp)) }
-                IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_RING }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Notifications, null, tint = if (activeStream == android.media.AudioManager.STREAM_RING) Color.Cyan else Color.White.copy(0.5f), modifier = Modifier.size(20.dp)) }
-                IconButton(onClick = { activeStream = android.media.AudioManager.STREAM_ALARM }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Alarm, null, tint = if (activeStream == android.media.AudioManager.STREAM_ALARM) Color.Cyan else Color.White.copy(0.5f), modifier = Modifier.size(20.dp)) }
-                Spacer(modifier = Modifier.width(8.dp))
-                Slider(value = currentVol, onValueChange = { currentVol = it; try{ audioManager.setStreamVolume(activeStream, (it * maxVol).toInt(), 0) } catch(e: Throwable){} }, colors = SliderDefaults.colors(activeTrackColor = Color.Cyan, inactiveTrackColor = Color.Cyan.copy(alpha=0.2f), thumbColor = Color.Cyan), modifier = Modifier.weight(1f).height(24.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                AppleControlCenterSlider(value = currentVol, onValueChange = { currentVol = it }, onValueChangeFinished = { try{ audioManager.setStreamVolume(activeStream, (currentVol * maxVol).toInt(), 0) } catch(e: Throwable){} }, activeColor = Color.Cyan, icon = Icons.Default.VolumeUp)
             }
         }
     }
 
+    // 🚀 UPDATED: Tiles now strictly respect user Config sizes, shapes, and spacing
     @Composable
     fun DynamicIslandView.DashboardQuickToggle(icon: androidx.compose.ui.graphics.vector.ImageVector, isActive: Boolean, label: String? = null, onClick: () -> Unit = {}) {
-        val bgColor by animateColorAsState(if (isActive) Color(0xFF0A84FF) else Color.White.copy(alpha=0.1f), label="bg")
-        val tint by animateColorAsState(if (isActive) Color.White else Color.White.copy(alpha=0.7f), label="tint")
+        val theme = LocalIslandTheme.current
+        val bgColor = if (isActive) Color(0xFF00FFCC) else Color.White.copy(alpha=0.1f)
+        val tint = if (isActive) Color.Black else Color.White
+        
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(modifier = Modifier.size(60.dp).clip(RoundedCornerShape(16.dp)).background(bgColor).clickable { onClick() }, contentAlignment = Alignment.Center) { Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(28.dp)) }
-            if (label != null) { Spacer(modifier = Modifier.height(8.dp)); Text(label, color = Color.White.copy(alpha=0.9f), fontSize = 12.sp, fontWeight = FontWeight.Medium) }
+            InteractiveIconButton(icon = icon, tint = tint, baseSize = theme.buttonSize, bgAlpha = if (isActive) 1f else 0.1f) { onClick() }
+            if (label != null) { Spacer(modifier = Modifier.height(6.dp)); Text(label, color = Color.White.copy(alpha=0.9f), fontSize = 10.sp, fontWeight = FontWeight.Medium) }
         }
     }
 
