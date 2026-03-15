@@ -15,7 +15,7 @@ class MainHook : IXposedHookLoadPackage {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
-        // 1. SYSTEM SERVER HOOKS (Gaming Blacklist, OTPs, Live Activities)
+        // 1. SYSTEM SERVER HOOKS
         if (lpparam.packageName == "android") {
             try {
                 val atmsClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader)
@@ -52,7 +52,6 @@ class MainHook : IXposedHookLoadPackage {
                                     val title = extras.getString(android.app.Notification.EXTRA_TITLE) ?: ""
                                     val isOngoing = (notification.flags and android.app.Notification.FLAG_ONGOING_EVENT) != 0
 
-                                    // Catch Live Activities (Maps, Downloads, etc)
                                     if (isOngoing && pkgName != "com.android.systemui" && pkgName != "android") {
                                         val progress = extras.getInt(android.app.Notification.EXTRA_PROGRESS, -1)
                                         val progressMax = extras.getInt(android.app.Notification.EXTRA_PROGRESS_MAX, -1)
@@ -67,7 +66,6 @@ class MainHook : IXposedHookLoadPackage {
                                         mContext?.sendBroadcast(intent)
                                     }
 
-                                    // Catch OTPs
                                     if (text.contains("OTP", true) || text.contains("code", true) || text.contains("verification", true)) {
                                         val otpRegex = Regex("\\b\\d{4,8}\\b")
                                         val match = otpRegex.find(text)
@@ -84,7 +82,7 @@ class MainHook : IXposedHookLoadPackage {
             return
         }
 
-        // 2. SYSTEM UI HOOK (Restored to perfectly stable 15s delay & SystemUIApplication)
+        // 2. SYSTEM UI HOOK
         if (lpparam.packageName != "com.android.systemui") return
 
         try {
@@ -105,15 +103,16 @@ class MainHook : IXposedHookLoadPackage {
     }
 
     private fun injectDynamicIsland(systemUiContext: Context) {
-        // 🚀 PROVEN STABLE: 15 Second delay ensures SystemUI finishes building its internal components first!
+        // 🛑 PRIME DIRECTIVE: 15-second delay maintained
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             try {
                 XposedBridge.log("RedwoodIsland: Starting delayed injection...")
                 val windowManager = systemUiContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
+                // 🛑 PRIME DIRECTIVE ENFORCED: Reverted back to MATCH_PARENT
                 val layoutParams = WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.WRAP_CONTENT,
-                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.MATCH_PARENT, 
+                    WindowManager.LayoutParams.MATCH_PARENT, 
                     2024, // TYPE_NAVIGATION_BAR_PANEL
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
