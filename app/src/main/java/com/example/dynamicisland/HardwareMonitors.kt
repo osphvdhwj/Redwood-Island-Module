@@ -1,80 +1,58 @@
 package com.example.dynamicisland
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import java.io.File
 
 object HardwareMonitors {
 
-    private var cpuThermalPath: String? = null
-
-    init {
-        findThermalPath()
+    private fun readCpuTemp(): Float {
+        return try {
+            val temp = File("/sys/class/thermal/thermal_zone0/temp").readText().trim().toFloat()
+            if (temp > 1000) temp / 1000 else temp
+        } catch (e: Exception) { 0f }
     }
 
-    private fun findThermalPath() {
-        try {
-            val dir = File("/sys/class/thermal/")
-            if (dir.exists()) {
-                dir.listFiles()?.forEach { zone ->
-                    if (zone.name.startsWith("thermal_zone")) {
-                        val typeFile = File(zone, "type")
-                        if (typeFile.exists()) {
-                            val type = typeFile.readText().lowercase()
-                            if (type.contains("cpu") || type.contains("tsens") || type.contains("soc") || type.contains("bcl")) {
-                                cpuThermalPath = File(zone, "temp").absolutePath
-                                return
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {}
-        
-        // 🚀 SAFE FALLBACK: If no CPU node is found, try the universal battery node
-        if (cpuThermalPath == null) {
-            val battTemp = File("/sys/class/power_supply/battery/temp")
-            if (battTemp.exists()) {
-                cpuThermalPath = battTemp.absolutePath
-            }
-        }
+    private fun readCpuFreq(): Int {
+        return try {
+            File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq").readText().trim().toInt() / 1000
+        } catch (e: Exception) { 0 }
+    }
+
+    // 🚀 NEW: Reads raw charging speed from kernel nodes
+    fun readChargingWattage(): Float {
+        return try {
+            val voltageStr = File("/sys/class/power_supply/battery/voltage_now").readText().trim()
+            val currentStr = File("/sys/class/power_supply/battery/current_now").readText().trim()
+            
+            val voltage = voltageStr.toFloat() / 1_000_000f 
+            var current = currentStr.toFloat() / 1_000_000f 
+            if (current < 0) current *= -1f // Absolute value
+            
+            val watts = voltage * current
+            if (watts > 120f || watts < 0f) 0f else watts 
+        } catch (e: Throwable) { 0f }
     }
 
     fun startMonitoring(): Flow<LiveActivityModel.HardwareMonitor> = flow {
         while (true) {
             val temp = readCpuTemp()
             val freq = readCpuFreq()
-            // Simple heuristic: If freq is consistently maxed out, assume Gaming Mode
             val isGaming = freq > 2000 
             
             emit(LiveActivityModel.HardwareMonitor(
+                id = "hw_monitor",
+                type = ActivityType.HARDWARE,
+                isTransient = false,
+                isCritical = temp > 45f,
                 cpuTempCelsius = temp,
                 cpuFreqMhz = freq,
                 isGamingModeOn = isGaming
             ))
-            delay(3000) // Update every 3 seconds to save battery
+            delay(3000) 
         }
-    }
-
-    private fun readCpuTemp(): Float {
-        // 🚀 FAIL GRACEFULLY: Return 0f if the hardware doesn't support thermal reading
-        val path = cpuThermalPath ?: return 0f
-        return try {
-            val tempStr = File(path).readText().trim()
-            val tempRaw = tempStr.toFloat()
-            if (tempRaw > 1000) tempRaw / 1000f else tempRaw
-        } catch (e: Exception) {
-            0f
-        }
-    }
-
-    private fun readCpuFreq(): Int {
-        return try {
-            val freqStr = File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq").readText().trim()
-            freqStr.toInt() / 1000
-        } catch (e: Exception) {
-            0
-        }
-    }
+    }.flowOn(Dispatchers.IO)
 }
