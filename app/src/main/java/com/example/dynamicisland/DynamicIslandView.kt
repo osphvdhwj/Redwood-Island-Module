@@ -99,6 +99,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     var isCubeRotationEnabled = mutableStateOf(true)
     var activeTheme = mutableStateOf(IslandTheme())
+    
     var globalBatteryLevel = mutableIntStateOf(100)
     var globalIsCharging = mutableStateOf(false)
     var currentMediaPos = mutableLongStateOf(0L)
@@ -245,18 +246,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        
         try {
             if (insetsListenerProxy != null) {
                 val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
                 viewTreeObserver.javaClass.getMethod("removeOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListenerProxy)
             }
         } catch (e: Exception) {}
-
-        flowJob?.cancel()
-        flowJob = null
+        flowJob?.cancel(); flowJob = null
         try { context.unregisterReceiver(receiver) } catch (e: Exception) {}
-
         BatteryPlugin.stop(context)
         context.sendBroadcast(android.content.Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui"))
     }
@@ -266,13 +263,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     fun IslandUI(state: IslandState) {
         val haptic = LocalHapticFeedback.current
         var isSquished by remember { mutableStateOf(false) }
+        
+        // 🍏 Apple-Grade Physics: Tighter damping for elastic interaction
         val touchScale by animateFloatAsState(
             targetValue = if (isSquished) 0.96f else 1f,
-            animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "squish"
+            animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f), label = "squish"
         )
         
         val minSafeWidth = displayCutoutWidth.floatValue + 4f
-
         val rawTargetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
         val targetWidth = rawTargetWidth.coerceAtLeast(minSafeWidth)
         val model = activeModel.value
@@ -286,11 +284,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val targetX = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value; IslandState.TYPE_2_MID -> midX.value; IslandState.TYPE_3_MAX -> maxX.value; IslandState.TYPE_CUBE -> cubeX.value; else -> ringX.value }
         val targetY = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value; IslandState.TYPE_2_MID -> midY.value; IslandState.TYPE_3_MAX -> maxY.value; IslandState.TYPE_CUBE -> cubeY.value; else -> ringY.value }
 
-        val physicsSpec = spring<Dp>(dampingRatio = 0.65f, stiffness = 250f)
+        // 🍏 Apple-Grade Physics: Fluid expansion and collapse
+        val physicsSpec = spring<Dp>(dampingRatio = 0.72f, stiffness = 320f)
+        val floatPhysicsSpec = spring<Float>(dampingRatio = 0.72f, stiffness = 320f)
+        
         val width by animateDpAsState(targetWidth.dp, physicsSpec, label = "width")
         val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
-        val offsetX by animateFloatAsState(targetX, spring<Float>(dampingRatio=0.65f, stiffness=250f), label = "x")
-        val offsetY by animateFloatAsState(targetY, spring<Float>(dampingRatio=0.65f, stiffness=250f), label = "y")
+        val offsetX by animateFloatAsState(targetX, floatPhysicsSpec, label = "x")
+        val offsetY by animateFloatAsState(targetY, floatPhysicsSpec, label = "y")
         val radTarget = when (state) { IslandState.TYPE_3_MAX -> 42.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_CUBE -> 24.dp; else -> (targetHeight / 2).dp }
         val rad by animateDpAsState(radTarget, physicsSpec, label = "rad")
 
@@ -298,11 +299,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         else if (state == IslandState.TYPE_0_RING) Color.Black.copy(alpha = 0.01f) 
         else {
             if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor).copy(alpha = 0.65f) 
-            else if (state == IslandState.TYPE_3_MAX) Color(0xFF121212).copy(alpha = 0.4f) 
-            else Color(0xFF121212).copy(alpha = 0.75f) 
+            else if (state == IslandState.TYPE_3_MAX) Color(0xFF0F0F0F).copy(alpha = 0.5f) 
+            else Color(0xFF0F0F0F).copy(alpha = 0.85f) 
         }
-        val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
-        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.15f), animationSpec = tween(600), label = "borderColor")
+        val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(400), label = "bgColor")
+        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.12f), animationSpec = tween(400), label = "borderColor")
 
         LaunchedEffect(state, model) {
             if (!isAttachedToWindow) return@LaunchedEffect
@@ -311,17 +312,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
             if (model?.isSensitive == true) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE } else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv() }
 
-            // 🚀 PROVEN STABLE: WindowManager Size Restoration
             if (state == IslandState.HIDDEN) {
                 wp.width = 0 
                 wp.height = 0 
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             } else {
                 wp.width = WindowManager.LayoutParams.MATCH_PARENT
                 wp.height = WindowManager.LayoutParams.MATCH_PARENT
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
-                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             }
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
         }
@@ -329,7 +327,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
 
         Row(
-            // 🚀 RESTORED: .offset coordinates required for OnComputeInternalInsets bounds calculation!
+            // 🛑 PRIME DIRECTIVE: Offset unmodified for precise Bounds Calculation!
             modifier = Modifier.fillMaxWidth().offset(x = offsetX.dp, y = offsetY.coerceAtLeast(0f).dp).height(maxH.value.dp), 
             horizontalArrangement = Arrangement.Center, 
             verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
@@ -405,19 +403,19 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             modifier = Modifier.fillMaxSize()
                             .drawWithContent {
                                 drawContent()
-                                drawRect(brush = Brush.horizontalGradient(0.0f to Color.Transparent, 0.8f to Color.Black, 1.0f to Color.Black))
+                                drawRect(brush = Brush.horizontalGradient(0.0f to Color.Transparent, 0.7f to Color.Black, 1.0f to Color.Black))
                             }
-                            .alpha(if (state == IslandState.TYPE_3_MAX) 0.65f else 0.35f).blur(if (state == IslandState.TYPE_3_MAX) 12.dp else 24.dp)
+                            .alpha(if (state == IslandState.TYPE_3_MAX) 0.55f else 0.25f).blur(if (state == IslandState.TYPE_3_MAX) 18.dp else 28.dp)
                         )
                     }
 
                     if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING) {
-                        val bottomPadding by animateDpAsState(targetValue = when(state) { IslandState.TYPE_3_MAX -> 24.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> 12.dp; else -> 0.dp }, label = "bottomPadding")
+                        val bottomPadding by animateDpAsState(targetValue = when(state) { IslandState.TYPE_3_MAX -> 28.dp; IslandState.TYPE_2_MID -> 18.dp; IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> 14.dp; else -> 0.dp }, label = "bottomPadding")
                         Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
                             AnimatedContent(
                                 targetState = state,
                                 transitionSpec = {
-                                    (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90))) togetherWith fadeOut(animationSpec = tween(90))
+                                    (fadeIn(animationSpec = tween(200, delayMillis = 60)) + scaleIn(initialScale = 0.94f, animationSpec = tween(200, delayMillis = 60))) togetherWith fadeOut(animationSpec = tween(100))
                                 },
                                 label = "UI Transition"
                             ) { s ->
@@ -452,9 +450,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
                         if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX || state == IslandState.TYPE_SPLIT) {
                             Box(
-                                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(when(state) { IslandState.TYPE_3_MAX -> 32.dp; IslandState.TYPE_2_MID -> 20.dp; else -> 16.dp }),
+                                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(when(state) { IslandState.TYPE_3_MAX -> 36.dp; IslandState.TYPE_2_MID -> 22.dp; else -> 18.dp }),
                                 contentAlignment = Alignment.Center
-                            ) { Box(modifier = Modifier.width(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 24.dp else 40.dp).height(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 3.dp else 5.dp).shadow(2.dp, CircleShape).background(Color.White.copy(alpha=0.8f), CircleShape)) }
+                            ) { Box(modifier = Modifier.width(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 28.dp else 46.dp).height(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 3.5.dp else 5.dp).background(Color.White.copy(alpha=0.6f), CircleShape)) }
                         }
                     }
                     
@@ -464,38 +462,31 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         val shouldShowRing = isMedia || globalIsCharging.value || globalBatteryLevel.intValue <= 20
 
                         if (shouldShowRing) {
-                            val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
-                            val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
-                            
-                            val baseColor = if (isMedia) {
-                                musicModel?.dominantColor?.let { Color(it) } ?: Color.White
-                            } else if (globalIsCharging.value) {
-                                Color.Green
-                            } else if (globalBatteryLevel.intValue <= 20) {
-                                Color.Red
-                            } else {
-                                Color.White
-                            }
-
                             val infiniteTransition = rememberInfiniteTransition(label = "ring_pulse")
                             val pulseAlpha by infiniteTransition.animateFloat(
-                                initialValue = if (globalIsCharging.value && !isMedia) 0.3f else 1f,
+                                initialValue = if (globalIsCharging.value && !isMedia) 0.25f else 1f,
                                 targetValue = 1f,
                                 animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
                                 label = "alpha"
                             )
-                            val progressColor = baseColor.copy(alpha = pulseAlpha)
 
+                            // ⚡ PERFORMANCE WIN: Draw-phase rendering prevents recomposition!
                             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
+                                val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
+                                val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
+                                
+                                val baseColor = if (isMedia) { musicModel?.dominantColor?.let { Color(it) } ?: Color.White } else if (globalIsCharging.value) { Color.Green } else if (globalBatteryLevel.intValue <= 20) { Color.Red } else { Color.White }
+                                val progressColor = baseColor.copy(alpha = pulseAlpha)
+
                                 val strokeW = ringThickness.value.dp.toPx() 
                                 val inset = strokeW / 2
                                 val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
                                 val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
                                 val progressPercent = progress.coerceIn(0f, 1f)
 
-                                val sweepGradient = Brush.sweepGradient(0.0f to progressColor.copy(alpha = 0.4f), 0.8f to progressColor, 1.0f to progressColor.copy(alpha = 0.4f))
+                                val sweepGradient = Brush.sweepGradient(0.0f to progressColor.copy(alpha = 0.3f), 0.8f to progressColor, 1.0f to progressColor.copy(alpha = 0.3f))
 
-                                drawArc(color = baseColor.copy(alpha=0.35f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
+                                drawArc(color = baseColor.copy(alpha=0.25f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
                                 drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Butt), alpha = 0.95f)
 
                                 val markerLength = strokeW * 1.3f
@@ -516,7 +507,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 }
             }
 
-            AnimatedVisibility(visible = state == IslandState.TYPE_SPLIT, enter = scaleIn(spring(dampingRatio=0.8f, stiffness=300f)) + fadeIn(), exit = scaleOut() + fadeOut()) {
+            AnimatedVisibility(visible = state == IslandState.TYPE_SPLIT, enter = scaleIn(spring(dampingRatio=0.72f, stiffness=320f)) + fadeIn(), exit = scaleOut() + fadeOut()) {
                 val sModel = splitModel.value
                 val splitBg = if (sModel is LiveActivityModel.Charging) { if (sModel.isPluggedIn) Color.Green.copy(alpha=0.2f) else if (sModel.level <= 20) Color.Red.copy(alpha=0.2f) else Color(0xFF121212).copy(alpha=0.75f) } else Color(0xFF121212).copy(alpha=0.75f)
                 Row {
