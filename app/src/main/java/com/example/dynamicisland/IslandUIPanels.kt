@@ -43,12 +43,41 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import de.robv.android.xposed.XSharedPreferences
+
+// 🚀 NEW: Standalone Interactive Drag Handle with own pointer bounds
+@Composable
+fun InteractiveDragHandle(onExpand: () -> Unit = {}, onCollapse: () -> Unit = {}) {
+    val haptic = LocalHapticFeedback.current
+    Box(
+        modifier = Modifier
+            .width(42.dp)
+            .height(5.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.5f))
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragEnd = { }
+                ) { change, dragAmount ->
+                    change.consume()
+                    if (dragAmount.y > 10f) { onExpand(); haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+                    else if (dragAmount.y < -10f) { onCollapse(); haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+                }
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = { onExpand(); haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                    onTap = { onExpand(); haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+                )
+            }
+    )
+}
 
 @Composable
 fun InteractiveIconButton(icon: ImageVector, tint: Color, baseSize: Dp, bgAlpha: Float = 0f, onClick: () -> Unit) {
@@ -104,7 +133,7 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
     Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         Icon(imageVector = if (model.isPluggedIn) Icons.Default.Add else Icons.Default.Warning, contentDescription = null, tint = color, modifier = Modifier.size(32.dp).graphicsLayer { scaleX = pulseScale; scaleY = pulseScale })
         Spacer(modifier = Modifier.height(2.dp))
-        Text(text = "${model.level}%", color = color, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+        Text(text = "${model.level}%", color = color, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, fontFamily = LocalIslandFont.current)
     }
 }
 
@@ -112,7 +141,7 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
 @Composable
 fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
     Box(modifier = Modifier.fillMaxSize()) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp)) {
             val infiniteTransition = rememberInfiniteTransition()
             val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart))
             val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
@@ -121,15 +150,8 @@ fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
             else Box(Modifier.size(24.dp).background(Color.White.copy(0.2f), CircleShape))
             
             Spacer(Modifier.width(10.dp))
-            Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, modifier = Modifier.weight(1f, fill = false).safeMarquee(islandState.value))
+            Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, fontFamily = LocalIslandFont.current, maxLines = 1, modifier = Modifier.weight(1f, fill = false).safeMarquee(islandState.value))
         }
-        
-        Row(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 32.dp, vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            IsolatedTimeText(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = Color.White.copy(alpha=0.6f), fontSize = 9.sp)
-            Text(text = formatTime(music.durationMs), color = Color.White.copy(alpha=0.6f), fontSize = 9.sp, fontWeight = FontWeight.Medium)
-        }
-        
-        IsolatedLinearProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = Color.White.copy(alpha=0.85f), trackColor = Color.White.copy(alpha=0.2f), modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.5f).height(3.dp).padding(bottom = 1.dp).clip(CircleShape))
     }
 }
 
@@ -142,8 +164,8 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
     val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart))
     val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Row(modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 8.dp), verticalArrangement = Arrangement.SpaceBetween) {
+        Row(modifier = Modifier.fillMaxWidth().weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(52.dp)) {
                 IsolatedCircularProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha = 0.2f), strokeWidth = 2.dp, modifier = Modifier.fillMaxSize())
                 if (music.albumArt != null) { Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(44.dp).clip(RoundedCornerShape(theme.cornerRadius / 4)).graphicsLayer { rotationZ = currentRotation }) } 
@@ -151,14 +173,16 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f, fill=false).offset(x = theme.titleOffsetX, y = theme.titleOffsetY)) {
-                Text(text = music.title, color = dynamicTextColor, fontSize = theme.titleSize, fontFamily = theme.titleFont, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-                Text(text = music.artist, color = dynamicTextColor.copy(alpha = 0.7f), fontSize = theme.titleSize * 0.85f, fontFamily = theme.titleFont, fontWeight = FontWeight.Medium, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+                Text(text = music.title, color = dynamicTextColor, fontSize = theme.titleSize, fontFamily = LocalIslandFont.current, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+                Text(text = music.artist, color = dynamicTextColor.copy(alpha = 0.7f), fontSize = theme.titleSize * 0.85f, fontFamily = LocalIslandFont.current, fontWeight = FontWeight.Medium, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
             }
         }
 
-        Row(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 48.dp, vertical = 6.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        // 🚀 FEATURE: Beautiful Interactive Handle with Flanking Timestamps
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             IsolatedTimeText(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = dynamicTextColor.copy(alpha=0.6f), fontSize = 10.sp)
-            Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.6f), fontSize = 10.sp, fontWeight = FontWeight.Medium)
+            InteractiveDragHandle(onExpand = { onDragHandleExpand?.invoke() }, onCollapse = { onDragHandleCollapse?.invoke() })
+            Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.6f), fontSize = 10.sp, fontWeight = FontWeight.Medium, fontFamily = LocalIslandFont.current)
         }
     }
 }
@@ -180,22 +204,30 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
         } catch (e: Exception) { audioIcon = Icons.Default.Smartphone; audioLabel = "Phone" }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 18.dp)) {
+        
+        // 🚀 FEATURE: Beautiful Interactive Handle with Flanking Timestamps
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            IsolatedTimeText(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = dynamicTextColor.copy(alpha=0.7f), fontSize = 12.sp)
+            InteractiveDragHandle(onExpand = { onDragHandleExpand?.invoke() }, onCollapse = { onDragHandleCollapse?.invoke() })
+            Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 12.sp, fontWeight = FontWeight.Medium, fontFamily = LocalIslandFont.current)
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             if (music.appIcon != null) { Image(bitmap = music.appIcon.asImageBitmap(), contentDescription = "App Logo", modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))) } else Box(Modifier.size(36.dp).background(Color.White.copy(alpha=0.2f), RoundedCornerShape(10.dp)))
             Row(modifier = Modifier.background(Color.White.copy(alpha=0.15f), RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).clickable { onAudioOutputClick?.invoke() }.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(audioIcon, contentDescription = "Output", tint = dynamicTextColor, modifier = Modifier.size(16.dp)); Spacer(modifier = Modifier.width(6.dp)); Text(audioLabel, color = dynamicTextColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Icon(audioIcon, contentDescription = "Output", tint = dynamicTextColor, modifier = Modifier.size(16.dp)); Spacer(modifier = Modifier.width(6.dp)); Text(audioLabel, color = dynamicTextColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = LocalIslandFont.current)
             }
         }
         Spacer(modifier = Modifier.weight(0.5f))
         
-        Text(text = music.title, color = dynamicTextColor, fontSize = theme.titleSize * 1.35f, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.fillMaxWidth().safeMarquee(islandState.value))
+        Text(text = music.title, color = dynamicTextColor, fontSize = theme.titleSize * 1.35f, fontWeight = FontWeight.Bold, fontFamily = LocalIslandFont.current, maxLines = 1, modifier = Modifier.fillMaxWidth().safeMarquee(islandState.value))
         Spacer(modifier = Modifier.height(2.dp))
-        Text(text = music.artist, color = dynamicTextColor.copy(alpha=0.75f), fontSize = (theme.titleSize * 0.9f) * 1.15f, fontWeight = FontWeight.Medium, maxLines = 1, modifier = Modifier.fillMaxWidth().safeMarquee(islandState.value))
+        Text(text = music.artist, color = dynamicTextColor.copy(alpha=0.75f), fontSize = (theme.titleSize * 0.9f) * 1.15f, fontWeight = FontWeight.Medium, fontFamily = LocalIslandFont.current, maxLines = 1, modifier = Modifier.fillMaxWidth().safeMarquee(islandState.value))
         
         Spacer(modifier = Modifier.weight(0.5f))
-
-        IsolatedTimeRow(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = dynamicTextColor)
         IsolatedMediaSlider(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, dynamicTextColor = dynamicTextColor, onSeek = { onSeekTo?.invoke(it) })
 
         Spacer(modifier = Modifier.weight(1f))
@@ -215,6 +247,32 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
             val repeatAction = music.customActions.find { it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) }
             if (repeatAction != null) { InteractiveIconButton(icon = Icons.Default.Refresh, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) {} } 
             else { Spacer(Modifier.width(theme.buttonSize)) }
+        }
+    }
+}
+
+// 🚀 NEW: The Visual OTP Catcher UI
+@Composable
+fun DynamicIslandView.OtpMid(model: LiveActivityModel.Otp) {
+    val haptic = LocalHapticFeedback.current
+    Row(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.size(44.dp).background(Color(0xFF4285F4).copy(alpha=0.2f), CircleShape).border(1.dp, Color(0xFF4285F4).copy(alpha=0.5f), CircleShape), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF4285F4), modifier = Modifier.size(24.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+             Text(text = "Code from ${model.sourceApp}", color = Color.Gray, fontSize = 12.sp, fontFamily = LocalIslandFont.current)
+             Text(text = model.code, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp, fontFamily = LocalIslandFont.current)
+        }
+        IconButton(onClick = {
+            try {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("OTP", model.code))
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onGestureEvent?.invoke(IslandGesture.SWIPE_UP) // Collapse on copy
+            } catch(e: Exception){}
+        }) {
+            Icon(Icons.Default.ContentCopy, contentDescription="Copy", tint=Color(0xFF00FFCC), modifier = Modifier.size(28.dp))
         }
     }
 }
@@ -377,7 +435,7 @@ fun DynamicIslandView.DashboardQuickToggle(icon: androidx.compose.ui.graphics.ve
     
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         InteractiveIconButton(icon = icon, tint = tint, baseSize = theme.buttonSize, bgAlpha = if (isActive) 1f else 0.1f) { onClick() }
-        if (label != null) { Spacer(modifier = Modifier.height(6.dp)); Text(label, color = Color.White.copy(alpha=0.9f), fontSize = 10.sp, fontWeight = FontWeight.Medium) }
+        if (label != null) { Spacer(modifier = Modifier.height(6.dp)); Text(label, color = Color.White.copy(alpha=0.9f), fontSize = 10.sp, fontWeight = FontWeight.Medium, fontFamily = LocalIslandFont.current) }
     }
 }
 
@@ -392,8 +450,8 @@ fun DynamicIslandView.SystemAlertMid(alert: LiveActivityModel.SystemAlert) {
         }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-             Text(text = alert.title, color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-             Text(text = alert.message, color = color.copy(alpha=0.8f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+             Text(text = alert.title, color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = LocalIslandFont.current, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+             Text(text = alert.message, color = color.copy(alpha=0.8f), fontSize = 14.sp, fontFamily = LocalIslandFont.current, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
         }
     }
 }
@@ -408,21 +466,21 @@ fun DynamicIslandView.OngoingTaskMid(task: LiveActivityModel.OngoingTask) {
         }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-             Text(text = task.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-             Text(text = task.text, color = Color.White.copy(alpha=0.8f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+             Text(text = task.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = LocalIslandFont.current, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+             Text(text = task.text, color = Color.White.copy(alpha=0.8f), fontSize = 14.sp, fontFamily = LocalIslandFont.current, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
         }
     }
 }
 
 @Composable
-fun DynamicIslandView.GeneralMini(general: LiveActivityModel.General) { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) { Icon(imageVector = getIconForType(general.type), contentDescription = null, tint = Color(general.accentColor), modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text(text = "${general.title} • ${general.dataText}", color = Color.White, fontSize = 14.sp, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value)) } }
+fun DynamicIslandView.GeneralMini(general: LiveActivityModel.General) { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) { Icon(imageVector = getIconForType(general.type), contentDescription = null, tint = Color(general.accentColor), modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text(text = "${general.title} • ${general.dataText}", color = Color.White, fontSize = 14.sp, fontFamily = LocalIslandFont.current, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value)) } }
 
 @Composable
-fun DynamicIslandView.HardwareGaugeMini(hw: LiveActivityModel.HardwareMonitor) { val tempColor = when { hw.cpuTempCelsius > 45f -> Color.Red; hw.cpuTempCelsius > 38f -> Color.Yellow; else -> Color.Green }; Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) { Icon(imageVector = Icons.Default.Info, contentDescription = "Hardware", tint = tempColor, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); androidx.compose.material3.LinearProgressIndicator(progress = { (hw.cpuTempCelsius / 60f).coerceIn(0f, 1f) }, modifier = Modifier.width(60.dp).height(6.dp).clip(RoundedCornerShape(3.dp)), color = tempColor, trackColor = Color.White.copy(alpha=0.2f)); Spacer(Modifier.width(8.dp)); Text(text = "${hw.cpuFreqMhz} MHz", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) } }
+fun DynamicIslandView.HardwareGaugeMini(hw: LiveActivityModel.HardwareMonitor) { val tempColor = when { hw.cpuTempCelsius > 45f -> Color.Red; hw.cpuTempCelsius > 38f -> Color.Yellow; else -> Color.Green }; Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) { Icon(imageVector = Icons.Default.Info, contentDescription = "Hardware", tint = tempColor, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); androidx.compose.material3.LinearProgressIndicator(progress = { (hw.cpuTempCelsius / 60f).coerceIn(0f, 1f) }, modifier = Modifier.width(60.dp).height(6.dp).clip(RoundedCornerShape(3.dp)), color = tempColor, trackColor = Color.White.copy(alpha=0.2f)); Spacer(Modifier.width(8.dp)); Text(text = "${hw.cpuFreqMhz} MHz", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, fontFamily = LocalIslandFont.current) } }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun DynamicIslandView.UniversalMid(textColor: Color, activity: LiveActivityModel) { val infiniteTransition = rememberInfiniteTransition(label = "pulse"); val alphaPulse by infiniteTransition.animateFloat(initialValue = 0.4f, targetValue = 1f, animationSpec = infiniteRepeatable(animation = tween(800, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse), label = "alphaPulse"); val progress = when(activity) { is LiveActivityModel.General -> activity.progress; is LiveActivityModel.Charging -> activity.level / 100f; else -> null }; val colorInt = when(activity) { is LiveActivityModel.General -> activity.accentColor; is LiveActivityModel.Charging -> android.graphics.Color.GREEN; else -> android.graphics.Color.WHITE }; val title = when(activity) { is LiveActivityModel.General -> activity.title; is LiveActivityModel.Charging -> if (activity.isPluggedIn) "Charging" else "Disconnected"; else -> "" }; val dataText = when(activity) { is LiveActivityModel.General -> activity.dataText; is LiveActivityModel.Charging -> "${activity.level}%"; else -> "" }; Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) { Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) { if (progress != null) CircularProgressIndicator(progress = { progress }, color = Color(colorInt), trackColor = textColor.copy(alpha = 0.2f), modifier = Modifier.fillMaxSize()); val iconAlpha = if (activity.type == ActivityType.CHARGING) alphaPulse else 1f; Icon(imageVector = getIconForType(activity.type), contentDescription = null, tint = Color(colorInt), modifier = Modifier.size(24.dp).alpha(iconAlpha)) }; Spacer(Modifier.width(16.dp)); Column(modifier = Modifier.weight(1f)) { Text(text = title, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value)); Text(text = dataText, color = textColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value)) } } }
+fun DynamicIslandView.UniversalMid(textColor: Color, activity: LiveActivityModel) { val infiniteTransition = rememberInfiniteTransition(label = "pulse"); val alphaPulse by infiniteTransition.animateFloat(initialValue = 0.4f, targetValue = 1f, animationSpec = infiniteRepeatable(animation = tween(800, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse), label = "alphaPulse"); val progress = when(activity) { is LiveActivityModel.General -> activity.progress; is LiveActivityModel.Charging -> activity.level / 100f; else -> null }; val colorInt = when(activity) { is LiveActivityModel.General -> activity.accentColor; is LiveActivityModel.Charging -> android.graphics.Color.GREEN; else -> android.graphics.Color.WHITE }; val title = when(activity) { is LiveActivityModel.General -> activity.title; is LiveActivityModel.Charging -> if (activity.isPluggedIn) "Charging" else "Disconnected"; else -> "" }; val dataText = when(activity) { is LiveActivityModel.General -> activity.dataText; is LiveActivityModel.Charging -> "${activity.level}%"; else -> "" }; Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) { Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) { if (progress != null) CircularProgressIndicator(progress = { progress }, color = Color(colorInt), trackColor = textColor.copy(alpha = 0.2f), modifier = Modifier.fillMaxSize()); val iconAlpha = if (activity.type == ActivityType.CHARGING) alphaPulse else 1f; Icon(imageVector = getIconForType(activity.type), contentDescription = null, tint = Color(colorInt), modifier = Modifier.size(24.dp).alpha(iconAlpha)) }; Spacer(Modifier.width(16.dp)); Column(modifier = Modifier.weight(1f)) { Text(text = title, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = LocalIslandFont.current, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value)); Text(text = dataText, color = textColor.copy(alpha = 0.7f), fontSize = 14.sp, fontFamily = LocalIslandFont.current, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value)) } } }
 
 @Composable
 fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) { UniversalMid(Color.White, charging) }
@@ -438,18 +496,17 @@ fun getIconForType(type: ActivityType): ImageVector { return when(type) { Activi
 
 fun formatTime(ms: Long): String { if (ms <= 0) return "0:00"; val s = ms / 1000; return String.format("%d:%02d", s / 60, s % 60) }
 
-// ⚡ PERFORMANCE WIN: Derived State Time Text
 @Composable
 fun IsolatedTimeText(durationMs: Long, posProvider: () -> Long, textColor: Color, fontSize: androidx.compose.ui.unit.TextUnit = 12.sp, modifier: Modifier = Modifier) {
     val timeStr by remember(durationMs) { derivedStateOf { formatTime(posProvider()) } }
-    Text(text = timeStr, color = textColor, fontSize = fontSize, fontWeight = FontWeight.Medium, modifier = modifier)
+    Text(text = timeStr, color = textColor, fontSize = fontSize, fontWeight = FontWeight.Medium, fontFamily = LocalIslandFont.current, modifier = modifier)
 }
 
 @Composable
 fun IsolatedTimeRow(durationMs: Long, posProvider: () -> Long, textColor: Color) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         IsolatedTimeText(durationMs = durationMs, posProvider = posProvider, textColor = textColor.copy(alpha=0.6f))
-        Text(text = formatTime(durationMs), color = textColor.copy(alpha=0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(text = formatTime(durationMs), color = textColor.copy(alpha=0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium, fontFamily = LocalIslandFont.current)
     }
 }
 
@@ -481,7 +538,6 @@ fun IsolatedMediaSlider(durationMs: Long, posProvider: () -> Long, dynamicTextCo
     )
 }
 
-// ⚡ PERFORMANCE WIN: Draw-phase Progress Bar
 @Composable
 fun IsolatedLinearProgressIndicator(durationMs: Long, posProvider: () -> Long, color: Color, trackColor: Color, modifier: Modifier = Modifier) {
     val theme = LocalIslandTheme.current 
@@ -524,8 +580,8 @@ fun DynamicIslandView.AppTimerWarningMid(model: LiveActivityModel.AppTimerWarnin
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
              val theme = LocalIslandTheme.current
-             Text(text = "Time Limit Reached", color = Color.Red, fontSize = theme.titleSize, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-             Text(text = "${model.appName} closing in ${remainingSeconds}s", color = Color.White, fontSize = (theme.titleSize * 0.85f), maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+             Text(text = "Time Limit Reached", color = Color.Red, fontSize = theme.titleSize, fontWeight = FontWeight.Bold, fontFamily = LocalIslandFont.current, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+             Text(text = "${model.appName} closing in ${remainingSeconds}s", color = Color.White, fontSize = (theme.titleSize * 0.85f), fontFamily = LocalIslandFont.current, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
         }
     }
 }
@@ -543,7 +599,7 @@ fun DynamicIslandView.RealityPillMini(model: LiveActivityModel.RealityPill) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Icon(Icons.Default.Timer, contentDescription = "Session Time", tint = Color(0xFF00FF00), modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(8.dp))
-        Text(text = "${model.appName} • ${model.sessionMinutes}m", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+        Text(text = "${model.appName} • ${model.sessionMinutes}m", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = LocalIslandFont.current, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
     }
 }
 
