@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -80,6 +81,9 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     }
 }
 
+// 🚀 CUSTOM FONT ENGINE PROVIDER
+val LocalIslandFont = compositionLocalOf { FontFamily.Default }
+
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @SuppressLint("ViewConstructor")
 class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLayout(context) {
@@ -98,6 +102,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var expandUpwards = mutableStateOf(false)
 
     var isCubeRotationEnabled = mutableStateOf(true)
+    var useSystemFont = mutableStateOf(true) // 🚀 Typography Tracker
     var activeTheme = mutableStateOf(IslandTheme())
     
     var globalBatteryLevel = mutableIntStateOf(100)
@@ -118,6 +123,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onGestureEvent: ((IslandGesture) -> Unit)? = null
     var onGestureSettingsUpdated: ((String?) -> Unit)? = null
     var onSplitPillClick: (() -> Unit)? = null
+
+    // Callbacks for new Drag Handle
+    var onDragHandleExpand: (() -> Unit)? = null
+    var onDragHandleCollapse: (() -> Unit)? = null
 
     var onPlayPauseClick: (() -> Unit)? = null
     var onPrevClick: (() -> Unit)? = null
@@ -149,6 +158,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             ringThickness.value = pref.getFloat("ring_thickness", 6f)
             expandUpwards.value = pref.getBoolean("expand_upwards", false)
             isCubeRotationEnabled.value = pref.getBoolean("rotate_cube", true)
+            useSystemFont.value = pref.getBoolean("use_system_font", true)
         } catch (e: Exception) {}
     }
 
@@ -166,7 +176,23 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     for (i in 0..6) { val qs = intent.getStringExtra("qs_tile_$i"); if (qs != null) qsTiles[i] = qs } 
                 } 
 
+                val pref = ctx.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+                useSystemFont.value = pref.getBoolean("use_system_font", true)
+
+                val capString = intent.getStringExtra("theme_media_cap") ?: "Round"
+                val parsedCap = if (capString == "Square") StrokeCap.Square else StrokeCap.Round
+
                 activeTheme.value = IslandTheme(
+                    mediaBarCap = parsedCap,
+                    mediaBarThickness = intent.getFloatExtra("theme_media_thick", 4f).dp,
+                    titleOffsetX = intent.getFloatExtra("theme_title_x", 0f).dp,
+                    titleOffsetY = intent.getFloatExtra("theme_title_y", 0f).dp,
+                    titleSize = intent.getFloatExtra("theme_title_size", 16f).sp,
+                    timeTextSize = intent.getFloatExtra("theme_time_size", 12f).sp,
+                    timeTextOffsetX = intent.getFloatExtra("theme_time_x", 0f).dp,
+                    batteryRingThickness = intent.getFloatExtra("theme_bat_ring", 12f).dp,
+                    cornerRadius = intent.getFloatExtra("theme_corner_radius", 50f).dp,
+                    albumArtSize = intent.getFloatExtra("theme_album_art_size", 44f).dp,
                     buttonSize = intent.getFloatExtra("theme_button_size", 48f).dp,
                     buttonSpacing = intent.getFloatExtra("theme_button_spacing", 16f).dp,
                     buttonCornerRadius = intent.getFloatExtra("theme_button_radius", 50f).dp,
@@ -212,8 +238,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             })
 
             setContent {
-                MaterialTheme(colorScheme = darkColorScheme()) {
-                    CompositionLocalProvider(LocalContext provides moduleContext, LocalIslandTheme provides activeTheme.value) {
+                val islandFont = if (useSystemFont.value) FontFamily.Default else FontFamily.Monospace // Or load from assets
+                MaterialTheme(
+                    colorScheme = darkColorScheme(),
+                    typography = Typography(bodyMedium = androidx.compose.material3.Typography().bodyMedium.copy(fontFamily = islandFont))
+                ) {
+                    CompositionLocalProvider(
+                        LocalContext provides moduleContext, 
+                        LocalIslandTheme provides activeTheme.value,
+                        LocalIslandFont provides islandFont
+                    ) {
                         IslandUI(islandState.value)
                     }
                 }
@@ -264,7 +298,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val haptic = LocalHapticFeedback.current
         var isSquished by remember { mutableStateOf(false) }
         
-        // 🍏 Apple-Grade Physics: Tighter damping for elastic interaction
         val touchScale by animateFloatAsState(
             targetValue = if (isSquished) 0.96f else 1f,
             animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f), label = "squish"
@@ -284,7 +317,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val targetX = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value; IslandState.TYPE_2_MID -> midX.value; IslandState.TYPE_3_MAX -> maxX.value; IslandState.TYPE_CUBE -> cubeX.value; else -> ringX.value }
         val targetY = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value; IslandState.TYPE_2_MID -> midY.value; IslandState.TYPE_3_MAX -> maxY.value; IslandState.TYPE_CUBE -> cubeY.value; else -> ringY.value }
 
-        // 🍏 Apple-Grade Physics: Fluid expansion and collapse
         val physicsSpec = spring<Dp>(dampingRatio = 0.72f, stiffness = 320f)
         val floatPhysicsSpec = spring<Float>(dampingRatio = 0.72f, stiffness = 320f)
         
@@ -327,7 +359,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
 
         Row(
-            // 🛑 PRIME DIRECTIVE: Offset unmodified for precise Bounds Calculation!
             modifier = Modifier.fillMaxWidth().offset(x = offsetX.dp, y = offsetY.coerceAtLeast(0f).dp).height(maxH.value.dp), 
             horizontalArrangement = Arrangement.Center, 
             verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
@@ -430,6 +461,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                             is LiveActivityModel.SystemAlert -> SystemAlertMid(model)
                                             is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model)
                                             is LiveActivityModel.OngoingTask -> OngoingTaskMid(model)
+                                            // 🚀 ROUTING: The Visual OTP Catcher UI
+                                            is LiveActivityModel.Otp -> OtpMid(model)
                                             else -> {}
                                         }
                                     }
@@ -447,13 +480,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 }
                             }
                         }
-
-                        if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX || state == IslandState.TYPE_SPLIT) {
-                            Box(
-                                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(when(state) { IslandState.TYPE_3_MAX -> 36.dp; IslandState.TYPE_2_MID -> 22.dp; else -> 18.dp }),
-                                contentAlignment = Alignment.Center
-                            ) { Box(modifier = Modifier.width(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 28.dp else 46.dp).height(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 3.5.dp else 5.dp).background(Color.White.copy(alpha=0.6f), CircleShape)) }
-                        }
                     }
                     
                     if (state == IslandState.TYPE_0_RING) {
@@ -470,7 +496,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 label = "alpha"
                             )
 
-                            // ⚡ PERFORMANCE WIN: Draw-phase rendering prevents recomposition!
                             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
                                 val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
                                 val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
