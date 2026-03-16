@@ -1,12 +1,12 @@
 package com.example.dynamicisland
 
-import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontFamily
 
 data class IslandTheme(
     val mediaBarCap: StrokeCap = StrokeCap.Round,
@@ -20,12 +20,12 @@ data class IslandTheme(
     val batteryRingThickness: Dp = 12.dp,
     val cornerRadius: Dp = 50.dp,
     val albumArtSize: Dp = 44.dp,
-    
-    // 🚀 NEW: Big Pill (Max State) Customizations
-    val buttonSize: Dp = 48.dp, 
+    val buttonSize: Dp = 48.dp,
     val buttonSpacing: Dp = 16.dp,
     val buttonCornerRadius: Dp = 50.dp,
-    val actionAnimType: String = "BOUNCE" // "CHECKMARK", "BOUNCE", "PULSE", "NONE"
+    val actionAnimType: String = "BOUNCE",
+    val handleWidth: Dp = 40.dp,
+    val handleHeight: Dp = 5.dp
 )
 
-val LocalIslandTheme = staticCompositionLocalOf { IslandTheme() }
+val LocalIslandTheme = compositionLocalOf { IslandTheme() }
