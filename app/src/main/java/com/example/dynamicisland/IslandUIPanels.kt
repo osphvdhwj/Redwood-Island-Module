@@ -31,7 +31,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow // 🚀 CRITICAL FIX: The missing shadow import!
+import androidx.compose.ui.draw.shadow 
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -55,7 +55,7 @@ import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.delay
 
 @Composable
-fun InteractiveDragHandle(
+fun FloatingDragHandle(
     modifier: Modifier = Modifier,
     handleWidth: Dp = 40.dp,
     handleHeight: Dp = 5.dp,
