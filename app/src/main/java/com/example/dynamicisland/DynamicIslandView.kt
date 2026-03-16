@@ -51,6 +51,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight 
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp 
 import androidx.lifecycle.*
@@ -81,7 +82,27 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     }
 }
 
-// 🚀 CUSTOM FONT ENGINE PROVIDER
+// 🚀 THEME & FONT ENGINE
+data class IslandTheme(
+    val mediaBarCap: StrokeCap = StrokeCap.Round,
+    val mediaBarThickness: Dp = 4.dp,
+    val titleOffsetX: Dp = 0.dp,
+    val titleOffsetY: Dp = 0.dp,
+    val titleSize: TextUnit = 16.sp,
+    val titleFont: FontFamily = FontFamily.Default,
+    val timeTextSize: TextUnit = 12.sp,
+    val timeTextOffsetX: Dp = 0.dp,
+    val batteryRingThickness: Dp = 12.dp,
+    val cornerRadius: Dp = 50.dp,
+    val albumArtSize: Dp = 44.dp,
+    val buttonSize: Dp = 48.dp,
+    val buttonSpacing: Dp = 16.dp,
+    val buttonCornerRadius: Dp = 50.dp,
+    val actionAnimType: String = "BOUNCE",
+    val handleWidth: Dp = 40.dp,
+    val handleHeight: Dp = 5.dp
+)
+val LocalIslandTheme = compositionLocalOf { IslandTheme() }
 val LocalIslandFont = compositionLocalOf { FontFamily.Default }
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
@@ -91,10 +112,15 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
 
+    // 🚀 NEW: Separated Media & Dashboard Dimensions
     var ringW = mutableStateOf(45f); var ringH = mutableStateOf(45f); var ringX = mutableStateOf(0f); var ringY = mutableStateOf(48f)
     var miniW = mutableStateOf(180f); var miniH = mutableStateOf(36f); var miniX = mutableStateOf(0f); var miniY = mutableStateOf(48f)
     var midW = mutableStateOf(320f); var midH = mutableStateOf(80f); var midX = mutableStateOf(0f); var midY = mutableStateOf(48f)
     var maxW = mutableStateOf(360f); var maxH = mutableStateOf(220f); var maxX = mutableStateOf(0f); var maxY = mutableStateOf(48f)
+    
+    var mediaMidW = mutableStateOf(320f); var mediaMidH = mutableStateOf(80f); var mediaMidX = mutableStateOf(0f); var mediaMidY = mutableStateOf(48f)
+    var mediaMaxW = mutableStateOf(360f); var mediaMaxH = mutableStateOf(200f); var mediaMaxX = mutableStateOf(0f); var mediaMaxY = mutableStateOf(48f)
+    
     var cubeW = mutableStateOf(85f); var cubeH = mutableStateOf(85f); var cubeX = mutableStateOf(0f); var cubeY = mutableStateOf(48f)
 
     var padT = mutableStateOf(0f); var padB = mutableStateOf(0f); var padL = mutableStateOf(0f); var padR = mutableStateOf(0f)
@@ -102,7 +128,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var expandUpwards = mutableStateOf(false)
 
     var isCubeRotationEnabled = mutableStateOf(true)
-    var useSystemFont = mutableStateOf(true) // 🚀 Typography Tracker
+    var useSystemFont = mutableStateOf(true) 
     var activeTheme = mutableStateOf(IslandTheme())
     
     var globalBatteryLevel = mutableIntStateOf(100)
@@ -153,12 +179,22 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             miniW.value = pref.getFloat("mini_w", 180f); miniH.value = pref.getFloat("mini_h", 36f); miniX.value = pref.getFloat("mini_x", 0f); miniY.value = pref.getFloat("mini_y", 48f)
             midW.value = pref.getFloat("mid_w", 320f); midH.value = pref.getFloat("mid_h", 80f); midX.value = pref.getFloat("mid_x", 0f); midY.value = pref.getFloat("mid_y", 48f)
             maxW.value = pref.getFloat("max_w", 360f); maxH.value = pref.getFloat("max_h", 220f); maxX.value = pref.getFloat("max_x", 0f); maxY.value = pref.getFloat("max_y", 48f)
+            
+            mediaMidW.value = pref.getFloat("media_mid_w", 320f); mediaMidH.value = pref.getFloat("media_mid_h", 80f); mediaMidX.value = pref.getFloat("media_mid_x", 0f); mediaMidY.value = pref.getFloat("media_mid_y", 48f)
+            mediaMaxW.value = pref.getFloat("media_max_w", 360f); mediaMaxH.value = pref.getFloat("media_max_h", 200f); mediaMaxX.value = pref.getFloat("media_max_x", 0f); mediaMaxY.value = pref.getFloat("media_max_y", 48f)
+            
             cubeW.value = pref.getFloat("cube_w", 85f); cubeH.value = pref.getFloat("cube_h", 85f); cubeX.value = pref.getFloat("cube_x", 0f); cubeY.value = pref.getFloat("cube_y", 48f)
+            
             padT.value = pref.getFloat("pad_t", 0f); padB.value = pref.getFloat("pad_b", 0f); padL.value = pref.getFloat("pad_l", 0f); padR.value = pref.getFloat("pad_r", 0f)
             ringThickness.value = pref.getFloat("ring_thickness", 6f)
             expandUpwards.value = pref.getBoolean("expand_upwards", false)
             isCubeRotationEnabled.value = pref.getBoolean("rotate_cube", true)
             useSystemFont.value = pref.getBoolean("use_system_font", true)
+            
+            activeTheme.value = activeTheme.value.copy(
+                handleWidth = pref.getFloat("theme_handle_width", 40f).dp,
+                handleHeight = pref.getFloat("theme_handle_height", 5f).dp
+            )
         } catch (e: Exception) {}
     }
 
@@ -168,35 +204,32 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 val prefix = intent.getStringExtra("prefix")
                 if (prefix != null) {
                     val w = intent.getFloatExtra("w", 0f); val h = intent.getFloatExtra("h", 0f); val x = intent.getFloatExtra("x", 0f); val y = intent.getFloatExtra("y", 0f)
-                    when (prefix) { "ring" -> { ringW.value = w; ringH.value = h; ringX.value = x; ringY.value = y }; "mini" -> { miniW.value = w; miniH.value = h; miniX.value = x; miniY.value = y }; "mid" -> { midW.value = w; midH.value = h; midX.value = x; midY.value = y }; "max" -> { maxW.value = w; maxH.value = h; maxX.value = x; maxY.value = y }; "cube" -> { cubeW.value = w; cubeH.value = h; cubeX.value = x; cubeY.value = y } }
+                    when (prefix) { 
+                        "ring" -> { ringW.value = w; ringH.value = h; ringX.value = x; ringY.value = y }
+                        "mini" -> { miniW.value = w; miniH.value = h; miniX.value = x; miniY.value = y }
+                        "mid" -> { midW.value = w; midH.value = h; midX.value = x; midY.value = y }
+                        "max" -> { maxW.value = w; maxH.value = h; maxX.value = x; maxY.value = y }
+                        "media_mid" -> { mediaMidW.value = w; mediaMidH.value = h; mediaMidX.value = x; mediaMidY.value = y }
+                        "media_max" -> { mediaMaxW.value = w; mediaMaxH.value = h; mediaMaxX.value = x; mediaMaxY.value = y }
+                        "cube" -> { cubeW.value = w; cubeH.value = h; cubeX.value = x; cubeY.value = y } 
+                    }
                     padT.value = intent.getFloatExtra("pad_t", padT.value); padB.value = intent.getFloatExtra("pad_b", padB.value); padL.value = intent.getFloatExtra("pad_l", padL.value); padR.value = intent.getFloatExtra("pad_r", padR.value)
                     ringThickness.value = intent.getFloatExtra("ring_thickness", ringThickness.value)
                     expandUpwards.value = intent.getBooleanExtra("expand_upwards", expandUpwards.value)
-                    for (i in 0..7) { val pkg = intent.getStringExtra("pinned_app_$i"); if (pkg != null) pinnedApps[i] = pkg }
-                    for (i in 0..6) { val qs = intent.getStringExtra("qs_tile_$i"); if (qs != null) qsTiles[i] = qs } 
                 } 
 
                 val pref = ctx.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
                 useSystemFont.value = pref.getBoolean("use_system_font", true)
-
-                val capString = intent.getStringExtra("theme_media_cap") ?: "Round"
-                val parsedCap = if (capString == "Square") StrokeCap.Square else StrokeCap.Round
+                for (i in 0..7) { val pkg = pref.getString("pinned_app_$i", ""); if (pkg != null) pinnedApps[i] = pkg }
+                for (i in 0..6) { val qs = pref.getString("qs_tile_$i", ""); if (qs != null) qsTiles[i] = qs }
 
                 activeTheme.value = IslandTheme(
-                    mediaBarCap = parsedCap,
-                    mediaBarThickness = intent.getFloatExtra("theme_media_thick", 4f).dp,
-                    titleOffsetX = intent.getFloatExtra("theme_title_x", 0f).dp,
-                    titleOffsetY = intent.getFloatExtra("theme_title_y", 0f).dp,
-                    titleSize = intent.getFloatExtra("theme_title_size", 16f).sp,
-                    timeTextSize = intent.getFloatExtra("theme_time_size", 12f).sp,
-                    timeTextOffsetX = intent.getFloatExtra("theme_time_x", 0f).dp,
-                    batteryRingThickness = intent.getFloatExtra("theme_bat_ring", 12f).dp,
-                    cornerRadius = intent.getFloatExtra("theme_corner_radius", 50f).dp,
-                    albumArtSize = intent.getFloatExtra("theme_album_art_size", 44f).dp,
                     buttonSize = intent.getFloatExtra("theme_button_size", 48f).dp,
                     buttonSpacing = intent.getFloatExtra("theme_button_spacing", 16f).dp,
                     buttonCornerRadius = intent.getFloatExtra("theme_button_radius", 50f).dp,
-                    actionAnimType = intent.getStringExtra("theme_anim_type") ?: "BOUNCE"
+                    actionAnimType = intent.getStringExtra("theme_anim_type") ?: "BOUNCE",
+                    handleWidth = pref.getFloat("theme_handle_width", 40f).dp,
+                    handleHeight = pref.getFloat("theme_handle_height", 5f).dp
                 )
 
                 val payload = intent.getStringExtra("gesture_payload")
@@ -238,7 +271,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             })
 
             setContent {
-                val islandFont = if (useSystemFont.value) FontFamily.Default else FontFamily.Monospace // Or load from assets
+                val islandFont = if (useSystemFont.value) FontFamily.Default else FontFamily.Monospace 
                 MaterialTheme(
                     colorScheme = darkColorScheme(),
                     typography = Typography(bodyMedium = androidx.compose.material3.Typography().bodyMedium.copy(fontFamily = islandFont))
@@ -304,18 +337,42 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         )
         
         val minSafeWidth = displayCutoutWidth.floatValue + 4f
-        val rawTargetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
-        val targetWidth = rawTargetWidth.coerceAtLeast(minSafeWidth)
         val model = activeModel.value
+        val isMedia = model is LiveActivityModel.Music
+        
+        // 🚀 DYNAMIC MEDIA DIMENSIONS ROUTING
+        val rawTargetWidth = when (state) { 
+            IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value
+            IslandState.TYPE_2_MID -> if (isMedia) mediaMidW.value else midW.value
+            IslandState.TYPE_3_MAX -> if (isMedia) mediaMaxW.value else maxW.value
+            IslandState.TYPE_CUBE -> cubeW.value
+            else -> ringW.value 
+        }
+        val targetWidth = rawTargetWidth.coerceAtLeast(minSafeWidth)
+        
         val targetHeight = when (state) { 
             IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniH.value
-            IslandState.TYPE_2_MID -> midH.value
-            IslandState.TYPE_3_MAX -> if (model is LiveActivityModel.Music) (maxH.value * 0.70f) else maxH.value
+            IslandState.TYPE_2_MID -> if (isMedia) mediaMidH.value else midH.value
+            IslandState.TYPE_3_MAX -> if (isMedia) mediaMaxH.value else maxH.value
             IslandState.TYPE_CUBE -> cubeH.value 
             else -> ringH.value 
         }
-        val targetX = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value; IslandState.TYPE_2_MID -> midX.value; IslandState.TYPE_3_MAX -> maxX.value; IslandState.TYPE_CUBE -> cubeX.value; else -> ringX.value }
-        val targetY = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value; IslandState.TYPE_2_MID -> midY.value; IslandState.TYPE_3_MAX -> maxY.value; IslandState.TYPE_CUBE -> cubeY.value; else -> ringY.value }
+        
+        val targetX = when (state) { 
+            IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value
+            IslandState.TYPE_2_MID -> if (isMedia) mediaMidX.value else midX.value
+            IslandState.TYPE_3_MAX -> if (isMedia) mediaMaxX.value else maxX.value
+            IslandState.TYPE_CUBE -> cubeX.value
+            else -> ringX.value 
+        }
+        
+        val targetY = when (state) { 
+            IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value
+            IslandState.TYPE_2_MID -> if (isMedia) mediaMidY.value else midY.value
+            IslandState.TYPE_3_MAX -> if (isMedia) mediaMaxY.value else maxY.value
+            IslandState.TYPE_CUBE -> cubeY.value
+            else -> ringY.value 
+        }
 
         val physicsSpec = spring<Dp>(dampingRatio = 0.72f, stiffness = 320f)
         val floatPhysicsSpec = spring<Float>(dampingRatio = 0.72f, stiffness = 320f)
@@ -324,13 +381,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
         val offsetX by animateFloatAsState(targetX, floatPhysicsSpec, label = "x")
         val offsetY by animateFloatAsState(targetY, floatPhysicsSpec, label = "y")
-        val radTarget = when (state) { IslandState.TYPE_3_MAX -> 42.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_CUBE -> 24.dp; else -> (targetHeight / 2).dp }
+        val radTarget = when (state) { IslandState.TYPE_3_MAX -> 42.dp; IslandState.TYPE_2_MID -> 24.dp; IslandState.TYPE_CUBE -> 24.dp; else -> (targetHeight / 2).dp }
         val rad by animateDpAsState(radTarget, physicsSpec, label = "rad")
 
         val targetBgColor = if (state == IslandState.HIDDEN) Color.Transparent 
         else if (state == IslandState.TYPE_0_RING) Color.Black.copy(alpha = 0.01f) 
         else {
-            if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor).copy(alpha = 0.65f) 
+            if (isMedia && (model as LiveActivityModel.Music).dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor!!).copy(alpha = 0.65f) 
             else if (state == IslandState.TYPE_3_MAX) Color(0xFF0F0F0F).copy(alpha = 0.5f) 
             else Color(0xFF0F0F0F).copy(alpha = 0.85f) 
         }
@@ -359,7 +416,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
 
         Row(
-            modifier = Modifier.fillMaxWidth().offset(x = offsetX.dp, y = offsetY.coerceAtLeast(0f).dp).height(maxH.value.dp), 
+            modifier = Modifier.fillMaxWidth().offset(x = offsetX.dp, y = offsetY.coerceAtLeast(0f).dp).height(maxH.value.dp.coerceAtLeast(mediaMaxH.value.dp)), 
             horizontalArrangement = Arrangement.Center, 
             verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
         ) {
@@ -404,9 +461,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         }
                     }
                     .pointerInput(state) {
-                        var dragOffsetX = 0f
-                        var dragOffsetY = 0f
-                        
+                        var dragOffsetX = 0f; var dragOffsetY = 0f
                         detectDragGestures(
                             onDragEnd = {
                                 if (abs(dragOffsetX) > abs(dragOffsetY)) {
@@ -420,8 +475,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             }
                         ) { change, dragAmount ->
                             if (abs(dragAmount.x) > 5f || abs(dragAmount.y) > 5f) { change.consume() }
-                            dragOffsetX += dragAmount.x
-                            dragOffsetY += dragAmount.y
+                            dragOffsetX += dragAmount.x; dragOffsetY += dragAmount.y
                         }
                     },
                 contentAlignment = boxAlignment
@@ -461,7 +515,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                             is LiveActivityModel.SystemAlert -> SystemAlertMid(model)
                                             is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model)
                                             is LiveActivityModel.OngoingTask -> OngoingTaskMid(model)
-                                            // 🚀 ROUTING: The Visual OTP Catcher UI
                                             is LiveActivityModel.Otp -> OtpMid(model)
                                             else -> {}
                                         }
@@ -557,7 +610,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 indication = null
                             ) { onSplitPillClick?.invoke() },
                         contentAlignment = Alignment.Center) {
-                        if (sModel is LiveActivityModel.Charging) { val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White; Text(text = "${sModel.level}%", color = iconColor, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                        if (sModel is LiveActivityModel.Charging) { val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White; Text(text = "${sModel.level}%", color = iconColor, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = LocalIslandFont.current) }
                     }
                 }
             }
