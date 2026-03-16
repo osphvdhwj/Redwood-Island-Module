@@ -82,27 +82,7 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     }
 }
 
-// 🚀 THEME & FONT ENGINE
-data class IslandTheme(
-    val mediaBarCap: StrokeCap = StrokeCap.Round,
-    val mediaBarThickness: Dp = 4.dp,
-    val titleOffsetX: Dp = 0.dp,
-    val titleOffsetY: Dp = 0.dp,
-    val titleSize: TextUnit = 16.sp,
-    val titleFont: FontFamily = FontFamily.Default,
-    val timeTextSize: TextUnit = 12.sp,
-    val timeTextOffsetX: Dp = 0.dp,
-    val batteryRingThickness: Dp = 12.dp,
-    val cornerRadius: Dp = 50.dp,
-    val albumArtSize: Dp = 44.dp,
-    val buttonSize: Dp = 48.dp,
-    val buttonSpacing: Dp = 16.dp,
-    val buttonCornerRadius: Dp = 50.dp,
-    val actionAnimType: String = "BOUNCE",
-    val handleWidth: Dp = 40.dp,
-    val handleHeight: Dp = 5.dp
-)
-val LocalIslandTheme = compositionLocalOf { IslandTheme() }
+// 🚀 FONT ENGINE
 val LocalIslandFont = compositionLocalOf { FontFamily.Default }
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
@@ -112,7 +92,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
 
-    // 🚀 NEW: Separated Media & Dashboard Dimensions
+    // 🚀 Separated Media & Dashboard Dimensions
     var ringW = mutableStateOf(45f); var ringH = mutableStateOf(45f); var ringX = mutableStateOf(0f); var ringY = mutableStateOf(48f)
     var miniW = mutableStateOf(180f); var miniH = mutableStateOf(36f); var miniX = mutableStateOf(0f); var miniY = mutableStateOf(48f)
     var midW = mutableStateOf(320f); var midH = mutableStateOf(80f); var midX = mutableStateOf(0f); var midY = mutableStateOf(48f)
