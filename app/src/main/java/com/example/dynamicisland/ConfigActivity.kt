@@ -46,7 +46,7 @@ class ConfigActivity : ComponentActivity() {
     @Composable
     fun ConfigScreen(prefs: android.content.SharedPreferences) {
         var selectedTab by remember { mutableIntStateOf(0) }
-        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures", "Dashboard", "Tweaks", "Theme", "Features")
+        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Media Mid", "Media Max", "Cube", "Handle", "Gestures", "Dashboard", "Tweaks", "Theme", "Features")
 
         var w by remember { mutableFloatStateOf(0f) }
         var h by remember { mutableFloatStateOf(0f) }
@@ -55,10 +55,10 @@ class ConfigActivity : ComponentActivity() {
         var ringT by remember { mutableFloatStateOf(prefs.getFloat("ring_thickness", 6f)) }
         var expandUpwards by remember { mutableStateOf(prefs.getBoolean("expand_upwards", false)) }
 
-        val currentPrefix = tabs[selectedTab].lowercase()
+        val currentPrefix = tabs[selectedTab].lowercase().replace(" ", "_")
 
         LaunchedEffect(selectedTab) {
-            if (currentPrefix != "gestures" && currentPrefix != "dashboard" && currentPrefix != "tweaks" && currentPrefix != "theme" && currentPrefix != "features") {
+            if (currentPrefix != "handle" && currentPrefix != "gestures" && currentPrefix != "dashboard" && currentPrefix != "tweaks" && currentPrefix != "theme" && currentPrefix != "features") {
                 w = prefs.getFloat("${currentPrefix}_w", getDefaultWidth(currentPrefix))
                 h = prefs.getFloat("${currentPrefix}_h", getDefaultHeight(currentPrefix))
                 x = prefs.getFloat("${currentPrefix}_x", 0f)
@@ -69,8 +69,8 @@ class ConfigActivity : ComponentActivity() {
 
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxWidth().height(250.dp).background(Color.Black), contentAlignment = if (expandUpwards) Alignment.BottomCenter else Alignment.TopCenter) {
-                if (currentPrefix != "gestures" && currentPrefix != "dashboard" && currentPrefix != "tweaks" && currentPrefix != "theme" && currentPrefix != "features") {
-                    Box(modifier = Modifier.offset(x = x.dp, y = y.dp).width(w.dp).height(h.dp).background(Color.White.copy(alpha = 0.6f), RoundedCornerShape(if(currentPrefix == "max") 42.dp else (h/2).dp)))
+                if (currentPrefix != "handle" && currentPrefix != "gestures" && currentPrefix != "dashboard" && currentPrefix != "tweaks" && currentPrefix != "theme" && currentPrefix != "features") {
+                    Box(modifier = Modifier.offset(x = x.dp, y = y.dp).width(w.dp).height(h.dp).background(Color.White.copy(alpha = 0.6f), RoundedCornerShape(if(currentPrefix.contains("max")) 42.dp else (h/2).dp)))
                 } else Text("Universal Matrix Config", color = Color.White, modifier = Modifier.align(Alignment.Center))
             }
 
@@ -109,6 +109,17 @@ class ConfigActivity : ComponentActivity() {
                             }
                         }
                     }
+                } else if (currentPrefix == "handle") {
+                    Text(text = "Drag Handle (___)", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00FFCC))
+                    Text(text = "Customize the floating inner pill.", fontSize = 14.sp, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    ThemeSlider("Handle Width", "theme_handle_width", 40f, 10f..150f, prefs)
+                    ThemeSlider("Handle Thickness", "theme_handle_height", 5f, 2f..20f, prefs)
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text("Handle Gestures are hardcoded to Expand/Collapse for optimal layout tracking.", fontSize = 12.sp, color = Color.Gray)
+                    
                 } else if (currentPrefix == "dashboard") {
                     Text(text = "Quick Settings Grid", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
                     Text(text = "Select 7 hardware toggles.", fontSize = 14.sp, color = Color.Gray)
@@ -197,10 +208,6 @@ class ConfigActivity : ComponentActivity() {
                     var offsetY by remember { mutableFloatStateOf(prefs.getFloat("tweak_offset_y", 0f)) }
                     Text(text = "Y-Axis Offset (Push down from top): ${offsetY.toInt()}px", color = Color.White)
                     Slider(value = offsetY, onValueChange = { offsetY = it; prefs.edit().putFloat("tweak_offset_y", it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) }, valueRange = 0f..150f)
-
-                    var baseWidth by remember { mutableFloatStateOf(prefs.getFloat("tweak_base_width", 100f)) }
-                    Text(text = "Mini Pill Width: ${baseWidth.toInt()}dp", color = Color.White)
-                    Slider(value = baseWidth, onValueChange = { baseWidth = it; prefs.edit().putFloat("tweak_base_width", it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) }, valueRange = 50f..200f)
                 } else if (currentPrefix == "theme") {
                     Text(text = "UI Customization Engine", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text(text = "Customize the physical appearance of inner elements.", fontSize = 14.sp, color = Color.Gray)
@@ -225,10 +232,7 @@ class ConfigActivity : ComponentActivity() {
                     ThemeSlider("Button Shape (0=Square, 50=Circle)", "theme_button_radius", 50f, 0f..50f, prefs)
                     
                     Spacer(modifier = Modifier.height(16.dp))
-
                     ThemeSlider("Corner Radius", "theme_corner_radius", 50f, 10f..100f, prefs)
-                    ThemeSlider("Global Text Size (sp)", "theme_text_primary", 16f, 10f..30f, prefs)
-                    ThemeSlider("Global Subtext Size (sp)", "theme_text_secondary", 14f, 8f..24f, prefs)
                     ThemeSlider("Global Progress Thickness", "theme_progress_thick", 4f, 1f..15f, prefs)
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -242,11 +246,6 @@ class ConfigActivity : ComponentActivity() {
                     ThemeSlider("Cube Text Size", "theme_bat_text", 16f, 10f..30f, prefs)
                     ThemeSlider("Cube Icon Size", "theme_bat_icon", 36f, 16f..72f, prefs)
                     ThemeSlider("Ring Thickness", "theme_bat_ring", 12f, 2f..25f, prefs)
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Notification Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Red)
-                    ThemeSlider("Alert Title Size", "theme_alert_title", 16f, 10f..30f, prefs)
-                    ThemeSlider("Alert Message Size", "theme_alert_msg", 14f, 8f..24f, prefs)
                 } else if (currentPrefix == "features") {
                     Text(text = "Core Engines & Features", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text(text = "Selectively disable Island behaviors.", fontSize = 14.sp, color = Color.Gray)
@@ -360,8 +359,8 @@ class ConfigActivity : ComponentActivity() {
         }
     }
 
-    private fun getDefaultWidth(prefix: String) = when (prefix) { "ring" -> 45f; "mini" -> 180f; "mid" -> 320f; "max" -> 360f; "cube" -> 85f; else -> 0f }
-    private fun getDefaultHeight(prefix: String) = when (prefix) { "ring" -> 45f; "mini" -> 36f; "mid" -> 80f; "max" -> 220f; "cube" -> 85f; else -> 0f }
+    private fun getDefaultWidth(prefix: String) = when (prefix) { "ring" -> 45f; "mini" -> 180f; "mid" -> 320f; "max" -> 360f; "media_mid" -> 320f; "media_max" -> 360f; "cube" -> 85f; else -> 0f }
+    private fun getDefaultHeight(prefix: String) = when (prefix) { "ring" -> 45f; "mini" -> 36f; "mid" -> 80f; "max" -> 220f; "media_mid" -> 80f; "media_max" -> 200f; "cube" -> 85f; else -> 0f }
 
     private fun saveAndBroadcast(prefs: android.content.SharedPreferences, prefix: String, w: Float, h: Float, x: Float, y: Float, ringT: Float, up: Boolean) {
         prefs.edit().putFloat("${prefix}_w", w).putFloat("${prefix}_h", h).putFloat("${prefix}_x", x).putFloat("${prefix}_y", y).putFloat("ring_thickness", ringT).putBoolean("expand_upwards", up).apply()
