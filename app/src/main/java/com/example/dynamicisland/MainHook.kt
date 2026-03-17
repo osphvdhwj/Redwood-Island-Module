@@ -1,9 +1,8 @@
 package com.example.dynamicisland
 
+import android.app.Application
 import android.content.Context
 import android.content.Intent
-import android.graphics.PixelFormat
-import android.view.Gravity
 import android.view.WindowManager
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
@@ -15,13 +14,13 @@ class MainHook : IXposedHookLoadPackage {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
-        // 1. SYSTEM SERVER HOOKS
+        // 1. SYSTEM SERVER HOOKS (Android 16 / CrDroid 12.7 Bulletproof)
         if (lpparam.packageName == "android") {
             try {
                 val atmsClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader)
                 if (atmsClass != null) {
-                    XposedHelpers.findAndHookMethod(atmsClass, "setResumedActivityUncheckLocked",
-                        "com.android.server.wm.ActivityRecord", String::class.java,
+                    // 🚀 FIX: Using hookAllMethods because Android 16 changes parameter counts!
+                    XposedBridge.hookAllMethods(atmsClass, "setResumedActivityUncheckLocked",
                         object : XC_MethodHook() {
                             override fun afterHookedMethod(param: MethodHookParam) {
                                 try {
@@ -37,14 +36,15 @@ class MainHook : IXposedHookLoadPackage {
 
                 val nmsClass = XposedHelpers.findClassIfExists("com.android.server.notification.NotificationManagerService", lpparam.classLoader)
                 if (nmsClass != null) {
-                    XposedHelpers.findAndHookMethod(nmsClass, "enqueueNotificationInternal", 
-                        String::class.java, String::class.java, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, 
-                        String::class.java, Int::class.javaPrimitiveType, android.app.Notification::class.java, Int::class.javaPrimitiveType,
+                    // 🚀 FIX: Using hookAllMethods to bypass Android 16's new enqueueNotification signatures
+                    XposedBridge.hookAllMethods(nmsClass, "enqueueNotificationInternal", 
                         object : XC_MethodHook() {
                             override fun afterHookedMethod(param: MethodHookParam) {
                                 try {
                                     val pkgName = param.args[0] as? String ?: return
-                                    val notification = param.args[6] as? android.app.Notification ?: return
+                                    // Dynamically find the Notification object regardless of Android 16 index shifts
+                                    val notification = param.args.firstOrNull { it is android.app.Notification } as? android.app.Notification ?: return
+                                    
                                     val extras = notification.extras
                                     val mContext = XposedHelpers.getObjectField(param.thisObject, "mContext") as? Context
                                     
@@ -82,34 +82,34 @@ class MainHook : IXposedHookLoadPackage {
             return
         }
 
-        // 2. SYSTEM UI HOOK
-        if (lpparam.packageName != "com.android.systemui") return
-
-        try {
-            XposedHelpers.findAndHookMethod(
-                "com.android.systemui.SystemUIApplication",
-                lpparam.classLoader,
-                "onCreate",
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        val context = param.thisObject as Context
-                        injectDynamicIsland(context)
+        // 2. SYSTEM UI HOOK (Android 16 Universal Application Hook)
+        if (lpparam.packageName == "com.android.systemui") {
+            try {
+                // 🚀 FIX: Hooking the base Application class is un-bypassable.
+                XposedHelpers.findAndHookMethod(
+                    Application::class.java,
+                    "onCreate",
+                    object : XC_MethodHook() {
+                        override fun afterHookedMethod(param: MethodHookParam) {
+                            val app = param.thisObject as Application
+                            if (app.packageName == "com.android.systemui") {
+                                injectDynamicIsland(app.applicationContext)
+                            }
+                        }
                     }
-                }
-            )
-        } catch (e: Exception) {
-            XposedBridge.log("DynamicIsland: Failed to hook SystemUI - ${e.message}")
+                )
+            } catch (e: Exception) {
+                XposedBridge.log("DynamicIsland: Failed to hook SystemUI base Application - ${e.message}")
+            }
         }
     }
 
     private fun injectDynamicIsland(systemUiContext: Context) {
-        // 🛑 PRIME DIRECTIVE: 15-second delay maintained
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             try {
                 XposedBridge.log("RedwoodIsland: Starting delayed injection...")
                 val windowManager = systemUiContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-                // 🛑 PRIME DIRECTIVE ENFORCED: Reverted back to MATCH_PARENT
                 val layoutParams = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT, 
                     WindowManager.LayoutParams.MATCH_PARENT, 
