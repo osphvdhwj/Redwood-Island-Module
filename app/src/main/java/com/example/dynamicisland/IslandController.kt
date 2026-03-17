@@ -1,6 +1,7 @@
 @file:Suppress("DEPRECATION")
 package com.example.dynamicisland
 
+import android.app.ActivityOptions
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -33,6 +34,10 @@ class IslandController(private val context: Context) {
     val activeModel = _activeModel.asStateFlow()
     private val _splitModel = MutableStateFlow<LiveActivityModel?>(null) 
     val splitModel = _splitModel.asStateFlow()
+
+    // 🚀 NEW: The Multi-Tasking Engine Queue
+    private val taskQueue = mutableListOf<LiveActivityModel>()
+    private var currentTaskIndex = 0
 
     private var currentMedia: LiveActivityModel.Music? = null
     private var islandView: DynamicIslandView? = null
@@ -92,13 +97,16 @@ class IslandController(private val context: Context) {
                     val text = intent.getStringExtra("text") ?: ""
                     val progress = intent.getIntExtra("progress", -1)
                     val progressMax = intent.getIntExtra("progressMax", -1)
-                    if (progress != -1 && progressMax > 0) postTransientNotification(LiveActivityModel.OngoingTask(pkgName = pkg, title = title, text = text, progress = progress, progressMax = progressMax), 4000L)
+                    if (progress != -1 && progressMax > 0) {
+                        val task = LiveActivityModel.OngoingTask(pkgName = pkg, title = title, text = text, progress = progress, progressMax = progressMax)
+                        updateQueue(task)
+                        postTransientNotification(task, 4000L)
+                    }
                 }
-                // 🚀 NEW: Visual OTP Catcher Intercept
                 "com.example.dynamicisland.OTP_CAUGHT" -> {
                     val otpCode = intent.getStringExtra("otp") ?: return
                     val pkg = intent.getStringExtra("pkg") ?: "System"
-                    postTransientNotification(LiveActivityModel.Otp(code = otpCode, sourceApp = pkg), 8000L) // 8 second visibility
+                    postTransientNotification(LiveActivityModel.Otp(code = otpCode, sourceApp = pkg), 8000L) 
                 }
                 "com.crdroid.batterywellbeing.SYSTEM_OVERRIDE" -> {
                     if (!isAlertsEnabled) return
@@ -123,20 +131,62 @@ class IslandController(private val context: Context) {
         override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
     }
 
-    fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
-        val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
-        val view = DynamicIslandView(context, moduleContext).apply {
-            windowManager = wm
-            windowParams = params
+    // 🚀 NEW: Queue Management Logic
+    private fun updateQueue(model: LiveActivityModel) {
+        taskQueue.removeAll { it.id == model.id || it.type == model.type }
+        taskQueue.add(0, model) // Add to front
+        if (taskQueue.size > 3) taskQueue.removeLast() // Keep max 3 like Xiaomi
+        currentTaskIndex = 0
+    }
+
+    private fun cycleTask(forward: Boolean) {
+        if (taskQueue.isEmpty()) return
+        currentTaskIndex = if (forward) {
+            (currentTaskIndex + 1) % taskQueue.size
+        } else {
+            if (currentTaskIndex - 1 < 0) taskQueue.size - 1 else currentTaskIndex - 1
+        }
+        evaluatePriority()
+    }
+
+    // 🚀 NEW: Xiaomi-style Floating Window Ripper
+    private fun launchFloatingWindow(model: LiveActivityModel?) {
+        val packageName = when (model) {
+            is LiveActivityModel.Music -> model.appPackageName
+            is LiveActivityModel.OngoingTask -> model.pkgName
+            is LiveActivityModel.AppTimerWarning -> model.packageName
+            else -> return
         }
         
-        this.islandView = view 
-        this.windowManager = wm 
+        try {
+            val pm = context.packageManager
+            val intent = pm.getLaunchIntentForPackage(packageName)?.apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+            }
+            if (intent != null) {
+                val options = ActivityOptions.makeBasic()
+                try {
+                    // Deep reflection to bypass API restrictions and force Freeform Mode (5)
+                    val method = ActivityOptions::class.java.getMethod("setLaunchWindowingMode", Int::class.javaPrimitiveType)
+                    method.invoke(options, 5) 
+                } catch (e: Exception) {}
+                context.startActivity(intent, options.toBundle())
+                _islandState.update { IslandState.HIDDEN } // Snap island shut
+            }
+        } catch (e: Exception) {}
+    }
+
+    fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
+        val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
+        val view = DynamicIslandView(context, moduleContext).apply { windowManager = wm; windowParams = params }
+        this.islandView = view; this.windowManager = wm 
         
         view.onSplitPillClick = { 
             if (_splitModel.value is LiveActivityModel.Charging) { 
                 try { context.startActivity(Intent().setComponent(ComponentName("com.crdroid.batterywellbeing", "com.crdroid.batterywellbeing.MainActivity")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)) } catch(e: Throwable) { _islandState.update { IslandState.TYPE_CUBE } }
-            } 
+            } else if (_splitModel.value != null) {
+                cycleTask(true) // Swapping focus to split pill
+            }
         }
 
         view.onGestureSettingsUpdated = { payload ->
@@ -165,7 +215,11 @@ class IslandController(private val context: Context) {
                 "PREV_TRACK" -> sendMediaCommand("PREV")
                 "OPEN_DASHBOARD" -> { _activeModel.update { LiveActivityModel.Dashboard() }; _islandState.update { IslandState.TYPE_3_MAX } }
                 
-                // 🚀 REFINED UX: Graceful Step-by-Step Collapse (Max -> Mid -> Mini/Ring)
+                // 🚀 NEW: Task Routing Actions
+                "CYCLE_TASK_FWD" -> cycleTask(true)
+                "CYCLE_TASK_REV" -> cycleTask(false)
+                "OPEN_FLOATING" -> launchFloatingWindow(_activeModel.value)
+
                 "COLLAPSE" -> {
                     if (_activeModel.value is LiveActivityModel.Dashboard) {
                         _islandState.update { IslandState.TYPE_0_RING }
@@ -174,29 +228,20 @@ class IslandController(private val context: Context) {
                         when (_islandState.value) {
                             IslandState.TYPE_3_MAX -> _islandState.update { IslandState.TYPE_2_MID }
                             IslandState.TYPE_2_MID -> {
-                                if (currentMedia?.isPlaying == true) {
-                                    _islandState.update { IslandState.TYPE_1_MINI }
-                                } else {
-                                    userForceCollapsed = true
-                                    _islandState.update { IslandState.TYPE_0_RING }
-                                }
+                                if (currentMedia?.isPlaying == true) { _islandState.update { IslandState.TYPE_1_MINI } } 
+                                else { userForceCollapsed = true; _islandState.update { IslandState.TYPE_0_RING } }
                             }
-                            IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> {
-                                userForceCollapsed = true
-                                _islandState.update { IslandState.TYPE_0_RING }
-                            }
+                            IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { userForceCollapsed = true; _islandState.update { IslandState.TYPE_0_RING } }
                             else -> {}
                         }
                     }
                     evaluatePriority()
                 }
-                
-                // 🚀 REFINED UX: Graceful Step-by-Step Expand
                 "EXPAND" -> {
                     userForceCollapsed = false
                     when (_islandState.value) {
                         IslandState.TYPE_0_RING -> { 
-                            if (currentMedia != null) _islandState.update { IslandState.TYPE_1_MINI } 
+                            if (taskQueue.isNotEmpty()) _islandState.update { IslandState.TYPE_1_MINI } 
                             else { _activeModel.update { LiveActivityModel.Dashboard() }; _islandState.update { IslandState.TYPE_2_MID } } 
                         }
                         IslandState.TYPE_1_MINI -> _islandState.update { IslandState.TYPE_2_MID }
@@ -214,7 +259,7 @@ class IslandController(private val context: Context) {
         view.onNextClick = { sendMediaCommand("NEXT") }
         view.onSeekTo = { position -> activeMediaController?.transportControls?.seekTo(position) }
 
-        // 🚀 NEW: Drag Handle Gestures from View
+        // Hardcoded handle routing for stability
         view.onDragHandleExpand = { view.onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN) }
         view.onDragHandleCollapse = { view.onGestureEvent?.invoke(IslandGesture.SWIPE_UP) }
 
@@ -229,42 +274,55 @@ class IslandController(private val context: Context) {
     private fun evaluatePriority() {
         val rotation = try { windowManager?.defaultDisplay?.rotation ?: 0 } catch(e: Throwable) { 0 }
         val isLandscapeNow = rotation == android.view.Surface.ROTATION_90 || rotation == android.view.Surface.ROTATION_270
-        
         val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
         val blacklistedGames = prefs.getString("gaming_blacklist", "com.dts.freefiremax,com.tencent.ig") ?: ""
         val isBlacklistedAppActive = topAppPackage.isNotEmpty() && blacklistedGames.contains(topAppPackage)
         
         if ((isLandscapeNow || currentHardware?.isGamingModeOn == true || isBlacklistedAppActive) && transientModel?.isCritical != true) {
-            _islandState.update { IslandState.HIDDEN }
-            return
+            _islandState.update { IslandState.HIDDEN }; return
         }
         
+        // 1. Critical Transients Override Everything
         if (transientModel != null) {
             userForceCollapsed = false
-            if (currentHardware?.isGamingModeOn == true && transientModel is LiveActivityModel.Charging) { } 
-            else if (transientModel is LiveActivityModel.SystemAlert || transientModel is LiveActivityModel.AppTimerWarning || transientModel is LiveActivityModel.OngoingTask || transientModel is LiveActivityModel.Otp) {
+            if (transientModel is LiveActivityModel.SystemAlert || transientModel is LiveActivityModel.AppTimerWarning || transientModel is LiveActivityModel.OngoingTask || transientModel is LiveActivityModel.Otp) {
                 _activeModel.update { transientModel }; _splitModel.update { null }; _islandState.update { IslandState.TYPE_2_MID }
             } else if (transientModel is LiveActivityModel.RealityPill) {
                 _activeModel.update { transientModel }; _splitModel.update { null }; _islandState.update { IslandState.TYPE_1_MINI }
-            } else if (currentMedia?.isPlaying == true || currentMedia != null) {
-                _activeModel.update { currentMedia }; _splitModel.update { transientModel }; _islandState.update { IslandState.TYPE_SPLIT }
+            } else if (taskQueue.isNotEmpty()) {
+                _activeModel.update { taskQueue[currentTaskIndex] }; _splitModel.update { transientModel }; _islandState.update { IslandState.TYPE_SPLIT }
             } else {
                 _activeModel.update { transientModel }; _splitModel.update { null }; _islandState.update { IslandState.TYPE_CUBE }
             }
             return
         }
         
-        _splitModel.update { null }
         if (_activeModel.value is LiveActivityModel.Dashboard) return
         
-        if (currentMedia != null && isMediaEnabled) {
-            _activeModel.update { currentMedia }
+        // 2. Process Task Queue (The Xiaomi/Apple way)
+        if (taskQueue.isNotEmpty()) {
+            val primaryTask = taskQueue[currentTaskIndex]
+            _activeModel.update { primaryTask }
+            
             if (userForceCollapsed) { _islandState.update { IslandState.TYPE_0_RING }; return }
-            if (_islandState.value in listOf(IslandState.HIDDEN, IslandState.TYPE_0_RING, IslandState.TYPE_CUBE, IslandState.TYPE_SPLIT)) _islandState.update { IslandState.TYPE_1_MINI }
+            
+            if (taskQueue.size > 1) {
+                // Determine secondary task for split pill
+                val secondaryIndex = (currentTaskIndex + 1) % taskQueue.size
+                _splitModel.update { taskQueue[secondaryIndex] }
+                if (_islandState.value == IslandState.HIDDEN || _islandState.value == IslandState.TYPE_0_RING) {
+                    _islandState.update { IslandState.TYPE_SPLIT }
+                }
+            } else {
+                _splitModel.update { null }
+                if (_islandState.value == IslandState.HIDDEN || _islandState.value == IslandState.TYPE_0_RING) {
+                    _islandState.update { IslandState.TYPE_1_MINI }
+                }
+            }
             return
         }
         
-        _activeModel.update { null }
+        _activeModel.update { null }; _splitModel.update { null }
         _islandState.update { IslandState.TYPE_0_RING }
     }
 
@@ -275,7 +333,11 @@ class IslandController(private val context: Context) {
 
     private fun updateActiveMediaController(controller: MediaController?) {
         activeMediaController?.unregisterCallback(mediaCallback); activeMediaController = controller
-        if (controller == null || !isMediaEnabled) { currentMedia = null; stopMediaTicker(); evaluatePriority(); return }
+        if (controller == null || !isMediaEnabled) { 
+            currentMedia = null
+            taskQueue.removeAll { it is LiveActivityModel.Music }
+            stopMediaTicker(); evaluatePriority(); return 
+        }
         controller.registerCallback(mediaCallback); extractMediaData(controller)
     }
 
@@ -343,6 +405,8 @@ class IslandController(private val context: Context) {
                     isPlaying = isPlaying, durationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L, positionMs = pbState.position,
                     appPackageName = controller.packageName, customActions = pbState.customActions.map { CustomMediaAction(it.action, null, null, true) }
                 )
+
+                if (currentMedia != null) updateQueue(currentMedia!!)
 
                 if (isPlaying && !wasPlaying) { userForceCollapsed = false; pauseFadeJob?.cancel(); startMediaTicker() }
                 else if (!isPlaying) { stopMediaTicker(); if (wasPlaying) { pauseFadeJob?.cancel(); pauseFadeJob = scope.launch { delay(3000); userForceCollapsed = true; evaluatePriority() } } }
