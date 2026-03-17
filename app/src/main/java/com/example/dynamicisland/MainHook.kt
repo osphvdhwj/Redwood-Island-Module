@@ -3,6 +3,8 @@ package com.example.dynamicisland
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.hardware.display.DisplayManager
+import android.view.Display
 import android.view.WindowManager
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
@@ -19,7 +21,6 @@ class MainHook : IXposedHookLoadPackage {
             try {
                 val atmsClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader)
                 if (atmsClass != null) {
-                    // 🚀 FIX: Using hookAllMethods because Android 16 changes parameter counts!
                     XposedBridge.hookAllMethods(atmsClass, "setResumedActivityUncheckLocked",
                         object : XC_MethodHook() {
                             override fun afterHookedMethod(param: MethodHookParam) {
@@ -36,13 +37,11 @@ class MainHook : IXposedHookLoadPackage {
 
                 val nmsClass = XposedHelpers.findClassIfExists("com.android.server.notification.NotificationManagerService", lpparam.classLoader)
                 if (nmsClass != null) {
-                    // 🚀 FIX: Using hookAllMethods to bypass Android 16's new enqueueNotification signatures
                     XposedBridge.hookAllMethods(nmsClass, "enqueueNotificationInternal", 
                         object : XC_MethodHook() {
                             override fun afterHookedMethod(param: MethodHookParam) {
                                 try {
                                     val pkgName = param.args[0] as? String ?: return
-                                    // Dynamically find the Notification object regardless of Android 16 index shifts
                                     val notification = param.args.firstOrNull { it is android.app.Notification } as? android.app.Notification ?: return
                                     
                                     val extras = notification.extras
@@ -82,10 +81,9 @@ class MainHook : IXposedHookLoadPackage {
             return
         }
 
-        // 2. SYSTEM UI HOOK (Android 16 Universal Application Hook)
+        // 2. SYSTEM UI HOOK
         if (lpparam.packageName == "com.android.systemui") {
             try {
-                // 🚀 FIX: Hooking the base Application class is un-bypassable.
                 XposedHelpers.findAndHookMethod(
                     Application::class.java,
                     "onCreate",
@@ -107,13 +105,20 @@ class MainHook : IXposedHookLoadPackage {
     private fun injectDynamicIsland(systemUiContext: Context) {
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             try {
-                XposedBridge.log("RedwoodIsland: Starting delayed injection...")
-                val windowManager = systemUiContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                XposedBridge.log("RedwoodIsland: Starting Android 16 compliant injection...")
+                
+                // 🚀 FIX: Generate a strict UI WindowContext to satisfy Android 16's DisplayManager
+                val displayManager = systemUiContext.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+                val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+                
+                // 2024 = TYPE_NAVIGATION_BAR_PANEL
+                val windowContext = systemUiContext.createWindowContext(display, 2024, null)
+                val windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
                 val layoutParams = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT, 
                     WindowManager.LayoutParams.MATCH_PARENT, 
-                    2024, // TYPE_NAVIGATION_BAR_PANEL
+                    2024, 
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
@@ -130,11 +135,12 @@ class MainHook : IXposedHookLoadPackage {
                     }
                 }
 
-                val controller = IslandController(systemUiContext)
+                // 🚀 FIX: Pass the authenticated windowContext to Compose, NOT the base ApplicationContext
+                val controller = IslandController(windowContext)
                 val islandView = controller.createIslandView(windowManager, layoutParams)
 
                 windowManager.addView(islandView, layoutParams)
-                XposedBridge.log("RedwoodIsland: Successfully injected overlay with dynamic bounds.")
+                XposedBridge.log("RedwoodIsland: Successfully injected overlay using WindowContext.")
             } catch (e: Exception) {
                 XposedBridge.log("RedwoodIsland: FATAL ERROR during injection: ${e.message}")
             }
