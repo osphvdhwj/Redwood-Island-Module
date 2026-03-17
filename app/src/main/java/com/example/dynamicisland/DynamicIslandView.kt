@@ -13,6 +13,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -37,6 +38,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -60,19 +62,6 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     fun detach() { lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY) }
 }
 
-data class IslandTheme(
-    val mediaBarCap: StrokeCap = StrokeCap.Round,
-    val mediaBarThickness: Dp = 4.dp,
-    val titleSize: TextUnit = 16.sp,
-    val titleFont: FontFamily = FontFamily.Default,
-    val timeTextSize: TextUnit = 12.sp,
-    val buttonSize: Dp = 48.dp,
-    val buttonSpacing: Dp = 16.dp,
-    val buttonCornerRadius: Dp = 50.dp,
-    val actionAnimType: String = "BOUNCE"
-)
-
-val LocalIslandTheme = compositionLocalOf { IslandTheme() }
 val LocalIslandFont = compositionLocalOf { FontFamily.Default }
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
@@ -116,6 +105,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onNextClick: (() -> Unit)? = null
     var onSeekTo: ((Long) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
+    
+    // 🚀 RESTORED CALLBACKS
+    var onDragHandleExpand: (() -> Unit)? = null
+    var onDragHandleCollapse: (() -> Unit)? = null
 
     private var flowJob: Job? = null
     private val lifecycleOwner = OverlayLifecycleOwner()
@@ -250,6 +243,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val targetY = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value; IslandState.TYPE_2_MID -> if (isMedia) mediaMidY.value else midY.value; IslandState.TYPE_3_MAX -> if (isMedia) mediaMaxY.value else maxY.value; IslandState.TYPE_CUBE -> cubeY.value; else -> ringY.value }
 
         val physicsSpec = spring<Dp>(dampingRatio = 0.72f, stiffness = 320f)
+        val floatPhysicsSpec = spring<Float>(dampingRatio = 0.72f, stiffness = 320f)
+        
         val width by animateDpAsState(targetWidth.dp, physicsSpec, label = "width")
         val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
         val offsetX by animateFloatAsState(targetX, spring(dampingRatio = 0.72f, stiffness = 320f), label = "x")
@@ -258,6 +253,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         val targetBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.Black
         val bgColor by animateColorAsState(targetBgColor, tween(400), label = "bgColor")
+        
+        // 🚀 RESTORED BORDER COLOR
+        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.12f), animationSpec = tween(400), label = "borderColor")
 
         LaunchedEffect(state, model) {
             val wp = windowParams ?: return@LaunchedEffect; val wm = windowManager ?: return@LaunchedEffect
@@ -283,7 +281,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     .graphicsLayer { scaleX = touchScale; scaleY = touchScale; transformOrigin = TransformOrigin(0.5f, 0f) }
                     .clip(RoundedCornerShape(rad))
                     .background(bgColor)
-                    // 🚀 UNIFIED MASTER GESTURE DETECTOR
+                    .border(1.dp, borderColor, RoundedCornerShape(rad)) // 🚀 APPLIED BORDER COLOR
                     .pointerInput(state) {
                         detectTapGestures(
                             onPress = { isSquished = true; tryAwaitRelease(); isSquished = false },
@@ -303,7 +301,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         ) { change, dragAmount -> change.consume(); dX += dragAmount.x; dY += dragAmount.y }
                     }
             ) {
-                // 🚀 ADAPTIVE UI CONTAINER (Zero Hardcoded Paddings)
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING) {
                         AnimatedContent(
@@ -338,7 +335,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         }
                     }
                     
-                    // 🚀 REWRITTEN RING STATE: Breathing + Sweep Animation
                     if (state == IslandState.TYPE_0_RING) {
                         val musicModel = model as? LiveActivityModel.Music
                         val isMedia = musicModel != null && musicModel.isPlaying
