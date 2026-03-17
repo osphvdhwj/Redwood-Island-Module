@@ -3,6 +3,7 @@ package com.example.dynamicisland
 import android.content.Context
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -31,15 +32,73 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.foundation.gestures.*
+import androidx.compose.ui.graphics.graphicsLayer
 
-// 🚀 ADAPTIVE MINI PILL: Intrinsic centering, no overlapping
+@Composable
+fun FloatingDragHandle(
+    modifier: Modifier = Modifier,
+    handleWidth: Dp = 40.dp,
+    handleHeight: Dp = 5.dp,
+    handleColor: Color = Color.White.copy(alpha = 0.4f),
+    onSwipeUp: () -> Unit = {},
+    onSwipeDown: () -> Unit = {},
+    onSwipeLeft: () -> Unit = {},
+    onSwipeRight: () -> Unit = {},
+    onLongClick: () -> Unit = {},
+    onClick: () -> Unit = {}
+) {
+    val haptic = LocalHapticFeedback.current
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(targetValue = if (isPressed) 1.2f else 1f, animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f), label = "handleScale")
+
+    Box(
+        modifier = modifier
+            .width(handleWidth)
+            .height(handleHeight * 2) 
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { isPressed = true },
+                    onDragEnd = { isPressed = false; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) },
+                    onDragCancel = { isPressed = false }
+                ) { change, dragAmount ->
+                    change.consume()
+                    if (dragAmount.y > 15f) onSwipeDown()
+                    else if (dragAmount.y < -15f) onSwipeUp()
+                    else if (dragAmount.x > 15f) onSwipeRight()
+                    else if (dragAmount.x < -15f) onSwipeLeft()
+                }
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = { isPressed = true; tryAwaitRelease(); isPressed = false },
+                    onLongPress = { onLongClick(); haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                    onTap = { onClick(); haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .width(handleWidth)
+                .height(handleHeight)
+                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .clip(CircleShape)
+                .background(handleColor)
+        )
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
     Row(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween // Pushes icon and text to edges safely
+        horizontalArrangement = Arrangement.SpaceBetween 
     ) {
         if (music.albumArt != null) {
             Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(24.dp).clip(CircleShape))
@@ -58,7 +117,6 @@ fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
             modifier = Modifier.weight(1f).safeMarquee(islandState.value) 
         )
         
-        // Animated Equalizer/Waveform indicator instead of overlapping progress
         if (music.isPlaying) {
             Spacer(Modifier.width(12.dp))
             Icon(Icons.Default.GraphicEq, contentDescription = null, tint = Color(music.dominantColor ?: android.graphics.Color.WHITE), modifier = Modifier.size(16.dp))
@@ -66,14 +124,12 @@ fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
     }
 }
 
-// 🚀 ADAPTIVE MID PILL: Strict weight ratios
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
     val dynamicColor = Color(music.titleTextColor).copy(alpha = 0.9f)
     
     Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-        // TOP 70%: Content
         Row(modifier = Modifier.weight(0.7f).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             if (music.albumArt != null) {
                 Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.fillMaxHeight().aspectRatio(1f).clip(RoundedCornerShape(12.dp)))
@@ -90,30 +146,29 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
             Icon(imageVector = playIcon, contentDescription = "Play/Pause", tint = dynamicColor, modifier = Modifier.size(32.dp))
         }
         
-        // BOTTOM 30%: Handle and Timestamps
         Row(modifier = Modifier.weight(0.3f).fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
             IsolatedTimeText(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = dynamicColor.copy(alpha=0.6f), fontSize = 11.sp)
-            Box(modifier = Modifier.width(40.dp).height(4.dp).clip(CircleShape).background(dynamicColor.copy(alpha = 0.3f))) // Clean Handle
+            FloatingDragHandle(
+                onSwipeDown = { onDragHandleExpand?.invoke() },
+                onSwipeUp = { onDragHandleCollapse?.invoke() }
+            )
             Text(text = formatTime(music.durationMs), color = dynamicColor.copy(alpha=0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium, fontFamily = FontFamily.Monospace)
         }
     }
 }
 
-// 🚀 ADAPTIVE MAX PILL: Strict flex layout
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
     val theme = LocalIslandTheme.current
     
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        // TOP 15%: App Icon & Routing
         Row(modifier = Modifier.weight(0.15f).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
             if (music.appIcon != null) Image(bitmap = music.appIcon.asImageBitmap(), contentDescription = "App", modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp))) 
             else Box(Modifier.size(24.dp).background(Color.White.copy(alpha=0.2f), RoundedCornerShape(6.dp)))
             Icon(Icons.Default.Smartphone, contentDescription = "Output", tint = Color.White.copy(0.7f), modifier = Modifier.size(20.dp))
         }
         
-        // MIDDLE 40%: Huge Art & Text
         Row(modifier = Modifier.weight(0.4f).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentDescription = "Art", modifier = Modifier.fillMaxHeight().aspectRatio(1f).clip(RoundedCornerShape(16.dp)))
             Spacer(modifier = Modifier.width(16.dp))
@@ -123,7 +178,6 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
             }
         }
         
-        // BOTTOM 45%: Seekbar & Controls
         Column(modifier = Modifier.weight(0.45f).fillMaxWidth(), verticalArrangement = Arrangement.Bottom) {
             IsolatedMediaSlider(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, dynamicTextColor = Color.White, onSeek = { onSeekTo?.invoke(it) })
             Spacer(modifier = Modifier.height(8.dp))
@@ -135,13 +189,15 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
             }
             Spacer(modifier = Modifier.height(8.dp))
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Box(modifier = Modifier.width(40.dp).height(4.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.3f)))
+                FloatingDragHandle(
+                    onSwipeDown = { onDragHandleExpand?.invoke() },
+                    onSwipeUp = { onDragHandleCollapse?.invoke() }
+                )
             }
         }
     }
 }
 
-// 🚀 REFINED DASHBOARD (Clean Grid)
 @Composable
 fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceEvenly) {
@@ -158,7 +214,10 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
             DashboardToggle(Icons.Default.Build, false)
         }
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Box(modifier = Modifier.width(40.dp).height(4.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.3f)))
+            FloatingDragHandle(
+                onSwipeDown = { onDragHandleExpand?.invoke() },
+                onSwipeUp = { onDragHandleCollapse?.invoke() }
+            )
         }
     }
 }
@@ -172,7 +231,6 @@ fun DashboardToggle(icon: ImageVector, active: Boolean) {
     }
 }
 
-// 🚀 OTP CATCHER (Beautiful layout)
 @Composable
 fun DynamicIslandView.OtpMid(model: LiveActivityModel.Otp) {
     Row(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -190,7 +248,6 @@ fun DynamicIslandView.OtpMid(model: LiveActivityModel.Otp) {
     }
 }
 
-// UTILITY COMPONENTS
 @Composable
 fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
     val color = if (model.isPluggedIn) Color.Green else if (model.level <= 20) Color.Red else Color.White
@@ -312,3 +369,8 @@ fun IsolatedMediaSlider(durationMs: Long, posProvider: () -> Long, dynamicTextCo
 fun androidx.compose.ui.Modifier.safeMarquee(state: IslandState): androidx.compose.ui.Modifier {
     return if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING && state != IslandState.TYPE_CUBE) this.basicMarquee() else this
 }
+
+// 🚀 RESTORED EXTENSION FUNCTIONS
+fun DynamicIslandView.setState(newState: IslandState) { islandState.value = newState }
+fun DynamicIslandView.setModel(model: LiveActivityModel?) { activeModel.value = model }
+fun DynamicIslandView.setSplitModel(model: LiveActivityModel?) { splitModel.value = model }
