@@ -5,8 +5,7 @@ import android.graphics.Bitmap
 enum class ActivityType { CALL, NAVIGATION, TIMER, MESSAGE, ALARM, CHARGING, BATTERY_LOW, BLUETOOTH, WIFI, HARDWARE, ONGOING_TASK }
 enum class IslandState { HIDDEN, TYPE_0_RING, TYPE_1_MINI, TYPE_2_MID, TYPE_3_MAX, TYPE_SPLIT, TYPE_CUBE }
 enum class IslandGesture { SINGLE_TAP, DOUBLE_TAP, LONG_PRESS, SWIPE_LEFT, SWIPE_RIGHT, SWIPE_UP, SWIPE_DOWN }
-enum class IslandAction { NONE, PLAY_PAUSE, NEXT_TRACK, PREV_TRACK, VOL_UP, VOL_DOWN, OPEN_APP, EXPAND, COLLAPSE, OPEN_DASHBOARD, HEART_SONG }
-
+enum class IslandAction { NONE, PLAY_PAUSE, NEXT_TRACK, PREV_TRACK, VOL_UP, VOL_DOWN, OPEN_APP, EXPAND, COLLAPSE, OPEN_DASHBOARD, HEART_SONG, CYCLE_TASK_FWD, CYCLE_TASK_REV, OPEN_FLOATING }
 data class CustomMediaAction(val actionName: String, val iconBitmap: Bitmap?, val iconResId: Int?, val isEnabled: Boolean)
 
 sealed class LiveActivityModel {
