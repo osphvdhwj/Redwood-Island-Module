@@ -89,7 +89,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var ringThickness = mutableStateOf(6f)
     var expandUpwards = mutableStateOf(false)
     var useSystemFont = mutableStateOf(true) 
-    var isCubeRotationEnabled = mutableStateOf(true) // 🚀 RESTORED: Cube Rotation Config
+    var isCubeRotationEnabled = mutableStateOf(true) 
     
     var globalBatteryLevel = mutableIntStateOf(100)
     var globalIsCharging = mutableStateOf(false)
@@ -113,6 +113,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onPrevClick: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
     var onSeekTo: ((Long) -> Unit)? = null
+    
+    // Missing variables restored here:
+    var onAudioOutputClick: (() -> Unit)? = null
+    var onDragHandleExpand: (() -> Unit)? = null
+    var onDragHandleCollapse: (() -> Unit)? = null
 
     private var flowJob: Job? = null
     private val lifecycleOwner = OverlayLifecycleOwner()
@@ -138,7 +143,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             ringThickness.value = pref.getFloat("ring_thickness", 6f)
             expandUpwards.value = pref.getBoolean("expand_upwards", false)
             useSystemFont.value = pref.getBoolean("use_system_font", true)
-            isCubeRotationEnabled.value = pref.getBoolean("enable_cube_rotation", true) // 🚀 RESTORED
+            isCubeRotationEnabled.value = pref.getBoolean("enable_cube_rotation", true) 
             
             for (i in 0..7) { val pkg = pref.getString("pinned_app_$i", ""); if (pkg != null) pinnedApps[i] = pkg }
             for (i in 0..6) { val qs = pref.getString("qs_tile_$i", ""); if (qs != null) qsTiles[i] = qs }
@@ -260,7 +265,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         Box(modifier = Modifier.fillMaxSize()) {
             
-            // MAIN ISLAND PILL
             Box(
                 modifier = Modifier
                     .align(if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter)
@@ -303,7 +307,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     
-                    // 🚀 RESTORED: Premium OLED Background Purity with 40dp Blur and Vertical Dark Gradient Mask
                     if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
                         Image(
                             bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
@@ -312,7 +315,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 drawContent()
                                 drawRect(brush = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))))
                             }
-                            .alpha(if (state == IslandState.TYPE_3_MAX) 0.65f else 0.45f).blur(40.dp) // Deep, high-end blur
+                            .alpha(if (state == IslandState.TYPE_3_MAX) 0.65f else 0.45f).blur(40.dp) 
                         )
                     }
 
@@ -349,7 +352,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         }
                     }
                     
-                    // 🚀 RESTORED: The Original Mathematical Ring Physics with the White Rotating Marker
                     if (state == IslandState.TYPE_0_RING) {
                         val musicModel = model as? LiveActivityModel.Music
                         val isMedia = musicModel != null && musicModel.isPlaying
@@ -368,13 +370,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             val progressAngle = 360f * safeProgress
                             val sweepGradient = Brush.sweepGradient(0.0f to baseColor.copy(alpha = 0.2f), 0.8f to baseColor, 1.0f to baseColor.copy(alpha = 0.2f))
 
-                            // Draw Background Track
                             drawArc(color = baseColor.copy(alpha=0.15f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
-                            
-                            // Draw Progress Gradient
                             drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = progressAngle, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 0.95f)
                             
-                            // Draw Precise Leading-Edge White Marker (The exact feature you wanted back)
                             val markerAngle = -90f + progressAngle
                             drawArc(color = Color.White, startAngle = markerAngle - 2f, sweepAngle = 4f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round))
                         }
