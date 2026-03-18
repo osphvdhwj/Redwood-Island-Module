@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -68,18 +69,6 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     fun detach() { lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP); lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY) }
 }
 
-data class IslandTheme(
-    val mediaBarCap: StrokeCap = StrokeCap.Round,
-    val mediaBarThickness: Dp = 4.dp,
-    val titleSize: TextUnit = 16.sp,
-    val timeTextSize: TextUnit = 12.sp,
-    val buttonSize: Dp = 48.dp,
-    val buttonSpacing: Dp = 16.dp,
-    val buttonCornerRadius: Dp = 50.dp,
-    val actionAnimType: String = "BOUNCE"
-)
-
-val LocalIslandTheme = compositionLocalOf { IslandTheme() }
 val LocalIslandFont = compositionLocalOf { FontFamily.Default }
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
@@ -274,12 +263,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val offsetY by animateFloatAsState(targetY, floatPhysicsSpec, label = "y")
         val rad by animateDpAsState(if (state == IslandState.TYPE_3_MAX) 42.dp else (targetHeight / 2).dp, physicsSpec, label = "rad")
 
-        // 🚀 FIX: Beautiful, semi-transparent OLED Glass-Morphism
         val targetBgColor = if (state == IslandState.HIDDEN) Color.Transparent 
         else if (state == IslandState.TYPE_0_RING) Color.Black.copy(alpha = 0.05f) 
         else {
             if (isMedia && (model as LiveActivityModel.Music).dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor!!).copy(alpha = 0.65f) 
-            else if (state == IslandState.TYPE_3_MAX) Color(0xFF0F0F0F).copy(alpha = 0.55f) // Ultra-premium dark glass for Max
+            else if (state == IslandState.TYPE_3_MAX) Color(0xFF0F0F0F).copy(alpha = 0.55f)
             else Color(0xFF121212).copy(alpha = 0.85f) 
         }
         val bgColor by animateColorAsState(targetBgColor, tween(400), label = "bgColor")
@@ -293,10 +281,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
         }
 
-        // 🚀 FIX: Absolute screen-center positioning to prevent full-width clipping!
         Box(modifier = Modifier.fillMaxSize()) {
             
-            // The Main Island
             Box(
                 modifier = Modifier
                     .align(if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter)
@@ -339,7 +325,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     
-                    // Restore the Premium Cinematic Background for Media
                     if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
                         Image(
                             bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
@@ -385,7 +370,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         }
                     }
                     
-                    // The Unkillable Pulsing Ring
                     if (state == IslandState.TYPE_0_RING) {
                         val musicModel = model as? LiveActivityModel.Music
                         val isMedia = musicModel != null && musicModel.isPlaying
@@ -412,13 +396,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 }
             }
 
-            // The True Detached Split Pill (Multitasking)
             AnimatedVisibility(
                 visible = state == IslandState.TYPE_SPLIT, 
                 enter = scaleIn(spring(dampingRatio=0.72f, stiffness=320f)) + fadeIn(), exit = scaleOut() + fadeOut(),
                 modifier = Modifier
                     .align(if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter)
-                    // Mathematically attaches perfectly to the right side of the main pill + padding
                     .offset(x = (offsetX + (targetWidth/2) + 24f).dp, y = offsetY.dp)
             ) {
                 val sModel = splitModel.value
