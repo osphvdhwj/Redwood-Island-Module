@@ -35,7 +35,6 @@ class IslandController(private val context: Context) {
     private val _splitModel = MutableStateFlow<LiveActivityModel?>(null) 
     val splitModel = _splitModel.asStateFlow()
 
-    // 🚀 NEW: The Multi-Tasking Engine Queue
     private val taskQueue = mutableListOf<LiveActivityModel>()
     private var currentTaskIndex = 0
 
@@ -61,7 +60,20 @@ class IslandController(private val context: Context) {
     private var isAlertsEnabled = true
     private var isTimersEnabled = true
 
-    private val gestureMatrix = mutableMapOf<String, IslandAction>()
+    // 🚀 FIX: Failsafe Default Matrix. Even if settings fail to load, the Island works!
+    private val gestureMatrix = mutableMapOf<String, IslandAction>().apply {
+        put("TYPE_0_RING_SINGLE_TAP", IslandAction.EXPAND)
+        put("TYPE_1_MINI_SINGLE_TAP", IslandAction.EXPAND)
+        put("TYPE_2_MID_SINGLE_TAP", IslandAction.EXPAND)
+        put("TYPE_3_MAX_SWIPE_UP", IslandAction.COLLAPSE)
+        put("TYPE_2_MID_SWIPE_UP", IslandAction.COLLAPSE)
+        put("TYPE_3_MAX_SWIPE_DOWN", IslandAction.OPEN_FLOATING)
+        put("TYPE_2_MID_SWIPE_LEFT", IslandAction.CYCLE_TASK_REV)
+        put("TYPE_2_MID_SWIPE_RIGHT", IslandAction.CYCLE_TASK_FWD)
+        put("TYPE_3_MAX_SWIPE_LEFT", IslandAction.CYCLE_TASK_REV)
+        put("TYPE_3_MAX_SWIPE_RIGHT", IslandAction.CYCLE_TASK_FWD)
+    }
+
     private val mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
     private var activeMediaController: MediaController? = null
 
@@ -108,19 +120,6 @@ class IslandController(private val context: Context) {
                     val pkg = intent.getStringExtra("pkg") ?: "System"
                     postTransientNotification(LiveActivityModel.Otp(code = otpCode, sourceApp = pkg), 8000L) 
                 }
-                "com.crdroid.batterywellbeing.SYSTEM_OVERRIDE" -> {
-                    if (!isAlertsEnabled) return
-                    when (intent.getStringExtra("action")) {
-                        "SMART_CHARGE_LIMIT" -> postTransientNotification(LiveActivityModel.Charging("sys_smart_charge", ActivityType.CHARGING, intent.getIntExtra("level", 100), true, true), 6000L)
-                        "THERMAL_WARNING" -> postTransientNotification(LiveActivityModel.SystemAlert(id = "sys_thermal", alertType = "THERMAL", title = "Thermal Throttling", message = "Battery temperature at ${intent.getStringExtra("extra_info") ?: "High"}", alertColor = android.graphics.Color.RED), 6000L)
-                        "ROGUE_APP_DETECTED" -> postTransientNotification(LiveActivityModel.SystemAlert(id = "sys_rogue", alertType = "ROGUE", title = "High Background Drain", message = "${intent.getStringExtra("extra_info") ?: "Unknown App"} is draining battery", alertColor = android.graphics.Color.rgb(255, 165, 0)), 6000L)
-                    }
-                }
-                "com.crdroid.batterywellbeing.SYSTEM_ALERT" -> {
-                    if (!isAlertsEnabled) return
-                    val colorInt = try { android.graphics.Color.parseColor(intent.getStringExtra("colorHex") ?: "#FFFFFF") } catch(e: Exception) { android.graphics.Color.WHITE }
-                    postTransientNotification(LiveActivityModel.SystemAlert(id = "sys_alert", alertType = intent.getStringExtra("alertType") ?: "INFO", title = intent.getStringExtra("title") ?: "Alert", message = intent.getStringExtra("message") ?: "", alertColor = colorInt), 5000L)
-                }
             }
         }
     }
@@ -131,11 +130,10 @@ class IslandController(private val context: Context) {
         override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
     }
 
-    // 🚀 NEW: Queue Management Logic
     private fun updateQueue(model: LiveActivityModel) {
         taskQueue.removeAll { it.id == model.id || it.type == model.type }
-        taskQueue.add(0, model) // Add to front
-        if (taskQueue.size > 3) taskQueue.removeLast() // Keep max 3 like Xiaomi
+        taskQueue.add(0, model) 
+        if (taskQueue.size > 3) taskQueue.removeLast() 
         currentTaskIndex = 0
     }
 
@@ -149,7 +147,6 @@ class IslandController(private val context: Context) {
         evaluatePriority()
     }
 
-    // 🚀 NEW: Xiaomi-style Floating Window Ripper
     private fun launchFloatingWindow(model: LiveActivityModel?) {
         val packageName = when (model) {
             is LiveActivityModel.Music -> model.appPackageName
@@ -166,12 +163,11 @@ class IslandController(private val context: Context) {
             if (intent != null) {
                 val options = ActivityOptions.makeBasic()
                 try {
-                    // Deep reflection to bypass API restrictions and force Freeform Mode (5)
                     val method = ActivityOptions::class.java.getMethod("setLaunchWindowingMode", Int::class.javaPrimitiveType)
                     method.invoke(options, 5) 
                 } catch (e: Exception) {}
                 context.startActivity(intent, options.toBundle())
-                _islandState.update { IslandState.HIDDEN } // Snap island shut
+                _islandState.update { IslandState.HIDDEN } 
             }
         } catch (e: Exception) {}
     }
@@ -182,26 +178,15 @@ class IslandController(private val context: Context) {
         this.islandView = view; this.windowManager = wm 
         
         view.onSplitPillClick = { 
-            if (_splitModel.value is LiveActivityModel.Charging) { 
-                try { context.startActivity(Intent().setComponent(ComponentName("com.crdroid.batterywellbeing", "com.crdroid.batterywellbeing.MainActivity")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)) } catch(e: Throwable) { _islandState.update { IslandState.TYPE_CUBE } }
-            } else if (_splitModel.value != null) {
-                cycleTask(true) // Swapping focus to split pill
+            if (_splitModel.value != null) {
+                cycleTask(true) 
             }
         }
 
         view.onGestureSettingsUpdated = { payload ->
             try {
-                val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
-                isMediaEnabled = prefs.getBoolean("enable_media", true)
-                isChargingEnabled = prefs.getBoolean("enable_charging", true)
-                isAlertsEnabled = prefs.getBoolean("enable_alerts", true)
-                isTimersEnabled = prefs.getBoolean("enable_timers", true)
-                
-                if (!isMediaEnabled && currentMedia != null) { currentMedia = null; stopMediaTicker(); evaluatePriority() }
-
-                if (payload != null && payload.length < 5000) {
+                if (payload != null && payload.length > 5) {
                     val json = JSONObject(payload)
-                    gestureMatrix.clear()
                     json.keys().forEach { key -> try { if (key.startsWith("TYPE_")) { gestureMatrix[key] = IslandAction.valueOf(json.getString(key)) } } catch (e: Exception) {} }
                 }
             } catch (e: Exception) {}
@@ -215,7 +200,6 @@ class IslandController(private val context: Context) {
                 "PREV_TRACK" -> sendMediaCommand("PREV")
                 "OPEN_DASHBOARD" -> { _activeModel.update { LiveActivityModel.Dashboard() }; _islandState.update { IslandState.TYPE_3_MAX } }
                 
-                // 🚀 NEW: Task Routing Actions
                 "CYCLE_TASK_FWD" -> cycleTask(true)
                 "CYCLE_TASK_REV" -> cycleTask(false)
                 "OPEN_FLOATING" -> launchFloatingWindow(_activeModel.value)
@@ -259,7 +243,6 @@ class IslandController(private val context: Context) {
         view.onNextClick = { sendMediaCommand("NEXT") }
         view.onSeekTo = { position -> activeMediaController?.transportControls?.seekTo(position) }
 
-        // Hardcoded handle routing for stability
         view.onDragHandleExpand = { view.onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN) }
         view.onDragHandleCollapse = { view.onGestureEvent?.invoke(IslandGesture.SWIPE_UP) }
 
@@ -282,7 +265,6 @@ class IslandController(private val context: Context) {
             _islandState.update { IslandState.HIDDEN }; return
         }
         
-        // 1. Critical Transients Override Everything
         if (transientModel != null) {
             userForceCollapsed = false
             if (transientModel is LiveActivityModel.SystemAlert || transientModel is LiveActivityModel.AppTimerWarning || transientModel is LiveActivityModel.OngoingTask || transientModel is LiveActivityModel.Otp) {
@@ -299,7 +281,6 @@ class IslandController(private val context: Context) {
         
         if (_activeModel.value is LiveActivityModel.Dashboard) return
         
-        // 2. Process Task Queue (The Xiaomi/Apple way)
         if (taskQueue.isNotEmpty()) {
             val primaryTask = taskQueue[currentTaskIndex]
             _activeModel.update { primaryTask }
@@ -307,7 +288,6 @@ class IslandController(private val context: Context) {
             if (userForceCollapsed) { _islandState.update { IslandState.TYPE_0_RING }; return }
             
             if (taskQueue.size > 1) {
-                // Determine secondary task for split pill
                 val secondaryIndex = (currentTaskIndex + 1) % taskQueue.size
                 _splitModel.update { taskQueue[secondaryIndex] }
                 if (_islandState.value == IslandState.HIDDEN || _islandState.value == IslandState.TYPE_0_RING) {
@@ -403,7 +383,7 @@ class IslandController(private val context: Context) {
                     id = "media_main", title = newTitle, artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
                     albumArt = albumArtBitmap, blurredAlbumArt = blurredArtBitmap, appIcon = null, dominantColor = bgColor, titleTextColor = txtColor,
                     isPlaying = isPlaying, durationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L, positionMs = pbState.position,
-                    appPackageName = controller.packageName, customActions = pbState.customActions.map { CustomMediaAction(it.action, null, null, true) }
+                    appPackageName = controller.packageName, customActions = emptyList()
                 )
 
                 if (currentMedia != null) updateQueue(currentMedia!!)
@@ -426,7 +406,7 @@ class IslandController(private val context: Context) {
         context.registerReceiver(screenStateReceiver, IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) })
         context.registerComponentCallbacks(componentCallbacks)
         
-        val ecoFilter = IntentFilter().apply { listOf("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE", "com.crdroid.batterywellbeing.SYSTEM_ALERT", "com.example.dynamicisland.APP_CHANGED", "com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT", "com.example.dynamicisland.OTP_CAUGHT").forEach { addAction(it) } }
+        val ecoFilter = IntentFilter().apply { listOf("com.example.dynamicisland.APP_CHANGED", "com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT", "com.example.dynamicisland.OTP_CAUGHT").forEach { addAction(it) } }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) context.registerReceiver(ecosystemReceiver, ecoFilter, "com.redwood.permission.SECURE_IPC", null, Context.RECEIVER_EXPORTED) else @Suppress("UnspecifiedRegisterReceiverFlag") context.registerReceiver(ecosystemReceiver, ecoFilter, "com.redwood.permission.SECURE_IPC", null)
 
         BatteryPlugin.onBatteryChanged = { level, isCharging, _ ->
