@@ -16,7 +16,7 @@ class MainHook : IXposedHookLoadPackage {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
-        // 1. SYSTEM SERVER HOOKS (Android 16 / CrDroid 12.7 Bulletproof)
+        // 1. SYSTEM SERVER HOOKS
         if (lpparam.packageName == "android") {
             try {
                 val atmsClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader)
@@ -81,23 +81,27 @@ class MainHook : IXposedHookLoadPackage {
             return
         }
 
-        // 2. SYSTEM UI HOOK
+        // 2. SYSTEM UI HOOK (The Instrumentation Fix)
         if (lpparam.packageName == "com.android.systemui") {
             try {
+                // 🚀 FIX: Hooking the un-bypassable OS Ignition Switch instead of the App class
                 XposedHelpers.findAndHookMethod(
+                    "android.app.Instrumentation",
+                    lpparam.classLoader,
+                    "callApplicationOnCreate",
                     Application::class.java,
-                    "onCreate",
                     object : XC_MethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {
-                            val app = param.thisObject as Application
+                            val app = param.args[0] as Application
                             if (app.packageName == "com.android.systemui") {
                                 injectDynamicIsland(app.applicationContext)
                             }
                         }
                     }
                 )
+                XposedBridge.log("RedwoodIsland: Instrumentation hook deployed successfully.")
             } catch (e: Exception) {
-                XposedBridge.log("DynamicIsland: Failed to hook SystemUI base Application - ${e.message}")
+                XposedBridge.log("RedwoodIsland: Failed to hook Instrumentation - ${e.message}")
             }
         }
     }
@@ -107,11 +111,9 @@ class MainHook : IXposedHookLoadPackage {
             try {
                 XposedBridge.log("RedwoodIsland: Starting Android 16 compliant injection...")
                 
-                // 🚀 FIX: Generate a strict UI WindowContext to satisfy Android 16's DisplayManager
                 val displayManager = systemUiContext.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
                 val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
                 
-                // 2024 = TYPE_NAVIGATION_BAR_PANEL
                 val windowContext = systemUiContext.createWindowContext(display, 2024, null)
                 val windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
@@ -135,7 +137,6 @@ class MainHook : IXposedHookLoadPackage {
                     }
                 }
 
-                // 🚀 FIX: Pass the authenticated windowContext to Compose, NOT the base ApplicationContext
                 val controller = IslandController(windowContext)
                 val islandView = controller.createIslandView(windowManager, layoutParams)
 
