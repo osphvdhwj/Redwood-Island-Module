@@ -48,11 +48,11 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp 
 import androidx.lifecycle.*
 import androidx.savedstate.*
+import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -89,7 +89,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var ringThickness = mutableStateOf(6f)
     var expandUpwards = mutableStateOf(false)
     var useSystemFont = mutableStateOf(true) 
-    var activeTheme = mutableStateOf(IslandTheme())
+    var isCubeRotationEnabled = mutableStateOf(true) // 🚀 RESTORED: Cube Rotation Config
     
     var globalBatteryLevel = mutableIntStateOf(100)
     var globalIsCharging = mutableStateOf(false)
@@ -113,10 +113,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onPrevClick: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
     var onSeekTo: ((Long) -> Unit)? = null
-    var onAudioOutputClick: (() -> Unit)? = null
-    
-    var onDragHandleExpand: (() -> Unit)? = null
-    var onDragHandleCollapse: (() -> Unit)? = null
 
     private var flowJob: Job? = null
     private val lifecycleOwner = OverlayLifecycleOwner()
@@ -127,7 +123,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     private fun loadPreferences() {
         try {
-            val pref = moduleContext.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+            val pref = XSharedPreferences("com.example.dynamicisland", "island_prefs")
+            pref.makeWorldReadable()
+            pref.reload()
+            
             ringW.value = pref.getFloat("ring_w", 45f); ringH.value = pref.getFloat("ring_h", 45f); ringX.value = pref.getFloat("ring_x", 0f); ringY.value = pref.getFloat("ring_y", 48f)
             miniW.value = pref.getFloat("mini_w", 180f); miniH.value = pref.getFloat("mini_h", 36f); miniX.value = pref.getFloat("mini_x", 0f); miniY.value = pref.getFloat("mini_y", 48f)
             midW.value = pref.getFloat("mid_w", 320f); midH.value = pref.getFloat("mid_h", 80f); midX.value = pref.getFloat("mid_x", 0f); midY.value = pref.getFloat("mid_y", 48f)
@@ -135,9 +134,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             mediaMidW.value = pref.getFloat("media_mid_w", 320f); mediaMidH.value = pref.getFloat("media_mid_h", 80f); mediaMidX.value = pref.getFloat("media_mid_x", 0f); mediaMidY.value = pref.getFloat("media_mid_y", 48f)
             mediaMaxW.value = pref.getFloat("media_max_w", 360f); mediaMaxH.value = pref.getFloat("media_max_h", 200f); mediaMaxX.value = pref.getFloat("media_max_x", 0f); mediaMaxY.value = pref.getFloat("media_max_y", 48f)
             cubeW.value = pref.getFloat("cube_w", 85f); cubeH.value = pref.getFloat("cube_h", 85f); cubeX.value = pref.getFloat("cube_x", 0f); cubeY.value = pref.getFloat("cube_y", 48f)
+            
             ringThickness.value = pref.getFloat("ring_thickness", 6f)
             expandUpwards.value = pref.getBoolean("expand_upwards", false)
             useSystemFont.value = pref.getBoolean("use_system_font", true)
+            isCubeRotationEnabled.value = pref.getBoolean("enable_cube_rotation", true) // 🚀 RESTORED
             
             for (i in 0..7) { val pkg = pref.getString("pinned_app_$i", ""); if (pkg != null) pinnedApps[i] = pkg }
             for (i in 0..6) { val qs = pref.getString("qs_tile_$i", ""); if (qs != null) qsTiles[i] = qs }
@@ -147,32 +148,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     private val receiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             if (intent.action == "com.example.dynamicisland.RELOAD_PREFS") {
-                val prefix = intent.getStringExtra("prefix")
-                if (prefix != null) {
-                    val w = intent.getFloatExtra("w", 0f); val h = intent.getFloatExtra("h", 0f); val x = intent.getFloatExtra("x", 0f); val y = intent.getFloatExtra("y", 0f)
-                    when (prefix) { 
-                        "ring" -> { ringW.value = w; ringH.value = h; ringX.value = x; ringY.value = y }
-                        "mini" -> { miniW.value = w; miniH.value = h; miniX.value = x; miniY.value = y }
-                        "mid" -> { midW.value = w; midH.value = h; midX.value = x; midY.value = y }
-                        "max" -> { maxW.value = w; maxH.value = h; maxX.value = x; maxY.value = y }
-                        "media_mid" -> { mediaMidW.value = w; mediaMidH.value = h; mediaMidX.value = x; mediaMidY.value = y }
-                        "media_max" -> { mediaMaxW.value = w; mediaMaxH.value = h; mediaMaxX.value = x; mediaMaxY.value = y }
-                        "cube" -> { cubeW.value = w; cubeH.value = h; cubeX.value = x; cubeY.value = y } 
-                    }
-                    ringThickness.value = intent.getFloatExtra("ring_thickness", ringThickness.value)
-                    expandUpwards.value = intent.getBooleanExtra("expand_upwards", expandUpwards.value)
-                } 
-                val pref = moduleContext.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
-                useSystemFont.value = pref.getBoolean("use_system_font", true)
-                for (i in 0..7) { val pkg = pref.getString("pinned_app_$i", ""); if (pkg != null) pinnedApps[i] = pkg }
-                for (i in 0..6) { val qs = pref.getString("qs_tile_$i", ""); if (qs != null) qsTiles[i] = qs }
-                activeTheme.value = IslandTheme(
-                    buttonSize = intent.getFloatExtra("theme_button_size", 48f).dp,
-                    buttonSpacing = intent.getFloatExtra("theme_button_spacing", 16f).dp,
-                    buttonCornerRadius = intent.getFloatExtra("theme_button_radius", 50f).dp,
-                    actionAnimType = intent.getStringExtra("theme_anim_type") ?: "BOUNCE"
-                )
-                intent.getStringExtra("gesture_payload")?.let { onGestureSettingsUpdated?.invoke(it) } ?: loadPreferences()
+                loadPreferences()
+                intent.getStringExtra("gesture_payload")?.let { onGestureSettingsUpdated?.invoke(it) }
             }
         }
     }
@@ -211,7 +188,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             setContent {
                 val islandFont = if (useSystemFont.value) FontFamily.Default else FontFamily.Monospace 
                 MaterialTheme(typography = Typography(bodyMedium = androidx.compose.material3.Typography().bodyMedium.copy(fontFamily = islandFont))) {
-                    CompositionLocalProvider(LocalContext provides moduleContext, LocalIslandTheme provides activeTheme.value, LocalIslandFont provides islandFont) {
+                    CompositionLocalProvider(LocalContext provides moduleContext, LocalIslandFont provides islandFont) {
                         IslandUI(islandState.value)
                     }
                 }
@@ -283,6 +260,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         Box(modifier = Modifier.fillMaxSize()) {
             
+            // MAIN ISLAND PILL
             Box(
                 modifier = Modifier
                     .align(if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter)
@@ -325,15 +303,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     
+                    // 🚀 RESTORED: Premium OLED Background Purity with 40dp Blur and Vertical Dark Gradient Mask
                     if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
                         Image(
                             bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
                             modifier = Modifier.fillMaxSize()
                             .drawWithContent {
                                 drawContent()
-                                drawRect(brush = Brush.horizontalGradient(0.0f to Color.Transparent, 0.7f to Color.Black, 1.0f to Color.Black))
+                                drawRect(brush = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))))
                             }
-                            .alpha(if (state == IslandState.TYPE_3_MAX) 0.55f else 0.25f).blur(if (state == IslandState.TYPE_3_MAX) 18.dp else 28.dp)
+                            .alpha(if (state == IslandState.TYPE_3_MAX) 0.65f else 0.45f).blur(40.dp) // Deep, high-end blur
                         )
                     }
 
@@ -370,13 +349,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         }
                     }
                     
+                    // 🚀 RESTORED: The Original Mathematical Ring Physics with the White Rotating Marker
                     if (state == IslandState.TYPE_0_RING) {
                         val musicModel = model as? LiveActivityModel.Music
                         val isMedia = musicModel != null && musicModel.isPlaying
-                        val infiniteTransition = rememberInfiniteTransition(label = "ring_anim")
-                        val pulseScale by infiniteTransition.animateFloat(initialValue = 0.95f, targetValue = 1.05f, animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "scale")
                         
-                        Canvas(modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
                             val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
                             val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
                             val baseColor = if (isMedia) { musicModel?.dominantColor?.let { Color(it) } ?: Color.White } else if (globalIsCharging.value) Color.Green else if (globalBatteryLevel.intValue <= 20) Color.Red else Color.White
@@ -386,11 +364,19 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
                             val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
                             
-                            val safeProgress = progress.coerceIn(0.15f, 1f) 
+                            val safeProgress = progress.coerceIn(0.02f, 1f) 
+                            val progressAngle = 360f * safeProgress
                             val sweepGradient = Brush.sweepGradient(0.0f to baseColor.copy(alpha = 0.2f), 0.8f to baseColor, 1.0f to baseColor.copy(alpha = 0.2f))
 
+                            // Draw Background Track
                             drawArc(color = baseColor.copy(alpha=0.15f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
-                            drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * safeProgress, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 0.95f)
+                            
+                            // Draw Progress Gradient
+                            drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = progressAngle, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 0.95f)
+                            
+                            // Draw Precise Leading-Edge White Marker (The exact feature you wanted back)
+                            val markerAngle = -90f + progressAngle
+                            drawArc(color = Color.White, startAngle = markerAngle - 2f, sweepAngle = 4f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round))
                         }
                     }
                 }
