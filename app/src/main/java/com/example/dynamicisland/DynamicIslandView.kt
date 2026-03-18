@@ -106,7 +106,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onSeekTo: ((Long) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
     
-    // 🚀 RESTORED CALLBACKS
     var onDragHandleExpand: (() -> Unit)? = null
     var onDragHandleCollapse: (() -> Unit)? = null
 
@@ -119,8 +118,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     private fun loadPreferences() {
         try {
-            val pref = XSharedPreferences("com.example.dynamicisland", "island_prefs")
-            pref.makeWorldReadable(); pref.reload()
+            val pref = moduleContext.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
             ringW.value = pref.getFloat("ring_w", 45f); ringH.value = pref.getFloat("ring_h", 45f); ringX.value = pref.getFloat("ring_x", 0f); ringY.value = pref.getFloat("ring_y", 48f)
             miniW.value = pref.getFloat("mini_w", 180f); miniH.value = pref.getFloat("mini_h", 36f); miniX.value = pref.getFloat("mini_x", 0f); miniY.value = pref.getFloat("mini_y", 48f)
             midW.value = pref.getFloat("mid_w", 320f); midH.value = pref.getFloat("mid_h", 80f); midX.value = pref.getFloat("mid_x", 0f); midY.value = pref.getFloat("mid_y", 48f)
@@ -152,7 +150,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     ringThickness.value = intent.getFloatExtra("ring_thickness", ringThickness.value)
                     expandUpwards.value = intent.getBooleanExtra("expand_upwards", expandUpwards.value)
                 } 
-                val pref = ctx.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+                val pref = moduleContext.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
                 useSystemFont.value = pref.getBoolean("use_system_font", true)
                 activeTheme.value = IslandTheme(
                     buttonSize = intent.getFloatExtra("theme_button_size", 48f).dp,
@@ -247,15 +245,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         
         val width by animateDpAsState(targetWidth.dp, physicsSpec, label = "width")
         val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
-        val offsetX by animateFloatAsState(targetX, spring(dampingRatio = 0.72f, stiffness = 320f), label = "x")
-        val offsetY by animateFloatAsState(targetY, spring(dampingRatio = 0.72f, stiffness = 320f), label = "y")
+        val offsetX by animateFloatAsState(targetX, floatPhysicsSpec, label = "x")
+        val offsetY by animateFloatAsState(targetY, floatPhysicsSpec, label = "y")
         val rad by animateDpAsState(if (state == IslandState.TYPE_3_MAX) 42.dp else (targetHeight / 2).dp, physicsSpec, label = "rad")
 
-        val targetBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.Black
+        // 🚀 FIX: Prevent pure transparent backgrounds from ignoring taps
+        val targetBgColor = if (state == IslandState.HIDDEN) Color.Transparent else if (state == IslandState.TYPE_0_RING) Color.Black.copy(alpha = 0.05f) else Color.Black
         val bgColor by animateColorAsState(targetBgColor, tween(400), label = "bgColor")
-        
-        // 🚀 RESTORED BORDER COLOR
-        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.12f), animationSpec = tween(400), label = "borderColor")
+        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN) Color.Transparent else if (state == IslandState.TYPE_0_RING) Color.White.copy(alpha=0.4f) else Color.White.copy(alpha = 0.12f), animationSpec = tween(400), label = "borderColor")
 
         LaunchedEffect(state, model) {
             val wp = windowParams ?: return@LaunchedEffect; val wm = windowManager ?: return@LaunchedEffect
@@ -265,23 +262,24 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth().offset(x = offsetX.dp, y = offsetY.coerceAtLeast(0f).dp).height(maxH.value.dp.coerceAtLeast(mediaMaxH.value.dp)), 
-            horizontalArrangement = Arrangement.Center, 
-            verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
-        ) {
+        // 🚀 FIX: Absolute center positioning prevents the UI from clipping off the screen
+        Box(modifier = Modifier.fillMaxSize()) {
+            
+            // This is the Main Island Box
             Box(
                 modifier = Modifier
+                    .align(if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter)
+                    .offset(x = offsetX.dp, y = offsetY.dp)
+                    .width(width).height(height)
                     .onGloballyPositioned { coordinates ->
                         val loc = IntArray(2); this@DynamicIslandView.getLocationOnScreen(loc); val b = coordinates.boundsInRoot()
                         val gL = loc[0] + b.left.toInt(); val gT = loc[1] + b.top.toInt(); val gR = loc[0] + b.right.toInt(); val gB = loc[1] + b.bottom.toInt()
                         if (abs(mainPillRect.left - gL) > 5 || abs(mainPillRect.bottom - gB) > 5 || mainPillRect.isEmpty) { mainPillRect.set(gL, gT, gR, gB); insetsUpdateFlow.tryEmit(Unit) }
                     }
-                    .width(width).height(height)
-                    .graphicsLayer { scaleX = touchScale; scaleY = touchScale; transformOrigin = TransformOrigin(0.5f, 0f) }
+                    .graphicsLayer { scaleX = touchScale; scaleY = touchScale; transformOrigin = TransformOrigin(0.5f, 0.5f) }
                     .clip(RoundedCornerShape(rad))
                     .background(bgColor)
-                    .border(1.dp, borderColor, RoundedCornerShape(rad)) // 🚀 APPLIED BORDER COLOR
+                    .border(1.dp, borderColor, RoundedCornerShape(rad))
                     .pointerInput(state) {
                         detectTapGestures(
                             onPress = { isSquished = true; tryAwaitRelease(); isSquished = false },
@@ -335,52 +333,54 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         }
                     }
                     
+                    // 🚀 FIX: Enhanced Ring UI so it never vanishes
                     if (state == IslandState.TYPE_0_RING) {
                         val musicModel = model as? LiveActivityModel.Music
                         val isMedia = musicModel != null && musicModel.isPlaying
-                        val shouldShowRing = isMedia || globalIsCharging.value || globalBatteryLevel.intValue <= 20
-
-                        if (shouldShowRing) {
-                            val infiniteTransition = rememberInfiniteTransition(label = "ring_anim")
-                            val pulseScale by infiniteTransition.animateFloat(initialValue = 0.95f, targetValue = 1.05f, animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "scale")
+                        val infiniteTransition = rememberInfiniteTransition(label = "ring_anim")
+                        val pulseScale by infiniteTransition.animateFloat(initialValue = 0.95f, targetValue = 1.05f, animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "scale")
+                        
+                        Canvas(modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }) {
+                            val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
+                            val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
+                            val baseColor = if (isMedia) { musicModel?.dominantColor?.let { Color(it) } ?: Color.White } else if (globalIsCharging.value) Color.Green else if (globalBatteryLevel.intValue <= 20) Color.Red else Color.White
                             
-                            Canvas(modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }) {
-                                val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
-                                val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
-                                val baseColor = if (isMedia) { musicModel?.dominantColor?.let { Color(it) } ?: Color.White } else if (globalIsCharging.value) Color.Green else if (globalBatteryLevel.intValue <= 20) Color.Red else Color.White
-                                
-                                val strokeW = ringThickness.value.dp.toPx() 
-                                val inset = strokeW / 2
-                                val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
-                                val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
-                                val progressPercent = progress.coerceIn(0f, 1f)
+                            val strokeW = ringThickness.value.dp.toPx() 
+                            val inset = strokeW / 2
+                            val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
+                            val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
+                            
+                            // Guaranteed 15% sweep just so it's always visible even at 0 progress
+                            val safeProgress = progress.coerceIn(0.15f, 1f) 
+                            val sweepGradient = Brush.sweepGradient(0.0f to baseColor.copy(alpha = 0.2f), 0.8f to baseColor, 1.0f to baseColor.copy(alpha = 0.2f))
 
-                                val sweepGradient = Brush.sweepGradient(0.0f to baseColor.copy(alpha = 0.2f), 0.8f to baseColor, 1.0f to baseColor.copy(alpha = 0.2f))
-
-                                drawArc(color = baseColor.copy(alpha=0.15f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
-                                drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 0.95f)
-                            }
+                            drawArc(color = baseColor.copy(alpha=0.15f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
+                            drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * safeProgress, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 0.95f)
                         }
                     }
                 }
             }
 
-            AnimatedVisibility(visible = state == IslandState.TYPE_SPLIT, enter = scaleIn(spring(dampingRatio=0.72f, stiffness=320f)) + fadeIn(), exit = scaleOut() + fadeOut()) {
+            // Split Pill Logic (Detached)
+            AnimatedVisibility(
+                visible = state == IslandState.TYPE_SPLIT, 
+                enter = scaleIn(spring(dampingRatio=0.72f, stiffness=320f)) + fadeIn(), exit = scaleOut() + fadeOut(),
+                modifier = Modifier
+                    .align(if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter)
+                    .offset(x = (offsetX + (targetWidth/2) + 24f).dp, y = offsetY.dp)
+            ) {
                 val sModel = splitModel.value
                 val splitBg = if (sModel is LiveActivityModel.Charging) { if (sModel.isPluggedIn) Color.Green.copy(alpha=0.2f) else if (sModel.level <= 20) Color.Red.copy(alpha=0.2f) else Color(0xFF121212).copy(alpha=0.75f) } else Color(0xFF121212).copy(alpha=0.75f)
-                Row {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Box(modifier = Modifier.size(height)
-                            .onGloballyPositioned { coordinates ->
-                                val loc = IntArray(2); this@DynamicIslandView.getLocationOnScreen(loc); val b = coordinates.boundsInRoot()
-                                val gL = loc[0] + b.left.toInt(); val gT = loc[1] + b.top.toInt(); val gR = loc[0] + b.right.toInt(); val gB = loc[1] + b.bottom.toInt()
-                                if (abs(splitCubeRect.left - gL) > 5 || splitCubeRect.isEmpty) { splitCubeRect.set(gL, gT, gR, gB); insetsUpdateFlow.tryEmit(Unit) }
-                            }
-                            .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape)
-                            .clickable { onSplitPillClick?.invoke() },
-                        contentAlignment = Alignment.Center) {
-                        if (sModel is LiveActivityModel.Charging) { val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White; Text(text = "${sModel.level}%", color = iconColor, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = LocalIslandFont.current) }
-                    }
+                Box(modifier = Modifier.size(height)
+                        .onGloballyPositioned { coordinates ->
+                            val loc = IntArray(2); this@DynamicIslandView.getLocationOnScreen(loc); val b = coordinates.boundsInRoot()
+                            val gL = loc[0] + b.left.toInt(); val gT = loc[1] + b.top.toInt(); val gR = loc[0] + b.right.toInt(); val gB = loc[1] + b.bottom.toInt()
+                            if (abs(splitCubeRect.left - gL) > 5 || splitCubeRect.isEmpty) { splitCubeRect.set(gL, gT, gR, gB); insetsUpdateFlow.tryEmit(Unit) }
+                        }
+                        .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape)
+                        .clickable { onSplitPillClick?.invoke() },
+                    contentAlignment = Alignment.Center) {
+                    if (sModel is LiveActivityModel.Charging) { val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White; Text(text = "${sModel.level}%", color = iconColor, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = LocalIslandFont.current) }
                 }
             }
         }
