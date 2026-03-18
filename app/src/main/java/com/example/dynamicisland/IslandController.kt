@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import org.json.JSONObject
 import android.util.LruCache
-import java.util.concurrent.ConcurrentHashMap
 
 class IslandController(private val context: Context) {
 
@@ -60,7 +59,7 @@ class IslandController(private val context: Context) {
     private var isAlertsEnabled = true
     private var isTimersEnabled = true
 
-    // 🚀 FIX: Failsafe Default Matrix. Even if settings fail to load, the Island works!
+    // The Failsafe Matrix loads first, so your Island works instantly on boot.
     private val gestureMatrix = mutableMapOf<String, IslandAction>().apply {
         put("TYPE_0_RING_SINGLE_TAP", IslandAction.EXPAND)
         put("TYPE_1_MINI_SINGLE_TAP", IslandAction.EXPAND)
@@ -187,6 +186,7 @@ class IslandController(private val context: Context) {
             try {
                 if (payload != null && payload.length > 5) {
                     val json = JSONObject(payload)
+                    gestureMatrix.clear() // 🚀 FIX: Clears the failsafe and honors your custom Config App selections!
                     json.keys().forEach { key -> try { if (key.startsWith("TYPE_")) { gestureMatrix[key] = IslandAction.valueOf(json.getString(key)) } } catch (e: Exception) {} }
                 }
             } catch (e: Exception) {}
