@@ -415,13 +415,14 @@ class ConfigActivity : ComponentActivity() {
             setPackage("com.android.systemui")
         }
         val matrix = JSONObject()
-        // FIX: The previous code completely ignored Float/Int preferences because it checked `value is String`.
-        // This parses all matching keys to string so the receiver catches the Float changes.
-        prefs.all.forEach { (key, value) -> 
+        
+        // FIX: Using a standard for-loop avoids the Map.forEach type inference ambiguity that breaks the compiler
+        for ((key, value) in prefs.all) {
             if (key.contains("TYPE_") || key.contains("theme_") || key.contains("tweak_") || key.contains("enable_") || key.contains("use_")) {
                 matrix.put(key, value.toString()) 
             }
         }
+        
         updateIntent.putExtra("gesture_payload", matrix.toString())
         context.sendBroadcast(updateIntent)
     }
