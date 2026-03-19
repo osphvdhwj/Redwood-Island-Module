@@ -173,7 +173,16 @@ class IslandController(private val context: Context) {
 
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
-        val view = DynamicIslandView(context, moduleContext).apply { windowManager = wm; windowParams = params }
+        
+        // 🚀 ANDROID 16 QPR2 FIX: Start Hidden/Zero-bounds so we don't block the screen
+        params.width = 0
+        params.height = 0
+        params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+
+        val view = DynamicIslandView(context, moduleContext).apply { 
+            windowManager = wm
+            windowParams = params 
+        }
         this.islandView = view; this.windowManager = wm 
         
         view.onSplitPillClick = { 
@@ -186,7 +195,7 @@ class IslandController(private val context: Context) {
             try {
                 if (payload != null && payload.length > 5) {
                     val json = JSONObject(payload)
-                    gestureMatrix.clear() // 🚀 FIX: Clears the failsafe and honors your custom Config App selections!
+                    gestureMatrix.clear()
                     json.keys().forEach { key -> try { if (key.startsWith("TYPE_")) { gestureMatrix[key] = IslandAction.valueOf(json.getString(key)) } } catch (e: Exception) {} }
                 }
             } catch (e: Exception) {}
@@ -242,9 +251,6 @@ class IslandController(private val context: Context) {
         view.onPrevClick = { sendMediaCommand("PREV") }
         view.onNextClick = { sendMediaCommand("NEXT") }
         view.onSeekTo = { position -> activeMediaController?.transportControls?.seekTo(position) }
-
-        view.onDragHandleExpand = { view.onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN) }
-        view.onDragHandleCollapse = { view.onGestureEvent?.invoke(IslandGesture.SWIPE_UP) }
 
         scope.launch { islandState.collect { state -> view.setState(state) } }
         scope.launch { activeModel.collect { model -> view.setModel(model) } }
@@ -379,11 +385,20 @@ class IslandController(private val context: Context) {
                 currentMedia?.blurredAlbumArt?.takeIf { it != currentMedia?.albumArt }?.recycle()
                 val wasPlaying = currentMedia?.isPlaying == true
                 
+                // 🚀 ANDROID 16 FIX: Parse the custom media actions properly!
+                val sessionActions = pbState.customActions?.map { action ->
+                    LiveActivityModel.MediaAction(
+                        name = action.name.toString(),
+                        actionString = action.action,
+                        iconRes = action.icon
+                    )
+                } ?: emptyList()
+
                 currentMedia = LiveActivityModel.Music(
                     id = "media_main", title = newTitle, artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
                     albumArt = albumArtBitmap, blurredAlbumArt = blurredArtBitmap, appIcon = null, dominantColor = bgColor, titleTextColor = txtColor,
                     isPlaying = isPlaying, durationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L, positionMs = pbState.position,
-                    appPackageName = controller.packageName, customActions = emptyList()
+                    appPackageName = controller.packageName, customActions = sessionActions
                 )
 
                 if (currentMedia != null) updateQueue(currentMedia!!)
