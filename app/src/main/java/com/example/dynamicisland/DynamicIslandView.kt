@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -38,12 +39,14 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -86,7 +89,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var mediaMaxW = mutableStateOf(360f); var mediaMaxH = mutableStateOf(200f); var mediaMaxX = mutableStateOf(0f); var mediaMaxY = mutableStateOf(48f)
     var cubeW = mutableStateOf(85f); var cubeH = mutableStateOf(85f); var cubeX = mutableStateOf(0f); var cubeY = mutableStateOf(48f)
 
-    var ringThickness = mutableStateOf(6f)
+    var ringThickness = mutableStateOf(8f) // 🚀 FIX: Increased default thickness so ring is visible
     var expandUpwards = mutableStateOf(false)
     var useSystemFont = mutableStateOf(true) 
     var isCubeRotationEnabled = mutableStateOf(true) 
@@ -114,17 +117,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onNextClick: (() -> Unit)? = null
     var onSeekTo: ((Long) -> Unit)? = null
     
-    // Missing variables restored here:
     var onAudioOutputClick: (() -> Unit)? = null
     var onDragHandleExpand: (() -> Unit)? = null
     var onDragHandleCollapse: (() -> Unit)? = null
 
     private var flowJob: Job? = null
     private val lifecycleOwner = OverlayLifecycleOwner()
-    private val mainPillRect = android.graphics.Rect()
-    private val splitCubeRect = android.graphics.Rect()
-    private var insetsListenerProxy: Any? = null
-    private val insetsUpdateFlow = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(replay = 1, onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST)
 
     private fun loadPreferences() {
         try {
@@ -140,7 +138,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             mediaMaxW.value = pref.getFloat("media_max_w", 360f); mediaMaxH.value = pref.getFloat("media_max_h", 200f); mediaMaxX.value = pref.getFloat("media_max_x", 0f); mediaMaxY.value = pref.getFloat("media_max_y", 48f)
             cubeW.value = pref.getFloat("cube_w", 85f); cubeH.value = pref.getFloat("cube_h", 85f); cubeX.value = pref.getFloat("cube_x", 0f); cubeY.value = pref.getFloat("cube_y", 48f)
             
-            ringThickness.value = pref.getFloat("ring_thickness", 6f)
+            ringThickness.value = pref.getFloat("ring_thickness", 8f) // Maintained increased thickness
             expandUpwards.value = pref.getBoolean("expand_upwards", false)
             useSystemFont.value = pref.getBoolean("use_system_font", true)
             isCubeRotationEnabled.value = pref.getBoolean("enable_cube_rotation", true) 
@@ -161,24 +159,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     init {
         loadPreferences()
-        try {
-            val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
-            insetsListenerProxy = java.lang.reflect.Proxy.newProxyInstance(context.classLoader, arrayOf(listenerClass)) { _, method, args ->
-                if (method.name == "onComputeInternalInsets") {
-                    val info = args[0]
-                    val touchableInsetsRegion = info.javaClass.getField("TOUCHABLE_INSETS_REGION").getInt(null)
-                    info.javaClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType).invoke(info, touchableInsetsRegion)
-                    val region = info.javaClass.getField("touchableRegion").get(info) as android.graphics.Region
-                    region.setEmpty()
-                    if (islandState.value != IslandState.HIDDEN) {
-                        if (!mainPillRect.isEmpty) region.op(mainPillRect, android.graphics.Region.Op.UNION)
-                        if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) region.op(splitCubeRect, android.graphics.Region.Op.UNION)
-                    }
-                }
-                null
-            }
-            viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListenerProxy)
-        } catch (e: Exception) {}
+        
+        // 🚀 FIX: Removed the Java Reflection Insets listener entirely. We use dynamic WindowManager bounds now.
 
         val composeView = ComposeView(context).apply {
             setViewTreeLifecycleOwner(lifecycleOwner)
@@ -205,18 +187,34 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         addView(composeView)
     }
 
+    // 🚀 FIX: Real-time Window bounds updater to replace the Reflection hack
+    private fun updateWindowBounds(widthPx: Int, heightPx: Int) {
+        val wm = windowManager ?: return
+        val wp = windowParams ?: return
+        
+        if (islandState.value == IslandState.HIDDEN) {
+            wp.width = 0; wp.height = 0
+            wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        } else {
+            // Android 16 QPR2 FLAG_LAYOUT_NO_LIMITS prevents the black box from clipping the UI
+            wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            wp.width = widthPx + 150 // Buffer for physics elasticity and shadows
+            wp.height = heightPx + 150
+            wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+        }
+        try { wm.updateViewLayout(this, wp) } catch (e: Exception) {}
+    }
+
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { windowManager?.currentWindowMetrics?.windowInsets?.displayCutout } else null
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
-        flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch { insetsUpdateFlow.debounce(50).collect { this@DynamicIslandView.requestLayout() } }
         val filter = IntentFilter("com.example.dynamicisland.RELOAD_PREFS")
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) context.registerReceiver(receiver, filter, "com.redwood.permission.SECURE_IPC", null, Context.RECEIVER_EXPORTED) else @Suppress("UnspecifiedRegisterReceiverFlag") context.registerReceiver(receiver, filter, "com.redwood.permission.SECURE_IPC", null)
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        try { if (insetsListenerProxy != null) { val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener"); viewTreeObserver.javaClass.getMethod("removeOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListenerProxy) } } catch (e: Exception) {}
         flowJob?.cancel(); flowJob = null; try { context.unregisterReceiver(receiver) } catch (e: Exception) {}
     }
 
@@ -224,7 +222,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     @Composable
     fun IslandUI(state: IslandState) {
         val haptic = LocalHapticFeedback.current
+        val density = LocalDensity.current
         var isSquished by remember { mutableStateOf(false) }
+        
+        // 🚀 FIX: Velocity tracker offset for Rubber-banding
+        var dragOffset by remember { mutableStateOf(Offset.Zero) }
+        
         val touchScale by animateFloatAsState(targetValue = if (isSquished) 0.94f else 1f, animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f), label = "squish")
         
         val model = activeModel.value
@@ -236,31 +239,28 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val targetX = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value; IslandState.TYPE_2_MID -> if (isMedia) mediaMidX.value else midX.value; IslandState.TYPE_3_MAX -> if (isMedia) mediaMaxX.value else maxX.value; IslandState.TYPE_CUBE -> cubeX.value; else -> ringX.value }
         val targetY = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value; IslandState.TYPE_2_MID -> if (isMedia) mediaMidY.value else midY.value; IslandState.TYPE_3_MAX -> if (isMedia) mediaMaxY.value else maxY.value; IslandState.TYPE_CUBE -> cubeY.value; else -> ringY.value }
 
-        val physicsSpec = spring<Dp>(dampingRatio = 0.72f, stiffness = 320f)
-        val floatPhysicsSpec = spring<Float>(dampingRatio = 0.72f, stiffness = 320f)
+        val physicsSpec = spring<Dp>(dampingRatio = 0.65f, stiffness = 300f) // Snappier for Android 16
         
-        val width by animateDpAsState(targetWidth.dp, physicsSpec, label = "width")
-        val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
-        val offsetX by animateFloatAsState(targetX, floatPhysicsSpec, label = "x")
-        val offsetY by animateFloatAsState(targetY, floatPhysicsSpec, label = "y")
+        // 🚀 FIX: Apply dynamic drag stretch physics directly to bounds
+        val width by animateDpAsState((targetWidth + (abs(dragOffset.x) * 0.1f)).dp, physicsSpec, label = "width")
+        val height by animateDpAsState((targetHeight + (abs(dragOffset.y) * 0.2f)).dp, physicsSpec, label = "height")
+        val offsetX by animateFloatAsState(targetX, spring<Float>(dampingRatio = 0.72f, stiffness = 320f), label = "x")
+        val offsetY by animateFloatAsState(targetY, spring<Float>(dampingRatio = 0.72f, stiffness = 320f), label = "y")
         val rad by animateDpAsState(if (state == IslandState.TYPE_3_MAX) 42.dp else (targetHeight / 2).dp, physicsSpec, label = "rad")
 
         val targetBgColor = if (state == IslandState.HIDDEN) Color.Transparent 
-        else if (state == IslandState.TYPE_0_RING) Color.Black.copy(alpha = 0.05f) 
+        else if (state == IslandState.TYPE_0_RING) Color.Black.copy(alpha = 0.1f) // 🚀 FIX: Make ring background slightly visible
         else {
             if (isMedia && (model as LiveActivityModel.Music).dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor!!).copy(alpha = 0.65f) 
             else if (state == IslandState.TYPE_3_MAX) Color(0xFF0F0F0F).copy(alpha = 0.55f)
             else Color(0xFF121212).copy(alpha = 0.85f) 
         }
         val bgColor by animateColorAsState(targetBgColor, tween(400), label = "bgColor")
-        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN) Color.Transparent else if (state == IslandState.TYPE_0_RING) Color.White.copy(alpha=0.4f) else Color.White.copy(alpha = 0.15f), animationSpec = tween(400), label = "borderColor")
+        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN) Color.Transparent else if (state == IslandState.TYPE_0_RING) Color.White.copy(alpha=0.6f) else Color.White.copy(alpha = 0.15f), animationSpec = tween(400), label = "borderColor")
 
-        LaunchedEffect(state, model) {
-            val wp = windowParams ?: return@LaunchedEffect; val wm = windowManager ?: return@LaunchedEffect
-            wp.flags = if (model?.isSensitive == true) wp.flags or WindowManager.LayoutParams.FLAG_SECURE else wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv()
-            if (state == IslandState.HIDDEN) { wp.width = 0; wp.height = 0; wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE } 
-            else { wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = WindowManager.LayoutParams.MATCH_PARENT; wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv() }
-            try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
+        // 🚀 FIX: Hook dimensions to WindowManager in real-time
+        LaunchedEffect(width, height) {
+            with(density) { updateWindowBounds(width.roundToPx(), height.roundToPx()) }
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
@@ -270,23 +270,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     .align(if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter)
                     .offset(x = offsetX.dp, y = offsetY.dp)
                     .width(width).height(height)
-                    .onGloballyPositioned { coordinates ->
-                        val loc = IntArray(2); this@DynamicIslandView.getLocationOnScreen(loc); val b = coordinates.boundsInRoot()
-                        val gL = loc[0] + b.left.toInt(); val gT = loc[1] + b.top.toInt(); val gR = loc[0] + b.right.toInt(); val gB = loc[1] + b.bottom.toInt()
-                        if (abs(mainPillRect.left - gL) > 5 || abs(mainPillRect.bottom - gB) > 5 || mainPillRect.isEmpty) { mainPillRect.set(gL, gT, gR, gB); insetsUpdateFlow.tryEmit(Unit) }
-                    }
                     .graphicsLayer { scaleX = touchScale; scaleY = touchScale; transformOrigin = TransformOrigin(0.5f, 0.5f) }
                     .clip(RoundedCornerShape(rad))
                     .background(bgColor)
                     .border(1.dp, borderColor, RoundedCornerShape(rad))
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            awaitFirstDown(pass = PointerEventPass.Initial)
-                            isSquished = true
-                            waitForUpOrCancellation(pass = PointerEventPass.Initial)
-                            isSquished = false
-                        }
-                    }
                     .pointerInput(state) {
                         detectTapGestures(
                             onTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) },
@@ -294,15 +281,34 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             onLongPress = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) }
                         )
                     }
+                    // 🚀 FIX: Velocity Tracking replacing broken static thresholds
                     .pointerInput(state) {
-                        var dX = 0f; var dY = 0f
-                        detectDragGestures(
-                            onDragEnd = {
-                                if (abs(dX) > abs(dY)) { if (dX > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT) else if (dX < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT) } 
-                                else { if (dY > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN) else if (dY < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_UP) }
-                                dX = 0f; dY = 0f
+                        val velocityTracker = VelocityTracker()
+                        awaitPointerEventScope {
+                            while (true) {
+                                val down = awaitFirstDown(requireUnconsumed = false)
+                                isSquished = true
+                                velocityTracker.resetTracking()
+                                
+                                do {
+                                    val event = awaitPointerEvent()
+                                    if (event.changes.any { it.isConsumed }) break
+                                    val change = event.changes.first()
+                                    dragOffset += change.positionChange()
+                                    velocityTracker.addPointerInputChange(change)
+                                } while (event.changes.any { it.pressed })
+                                
+                                isSquished = false
+                                val velocity = velocityTracker.calculateVelocity()
+                                
+                                if (abs(velocity.y) > 800f) {
+                                    if (velocity.y > 0) onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN) else onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
+                                } else if (abs(velocity.x) > 800f) {
+                                    if (velocity.x > 0) onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT) else onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
+                                }
+                                dragOffset = Offset.Zero // Snap back elasticity
                             }
-                        ) { change, dragAmount -> change.consume(); dX += dragAmount.x; dY += dragAmount.y }
+                        }
                     }
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -370,8 +376,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             val progressAngle = 360f * safeProgress
                             val sweepGradient = Brush.sweepGradient(0.0f to baseColor.copy(alpha = 0.2f), 0.8f to baseColor, 1.0f to baseColor.copy(alpha = 0.2f))
 
-                            drawArc(color = baseColor.copy(alpha=0.15f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
-                            drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = progressAngle, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 0.95f)
+                            drawArc(color = baseColor.copy(alpha=0.3f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
+                            drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = progressAngle, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 1.0f) // 🚀 FIX: Full alpha on active progress stroke
                             
                             val markerAngle = -90f + progressAngle
                             drawArc(color = Color.White, startAngle = markerAngle - 2f, sweepAngle = 4f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round))
@@ -390,11 +396,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 val sModel = splitModel.value
                 val splitBg = if (sModel is LiveActivityModel.Charging) { if (sModel.isPluggedIn) Color.Green.copy(alpha=0.2f) else if (sModel.level <= 20) Color.Red.copy(alpha=0.2f) else Color(0xFF121212).copy(alpha=0.75f) } else Color(0xFF121212).copy(alpha=0.75f)
                 Box(modifier = Modifier.size(height)
-                        .onGloballyPositioned { coordinates ->
-                            val loc = IntArray(2); this@DynamicIslandView.getLocationOnScreen(loc); val b = coordinates.boundsInRoot()
-                            val gL = loc[0] + b.left.toInt(); val gT = loc[1] + b.top.toInt(); val gR = loc[0] + b.right.toInt(); val gB = loc[1] + b.bottom.toInt()
-                            if (abs(splitCubeRect.left - gL) > 5 || splitCubeRect.isEmpty) { splitCubeRect.set(gL, gT, gR, gB); insetsUpdateFlow.tryEmit(Unit) }
-                        }
                         .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape)
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onSplitPillClick?.invoke() },
                     contentAlignment = Alignment.Center) {
