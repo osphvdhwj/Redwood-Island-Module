@@ -2,9 +2,9 @@ name: Android Build
 
 on:
   push:
-    branches: [ "stable-backup", "dynamic-island-visuals-v5-build" ]
+    branches: [ "1_s", "dynamic-island-visuals-v5-build" ]
   pull_request:
-    branches: [ "stable-backup", "main" ]
+    branches: [ "1_s", "main" ]
 
 jobs:
   build:
