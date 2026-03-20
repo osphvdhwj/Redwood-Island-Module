@@ -59,7 +59,6 @@ class IslandController(private val context: Context) {
     private var isAlertsEnabled = true
     private var isTimersEnabled = true
 
-    // The Failsafe Matrix loads first, so your Island works instantly on boot.
     private val gestureMatrix = mutableMapOf<String, IslandAction>().apply {
         put("TYPE_0_RING_SINGLE_TAP", IslandAction.EXPAND)
         put("TYPE_1_MINI_SINGLE_TAP", IslandAction.EXPAND)
@@ -174,7 +173,6 @@ class IslandController(private val context: Context) {
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
         
-        // 🚀 ANDROID 16 QPR2 FIX: Start Hidden/Zero-bounds so we don't block the screen
         params.width = 0
         params.height = 0
         params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
@@ -183,7 +181,8 @@ class IslandController(private val context: Context) {
             windowManager = wm
             windowParams = params 
         }
-        this.islandView = view; this.windowManager = wm 
+        this.islandView = view;
+        this.windowManager = wm 
         
         view.onSplitPillClick = { 
             if (_splitModel.value != null) {
@@ -385,7 +384,6 @@ class IslandController(private val context: Context) {
                 currentMedia?.blurredAlbumArt?.takeIf { it != currentMedia?.albumArt }?.recycle()
                 val wasPlaying = currentMedia?.isPlaying == true
                 
-                // 🚀 ANDROID 16 FIX: Parse the custom media actions properly!
                 val sessionActions = pbState.customActions?.map { action ->
                     LiveActivityModel.MediaAction(
                         name = action.name.toString(),
@@ -417,6 +415,16 @@ class IslandController(private val context: Context) {
     }
     private fun stopMediaTicker() { mediaTickerJob?.cancel() }
     
+    // Memory Leak Preventer 
+    fun destroy() {
+        try { context.unregisterReceiver(screenStateReceiver) } catch (e: Exception) {}
+        try { context.unregisterReceiver(ecosystemReceiver) } catch (e: Exception) {}
+        try { context.unregisterComponentCallbacks(componentCallbacks) } catch (e: Exception) {}
+        try { mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener) } catch (e: Exception) {}
+        windowManager?.removeView(islandView)
+        scope.cancel()
+    }
+
     init {
         context.registerReceiver(screenStateReceiver, IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) })
         context.registerComponentCallbacks(componentCallbacks)
@@ -432,7 +440,7 @@ class IslandController(private val context: Context) {
              wasCharging = isCharging; lastReportedBattery = level; islandView?.updateBattery(level, isCharging)
         }
         BatteryPlugin.start(context)
-        scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; evaluatePriority() } }
+        scope.launch { HardwareMonitors.startMonitoring(context).collect { hw -> currentHardware = hw; evaluatePriority() } }
         try { mediaSessionManager.addOnActiveSessionsChangedListener(sessionListener, null); updateActiveMediaController(getBestMediaController(mediaSessionManager.getActiveSessions(null))) } catch (e: Exception) {}
     }
 }
