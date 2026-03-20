@@ -252,9 +252,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val bgColor by animateColorAsState(targetBgColor, tween(400), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN) Color.Transparent else if (state == IslandState.TYPE_0_RING) Color.White.copy(alpha=0.6f) else Color.White.copy(alpha = 0.15f), animationSpec = tween(400), label = "borderColor")
 
-        // 🚀 FIX: Static Window bounds updater to prevent frame drops
+        /// 🚀 FIX: Convert Float to dp before roundToPx()
         LaunchedEffect(state, targetWidth, targetHeight) {
-            with(density) { updateWindowBounds((targetWidth + 100f).roundToPx(), (targetHeight + 100f).roundToPx()) }
+            with(density) { 
+                updateWindowBounds((targetWidth + 100f).dp.roundToPx(), (targetHeight + 100f).dp.roundToPx()) 
+            }
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
