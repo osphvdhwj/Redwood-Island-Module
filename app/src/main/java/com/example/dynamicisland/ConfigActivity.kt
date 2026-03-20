@@ -39,8 +39,8 @@ class ConfigActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        @Suppress("DEPRECATION")
-        val prefs = getSharedPreferences("island_prefs", Context.MODE_WORLD_READABLE)
+        // FIX: Removed MODE_WORLD_READABLE. It causes crashes on modern Android.
+        val prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
         setContent { 
             MaterialTheme(colorScheme = darkColorScheme()) { 
                 Surface(modifier = Modifier.fillMaxSize()) { 
@@ -77,7 +77,6 @@ class ConfigActivity : ComponentActivity() {
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
-            // FIX: Removed strict clipping, allowing the preview to overflow the black box naturally
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -167,7 +166,7 @@ class ConfigActivity : ComponentActivity() {
                                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                     availableQS.forEach { tile ->
                                         DropdownMenuItem(text = { Text(tile) }, onClick = {
-                                            selectedQS = tile; prefs.edit().putString("qs_tile_$index", tile).apply(); expanded = false
+                                            selectedQS = tile; prefs.edit().putString("qs_tile_$index", tile).commit(); expanded = false // FIX: Using commit()
                                             broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
                                         })
                                     }
@@ -216,7 +215,6 @@ class ConfigActivity : ComponentActivity() {
                             }
                         }
 
-                        // FIX: Proper Bottom Sheet for App Selection
                         if (showAppPicker) {
                             ModalBottomSheet(onDismissRequest = { showAppPicker = false }) {
                                 LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -228,7 +226,7 @@ class ConfigActivity : ComponentActivity() {
                                         ListItem(
                                             headlineContent = { Text("None (Clear Slot)", color = Color.Red) },
                                             modifier = Modifier.clickable {
-                                                prefs.edit().putString("pinned_app_$activeSlot", "").apply()
+                                                prefs.edit().putString("pinned_app_$activeSlot", "").commit()
                                                 broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
                                                 showAppPicker = false
                                             }
@@ -239,7 +237,7 @@ class ConfigActivity : ComponentActivity() {
                                             headlineContent = { Text(app.first) },
                                             supportingContent = { Text(app.second, fontSize = 10.sp) },
                                             modifier = Modifier.clickable {
-                                                prefs.edit().putString("pinned_app_$activeSlot", app.second).apply()
+                                                prefs.edit().putString("pinned_app_$activeSlot", app.second).commit()
                                                 broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
                                                 showAppPicker = false
                                             }
@@ -256,7 +254,7 @@ class ConfigActivity : ComponentActivity() {
 
                         var offsetY by remember { mutableFloatStateOf(prefs.getFloat("tweak_offset_y", 0f)) }
                         Text(text = "Y-Axis Offset (Push down from top): ${offsetY.toInt()}px", color = Color.White)
-                        Slider(value = offsetY, onValueChange = { offsetY = it; prefs.edit().putFloat("tweak_offset_y", it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) }, valueRange = 0f..150f)
+                        Slider(value = offsetY, onValueChange = { offsetY = it; prefs.edit().putFloat("tweak_offset_y", it).commit(); sendGestureUpdate(prefs, this@ConfigActivity) }, valueRange = 0f..150f)
                     }
                     "theme" -> {
                         Text(text = "UI Customization Engine", fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -305,7 +303,7 @@ class ConfigActivity : ComponentActivity() {
                             Text(text = "Configure ${tabs[selectedTab]}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                             Button(onClick = { 
                                 w = getDefaultWidth(currentPrefix); h = getDefaultHeight(currentPrefix); x = 0f; y = 48f; 
-                                prefs.edit().putFloat("pad_t", 0f).putFloat("pad_b", 0f).putFloat("pad_l", 0f).putFloat("pad_r", 0f).apply()
+                                prefs.edit().putFloat("pad_t", 0f).putFloat("pad_b", 0f).putFloat("pad_l", 0f).putFloat("pad_r", 0f).commit()
                                 saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) 
                             }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha=0.7f))) { 
                                 Text("Reset") 
@@ -314,7 +312,7 @@ class ConfigActivity : ComponentActivity() {
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("Expand Upwards (From Bottom)", fontSize = 14.sp)
-                            Switch(checked = expandUpwards, onCheckedChange = { expandUpwards = it; prefs.edit().putBoolean("expand_upwards", it).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) })
+                            Switch(checked = expandUpwards, onCheckedChange = { expandUpwards = it; prefs.edit().putBoolean("expand_upwards", it).commit(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) })
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         
@@ -337,7 +335,7 @@ class ConfigActivity : ComponentActivity() {
         var checked by remember { mutableStateOf(prefs.getBoolean(key, default)) }
         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(label, color = Color.White, fontSize = 16.sp)
-            Switch(checked = checked, onCheckedChange = { checked = it; prefs.edit().putBoolean(key, it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) })
+            Switch(checked = checked, onCheckedChange = { checked = it; prefs.edit().putBoolean(key, it).commit(); sendGestureUpdate(prefs, this@ConfigActivity) })
         }
     }
 
@@ -345,7 +343,7 @@ class ConfigActivity : ComponentActivity() {
     fun ThemeSlider(label: String, key: String, default: Float, range: ClosedFloatingPointRange<Float>, prefs: android.content.SharedPreferences) {
         var value by remember { mutableFloatStateOf(prefs.getFloat(key, default)) }
         Text(text = "$label: ${value.toInt()}", color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
-        Slider(value = value, onValueChange = { value = it; prefs.edit().putFloat(key, it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) }, valueRange = range)
+        Slider(value = value, onValueChange = { value = it; prefs.edit().putFloat(key, it).commit(); sendGestureUpdate(prefs, this@ConfigActivity) }, valueRange = range)
     }
 
     @Composable
@@ -378,7 +376,7 @@ class ConfigActivity : ComponentActivity() {
                         DropdownMenuItem(
                             text = { Text(action.name.replace("_", " ")) },
                             onClick = {
-                                selectedAction = action; prefs.edit().putString(prefKey, action.name).apply(); expanded = false
+                                selectedAction = action; prefs.edit().putString(prefKey, action.name).commit(); expanded = false
                                 sendGestureUpdate(prefs, this@ConfigActivity)
                             }
                         )
@@ -392,13 +390,13 @@ class ConfigActivity : ComponentActivity() {
     private fun getDefaultHeight(prefix: String) = when (prefix) { "ring" -> 45f; "mini" -> 36f; "mid" -> 80f; "max" -> 220f; "media_mid" -> 80f; "media_max" -> 200f; "cube" -> 85f; else -> 0f }
 
     private fun saveAndBroadcast(prefs: android.content.SharedPreferences, prefix: String, w: Float, h: Float, x: Float, y: Float, ringT: Float, up: Boolean) {
-        prefs.edit().putFloat("${prefix}_w", w).putFloat("${prefix}_h", h).putFloat("${prefix}_x", x).putFloat("${prefix}_y", y).putFloat("ring_thickness", ringT).putBoolean("expand_upwards", up).apply()
+        prefs.edit().putFloat("${prefix}_w", w).putFloat("${prefix}_h", h).putFloat("${prefix}_x", x).putFloat("${prefix}_y", y).putFloat("ring_thickness", ringT).putBoolean("expand_upwards", up).commit()
         broadcastUpdate(prefix, w, h, x, y, ringT, up)
     }
 
     @SuppressLint("WrongConstant")
     private fun broadcastUpdate(prefix: String, w: Float, h: Float, x: Float, y: Float, ringT: Float, up: Boolean) {
-        val prefs = getSharedPreferences("island_prefs", Context.MODE_WORLD_READABLE)
+        val prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE) // FIX: SecurityException prevented
         val updateIntent = Intent("com.example.dynamicisland.RELOAD_PREFS").apply {
             addFlags(0x01000000)
             setPackage("com.android.systemui")
@@ -416,7 +414,6 @@ class ConfigActivity : ComponentActivity() {
         }
         val matrix = JSONObject()
         
-        // FIX: Using a standard for-loop avoids the Map.forEach type inference ambiguity that breaks the compiler
         for ((key, value) in prefs.all) {
             if (key.contains("TYPE_") || key.contains("theme_") || key.contains("tweak_") || key.contains("enable_") || key.contains("use_")) {
                 matrix.put(key, value.toString()) 
