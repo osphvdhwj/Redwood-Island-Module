@@ -89,7 +89,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var mediaMaxW = mutableStateOf(360f); var mediaMaxH = mutableStateOf(200f); var mediaMaxX = mutableStateOf(0f); var mediaMaxY = mutableStateOf(48f)
     var cubeW = mutableStateOf(85f); var cubeH = mutableStateOf(85f); var cubeX = mutableStateOf(0f); var cubeY = mutableStateOf(48f)
 
-    var ringThickness = mutableStateOf(8f) // 🚀 FIX: Increased default thickness so ring is visible
+    var ringThickness = mutableStateOf(8f) 
     var expandUpwards = mutableStateOf(false)
     var useSystemFont = mutableStateOf(true) 
     var isCubeRotationEnabled = mutableStateOf(true) 
@@ -138,7 +138,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             mediaMaxW.value = pref.getFloat("media_max_w", 360f); mediaMaxH.value = pref.getFloat("media_max_h", 200f); mediaMaxX.value = pref.getFloat("media_max_x", 0f); mediaMaxY.value = pref.getFloat("media_max_y", 48f)
             cubeW.value = pref.getFloat("cube_w", 85f); cubeH.value = pref.getFloat("cube_h", 85f); cubeX.value = pref.getFloat("cube_x", 0f); cubeY.value = pref.getFloat("cube_y", 48f)
             
-            ringThickness.value = pref.getFloat("ring_thickness", 8f) // Maintained increased thickness
+            ringThickness.value = pref.getFloat("ring_thickness", 8f) 
             expandUpwards.value = pref.getBoolean("expand_upwards", false)
             useSystemFont.value = pref.getBoolean("use_system_font", true)
             isCubeRotationEnabled.value = pref.getBoolean("enable_cube_rotation", true) 
@@ -160,8 +160,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     init {
         loadPreferences()
         
-        // 🚀 FIX: Removed the Java Reflection Insets listener entirely. We use dynamic WindowManager bounds now.
-
         val composeView = ComposeView(context).apply {
             setViewTreeLifecycleOwner(lifecycleOwner)
             setViewTreeSavedStateRegistryOwner(lifecycleOwner)
@@ -181,13 +179,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 }
             }
         }
+        
         val coroutineContext = AndroidUiDispatcher.CurrentThread; val recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
         composeView.setParentCompositionContext(recomposer)
         CoroutineScope(coroutineContext).launch { recomposer.runRecomposeAndApplyChanges() }
         addView(composeView)
     }
 
-    // 🚀 FIX: Real-time Window bounds updater to replace the Reflection hack
     private fun updateWindowBounds(widthPx: Int, heightPx: Int) {
         val wm = windowManager ?: return
         val wp = windowParams ?: return
@@ -196,9 +194,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             wp.width = 0; wp.height = 0
             wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         } else {
-            // Android 16 QPR2 FLAG_LAYOUT_NO_LIMITS prevents the black box from clipping the UI
             wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-            wp.width = widthPx + 150 // Buffer for physics elasticity and shadows
+            wp.width = widthPx + 150 
             wp.height = heightPx + 150
             wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
         }
@@ -224,8 +221,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val haptic = LocalHapticFeedback.current
         val density = LocalDensity.current
         var isSquished by remember { mutableStateOf(false) }
-        
-        // 🚀 FIX: Velocity tracker offset for Rubber-banding
         var dragOffset by remember { mutableStateOf(Offset.Zero) }
         
         val touchScale by animateFloatAsState(targetValue = if (isSquished) 0.94f else 1f, animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f), label = "squish")
@@ -239,9 +234,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val targetX = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value; IslandState.TYPE_2_MID -> if (isMedia) mediaMidX.value else midX.value; IslandState.TYPE_3_MAX -> if (isMedia) mediaMaxX.value else maxX.value; IslandState.TYPE_CUBE -> cubeX.value; else -> ringX.value }
         val targetY = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value; IslandState.TYPE_2_MID -> if (isMedia) mediaMidY.value else midY.value; IslandState.TYPE_3_MAX -> if (isMedia) mediaMaxY.value else maxY.value; IslandState.TYPE_CUBE -> cubeY.value; else -> ringY.value }
 
-        val physicsSpec = spring<Dp>(dampingRatio = 0.65f, stiffness = 300f) // Snappier for Android 16
+        val physicsSpec = spring<Dp>(dampingRatio = 0.65f, stiffness = 300f) 
         
-        // 🚀 FIX: Apply dynamic drag stretch physics directly to bounds
         val width by animateDpAsState((targetWidth + (abs(dragOffset.x) * 0.1f)).dp, physicsSpec, label = "width")
         val height by animateDpAsState((targetHeight + (abs(dragOffset.y) * 0.2f)).dp, physicsSpec, label = "height")
         val offsetX by animateFloatAsState(targetX, spring<Float>(dampingRatio = 0.72f, stiffness = 320f), label = "x")
@@ -249,7 +243,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val rad by animateDpAsState(if (state == IslandState.TYPE_3_MAX) 42.dp else (targetHeight / 2).dp, physicsSpec, label = "rad")
 
         val targetBgColor = if (state == IslandState.HIDDEN) Color.Transparent 
-        else if (state == IslandState.TYPE_0_RING) Color.Black.copy(alpha = 0.1f) // 🚀 FIX: Make ring background slightly visible
+        else if (state == IslandState.TYPE_0_RING) Color.Black.copy(alpha = 0.1f) 
         else {
             if (isMedia && (model as LiveActivityModel.Music).dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor!!).copy(alpha = 0.65f) 
             else if (state == IslandState.TYPE_3_MAX) Color(0xFF0F0F0F).copy(alpha = 0.55f)
@@ -258,13 +252,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val bgColor by animateColorAsState(targetBgColor, tween(400), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN) Color.Transparent else if (state == IslandState.TYPE_0_RING) Color.White.copy(alpha=0.6f) else Color.White.copy(alpha = 0.15f), animationSpec = tween(400), label = "borderColor")
 
-        // 🚀 FIX: Hook dimensions to WindowManager in real-time
-        LaunchedEffect(width, height) {
-            with(density) { updateWindowBounds(width.roundToPx(), height.roundToPx()) }
+        // 🚀 FIX: Static Window bounds updater to prevent frame drops
+        LaunchedEffect(state, targetWidth, targetHeight) {
+            with(density) { updateWindowBounds((targetWidth + 100f).roundToPx(), (targetHeight + 100f).roundToPx()) }
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
-            
             Box(
                 modifier = Modifier
                     .align(if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter)
@@ -281,7 +274,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             onLongPress = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) }
                         )
                     }
-                    // 🚀 FIX: Velocity Tracking replacing broken static thresholds
                     .pointerInput(state) {
                         val velocityTracker = VelocityTracker()
                         awaitPointerEventScope {
@@ -361,11 +353,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     if (state == IslandState.TYPE_0_RING) {
                         val musicModel = model as? LiveActivityModel.Music
                         val isMedia = musicModel != null && musicModel.isPlaying
+                        val baseColor = if (isMedia) { musicModel?.dominantColor?.let { Color(it) } ?: Color.White } else if (globalIsCharging.value) Color.Green else if (globalBatteryLevel.intValue <= 20) Color.Red else Color.White
                         
+                        // 🚀 FIX: Hoist brush out of draw phase
+                        val sweepGradient = remember(baseColor) {
+                            Brush.sweepGradient(0.0f to baseColor.copy(alpha = 0.2f), 0.8f to baseColor, 1.0f to baseColor.copy(alpha = 0.2f))
+                        }
+
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
                             val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
-                            val baseColor = if (isMedia) { musicModel?.dominantColor?.let { Color(it) } ?: Color.White } else if (globalIsCharging.value) Color.Green else if (globalBatteryLevel.intValue <= 20) Color.Red else Color.White
                             
                             val strokeW = ringThickness.value.dp.toPx() 
                             val inset = strokeW / 2
@@ -374,10 +371,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             
                             val safeProgress = progress.coerceIn(0.02f, 1f) 
                             val progressAngle = 360f * safeProgress
-                            val sweepGradient = Brush.sweepGradient(0.0f to baseColor.copy(alpha = 0.2f), 0.8f to baseColor, 1.0f to baseColor.copy(alpha = 0.2f))
 
                             drawArc(color = baseColor.copy(alpha=0.3f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
-                            drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = progressAngle, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 1.0f) // 🚀 FIX: Full alpha on active progress stroke
+                            drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = progressAngle, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 1.0f)
                             
                             val markerAngle = -90f + progressAngle
                             drawArc(color = Color.White, startAngle = markerAngle - 2f, sweepAngle = 4f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round))
