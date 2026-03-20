@@ -39,10 +39,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.gestures.*
 import kotlinx.coroutines.delay
 
-// ==========================================
-// CUSTOM COMPONENTS
-// ==========================================
-
 @Composable
 fun WavyProgressBar(progress: Float, modifier: Modifier = Modifier, activeColor: Color, inactiveColor: Color) {
     val phase by rememberInfiniteTransition(label = "wave").animateFloat(
@@ -55,10 +51,8 @@ fun WavyProgressBar(progress: Float, modifier: Modifier = Modifier, activeColor:
         val waveHeight = 3.dp.toPx()
         val centerY = size.height / 2
         
-        // Inactive Track (Straight line)
         drawLine(inactiveColor, Offset(0f, centerY), Offset(size.width, centerY), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
         
-        // Active Track (Wavy line)
         clipRect(right = size.width * progress.coerceIn(0.01f, 1f)) {
             val path = Path()
             var currentX = -(phase * waveWidth)
@@ -91,14 +85,9 @@ fun InteractiveIconButton(icon: ImageVector, tint: Color, baseSize: Dp, bgAlpha:
     }
 }
 
-// ==========================================
-// MUSIC PANELS
-// ==========================================
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
-    // Dynamic contrast adaptation based on dominant background color
     val dynamicTextColor = Color(music.titleTextColor)
     val progress = if (music.durationMs > 0) (currentMediaPos.longValue.toFloat() / music.durationMs.toFloat()).coerceIn(0f, 1f) else 0f
 
@@ -123,13 +112,7 @@ fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
         )
         
         Spacer(Modifier.width(12.dp))
-        // New Read-Only Wavy Progress Bar
-        WavyProgressBar(
-            progress = progress, 
-            modifier = Modifier.width(44.dp).height(16.dp), 
-            activeColor = dynamicTextColor, 
-            inactiveColor = dynamicTextColor.copy(alpha = 0.2f)
-        )
+        WavyProgressBar(progress = progress, modifier = Modifier.width(44.dp).height(16.dp), activeColor = dynamicTextColor, inactiveColor = dynamicTextColor.copy(alpha = 0.2f))
     }
 }
 
@@ -149,7 +132,6 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
                 Text(text = music.artist, color = dynamicColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.basicMarquee())
             }
             
-            // Transport Controls (Prev, Play/Pause, Next)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, tint = dynamicColor, baseSize = 32.dp) { onPrevClick?.invoke() }
                 val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
@@ -158,7 +140,6 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
             }
         }
         
-        // Baby Interactive Slider with Custom '|' Thumb
         var localPosition by remember { mutableFloatStateOf(0f) }
         Slider(
             value = (currentMediaPos.longValue.toFloat() / music.durationMs.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f),
@@ -174,7 +155,6 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
 @Composable
 fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
     Box(modifier = Modifier.fillMaxSize()) {
-        // Fullscreen Blurred Background Overlay
         if (music.albumArt != null) {
             Image(
                 bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "BG", 
@@ -186,7 +166,6 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
         }
 
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            // Header: App Icon & Audio Output Switcher
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                 if (music.appIcon != null) Image(bitmap = music.appIcon.asImageBitmap(), contentDescription = "App", modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp))) 
                 else Box(Modifier.size(24.dp).background(Color.White.copy(0.2f), RoundedCornerShape(6.dp)))
@@ -196,13 +175,11 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
             
             Spacer(modifier = Modifier.weight(1f))
             
-            // Track Info
             Text(text = music.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee())
             Text(text = music.artist, color = Color.White.copy(alpha=0.75f), fontSize = 16.sp, maxLines = 1)
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Interactive Slider
             var localPosition by remember { mutableFloatStateOf(0f) }
             Slider(
                 value = (currentMediaPos.longValue.toFloat() / music.durationMs.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f),
@@ -213,14 +190,10 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            // Media Controls (Custom Extracted + Standard)
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-                // Show Shuffle or Placeholder
                 if (music.customActions.any { it.name.contains("shuffle", true) }) {
-                    InteractiveIconButton(icon = Icons.Default.Shuffle, tint = Color.White.copy(0.7f), baseSize = 40.dp) { /* Handle Custom Action */ }
-                } else {
-                    Spacer(Modifier.size(40.dp))
-                }
+                    InteractiveIconButton(icon = Icons.Default.Shuffle, tint = Color.White.copy(0.7f), baseSize = 40.dp) { }
+                } else { Spacer(Modifier.size(40.dp)) }
 
                 InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, tint = Color.White, baseSize = 48.dp) { onPrevClick?.invoke() }
                 
@@ -229,34 +202,19 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                 
                 InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowForward, tint = Color.White, baseSize = 48.dp) { onNextClick?.invoke() }
                 
-                // Show Heart/Like or Placeholder
                 if (music.customActions.any { it.name.contains("heart", true) || it.name.contains("like", true) }) {
-                    InteractiveIconButton(icon = Icons.Default.FavoriteBorder, tint = Color.White.copy(0.7f), baseSize = 40.dp) { /* Handle Custom Action */ }
-                } else {
-                    Spacer(Modifier.size(40.dp))
-                }
+                    InteractiveIconButton(icon = Icons.Default.FavoriteBorder, tint = Color.White.copy(0.7f), baseSize = 40.dp) { }
+                } else { Spacer(Modifier.size(40.dp)) }
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
 
-// ==========================================
-// SYSTEM & DASHBOARD PANELS
-// ==========================================
-
 @Composable
 fun FloatingDragHandle(
-    modifier: Modifier = Modifier,
-    handleWidth: Dp = 40.dp,
-    handleHeight: Dp = 5.dp,
-    handleColor: Color = Color.White.copy(alpha = 0.4f),
-    onSwipeUp: () -> Unit = {},
-    onSwipeDown: () -> Unit = {},
-    onSwipeLeft: () -> Unit = {},
-    onSwipeRight: () -> Unit = {},
-    onLongClick: () -> Unit = {},
-    onClick: () -> Unit = {}
+    modifier: Modifier = Modifier, handleWidth: Dp = 40.dp, handleHeight: Dp = 5.dp, handleColor: Color = Color.White.copy(alpha = 0.4f),
+    onSwipeUp: () -> Unit = {}, onSwipeDown: () -> Unit = {}, onSwipeLeft: () -> Unit = {}, onSwipeRight: () -> Unit = {}, onLongClick: () -> Unit = {}, onClick: () -> Unit = {}
 ) {
     val haptic = LocalHapticFeedback.current
     var isPressed by remember { mutableStateOf(false) }
@@ -459,9 +417,7 @@ fun DynamicIslandView.HardwareGaugeMini(hw: LiveActivityModel.HardwareMonitor) {
 fun formatTime(ms: Long): String { if (ms <= 0) return "0:00"; val s = ms / 1000; return String.format("%d:%02d", s / 60, s % 60) }
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-fun androidx.compose.ui.Modifier.basicMarqueeIfSupported(): androidx.compose.ui.Modifier {
-    return this.basicMarquee() 
-}
+fun androidx.compose.ui.Modifier.basicMarqueeIfSupported(): androidx.compose.ui.Modifier { return this.basicMarquee() }
 
 fun DynamicIslandView.setState(newState: IslandState) { islandState.value = newState }
 fun DynamicIslandView.setModel(model: LiveActivityModel?) { activeModel.value = model }
