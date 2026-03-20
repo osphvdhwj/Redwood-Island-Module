@@ -1,5 +1,6 @@
 package com.example.dynamicisland
 
+import androidx.compose.ui.graphics.drawscope.clipRect
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
