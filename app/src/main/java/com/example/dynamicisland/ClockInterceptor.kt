@@ -1,7 +1,6 @@
 package com.example.dynamicisland
 
 import android.app.Notification
-import android.graphics.Color
 import android.service.notification.StatusBarNotification
 
 object ClockInterceptor {
@@ -18,42 +17,40 @@ object ClockInterceptor {
         val title = extras.getString(Notification.EXTRA_TITLE) ?: ""
         val text = extras.getString(Notification.EXTRA_TEXT) ?: ""
 
-        // Determine if it's a Timer or Stopwatch based on notification channels or text patterns
-
         // Stopwatch Logic
         if (notification.channelId == "Stopwatch" || title.contains("Stopwatch", ignoreCase = true)) {
-            return LiveActivityModel.General(
+            return LiveActivityModel.OngoingTask(
                 id = "system_stopwatch",
-                type = ActivityType.TIMER,
+                pkgName = packageName,
                 title = "Stopwatch",
-                dataText = text.ifEmpty { title }, // The ticking time is usually here
-                accentColor = Color.parseColor("#FF9800"), // Orange for Stopwatch
-                progress = null // Stopwatch has no progress bar
+                text = text.ifEmpty { title }, // The ticking time is usually here
+                progress = -1, // -1 signifies indeterminate/no progress bar
+                progressMax = -1,
+                type = ActivityType.TIMER
             )
         }
 
         // Timer Logic
         if (notification.channelId == "Timer" || title.contains("Timer", ignoreCase = true)) {
-            // Try to calculate progress if max value is available (hard in standard notifs),
-            // but we can definitely show the countdown text.
-            return LiveActivityModel.General(
+            return LiveActivityModel.OngoingTask(
                 id = "system_timer",
-                type = ActivityType.TIMER,
+                pkgName = packageName,
                 title = "Timer",
-                dataText = text.ifEmpty { title },
-                accentColor = Color.parseColor("#4CAF50"), // Green for Timer
-                progress = null // Optional: You could parse the text "04:00" vs "05:00" to fake a bar
+                text = text.ifEmpty { title },
+                progress = -1,
+                progressMax = -1,
+                type = ActivityType.TIMER
             )
         }
 
         // Alarm Logic (Upcoming Alarm)
         if (notification.channelId == "Alarm" || notification.category == Notification.CATEGORY_ALARM) {
-             return LiveActivityModel.General(
+             return LiveActivityModel.SystemAlert(
                 id = "system_alarm",
-                type = ActivityType.ALARM,
                 title = "Upcoming Alarm",
-                dataText = text,
-                accentColor = Color.LTGRAY
+                message = text,
+                alertColor = 0xFFCCCCCC, // LTGRAY
+                type = ActivityType.ALARM
             )
         }
 
