@@ -104,21 +104,33 @@ import de.robv.android.xposed.XSharedPreferences
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp).padding(bottom = 6.dp)) {
-                val infiniteTransition = rememberInfiniteTransition(); val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart))
-                val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
-                if (music.albumArt != null) Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(24.dp).clip(CircleShape).rotate(currentRotation)) else Box(Modifier.size(24.dp).background(Color.White.copy(0.2f), CircleShape))
-                Spacer(Modifier.width(8.dp))
-                Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f, fill = false).safeMarquee(islandState.value))
+        val dynamicTextColor = Color(music.titleTextColor)
+        
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
+            val infiniteTransition = rememberInfiniteTransition()
+            val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "spin")
+            val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
+            
+            if (music.albumArt != null) {
+                Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(24.dp).clip(CircleShape).rotate(currentRotation))
+            } else {
+                Box(Modifier.size(24.dp).background(Color.White.copy(0.2f), CircleShape))
             }
             
-            Row(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 32.dp).padding(bottom = 2.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(text = formatTime(currentMediaPos.longValue), color = Color.White.copy(alpha=0.7f), fontSize = 9.sp)
-                Text(text = formatTime(music.durationMs), color = Color.White.copy(alpha=0.7f), fontSize = 9.sp)
-            }
+            Spacer(Modifier.width(10.dp))
             
-            IsolatedLinearProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = Color.White.copy(alpha=0.8f), trackColor = Color.White.copy(alpha=0.2f), modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.5f).height(2.dp).padding(bottom = 1.dp).clip(CircleShape))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+                Spacer(Modifier.height(2.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Text(text = formatTime(currentMediaPos.longValue), color = Color.White.copy(alpha=0.7f), fontSize = 9.sp)
+                    Spacer(Modifier.width(6.dp))
+                    IsolatedLinearProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = Color.White.copy(alpha=0.8f), trackColor = Color.White.copy(alpha=0.2f), modifier = Modifier.weight(1f).height(2.dp).clip(CircleShape))
+                    Spacer(Modifier.width(6.dp))
+                    Text(text = formatTime(music.durationMs), color = Color.White.copy(alpha=0.7f), fontSize = 9.sp)
+                }
+            }
         }
     }
 
@@ -127,25 +139,47 @@ import de.robv.android.xposed.XSharedPreferences
     fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
         val theme = LocalIslandTheme.current
         val dynamicTextColor = Color(music.titleTextColor)
-        val infiniteTransition = rememberInfiniteTransition(); val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart))
+        val infiniteTransition = rememberInfiniteTransition()
+        val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "spin")
         val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            Row(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(52.dp)) {
-                    IsolatedCircularProgress(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor)
-                    if (music.albumArt != null) { Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(44.dp).clip(RoundedCornerShape(theme.cornerRadius / 4)).rotate(currentRotation)) } else Box(Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), RoundedCornerShape(theme.cornerRadius / 4)))
+        Row(modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            
+            // Disk moved to far left
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(48.dp)) {
+                IsolatedCircularProgress(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor)
+                if (music.albumArt != null) { 
+                    Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(40.dp).clip(CircleShape).rotate(currentRotation)) 
+                } else {
+                    Box(Modifier.size(40.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Column(modifier = Modifier.weight(1f, fill=false).offset(x = theme.titleOffsetX, y = theme.titleOffsetY)) {
-                    Text(text = music.title, color = dynamicTextColor, fontSize = theme.titleSize, fontFamily = theme.titleFont, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-                    Text(text = music.artist, color = dynamicTextColor.copy(alpha = 0.7f), fontSize = theme.titleSize * 0.85f, fontFamily = theme.titleFont, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+            }
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            // Column for Text and Progress
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                Text(text = music.title, color = dynamicTextColor, fontSize = 14.sp, fontFamily = theme.titleFont, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+                Text(text = music.artist, color = dynamicTextColor.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = theme.titleFont, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+                
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Text(text = formatTime(currentMediaPos.longValue), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 9.sp)
+                    Spacer(Modifier.width(6.dp))
+                    IsolatedLinearProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor.copy(alpha=0.8f), trackColor = dynamicTextColor.copy(alpha=0.2f), modifier = Modifier.weight(1f).height(2.dp).clip(CircleShape))
+                    Spacer(Modifier.width(6.dp))
+                    Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 9.sp)
                 }
             }
 
-            Row(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 48.dp).padding(bottom = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(text = formatTime(currentMediaPos.longValue), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 10.sp)
-                Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 10.sp)
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Transport Buttons
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, tint = dynamicTextColor, baseSize = 28.dp, bgAlpha = 0f) { onPrevClick?.invoke() }
+                val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
+                InteractiveIconButton(icon = playIcon, tint = dynamicTextColor, baseSize = 38.dp, bgAlpha = 0.15f) { onPlayPauseClick?.invoke() }
+                InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowForward, tint = dynamicTextColor, baseSize = 28.dp, bgAlpha = 0f) { onNextClick?.invoke() }
             }
         }
     }
@@ -187,9 +221,11 @@ import de.robv.android.xposed.XSharedPreferences
             Spacer(modifier = Modifier.weight(1f))
             
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(theme.buttonSpacing, Alignment.CenterHorizontally)) {
-                val favoriteAction = music.customActions.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("thumb", true) }
+                
+                // Custom Actions mapped properly!
+                val favoriteAction = music.customActions.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("thumb", true) || it.actionName.contains("like", true) }
                 if (favoriteAction != null) {
-                    InteractiveIconButton(icon = Icons.Default.Favorite, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) {}
+                    InteractiveIconButton(icon = Icons.Default.FavoriteBorder, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) { onCustomMediaAction?.invoke(favoriteAction.actionName) }
                 } else {
                     Spacer(Modifier.width(theme.buttonSize))
                 }
@@ -201,9 +237,10 @@ import de.robv.android.xposed.XSharedPreferences
                 
                 InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowForward, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) { onNextClick?.invoke() }
 
-                val repeatAction = music.customActions.find { it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) }
+                val repeatAction = music.customActions.find { it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) || it.actionName.contains("shuffle", true) }
                 if (repeatAction != null) {
-                    InteractiveIconButton(icon = Icons.Default.Refresh, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) {}
+                    val icon = if (repeatAction.actionName.contains("shuffle", true)) Icons.Default.Shuffle else Icons.Default.Refresh
+                    InteractiveIconButton(icon = icon, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) { onCustomMediaAction?.invoke(repeatAction.actionName) }
                 } else {
                     Spacer(Modifier.width(theme.buttonSize))
                 }
