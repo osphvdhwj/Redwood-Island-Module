@@ -91,44 +91,53 @@ import de.robv.android.xposed.XSharedPreferences
 
     @Composable
     fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
-        val color = if (model.isPluggedIn) Color.Green else if (model.level <= 20) Color.Red else Color.White
+        val color = if (model.isPluggedIn) Color(0xFF00FF41) else if (model.level <= 20) Color.Red else Color.White
         val infiniteTransition = rememberInfiniteTransition(label = "cube_pulse")
-        val pulseScale by infiniteTransition.animateFloat(initialValue = 0.85f, targetValue = 1.15f, animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "scale")
-        Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Icon(imageVector = if (model.isPluggedIn) Icons.Default.Add else Icons.Default.Warning, contentDescription = null, tint = color, modifier = Modifier.size(36.dp).graphicsLayer { scaleX = pulseScale; scaleY = pulseScale })
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = "${model.level}%", color = color, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+        val pulseScale by infiniteTransition.animateFloat(initialValue = 0.9f, targetValue = 1.1f, animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "scale")
+        val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.15f, targetValue = 0.45f, animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "glow")
+        
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            // Ambient glowing background
+            if (model.isPluggedIn) {
+                Box(modifier = Modifier.size(50.dp).background(color.copy(alpha = glowAlpha), CircleShape).blur(12.dp).graphicsLayer { scaleX = pulseScale; scaleY = pulseScale })
+            }
+            
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Icon(imageVector = if (model.isPluggedIn) Icons.Default.Add else Icons.Default.Warning, contentDescription = null, tint = color, modifier = Modifier.size(32.dp).graphicsLayer { scaleX = pulseScale; scaleY = pulseScale })
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(text = "${model.level}%", color = color, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+            }
         }
     }
 
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
-        val dynamicTextColor = Color(music.titleTextColor)
+        val dynamicTextColor = Color.White // Override for better AMOLED contrast
         
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
             val infiniteTransition = rememberInfiniteTransition()
             val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "spin")
             val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
             
             if (music.albumArt != null) {
-                Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(24.dp).clip(CircleShape).rotate(currentRotation))
+                Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(22.dp).clip(CircleShape).rotate(currentRotation))
             } else {
-                Box(Modifier.size(24.dp).background(Color.White.copy(0.2f), CircleShape))
+                Box(Modifier.size(22.dp).background(Color.White.copy(0.2f), CircleShape))
             }
             
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(8.dp))
             
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                Text(text = "${music.title} • ${music.artist}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-                Spacer(Modifier.height(2.dp))
+                Text(text = "${music.title} • ${music.artist}", color = dynamicTextColor, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
                 
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Text(text = formatTime(currentMediaPos.longValue), color = Color.White.copy(alpha=0.7f), fontSize = 9.sp)
+                // Adjusted padding and sizes to ensure it renders inside the 36dp pill height
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 1.dp)) {
+                    Text(text = formatTime(currentMediaPos.longValue), color = dynamicTextColor.copy(alpha=0.8f), fontSize = 9.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.width(6.dp))
-                    IsolatedLinearProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = Color.White.copy(alpha=0.8f), trackColor = Color.White.copy(alpha=0.2f), modifier = Modifier.weight(1f).height(2.dp).clip(CircleShape))
+                    IsolatedLinearProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.3f), modifier = Modifier.weight(1f).fillMaxWidth().height(3.dp).clip(CircleShape))
                     Spacer(Modifier.width(6.dp))
-                    Text(text = formatTime(music.durationMs), color = Color.White.copy(alpha=0.7f), fontSize = 9.sp)
+                    Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.8f), fontSize = 9.sp, fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -454,8 +463,47 @@ import de.robv.android.xposed.XSharedPreferences
     @Composable
     fun DynamicIslandView.UniversalMid(textColor: Color, activity: LiveActivityModel) { val infiniteTransition = rememberInfiniteTransition(label = "pulse"); val alphaPulse by infiniteTransition.animateFloat(initialValue = 0.4f, targetValue = 1f, animationSpec = infiniteRepeatable(animation = tween(800, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse), label = "alphaPulse"); val progress = when(activity) { is LiveActivityModel.General -> activity.progress; is LiveActivityModel.Charging -> activity.level / 100f; else -> null }; val colorInt = when(activity) { is LiveActivityModel.General -> activity.accentColor; is LiveActivityModel.Charging -> android.graphics.Color.GREEN; else -> android.graphics.Color.WHITE }; val title = when(activity) { is LiveActivityModel.General -> activity.title; is LiveActivityModel.Charging -> if (activity.isPluggedIn) "Charging" else "Disconnected"; else -> "" }; val dataText = when(activity) { is LiveActivityModel.General -> activity.dataText; is LiveActivityModel.Charging -> "${activity.level}%"; else -> "" }; Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) { Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) { if (progress != null) CircularProgressIndicator(progress = { progress }, color = Color(colorInt), trackColor = textColor.copy(alpha = 0.2f), modifier = Modifier.fillMaxSize()); val iconAlpha = if (activity.type == ActivityType.CHARGING) alphaPulse else 1f; Icon(imageVector = getIconForType(activity.type), contentDescription = null, tint = Color(colorInt), modifier = Modifier.size(24.dp).alpha(iconAlpha)) }; Spacer(Modifier.width(16.dp)); Column(modifier = Modifier.weight(1f)) { Text(text = title, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value)); Text(text = dataText, color = textColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value)) } } }
     
+    @OptIn(ExperimentalFoundationApi::class)
     @Composable
-    fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) { UniversalMid(Color.White, charging) }
+    fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) {
+        val batteryColor = if (charging.isPluggedIn) Color(0xFF00FF41) else if (charging.level <= 20) Color.Red else Color.White
+        
+        // Glow animation for charging
+        val infiniteTransition = rememberInfiniteTransition(label = "charging_glow")
+        val glowAlpha by infiniteTransition.animateFloat(
+            initialValue = 0.2f, targetValue = 0.6f,
+            animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "alpha"
+        )
+        
+        // Fluid fill animation for battery level
+        val targetFill = charging.level / 100f
+        val animatedFill by animateFloatAsState(targetValue = targetFill, animationSpec = tween(1500, easing = FastOutSlowInEasing), label = "fill")
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            // Animated Charging Icon
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) {
+                Box(modifier = Modifier.size(36.dp).background(batteryColor.copy(alpha = if (charging.isPluggedIn) glowAlpha else 0.05f), CircleShape).blur(if (charging.isPluggedIn) 8.dp else 0.dp))
+                Icon(imageVector = if (charging.isPluggedIn) Icons.Default.Add else Icons.Default.Warning, contentDescription = null, tint = batteryColor, modifier = Modifier.size(24.dp))
+            }
+            
+            Spacer(Modifier.width(12.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                 Text(text = if (charging.isPluggedIn) "Charging" else "Battery", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+                 Text(text = "${charging.level}% Available", color = Color.White.copy(alpha=0.7f), fontSize = 13.sp, maxLines = 1)
+            }
+            
+            Spacer(Modifier.width(12.dp))
+            
+            // Custom Visual Battery Indicator
+            Box(modifier = Modifier.width(42.dp).height(20.dp).border(1.5.dp, Color.White.copy(alpha=0.4f), RoundedCornerShape(4.dp)).padding(2.dp), contentAlignment = Alignment.CenterStart) {
+                Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(fraction = animatedFill).background(batteryColor, RoundedCornerShape(2.dp)))
+            }
+            // Battery Tip
+            Box(modifier = Modifier.width(3.dp).height(8.dp).background(Color.White.copy(alpha=0.4f), RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp)))
+        }
+    }
+
     @Composable
     fun DynamicIslandView.GeneralMid(general: LiveActivityModel.General) { UniversalMid(Color.White, general) }
     
