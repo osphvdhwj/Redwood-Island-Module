@@ -647,8 +647,9 @@ fun androidx.compose.ui.Modifier.safeMarquee(state: IslandState): androidx.compo
     } else {
         this
     }
+}
 
-    @Composable
+@Composable
     fun InteractiveWavyMediaBar(
         durationMs: Long,
         posProvider: () -> Long,
