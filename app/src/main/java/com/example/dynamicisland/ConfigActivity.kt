@@ -11,6 +11,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -106,12 +108,36 @@ class ConfigActivity : ComponentActivity() {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxWidth().height(250.dp).background(Color.Black), contentAlignment = if (expandUpwards) Alignment.BottomCenter else Alignment.TopCenter) {
                 if (currentPrefix != "tweaks") {
-                    Box(modifier = Modifier.offset(x = x.dp, y = y.dp).width(w.dp).height(h.dp).background(Color.White.copy(alpha = 0.6f), RoundedCornerShape(if(currentPrefix == "max") 42.dp else (h/2).dp)))
-                } else Text("Physical Tweaks Active", color = Color.White, modifier = Modifier.align(Alignment.Center))
+                    val cornerRadius = when (currentPrefix) {
+                        "max" -> 42.dp
+                        "mid" -> 16.dp
+                        "cube" -> 24.dp
+                        else -> (h / 2).dp
+                    }
+
+                    if (currentPrefix == "ring") {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = x.dp, y = y.dp)
+                                .size(w.dp, h.dp)
+                                .border(ringT.dp, Color.White.copy(alpha = 0.6f), CircleShape)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = x.dp, y = y.dp)
+                                .width(w.dp)
+                                .height(h.dp)
+                                .background(Color.White.copy(alpha = 0.6f), RoundedCornerShape(cornerRadius))
+                        )
+                    }
+                } else {
+                    Text("Physical Tweaks Active", color = Color.White, modifier = Modifier.align(Alignment.Center))
+                }
             }
 
             ScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 8.dp) { tabs.forEachIndexed { index, title -> Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) }) } }
-
+ 
             Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
                 if (currentPrefix == "tweaks") {
                     Text(text = "Physical Adjustments", fontSize = 20.sp, fontWeight = FontWeight.Bold)
