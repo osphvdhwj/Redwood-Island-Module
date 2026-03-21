@@ -152,43 +152,58 @@ import de.robv.android.xposed.XSharedPreferences
         val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "spin")
         val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
 
-        Row(modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        // Shifted padding to left-align the disk
+        Row(modifier = Modifier.fillMaxSize().padding(start = 8.dp, end = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             
-            // Disk moved to far left
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(48.dp)) {
+            // Disk moved to far left & enlarged
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(56.dp)) {
                 IsolatedCircularProgress(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor)
                 if (music.albumArt != null) { 
-                    Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(40.dp).clip(CircleShape).rotate(currentRotation)) 
+                    Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(50.dp).clip(CircleShape).rotate(currentRotation)) 
                 } else {
-                    Box(Modifier.size(40.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
+                    Box(Modifier.size(50.dp).background(Color.White.copy(alpha=0.2f), CircleShape))
                 }
             }
             
             Spacer(modifier = Modifier.width(12.dp))
             
-            // Column for Text and Progress
+            // Column for Text and Wavy Progress
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                Text(text = music.title, color = dynamicTextColor, fontSize = 14.sp, fontFamily = theme.titleFont, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-                Text(text = music.artist, color = dynamicTextColor.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = theme.titleFont, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+                Text(text = music.title, color = dynamicTextColor, fontSize = 15.sp, fontFamily = theme.titleFont, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+                Text(text = music.artist, color = dynamicTextColor.copy(alpha = 0.7f), fontSize = 13.sp, fontFamily = theme.titleFont, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
                 
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(2.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Text(text = formatTime(currentMediaPos.longValue), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 9.sp)
+                    Text(text = formatTime(currentMediaPos.longValue), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 10.sp)
                     Spacer(Modifier.width(6.dp))
-                    IsolatedLinearProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor.copy(alpha=0.8f), trackColor = dynamicTextColor.copy(alpha=0.2f), modifier = Modifier.weight(1f).height(2.dp).clip(CircleShape))
+                    // Replaced with Interactive Wavy Bar
+                    InteractiveWavyMediaBar(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.2f), onSeek = { onSeekTo?.invoke(it) }, modifier = Modifier.weight(1f).height(12.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 9.sp)
+                    Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 10.sp)
                 }
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Transport Buttons
+            // Transport Buttons (Now includes Custom Media Actions)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                val favoriteAction = music.customActions.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("thumb", true) || it.actionName.contains("like", true) }
+                if (favoriteAction != null) {
+                    InteractiveIconButton(icon = Icons.Default.FavoriteBorder, tint = dynamicTextColor, baseSize = 26.dp, bgAlpha = 0f) { onCustomMediaAction?.invoke(favoriteAction.actionName) }
+                }
+
                 InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, tint = dynamicTextColor, baseSize = 28.dp, bgAlpha = 0f) { onPrevClick?.invoke() }
+                
                 val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
                 InteractiveIconButton(icon = playIcon, tint = dynamicTextColor, baseSize = 38.dp, bgAlpha = 0.15f) { onPlayPauseClick?.invoke() }
+                
                 InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowForward, tint = dynamicTextColor, baseSize = 28.dp, bgAlpha = 0f) { onNextClick?.invoke() }
+
+                val repeatAction = music.customActions.find { it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) || it.actionName.contains("shuffle", true) }
+                if (repeatAction != null) {
+                    val icon = if (repeatAction.actionName.contains("shuffle", true)) Icons.Default.Shuffle else Icons.Default.Refresh
+                    InteractiveIconButton(icon = icon, tint = dynamicTextColor, baseSize = 26.dp, bgAlpha = 0f) { onCustomMediaAction?.invoke(repeatAction.actionName) }
+                }
             }
         }
     }
@@ -213,7 +228,8 @@ import de.robv.android.xposed.XSharedPreferences
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 if (music.appIcon != null) { Image(bitmap = music.appIcon.asImageBitmap(), contentDescription = "App Logo", modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))) } else Box(Modifier.size(36.dp).background(Color.White.copy(alpha=0.2f), RoundedCornerShape(10.dp)))
-                Row(modifier = Modifier.background(Color.White.copy(alpha=0.2f), RoundedCornerShape(12.dp)).clip(RoundedCornerShape(12.dp)).clickable { onAudioOutputClick?.invoke() }.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                // FIXED: Reordered clip -> background -> clickable -> padding for a perfect touch target and ripple
+                Row(modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha=0.2f)).clickable { onAudioOutputClick?.invoke() }.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(audioIcon, contentDescription = "Output", tint = dynamicTextColor, modifier = Modifier.size(16.dp)); Spacer(modifier = Modifier.width(6.dp)); Text(audioLabel, color = dynamicTextColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
@@ -225,8 +241,7 @@ import de.robv.android.xposed.XSharedPreferences
             Spacer(modifier = Modifier.weight(0.5f))
 
             IsolatedTimeRow(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = dynamicTextColor)
-            IsolatedMediaSlider(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, dynamicTextColor = dynamicTextColor, onSeek = { onSeekTo?.invoke(it) })
-
+            InteractiveWavyMediaBar(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.2f), onSeek = { onSeekTo?.invoke(it) }, modifier = Modifier.padding(vertical = 8.dp))
             Spacer(modifier = Modifier.weight(1f))
             
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(theme.buttonSpacing, Alignment.CenterHorizontally)) {
@@ -631,5 +646,87 @@ fun androidx.compose.ui.Modifier.safeMarquee(state: IslandState): androidx.compo
         this.basicMarquee()
     } else {
         this
+    }
+
+    @Composable
+    fun InteractiveWavyMediaBar(
+        durationMs: Long,
+        posProvider: () -> Long,
+        color: Color,
+        trackColor: Color,
+        onSeek: (Long) -> Unit,
+        modifier: Modifier = Modifier
+    ) {
+        val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
+        var isDragging by remember { mutableStateOf(false) }
+        var dragProgress by remember { mutableFloatStateOf(0f) }
+        val currentProgress = (posProvider() / safeDuration).coerceIn(0f, 1f)
+        val displayProgress = if (isDragging) dragProgress else currentProgress
+
+        // Sine wave animation phase
+        val phaseShift by rememberInfiniteTransition(label = "wave").animateFloat(
+            initialValue = 0f, targetValue = 2f * Math.PI.toFloat(),
+            animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing)), label = "phase"
+        )
+
+        Canvas(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(24.dp) // Larger invisible hit-box for easier grabbing
+                .pointerInput(Unit) {
+                    val velocityTracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            isDragging = true
+                            dragProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                            velocityTracker.resetTracking()
+                        },
+                        onDragEnd = {
+                            val finalVelocity = velocityTracker.calculateVelocity().x
+                            isDragging = false
+                            // THROW TO CANCEL: If horizontal velocity is > 1500px/sec, ignore the seek
+                            if (kotlin.math.abs(finalVelocity) < 1500f) {
+                                onSeek((dragProgress * safeDuration).toLong())
+                            }
+                        },
+                        onDragCancel = { isDragging = false }
+                    ) { change, dragAmount ->
+                        change.consume()
+                        velocityTracker.addPosition(change.uptimeMillis, change.position)
+                        dragProgress = (change.position.x / size.width).coerceIn(0f, 1f)
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = { offset ->
+                            val tappedProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                            onSeek((tappedProgress * safeDuration).toLong())
+                        }
+                    )
+                }
+        ) {
+            val midY = size.height / 2
+            val activeWidth = size.width * displayProgress
+
+            // 1. Draw inactive straight track
+            drawLine(color = trackColor, start = androidx.compose.ui.geometry.Offset(activeWidth, midY), end = androidx.compose.ui.geometry.Offset(size.width, midY), strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round)
+
+            // 2. Draw active WAVY track
+            val path = androidx.compose.ui.graphics.Path()
+            path.moveTo(0f, midY)
+            val amplitude = if (isDragging) 4.dp.toPx() else 2.5.dp.toPx() // Wave gets bigger when grabbing
+            val frequency = 0.08f
+            
+            for (x in 0..activeWidth.toInt() step 4) {
+                val y = midY + kotlin.math.sin((x * frequency) + phaseShift) * amplitude
+                path.lineTo(x.toFloat(), y)
+            }
+            path.lineTo(activeWidth, midY)
+
+            drawPath(path = path, color = color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
+            
+            // 3. Draw Thumb
+            drawCircle(color = Color.White, radius = if (isDragging) 7.dp.toPx() else 5.dp.toPx(), center = androidx.compose.ui.geometry.Offset(activeWidth, midY))
+        }
     }
 }
