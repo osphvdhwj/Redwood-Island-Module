@@ -730,4 +730,3 @@ fun androidx.compose.ui.Modifier.safeMarquee(state: IslandState): androidx.compo
             drawCircle(color = Color.White, radius = if (isDragging) 7.dp.toPx() else 5.dp.toPx(), center = androidx.compose.ui.geometry.Offset(activeWidth, midY))
         }
     }
-}
