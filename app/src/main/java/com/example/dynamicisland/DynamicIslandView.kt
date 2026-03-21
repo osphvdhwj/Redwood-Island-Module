@@ -295,16 +295,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val radTarget = when (state) { IslandState.TYPE_3_MAX -> 42.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_CUBE -> 24.dp; else -> (targetHeight / 2).dp }
         val rad by animateDpAsState(radTarget, physicsSpec, label = "rad")
 
-        val targetBgColor = if (state == IslandState.HIDDEN) Color.Transparent 
-        else if (state == IslandState.TYPE_0_RING) Color.Black.copy(alpha = 0.01f) 
+        // 🎨 REFINED: True AMOLED Black, refined transparencies, and ultra-subtle micro-borders
+        val targetBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent 
         else {
-            if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor).copy(alpha = 0.65f) 
-            else if (state == IslandState.TYPE_3_MAX) Color(0xFF121212).copy(alpha = 0.4f) 
-            else Color(0xFF121212).copy(alpha = 0.75f) 
+            if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor).copy(alpha = 0.85f) 
+            else if (state == IslandState.TYPE_3_MAX) Color(0xFF080808).copy(alpha = 0.85f) 
+            else Color.Black // Pure black for seamless AMOLED blend
         }
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
-        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.15f), animationSpec = tween(600), label = "borderColor")
-
+        val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
+        
         LaunchedEffect(state, model) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
@@ -354,8 +354,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         scaleX = touchScale; scaleY = touchScale
                         transformOrigin = TransformOrigin(0.5f, 0f)
                     }
+                    // 🎨 REFINED: Soft hardware shadow and a thinner 0.5dp border
+                    .shadow(elevation = if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp, shape = RoundedCornerShape(rad), spotColor = Color.Black)
                     .clip(RoundedCornerShape(rad))
-                    .background(bgColor).border(1.dp, borderColor, RoundedCornerShape(rad))
+                    .background(bgColor)
+                    .border(0.5.dp, borderColor, RoundedCornerShape(rad))
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             awaitFirstDown(pass = PointerEventPass.Initial)
@@ -499,8 +502,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
                                 val sweepGradient = Brush.sweepGradient(0.0f to progressColor.copy(alpha = 0.4f), 0.8f to progressColor, 1.0f to progressColor.copy(alpha = 0.4f))
 
-                                drawArc(color = baseColor.copy(alpha=0.35f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
-                                drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Butt), alpha = 0.95f)
+                                // 🎨 REFINED: Smooth rounded caps instead of harsh flat cuts
+                                drawArc(color = baseColor.copy(alpha=0.20f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
+                                drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 0.95f)
 
                                 val markerLength = strokeW * 1.3f
                                 val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
