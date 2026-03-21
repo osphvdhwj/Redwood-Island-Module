@@ -47,6 +47,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.core.graphics.drawable.toBitmap
 import de.robv.android.xposed.XSharedPreferences
 
@@ -127,21 +134,21 @@ import de.robv.android.xposed.XSharedPreferences
             verticalAlignment = Alignment.CenterVertically, 
             modifier = Modifier
                 .fillMaxSize()
-                .androidx.compose.ui.draw.drawWithCache {
+                .drawWithCache {
                     val cornerRadius = size.height / 2f
                     // Create the exact physical boundary of the pill
-                    val path = androidx.compose.ui.graphics.Path().apply {
+                    val path = Path().apply {
                         addRoundRect(
-                            androidx.compose.ui.geometry.RoundRect(
-                                rect = androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius, cornerRadius)
+                            RoundRect(
+                                rect = Rect(0f, 0f, size.width, size.height),
+                                cornerRadius = CornerRadius(cornerRadius, cornerRadius)
                             )
                         )
                     }
                     // Measure the path and extract just the portion based on song progress
-                    val pathMeasure = androidx.compose.ui.graphics.PathMeasure()
+                    val pathMeasure = PathMeasure()
                     pathMeasure.setPath(path, forceClosed = false)
-                    val segmentPath = androidx.compose.ui.graphics.Path()
+                    val segmentPath = Path()
                     pathMeasure.getSegment(
                         startDistance = 0f,
                         stopDistance = pathMeasure.length * animatedProgress,
@@ -155,7 +162,7 @@ import de.robv.android.xposed.XSharedPreferences
                         drawPath(
                             path = segmentPath,
                             color = dynamicTextColor,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
+                            style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
                         )
                     }
                 }
