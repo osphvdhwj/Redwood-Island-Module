@@ -241,6 +241,7 @@ class IslandController(private val context: Context) {
         view.onPrevClick = { sendMediaCommand("PREV") }
         view.onNextClick = { sendMediaCommand("NEXT") }
         view.onSeekTo = { position -> activeMediaController?.transportControls?.seekTo(position) }
+        view.onCustomMediaAction = { action -> activeMediaController?.transportControls?.sendCustomAction(action, null) }
 
         scope.launch { islandState.collect { state -> view.setState(state) } }
         scope.launch { activeModel.collect { model -> view.setModel(model) } }
@@ -255,7 +256,9 @@ class IslandController(private val context: Context) {
 
     private fun launchAudioOutputSwitcher() {
         try {
-            val intent = Intent("com.android.systemui.action.LAUNCH_SYSTEM_MEDIA_OUTPUT_DIALOG").apply { component = ComponentName("com.android.systemui", "com.android.systemui.media.dialog.MediaOutputDialogReceiver") }
+            val intent = Intent("com.android.systemui.action.LAUNCH_SYSTEM_MEDIA_OUTPUT_DIALOG")
+            intent.setPackage("com.android.systemui")
+            currentMedia?.appPackageName?.let { intent.putExtra("package_name", it) }
             val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
             pendingIntent.send()
         } catch (e: Exception) {}
@@ -368,6 +371,18 @@ class IslandController(private val context: Context) {
         }
 
         scope.launch(Dispatchers.IO) {
+            
+            // Fetch App Icon from PackageManager
+            val pm = context.packageManager
+            val appIconBmp = try {
+                val drawable = pm.getApplicationIcon(controller.packageName)
+                val bmp = Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(bmp)
+                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                drawable.draw(canvas)
+                getScaledBitmap(bmp, 100) 
+            } catch(e: Exception) { null }
+
             var blurredArtBitmap: Bitmap? = null
             var bgColor: Int? = null; var txtColor: Int = android.graphics.Color.WHITE
             if (albumArtBitmap != null) {
@@ -421,7 +436,7 @@ class IslandController(private val context: Context) {
                     id = "media_main", title = newTitle,
                     artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
                     albumArt = albumArtBitmap, blurredAlbumArt = blurredArtBitmap,
-                    appIcon = null, dominantColor = bgColor, titleTextColor = txtColor,
+                    appIcon = appIconBmp, dominantColor = bgColor, titleTextColor = txtColor,
                     isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position,
                     appPackageName = controller.packageName, customActions = extractedActions
                 )
