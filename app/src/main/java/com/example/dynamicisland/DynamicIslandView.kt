@@ -265,7 +265,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     @OptIn(ExperimentalAnimationApi::class)
     @Composable
     fun IslandUI(state: IslandState) {
+        // 📱 LANDSCAPE DETECTOR
+        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+        val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val landscapeAlpha by animateFloatAsState(targetValue = if (isLandscape) 0f else 1f, animationSpec = tween(300), label = "landscapeAlpha")
+
         val haptic = LocalHapticFeedback.current
+        val density = LocalDensity.current
         var isSquished by remember { mutableStateOf(false) }
         val touchScale by animateFloatAsState(
             targetValue = if (isSquished) 0.96f else 1f,
@@ -305,16 +311,18 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
         
-        LaunchedEffect(state, model) {
+        // 🚀 THIS RESTORES THE PROPER FULLSCREEN REFLECTION WINDOW BEHAVIOR
+        LaunchedEffect(state, model, isLandscape) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
 
             if (model?.isSensitive == true) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE } else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv() }
 
-            if (state == IslandState.HIDDEN) {
+            // 📱 FIXED: Completely collapse window in Landscape so it doesn't block touches!
+            if (state == IslandState.HIDDEN || isLandscape) {
                 wp.width = 0 
-                wp.height = 0 
+                wp.height = 0
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             } else {
@@ -329,7 +337,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
 
         Row(
-            modifier = Modifier.fillMaxWidth().offset(x = offsetX.dp, y = offsetY.coerceAtLeast(0f).dp).height(maxH.value.dp), 
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset(x = offsetX.dp, y = offsetY.coerceAtLeast(0f).dp)
+                .height(maxH.value.dp)
+                .alpha(landscapeAlpha), // 📱 FIXED: Fades out completely in landscape
             horizontalArrangement = Arrangement.Center, 
             verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
         ) {
