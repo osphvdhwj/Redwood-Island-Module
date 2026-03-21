@@ -123,6 +123,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onNextClick: (() -> Unit)? = null
     var onSeekTo: ((Long) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
+    var onCustomMediaAction: ((String) -> Unit)? = null
 
     private var flowJob: Job? = null
     private val lifecycleOwner = OverlayLifecycleOwner()
@@ -465,14 +466,19 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
                             val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
                             
+                            val batteryLevel = globalBatteryLevel.intValue
                             val baseColor = if (isMedia) {
                                 musicModel?.dominantColor?.let { Color(it) } ?: Color.White
                             } else if (globalIsCharging.value) {
-                                Color.Green
-                            } else if (globalBatteryLevel.intValue <= 20) {
-                                Color.Red
+                                Color(0xFF00FF00) // Bright Green
                             } else {
-                                Color.White
+                                when {
+                                    batteryLevel <= 5 -> Color(0xFFFF0000) // Super Red
+                                    batteryLevel <= 10 -> Color(0xFFFF3333) // Red
+                                    batteryLevel <= 40 -> Color(0xFFFFA500) // Orange
+                                    batteryLevel <= 60 -> Color(0xFFFFFF00) // Yellow
+                                    else -> Color(0xFF006400) // Dark Green
+                                }
                             }
 
                             val infiniteTransition = rememberInfiniteTransition(label = "ring_pulse")
