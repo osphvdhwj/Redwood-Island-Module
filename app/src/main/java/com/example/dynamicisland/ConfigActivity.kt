@@ -1,5 +1,6 @@
 package com.example.dynamicisland
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -17,15 +18,22 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.AspectRatio
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.SettingsSystemDaydream
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 
@@ -34,13 +42,47 @@ class ConfigActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
-        setContent { MaterialTheme(colorScheme = darkColorScheme()) { Surface(modifier = Modifier.fillMaxSize()) { ConfigScreen(prefs) } } }
+        setContent { 
+            MaterialTheme(colorScheme = darkColorScheme()) { 
+                Surface(modifier = Modifier.fillMaxSize()) { 
+                    ConfigScreen(prefs) 
+                } 
+            } 
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun ConfigScreen(prefs: android.content.SharedPreferences) {
+        var selectedNav by remember { mutableIntStateOf(0) }
+        
+        Scaffold(
+            bottomBar = {
+                NavigationBar {
+                    NavigationBarItem(selected = selectedNav == 0, onClick = { selectedNav = 0 }, icon = { Icon(Icons.Default.AspectRatio, null) }, label = { Text("Layout") })
+                    NavigationBarItem(selected = selectedNav == 1, onClick = { selectedNav = 1 }, icon = { Icon(Icons.Default.Palette, null) }, label = { Text("Theme") })
+                    NavigationBarItem(selected = selectedNav == 2, onClick = { selectedNav = 2 }, icon = { Icon(Icons.Default.Dashboard, null) }, label = { Text("Dashboard") })
+                    NavigationBarItem(selected = selectedNav == 3, onClick = { selectedNav = 3 }, icon = { Icon(Icons.Default.SettingsSystemDaydream, null) }, label = { Text("Features") })
+                    NavigationBarItem(selected = selectedNav == 4, onClick = { selectedNav = 4 }, icon = { Icon(Icons.Default.TouchApp, null) }, label = { Text("Gestures") })
+                }
+            }
+        ) { paddingValues ->
+            Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+                when (selectedNav) {
+                    0 -> LayoutScreen(prefs)
+                    1 -> ThemeScreen(prefs)
+                    2 -> DashboardScreen(prefs)
+                    3 -> FeaturesScreen(prefs)
+                    4 -> GesturesScreen(prefs)
+                }
+            }
+        }
     }
 
     @Composable
-    fun ConfigScreen(prefs: android.content.SharedPreferences) {
+    fun LayoutScreen(prefs: android.content.SharedPreferences) {
         var selectedTab by remember { mutableIntStateOf(0) }
-        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Gestures", "Dashboard", "Tweaks", "Theme", "Features")
+        val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Tweaks")
 
         var w by remember { mutableFloatStateOf(0f) }
         var h by remember { mutableFloatStateOf(0f) }
@@ -52,7 +94,7 @@ class ConfigActivity : ComponentActivity() {
         val currentPrefix = tabs[selectedTab].lowercase()
 
         LaunchedEffect(selectedTab) {
-            if (currentPrefix != "gestures" && currentPrefix != "dashboard" && currentPrefix != "tweaks" && currentPrefix != "theme" && currentPrefix != "features") {
+            if (currentPrefix != "tweaks") {
                 w = prefs.getFloat("${currentPrefix}_w", getDefaultWidth(currentPrefix))
                 h = prefs.getFloat("${currentPrefix}_h", getDefaultHeight(currentPrefix))
                 x = prefs.getFloat("${currentPrefix}_x", 0f)
@@ -63,123 +105,15 @@ class ConfigActivity : ComponentActivity() {
 
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxWidth().height(250.dp).background(Color.Black), contentAlignment = if (expandUpwards) Alignment.BottomCenter else Alignment.TopCenter) {
-                if (currentPrefix != "gestures" && currentPrefix != "dashboard" && currentPrefix != "tweaks" && currentPrefix != "theme" && currentPrefix != "features") {
+                if (currentPrefix != "tweaks") {
                     Box(modifier = Modifier.offset(x = x.dp, y = y.dp).width(w.dp).height(h.dp).background(Color.White.copy(alpha = 0.6f), RoundedCornerShape(if(currentPrefix == "max") 42.dp else (h/2).dp)))
-                } else Text("Universal Matrix Config", color = Color.White, modifier = Modifier.align(Alignment.Center))
+                } else Text("Physical Tweaks Active", color = Color.White, modifier = Modifier.align(Alignment.Center))
             }
 
             ScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 8.dp) { tabs.forEachIndexed { index, title -> Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) }) } }
 
             Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
-                if (currentPrefix == "gestures") {
-                    Text(text = "Action Matrix", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    val states = listOf("Ring" to "TYPE_0_RING", "Mini Pill" to "TYPE_1_MINI", "Mid Pill" to "TYPE_2_MID", "Max Pill" to "TYPE_3_MAX")
-                    val gestures = IslandGesture.values()
-                    val actionOptions = IslandAction.values()
-
-                    states.forEach { (label, stateKey) ->
-                        var expanded by remember { mutableStateOf(false) }
-                        ElevatedCard(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Row(modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text(label, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                                    Icon(if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null)
-                                }
-                                AnimatedVisibility(expanded) {
-                                    Column(modifier = Modifier.padding(top = 16.dp)) {
-                                        gestures.forEach { gesture ->
-                                            val prefKey = "${stateKey}_${gesture.name}"
-                                            GestureDropdown(label = gesture.name.replace("_", " "), options = actionOptions, prefs = prefs, prefKey = prefKey)
-                                            Spacer(Modifier.height(8.dp))
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } else if (currentPrefix == "dashboard") {
-                    Text(text = "Quick Settings Grid", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
-                    Text(text = "Select 7 hardware toggles.", fontSize = 14.sp, color = Color.Gray)
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    val availableQS = listOf("None", "WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
-                    val qsSlots = listOf("QS 1", "QS 2", "QS 3", "QS 4", "QS 5", "QS 6", "QS 7")
-                    qsSlots.forEachIndexed { index, slot ->
-                        var expanded by remember { mutableStateOf(false) }
-                        var selectedQS by remember { mutableStateOf(prefs.getString("qs_tile_$index", availableQS[index + 1]) ?: availableQS[index + 1]) }
-
-                        @OptIn(ExperimentalMaterial3Api::class)
-                        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-                            OutlinedTextField(
-                                value = selectedQS, onValueChange = {}, readOnly = true, label = { Text(slot) },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp)
-                            )
-                            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                availableQS.forEach { tile ->
-                                    DropdownMenuItem(text = { Text(tile) }, onClick = {
-                                        selectedQS = tile; prefs.edit().putString("qs_tile_$index", tile).apply(); expanded = false
-                                        broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
-                                    })
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text(text = "App Dock Pinning", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
-                    Text(text = "Select 8 apps to pin.", fontSize = 14.sp, color = Color.Gray)
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    val pm = LocalContext.current.packageManager
-                    var installedApps by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
-                    
-                    LaunchedEffect(Unit) {
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                            try {
-                                val apps = pm.getInstalledApplications(0)
-                                    .filter { appInfo -> try { pm.getLaunchIntentForPackage(appInfo.packageName) != null } catch(e:Throwable){false} }
-                                    .map { appInfo -> Pair(appInfo.loadLabel(pm).toString(), appInfo.packageName) }
-                                    .sortedBy { pair -> pair.first }
-                                installedApps = apps
-                            } catch(e: Throwable) {}
-                        }
-                    }
-
-                    if (installedApps.isEmpty()) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp))
-                    } else {
-                        val pinnedApps = listOf("App 1", "App 2", "App 3", "App 4", "App 5", "App 6", "App 7", "App 8")
-                        pinnedApps.forEachIndexed { index, slot ->
-                            var expanded by remember { mutableStateOf(false) }
-                            var selectedAppPkg by remember { mutableStateOf(prefs.getString("pinned_app_$index", "") ?: "") }
-                            val selectedAppName = installedApps.find { it.second == selectedAppPkg }?.first ?: "None"
-
-                            @OptIn(ExperimentalMaterial3Api::class)
-                            ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-                                OutlinedTextField(
-                                    value = selectedAppName, onValueChange = {}, readOnly = true, label = { Text(slot) },
-                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp)
-                                )
-                                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                    DropdownMenuItem(text = { Text("None") }, onClick = {
-                                        selectedAppPkg = ""; prefs.edit().putString("pinned_app_$index", "").apply(); expanded = false
-                                        broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
-                                    })
-                                    installedApps.forEach { pair ->
-                                        DropdownMenuItem(text = { Text(pair.first) }, onClick = {
-                                            selectedAppPkg = pair.second; prefs.edit().putString("pinned_app_$index", pair.second).apply(); expanded = false
-                                            broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
-                                        })
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } else if (currentPrefix == "tweaks") {
+                if (currentPrefix == "tweaks") {
                     Text(text = "Physical Adjustments", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text(text = "Adjust the Island without recompiling code.", fontSize = 14.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(16.dp))
@@ -191,70 +125,6 @@ class ConfigActivity : ComponentActivity() {
                     var baseWidth by remember { mutableFloatStateOf(prefs.getFloat("tweak_base_width", 100f)) }
                     Text(text = "Mini Pill Width: ${baseWidth.toInt()}dp", color = Color.White)
                     Slider(value = baseWidth, onValueChange = { baseWidth = it; prefs.edit().putFloat("tweak_base_width", it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) }, valueRange = 50f..200f)
-                } else if (currentPrefix == "theme") {
-                    Text(text = "UI Customization Engine", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(text = "Customize the physical appearance of inner elements.", fontSize = 14.sp, color = Color.Gray)
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text("Interactive Buttons (Max Pill)", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF00FFCC))
-                    
-                    var animExpanded by remember { mutableStateOf(false) }
-                    var selectedAnim by remember { mutableStateOf(prefs.getString("theme_anim_type", "BOUNCE") ?: "BOUNCE") }
-                    @OptIn(ExperimentalMaterial3Api::class)
-                    ExposedDropdownMenuBox(expanded = animExpanded, onExpandedChange = { animExpanded = !animExpanded }) {
-                        OutlinedTextField(value = selectedAnim, onValueChange = {}, readOnly = true, label = { Text("Click Animation Type") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = animExpanded) }, modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 8.dp))
-                        ExposedDropdownMenu(expanded = animExpanded, onDismissRequest = { animExpanded = false }) {
-                            listOf("CHECKMARK", "BOUNCE", "PULSE", "NONE").forEach { opt ->
-                                DropdownMenuItem(text = { Text(opt) }, onClick = { selectedAnim = opt; prefs.edit().putString("theme_anim_type", opt).apply(); animExpanded = false; sendGestureUpdate(prefs, this@ConfigActivity) })
-                            }
-                        }
-                    }
-
-                    ThemeSlider("Button Icon Size (dp)", "theme_button_size", 48f, 20f..80f, prefs)
-                    ThemeSlider("Gap Between Buttons (dp)", "theme_button_spacing", 16f, 0f..40f, prefs)
-                    ThemeSlider("Button Shape (0=Square, 50=Circle)", "theme_button_radius", 50f, 0f..50f, prefs)
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    ThemeSlider("Corner Radius", "theme_corner_radius", 50f, 10f..100f, prefs)
-                    ThemeSlider("Global Text Size (sp)", "theme_text_primary", 16f, 10f..30f, prefs)
-                    ThemeSlider("Global Subtext Size (sp)", "theme_text_secondary", 14f, 8f..24f, prefs)
-                    ThemeSlider("Global Progress Thickness", "theme_progress_thick", 4f, 1f..15f, prefs)
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Music Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Cyan)
-                    ThemeSlider("Title Text Size", "theme_music_title", 16f, 10f..30f, prefs)
-                    ThemeSlider("Artist Text Size", "theme_music_artist", 14f, 8f..24f, prefs)
-                    ThemeSlider("Seeker Thickness", "theme_music_seeker", 4f, 1f..15f, prefs)
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Battery Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Green)
-                    ThemeSlider("Cube Text Size", "theme_bat_text", 16f, 10f..30f, prefs)
-                    ThemeSlider("Cube Icon Size", "theme_bat_icon", 36f, 16f..72f, prefs)
-                    ThemeSlider("Ring Thickness", "theme_bat_ring", 12f, 2f..25f, prefs)
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Notification Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Red)
-                    ThemeSlider("Alert Title Size", "theme_alert_title", 16f, 10f..30f, prefs)
-                    ThemeSlider("Alert Message Size", "theme_alert_msg", 14f, 8f..24f, prefs)
-                } else if (currentPrefix == "features") {
-                    Text(text = "Active Modules", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(text = "Selectively disable Island behaviors.", fontSize = 14.sp, color = Color.Gray)
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    @Composable
-                    fun FeatureSwitch(label: String, key: String, default: Boolean) {
-                        var checked by remember { mutableStateOf(prefs.getBoolean(key, default)) }
-                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(label, color = Color.White, fontSize = 16.sp)
-                            Switch(checked = checked, onCheckedChange = { checked = it; prefs.edit().putBoolean(key, it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) })
-                        }
-                    }
-
-                    FeatureSwitch("Enable Media Pill (Music/Spotify)", "enable_media", true)
-                    FeatureSwitch("Enable Charging Cube", "enable_charging", true)
-                    FeatureSwitch("Enable System Alerts (Battery/Temp)", "enable_alerts", true)
-                    FeatureSwitch("Enable App Timers (Wellbeing)", "enable_timers", true)
                 } else {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(text = "Configure ${tabs[selectedTab]}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -284,8 +154,205 @@ class ConfigActivity : ComponentActivity() {
                     PrecisionSlider("Left", padL, 0f..100f, { padL = it }) { prefs.edit().putFloat("pad_l", padL).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
                     PrecisionSlider("Right", padR, 0f..100f, { padR = it }) { prefs.edit().putFloat("pad_r", padR).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
                 }
-                Spacer(modifier = Modifier.height(60.dp))
+                Spacer(modifier = Modifier.height(80.dp))
             }
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun ThemeScreen(prefs: android.content.SharedPreferences) {
+        Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+            Text(text = "UI Customization Engine", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(text = "Customize the physical appearance of inner elements.", fontSize = 14.sp, color = Color.Gray)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text("Interactive Buttons (Max Pill)", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF00FFCC))
+            
+            var animExpanded by remember { mutableStateOf(false) }
+            var selectedAnim by remember { mutableStateOf(prefs.getString("theme_anim_type", "BOUNCE") ?: "BOUNCE") }
+            ExposedDropdownMenuBox(expanded = animExpanded, onExpandedChange = { animExpanded = !animExpanded }) {
+                OutlinedTextField(value = selectedAnim, onValueChange = {}, readOnly = true, label = { Text("Click Animation Type") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = animExpanded) }, modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 8.dp))
+                ExposedDropdownMenu(expanded = animExpanded, onDismissRequest = { animExpanded = false }) {
+                    listOf("CHECKMARK", "BOUNCE", "PULSE", "NONE").forEach { opt ->
+                        DropdownMenuItem(text = { Text(opt) }, onClick = { selectedAnim = opt; prefs.edit().putString("theme_anim_type", opt).apply(); animExpanded = false; sendGestureUpdate(prefs, this@ConfigActivity) })
+                    }
+                }
+            }
+
+            ThemeSlider("Button Icon Size (dp)", "theme_button_size", 48f, 20f..80f, prefs)
+            ThemeSlider("Gap Between Buttons (dp)", "theme_button_spacing", 16f, 0f..40f, prefs)
+            ThemeSlider("Button Shape (0=Square, 50=Circle)", "theme_button_radius", 50f, 0f..50f, prefs)
+            
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ThemeSlider("Corner Radius", "theme_corner_radius", 50f, 10f..100f, prefs)
+            ThemeSlider("Global Text Size (sp)", "theme_text_primary", 16f, 10f..30f, prefs)
+            ThemeSlider("Global Subtext Size (sp)", "theme_text_secondary", 14f, 8f..24f, prefs)
+            ThemeSlider("Global Progress Thickness", "theme_progress_thick", 4f, 1f..15f, prefs)
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Music Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Cyan)
+            ThemeSlider("Title Text Size", "theme_music_title", 16f, 10f..30f, prefs)
+            ThemeSlider("Artist Text Size", "theme_music_artist", 14f, 8f..24f, prefs)
+            ThemeSlider("Seeker Thickness", "theme_music_seeker", 4f, 1f..15f, prefs)
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Battery Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Green)
+            ThemeSlider("Cube Text Size", "theme_bat_text", 16f, 10f..30f, prefs)
+            ThemeSlider("Cube Icon Size", "theme_bat_icon", 36f, 16f..72f, prefs)
+            ThemeSlider("Ring Thickness", "theme_bat_ring", 12f, 2f..25f, prefs)
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Notification Customizations", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Red)
+            ThemeSlider("Alert Title Size", "theme_alert_title", 16f, 10f..30f, prefs)
+            ThemeSlider("Alert Message Size", "theme_alert_msg", 14f, 8f..24f, prefs)
+            
+            Spacer(modifier = Modifier.height(80.dp))
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun DashboardScreen(prefs: android.content.SharedPreferences) {
+        Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+            Text(text = "Quick Settings Grid", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
+            Text(text = "Select 7 hardware toggles.", fontSize = 14.sp, color = Color.Gray)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val availableQS = listOf("None", "WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
+            val qsSlots = listOf("QS 1", "QS 2", "QS 3", "QS 4", "QS 5", "QS 6", "QS 7")
+            qsSlots.forEachIndexed { index, slot ->
+                var expanded by remember { mutableStateOf(false) }
+                var selectedQS by remember { mutableStateOf(prefs.getString("qs_tile_$index", availableQS[index + 1]) ?: availableQS[index + 1]) }
+
+                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                    OutlinedTextField(
+                        value = selectedQS, onValueChange = {}, readOnly = true, label = { Text(slot) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp)
+                    )
+                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        availableQS.forEach { tile ->
+                            DropdownMenuItem(text = { Text(tile) }, onClick = {
+                                selectedQS = tile; prefs.edit().putString("qs_tile_$index", tile).apply(); expanded = false
+                                broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
+                            })
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(text = "App Dock Pinning", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
+            Text(text = "Select 8 apps to pin.", fontSize = 14.sp, color = Color.Gray)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val pm = LocalContext.current.packageManager
+            var installedApps by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+            
+            LaunchedEffect(Unit) {
+                withContext(Dispatchers.IO) {
+                    try {
+                        val apps = pm.getInstalledApplications(0)
+                            .filter { appInfo -> try { pm.getLaunchIntentForPackage(appInfo.packageName) != null } catch(e:Throwable){false} }
+                            .map { appInfo -> Pair(appInfo.loadLabel(pm).toString(), appInfo.packageName) }
+                            .sortedBy { pair -> pair.first }
+                        installedApps = apps
+                    } catch(e: Throwable) {}
+                }
+            }
+
+            if (installedApps.isEmpty()) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp))
+            } else {
+                val pinnedApps = listOf("App 1", "App 2", "App 3", "App 4", "App 5", "App 6", "App 7", "App 8")
+                pinnedApps.forEachIndexed { index, slot ->
+                    var expanded by remember { mutableStateOf(false) }
+                    var selectedAppPkg by remember { mutableStateOf(prefs.getString("pinned_app_$index", "") ?: "") }
+                    val selectedAppName = installedApps.find { it.second == selectedAppPkg }?.first ?: "None"
+
+                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                        OutlinedTextField(
+                            value = selectedAppName, onValueChange = {}, readOnly = true, label = { Text(slot) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp)
+                        )
+                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            DropdownMenuItem(text = { Text("None") }, onClick = {
+                                selectedAppPkg = ""; prefs.edit().putString("pinned_app_$index", "").apply(); expanded = false
+                                broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
+                            })
+                            installedApps.forEach { pair ->
+                                DropdownMenuItem(text = { Text(pair.first) }, onClick = {
+                                    selectedAppPkg = pair.second; prefs.edit().putString("pinned_app_$index", pair.second).apply(); expanded = false
+                                    broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
+                                })
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(80.dp))
+        }
+    }
+
+    @Composable
+    fun FeaturesScreen(prefs: android.content.SharedPreferences) {
+        Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+            Text(text = "Active Modules", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(text = "Selectively disable Island behaviors.", fontSize = 14.sp, color = Color.Gray)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            FeatureSwitch("Enable Media Pill (Music/Spotify)", "enable_media", true, prefs)
+            FeatureSwitch("Enable Charging Cube", "enable_charging", true, prefs)
+            FeatureSwitch("Enable System Alerts (Battery/Temp)", "enable_alerts", true, prefs)
+            FeatureSwitch("Enable App Timers (Wellbeing)", "enable_timers", true, prefs)
+            
+            Spacer(modifier = Modifier.height(80.dp))
+        }
+    }
+
+    @Composable
+    fun FeatureSwitch(label: String, key: String, default: Boolean, prefs: android.content.SharedPreferences) {
+        var checked by remember { mutableStateOf(prefs.getBoolean(key, default)) }
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(label, color = Color.White, fontSize = 16.sp)
+            Switch(checked = checked, onCheckedChange = { checked = it; prefs.edit().putBoolean(key, it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) })
+        }
+    }
+
+    @Composable
+    fun GesturesScreen(prefs: android.content.SharedPreferences) {
+        Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+            Text(text = "Action Matrix", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            val states = listOf("Ring" to "TYPE_0_RING", "Mini Pill" to "TYPE_1_MINI", "Mid Pill" to "TYPE_2_MID", "Max Pill" to "TYPE_3_MAX")
+            val gestures = IslandGesture.values()
+            val actionOptions = IslandAction.values()
+
+            states.forEach { (label, stateKey) ->
+                var expanded by remember { mutableStateOf(false) }
+                ElevatedCard(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(label, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                            Icon(if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null)
+                        }
+                        AnimatedVisibility(expanded) {
+                            Column(modifier = Modifier.padding(top = 16.dp)) {
+                                gestures.forEach { gesture ->
+                                    val prefKey = "${stateKey}_${gesture.name}"
+                                    GestureDropdown(label = gesture.name.replace("_", " "), options = actionOptions, prefs = prefs, prefKey = prefKey)
+                                    Spacer(Modifier.height(8.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(80.dp))
         }
     }
 
