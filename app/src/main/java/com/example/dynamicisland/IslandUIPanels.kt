@@ -113,33 +113,69 @@ import de.robv.android.xposed.XSharedPreferences
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
-        val dynamicTextColor = Color.White // Override for better AMOLED contrast
+        // Fallback to a nice Cyan if the dominant color is too dark
+        val dynamicTextColor = Color(music.titleTextColor).takeIf { it != Color.Transparent && it != Color.Black } ?: Color(0xFF00FFCC) 
         
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
+        val safeDuration = if (music.durationMs <= 0L) 1f else music.durationMs.toFloat()
+        val currentPosition = currentMediaPos.longValue.toFloat().coerceAtLeast(0f)
+        val targetProgress = (currentPosition / safeDuration).coerceIn(0f, 1f)
+        
+        // Fluid animation for the climbing vine border
+        val animatedProgress by animateFloatAsState(targetValue = targetProgress, animationSpec = tween(durationMillis = 1000, easing = LinearEasing), label = "vine_progress")
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically, 
+            modifier = Modifier
+                .fillMaxSize()
+                .androidx.compose.ui.draw.drawWithCache {
+                    val cornerRadius = size.height / 2f
+                    // Create the exact physical boundary of the pill
+                    val path = androidx.compose.ui.graphics.Path().apply {
+                        addRoundRect(
+                            androidx.compose.ui.geometry.RoundRect(
+                                rect = androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius, cornerRadius)
+                            )
+                        )
+                    }
+                    // Measure the path and extract just the portion based on song progress
+                    val pathMeasure = androidx.compose.ui.graphics.PathMeasure()
+                    pathMeasure.setPath(path, forceClosed = false)
+                    val segmentPath = androidx.compose.ui.graphics.Path()
+                    pathMeasure.getSegment(
+                        startDistance = 0f,
+                        stopDistance = pathMeasure.length * animatedProgress,
+                        destination = segmentPath,
+                        startWithMoveTo = true
+                    )
+
+                    onDrawWithContent {
+                        drawContent() // Draw the disk and text first
+                        // Draw the glowing vine on top of the borders
+                        drawPath(
+                            path = segmentPath,
+                            color = dynamicTextColor,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
+                        )
+                    }
+                }
+                .padding(horizontal = 12.dp)
+        ) {
             val infiniteTransition = rememberInfiniteTransition()
             val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "spin")
             val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
             
-            if (music.albumArt != null) {
-                Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.size(22.dp).clip(CircleShape).rotate(currentRotation))
-            } else {
-                Box(Modifier.size(22.dp).background(Color.White.copy(0.2f), CircleShape))
-            }
-            
-            Spacer(Modifier.width(8.dp))
-            
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                Text(text = "${music.title} • ${music.artist}", color = dynamicTextColor, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-                
-                // Adjusted padding and sizes to ensure it renders inside the 36dp pill height
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 1.dp)) {
-                    Text(text = formatTime(currentMediaPos.longValue), color = dynamicTextColor.copy(alpha=0.8f), fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                    Spacer(Modifier.width(6.dp))
-                    IsolatedLinearProgressIndicator(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.3f), modifier = Modifier.weight(1f).fillMaxWidth().height(3.dp).clip(CircleShape))
-                    Spacer(Modifier.width(6.dp))
-                    Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.8f), fontSize = 9.sp, fontWeight = FontWeight.Medium)
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(26.dp)) {
+                if (music.albumArt != null) {
+                    Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.fillMaxSize().clip(CircleShape).rotate(currentRotation))
+                } else {
+                    Box(Modifier.fillMaxSize().background(Color.White.copy(0.2f), CircleShape))
                 }
             }
+            
+            Spacer(Modifier.width(10.dp))
+            
+            Text(text = music.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f).safeMarquee(islandState.value))
         }
     }
 
