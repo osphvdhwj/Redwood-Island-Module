@@ -216,26 +216,41 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            // Bottom Row: Custom Media Actions (Below the transport controls)
-            // Bottom Row: Custom Media Actions (Synced with System)
+            // Bottom Row: Custom Media Actions (Strictly Synced with System States)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    val favoriteAction = music.customActions.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("thumb", true) || it.actionName.contains("like", true) }
+                    
+                    // 1. Heart/Favorite Binding
+                    val favoriteAction = music.customActions.find { 
+                        it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || 
+                        it.actionName.contains("thumb", true) || it.actionName.contains("like", true) 
+                    }
                     if (favoriteAction != null) {
-                        InteractiveIconButton(icon = if(music.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, tint = if(music.isLiked) Color.Red else dynamicTextColor.copy(alpha=0.8f), baseSize = 22.dp, bgAlpha = 0f) { onCustomMediaAction?.invoke(favoriteAction.actionName) }
+                        val heartIcon = if (music.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder
+                        val heartTint = if (music.isLiked) Color(0xFFFF2A5F) else dynamicTextColor.copy(alpha=0.8f)
+                        InteractiveIconButton(icon = heartIcon, tint = heartTint, baseSize = 22.dp, bgAlpha = 0f) { 
+                            onCustomMediaAction?.invoke(favoriteAction.actionName) 
+                        }
                     }
 
-                    val repeatAction = music.customActions.find { it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) || it.actionName.contains("shuffle", true) }
+                    // 2. Loop & Shuffle Binding
+                    val repeatAction = music.customActions.find { 
+                        it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) || 
+                        it.actionName.contains("shuffle", true) 
+                    }
                     if (repeatAction != null) {
                         val isShuffleAct = repeatAction.actionName.contains("shuffle", true)
                         
-                        // If it's the shuffle button, map to music.isShuffled
                         if (isShuffleAct) {
-                            InteractiveIconButton(icon = Icons.Default.Shuffle, tint = if(music.isShuffled) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f), baseSize = 22.dp, bgAlpha = 0f) { onCustomMediaAction?.invoke(repeatAction.actionName) }
+                            val shuffleTint = if (music.isShuffled) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f)
+                            InteractiveIconButton(icon = Icons.Default.Shuffle, tint = shuffleTint, baseSize = 22.dp, bgAlpha = 0f) { 
+                                onCustomMediaAction?.invoke(repeatAction.actionName) 
+                            }
                         } else {
-                            // If it's a loop button, map to music.repeatMode (1=One, 2=All)
                             val loopIcon = if (music.repeatMode == 1) Icons.Default.RepeatOne else Icons.Default.Repeat
                             val loopTint = if (music.repeatMode > 0) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f)
-                            InteractiveIconButton(icon = loopIcon, tint = loopTint, baseSize = 22.dp, bgAlpha = 0f) { onCustomMediaAction?.invoke(repeatAction.actionName) }
+                            InteractiveIconButton(icon = loopIcon, tint = loopTint, baseSize = 22.dp, bgAlpha = 0f) { 
+                                onCustomMediaAction?.invoke(repeatAction.actionName) 
+                            }
                         }
                     }
                 }
@@ -289,28 +304,54 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
         InteractiveWavyMediaBar(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.2f), onSeek = { onSeekTo?.invoke(it) }, modifier = Modifier.padding(vertical = 8.dp))
         Spacer(modifier = Modifier.weight(1f))
         
-        // Bottom Row: Custom Media Actions (Synced with System)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    val favoriteAction = music.customActions.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("thumb", true) || it.actionName.contains("like", true) }
-                    if (favoriteAction != null) {
-                        InteractiveIconButton(icon = if(music.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, tint = if(music.isLiked) Color.Red else dynamicTextColor.copy(alpha=0.8f), baseSize = theme.buttonSize, bgAlpha = 0f) { onCustomMediaAction?.invoke(favoriteAction.actionName) }
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(theme.buttonSpacing, Alignment.CenterHorizontally)) {
+                
+                // System-Synced Heart/Favorite Implementation
+                val favoriteAction = music.customActions.find { 
+                    it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || 
+                    it.actionName.contains("thumb", true) || it.actionName.contains("like", true) 
+                }
+                if (favoriteAction != null) {
+                    val heartIcon = if (music.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder
+                    val heartTint = if (music.isLiked) Color(0xFFFF2A5F) else dynamicTextColor.copy(alpha=0.8f)
+                    InteractiveIconButton(icon = heartIcon, tint = heartTint, baseSize = theme.buttonSize, bgAlpha = 0f) { 
+                        onCustomMediaAction?.invoke(favoriteAction.actionName) 
                     }
+                } else {
+                    Spacer(Modifier.width(theme.buttonSize))
+                }
+                
+                InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) { onPrevClick?.invoke() }
+                
+                val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
+                InteractiveIconButton(icon = playIcon, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0.2f) { onPlayPauseClick?.invoke() }
+                
+                InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowForward, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) { onNextClick?.invoke() }
 
-                    val repeatAction = music.customActions.find { it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) || it.actionName.contains("shuffle", true) }
-                    if (repeatAction != null) {
-                        val isShuffleAct = repeatAction.actionName.contains("shuffle", true)
-                        
-                        // If it's the shuffle button, map to music.isShuffled
-                        if (isShuffleAct) {
-                            InteractiveIconButton(icon = Icons.Default.Shuffle, tint = if(music.isShuffled) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f), baseSize = theme.buttonSize, bgAlpha = 0f) { onCustomMediaAction?.invoke(repeatAction.actionName) }
-                        } else {
-                            // If it's a loop button, map to music.repeatMode (1=One, 2=All)
-                            val loopIcon = if (music.repeatMode == 1) Icons.Default.RepeatOne else Icons.Default.Repeat
-                            val loopTint = if (music.repeatMode > 0) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f)
-                            InteractiveIconButton(icon = loopIcon, tint = loopTint, baseSize = theme.buttonSize, bgAlpha = 0f) { onCustomMediaAction?.invoke(repeatAction.actionName) }
+                // System-Synced Shuffle & Repeat Implementation
+                val repeatAction = music.customActions.find { 
+                    it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) || 
+                    it.actionName.contains("shuffle", true) 
+                }
+                if (repeatAction != null) {
+                    val isShuffleAct = repeatAction.actionName.contains("shuffle", true)
+                    
+                    if (isShuffleAct) {
+                        val shuffleTint = if (music.isShuffled) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f)
+                        InteractiveIconButton(icon = Icons.Default.Shuffle, tint = shuffleTint, baseSize = theme.buttonSize, bgAlpha = 0f) { 
+                            onCustomMediaAction?.invoke(repeatAction.actionName) 
+                        }
+                    } else {
+                        val loopIcon = if (music.repeatMode == 1) Icons.Default.RepeatOne else Icons.Default.Repeat
+                        val loopTint = if (music.repeatMode > 0) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f)
+                        InteractiveIconButton(icon = loopIcon, tint = loopTint, baseSize = theme.buttonSize, bgAlpha = 0f) { 
+                            onCustomMediaAction?.invoke(repeatAction.actionName) 
                         }
                     }
+                } else {
+                    Spacer(Modifier.width(theme.buttonSize))
                 }
+            }
     }
 }
 
