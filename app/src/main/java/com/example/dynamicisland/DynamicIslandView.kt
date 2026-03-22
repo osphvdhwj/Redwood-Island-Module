@@ -330,7 +330,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
             if (model?.isSensitive == true) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE } else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv() }
 
-            // 📱 FIXED: We keep MATCH_PARENT to prevent deadzones, but we MUST explicitly toggle the touch flag!
+            // 📱 FIXED: explicitly toggle the touch flag so the Island isn't an untouchable ghost!
             if (state == IslandState.HIDDEN || isLandscape) {
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
             } else {
@@ -353,184 +353,201 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             horizontalArrangement = Arrangement.Center, 
             verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
         ) {
+            // 🎛️ FIXED: The Outer Box securely tracks the real layout bounds for the Android WindowManager touches.
             Box(
                 modifier = Modifier
-                    .onGloballyPositioned { coordinates -> /* ... (Keep this block exactly the same) ... */ }
+                    .onGloballyPositioned { coordinates ->
+                        val location = IntArray(2)
+                        this@DynamicIslandView.getLocationOnScreen(location)
+                        val bounds = coordinates.boundsInRoot()
+                        val globalLeft = location[0] + bounds.left.toInt()
+                        val globalTop = location[1] + bounds.top.toInt()
+                        val globalRight = location[0] + bounds.right.toInt()
+                        val globalBottom = location[1] + bounds.bottom.toInt()
+
+                        if (abs(mainPillRect.left - globalLeft) > 5 || abs(mainPillRect.bottom - globalBottom) > 5 || mainPillRect.isEmpty) {
+                            mainPillRect.set(globalLeft, globalTop, globalRight, globalBottom)
+                            insetsUpdateFlow.tryEmit(Unit)
+                        }
+                    }
                     .width(width).height(height)
-                    .graphicsLayer { 
-                        // 🎛️ APPLIES THE SUCK-IN ANIMATION AND TRANSPARENCY
-                        scaleX = touchScale * islandScale
-                        scaleY = touchScale * islandScale
-                        alpha = islandAlpha
-                        transformOrigin = TransformOrigin(0.5f, 0.5f) // Sucks directly into the center
-                    }
-                    .shadow(elevation = if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp, shape = RoundedCornerShape(rad), spotColor = Color.Black)
-                    .clip(RoundedCornerShape(rad))
-                    .background(bgColor)
-                    .border(0.5.dp, borderColor, RoundedCornerShape(rad))
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            awaitFirstDown(pass = PointerEventPass.Initial)
-                            isSquished = true
-                            waitForUpOrCancellation(pass = PointerEventPass.Initial)
-                            isSquished = false
-                        }
-                    }
-                    .pointerInput(state) {
-                        // 🎛️ FIXED: ALWAYS detect tap gestures so touches don't ghost through the pill to the OS!
-                        detectTapGestures(
-                            onTap = { 
-                                if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) } 
-                            },
-                            onDoubleTap = { 
-                                if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) } 
-                            },
-                            onLongPress = { 
-                                if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) } 
-                            }
-                        )
-                    }
-                    .pointerInput(state) {
-                        var dragOffsetX = 0f
-                        var dragOffsetY = 0f
-                        
-                        detectDragGestures(
-                            onDragEnd = {
-                                if (abs(dragOffsetX) > abs(dragOffsetY)) {
-                                    if (dragOffsetX > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT)
-                                    else if (dragOffsetX < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
-                                } else {
-                                    if (dragOffsetY > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN)
-                                    else if (dragOffsetY < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
-                                }
-                                dragOffsetX = 0f; dragOffsetY = 0f
-                            }
-                        ) { change, dragAmount ->
-                            if (abs(dragAmount.x) > 5f || abs(dragAmount.y) > 5f) { change.consume() }
-                            dragOffsetX += dragAmount.x
-                            dragOffsetY += dragAmount.y
-                        }
-                    },
-                contentAlignment = boxAlignment
             ) {
-                Box(modifier = Modifier.fillMaxSize().padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp)) {
-                    
-                    if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
-                        Image(
-                            bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
-                            modifier = Modifier.fillMaxSize()
-                            // Removed the murky black gradient mask, lowered blur slightly for clarity
-                            .alpha(if (state == IslandState.TYPE_3_MAX) 0.5f else 0.25f)
-                            .blur(if (state == IslandState.TYPE_3_MAX) 16.dp else 24.dp)
-                        )
-                    }
-
-                    if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING) {
-                        val bottomPadding by animateDpAsState(targetValue = when(state) { IslandState.TYPE_3_MAX -> 24.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> 12.dp; else -> 0.dp }, label = "bottomPadding")
-                        Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
-                            AnimatedContent(
-                                targetState = state,
-                                transitionSpec = {
-                                    (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90))) togetherWith fadeOut(animationSpec = tween(90))
+                // 🎛️ FIXED: The Inner Box handles the visual "Black Hole" graphics scale and the touch inputs.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { 
+                            scaleX = touchScale * islandScale
+                            scaleY = touchScale * islandScale
+                            alpha = islandAlpha
+                            transformOrigin = TransformOrigin(0.5f, 0.5f) // Sucks directly into the center
+                        }
+                        .shadow(elevation = if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp, shape = RoundedCornerShape(rad), spotColor = Color.Black)
+                        .clip(RoundedCornerShape(rad))
+                        .background(bgColor)
+                        .border(0.5.dp, borderColor, RoundedCornerShape(rad))
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                awaitFirstDown(pass = PointerEventPass.Initial)
+                                isSquished = true
+                                waitForUpOrCancellation(pass = PointerEventPass.Initial)
+                                isSquished = false
+                            }
+                        }
+                        .pointerInput(state) {
+                            detectTapGestures(
+                                onTap = { 
+                                    if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) } 
                                 },
-                                label = "UI Transition"
-                            ) { s ->
-                                when (s) {
-                                    IslandState.TYPE_3_MAX -> { if (model is LiveActivityModel.Dashboard) DashboardMax(model) else if (model is LiveActivityModel.Music) MusicMax(model) }
-                                    IslandState.TYPE_2_MID -> { 
-                                        when (model) {
-                                            is LiveActivityModel.Dashboard -> DashboardMid(model)
-                                            is LiveActivityModel.Music -> MusicMid(model)
-                                            is LiveActivityModel.General -> GeneralMid(model)
-                                            is LiveActivityModel.Charging -> ChargingMid(model)
-                                            is LiveActivityModel.SystemAlert -> SystemAlertMid(model)
-                                            is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model)
-                                            is LiveActivityModel.OngoingTask -> OngoingTaskMid(model)
-                                            else -> {}
-                                        }
-                                    }
-                                    IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> {
-                                        when (model) {
-                                            is LiveActivityModel.Music -> MusicMini(model)
-                                            is LiveActivityModel.General -> GeneralMini(model)
-                                            is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model)
-                                            is LiveActivityModel.RealityPill -> RealityPillMini(model)
-                                            else -> {}
-                                        }
-                                    }
-                                    IslandState.TYPE_CUBE -> { if (model is LiveActivityModel.Charging) ChargingCube(model) }
-                                    else -> {} 
+                                onDoubleTap = { 
+                                    if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) } 
+                                },
+                                onLongPress = { 
+                                    if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) } 
                                 }
-                            }
-                        }
-
-                        // 🎛️ REFINED: Ultra-slim grab handle ONLY for Mid and Max pills
-                        if (state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) {
-                            Box(
-                                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(10.dp).padding(bottom = 4.dp),
-                                contentAlignment = Alignment.Center
-                            ) { Box(modifier = Modifier.width(36.dp).height(4.dp).background(Color.White.copy(alpha=0.25f), CircleShape)) }
-                        }
-                    }
-                    
-                    if (state == IslandState.TYPE_0_RING) {
-                        val musicModel = model as? LiveActivityModel.Music
-                        val isMedia = musicModel != null && musicModel.isPlaying
-                        val shouldShowRing = isMedia || globalIsCharging.value || globalBatteryLevel.intValue <= 20
-
-                        if (shouldShowRing) {
-                            val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
-                            val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
-                            
-                            val batteryLevel = globalBatteryLevel.intValue
-                            val baseColor = if (isMedia) {
-                                musicModel?.dominantColor?.let { Color(it) } ?: Color.White
-                            } else if (globalIsCharging.value) {
-                                Color(0xFF00FF00) // Bright Green
-                            } else {
-                                when {
-                                    batteryLevel <= 5 -> Color(0xFFFF0000) // Super Red
-                                    batteryLevel <= 10 -> Color(0xFFFF3333) // Red
-                                    batteryLevel <= 40 -> Color(0xFFFFA500) // Orange
-                                    batteryLevel <= 60 -> Color(0xFFFFFF00) // Yellow
-                                    else -> Color(0xFF006400) // Dark Green
-                                }
-                            }
-
-                            val infiniteTransition = rememberInfiniteTransition(label = "ring_pulse")
-                            val pulseAlpha by infiniteTransition.animateFloat(
-                                initialValue = if (globalIsCharging.value && !isMedia) 0.3f else 1f,
-                                targetValue = 1f,
-                                animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-                                label = "alpha"
                             )
-                            val progressColor = baseColor.copy(alpha = pulseAlpha)
+                        }
+                        .pointerInput(state) {
+                            var dragOffsetX = 0f
+                            var dragOffsetY = 0f
+                            
+                            detectDragGestures(
+                                onDragEnd = {
+                                    if (abs(dragOffsetX) > abs(dragOffsetY)) {
+                                        if (dragOffsetX > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT)
+                                        else if (dragOffsetX < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
+                                    } else {
+                                        if (dragOffsetY > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN)
+                                        else if (dragOffsetY < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
+                                    }
+                                    dragOffsetX = 0f; dragOffsetY = 0f
+                                }
+                            ) { change, dragAmount ->
+                                if (abs(dragAmount.x) > 5f || abs(dragAmount.y) > 5f) { change.consume() }
+                                dragOffsetX += dragAmount.x
+                                dragOffsetY += dragAmount.y
+                            }
+                        },
+                    contentAlignment = boxAlignment
+                ) {
+                    Box(modifier = Modifier.fillMaxSize().padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp)) {
+                        
+                        if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
+                            Image(
+                                bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
+                                modifier = Modifier.fillMaxSize()
+                                .alpha(if (state == IslandState.TYPE_3_MAX) 0.5f else 0.25f)
+                                .blur(if (state == IslandState.TYPE_3_MAX) 16.dp else 24.dp)
+                            )
+                        }
 
-                            Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
-                                val strokeW = ringThickness.value.dp.toPx() 
-                                val inset = strokeW / 2
-                                val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
-                                val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
-                                val progressPercent = progress.coerceIn(0f, 1f)
+                        if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING) {
+                            val bottomPadding by animateDpAsState(targetValue = when(state) { IslandState.TYPE_3_MAX -> 24.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> 12.dp; else -> 0.dp }, label = "bottomPadding")
+                            Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
+                                AnimatedContent(
+                                    targetState = state,
+                                    transitionSpec = {
+                                        (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90))) togetherWith fadeOut(animationSpec = tween(90))
+                                    },
+                                    label = "UI Transition"
+                                ) { s ->
+                                    when (s) {
+                                        IslandState.TYPE_3_MAX -> { if (model is LiveActivityModel.Dashboard) DashboardMax(model) else if (model is LiveActivityModel.Music) MusicMax(model) }
+                                        IslandState.TYPE_2_MID -> { 
+                                            when (model) {
+                                                is LiveActivityModel.Dashboard -> DashboardMid(model)
+                                                is LiveActivityModel.Music -> MusicMid(model)
+                                                is LiveActivityModel.General -> GeneralMid(model)
+                                                is LiveActivityModel.Charging -> ChargingMid(model)
+                                                is LiveActivityModel.SystemAlert -> SystemAlertMid(model)
+                                                is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model)
+                                                is LiveActivityModel.OngoingTask -> OngoingTaskMid(model)
+                                                else -> {}
+                                            }
+                                        }
+                                        IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> {
+                                            when (model) {
+                                                is LiveActivityModel.Music -> MusicMini(model)
+                                                is LiveActivityModel.General -> GeneralMini(model)
+                                                is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model)
+                                                is LiveActivityModel.RealityPill -> RealityPillMini(model)
+                                                else -> {}
+                                            }
+                                        }
+                                        IslandState.TYPE_CUBE -> { if (model is LiveActivityModel.Charging) ChargingCube(model) }
+                                        else -> {} 
+                                    }
+                                }
+                            }
 
-                                val sweepGradient = Brush.sweepGradient(0.0f to progressColor.copy(alpha = 0.4f), 0.8f to progressColor, 1.0f to progressColor.copy(alpha = 0.4f))
+                            // 🎛️ REFINED: Ultra-slim grab handle ONLY for Mid and Max pills
+                            if (state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) {
+                                Box(
+                                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(10.dp).padding(bottom = 4.dp),
+                                    contentAlignment = Alignment.Center
+                                ) { Box(modifier = Modifier.width(36.dp).height(4.dp).background(Color.White.copy(alpha=0.25f), CircleShape)) }
+                            }
+                        }
+                        
+                        if (state == IslandState.TYPE_0_RING) {
+                            val musicModel = model as? LiveActivityModel.Music
+                            val isMedia = musicModel != null && musicModel.isPlaying
+                            val shouldShowRing = isMedia || globalIsCharging.value || globalBatteryLevel.intValue <= 20
 
-                                // 🎨 REFINED: Smooth rounded caps instead of harsh flat cuts
-                                drawArc(color = baseColor.copy(alpha=0.20f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
-                                drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 0.95f)
-
-                                val markerLength = strokeW * 1.3f
-                                val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
-                                val radius = (size.width - strokeW) / 2
+                            if (shouldShowRing) {
+                                val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
+                                val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
                                 
-                                drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(center.x, center.y - radius - markerLength/2), end = androidx.compose.ui.geometry.Offset(center.x, center.y - radius + markerLength/2), strokeWidth = 4f)
-                                
-                                val angleRad = Math.toRadians((-90f + 360f * progressPercent).toDouble())
-                                val mStartX = center.x + (radius - markerLength/2) * Math.cos(angleRad).toFloat()
-                                val mStartY = center.y + (radius - markerLength/2) * Math.sin(angleRad).toFloat()
-                                val mEndX = center.x + (radius + markerLength/2) * Math.cos(angleRad).toFloat()
-                                val mEndY = center.y + (radius + markerLength/2) * Math.sin(angleRad).toFloat()
-                                drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(mStartX, mStartY), end = androidx.compose.ui.geometry.Offset(mEndX, mEndY), strokeWidth = 4f)
+                                val batteryLevel = globalBatteryLevel.intValue
+                                val baseColor = if (isMedia) {
+                                    musicModel?.dominantColor?.let { Color(it) } ?: Color.White
+                                } else if (globalIsCharging.value) {
+                                    Color(0xFF00FF00) // Bright Green
+                                } else {
+                                    when {
+                                        batteryLevel <= 5 -> Color(0xFFFF0000) // Super Red
+                                        batteryLevel <= 10 -> Color(0xFFFF3333) // Red
+                                        batteryLevel <= 40 -> Color(0xFFFFA500) // Orange
+                                        batteryLevel <= 60 -> Color(0xFFFFFF00) // Yellow
+                                        else -> Color(0xFF006400) // Dark Green
+                                    }
+                                }
+
+                                val infiniteTransition = rememberInfiniteTransition(label = "ring_pulse")
+                                val pulseAlpha by infiniteTransition.animateFloat(
+                                    initialValue = if (globalIsCharging.value && !isMedia) 0.3f else 1f,
+                                    targetValue = 1f,
+                                    animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                                    label = "alpha"
+                                )
+                                val progressColor = baseColor.copy(alpha = pulseAlpha)
+
+                                Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
+                                    val strokeW = ringThickness.value.dp.toPx() 
+                                    val inset = strokeW / 2
+                                    val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
+                                    val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
+                                    val progressPercent = progress.coerceIn(0f, 1f)
+
+                                    val sweepGradient = Brush.sweepGradient(0.0f to progressColor.copy(alpha = 0.4f), 0.8f to progressColor, 1.0f to progressColor.copy(alpha = 0.4f))
+
+                                    // 🎨 REFINED: Smooth rounded caps instead of harsh flat cuts
+                                    drawArc(color = baseColor.copy(alpha=0.20f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
+                                    drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 0.95f)
+
+                                    val markerLength = strokeW * 1.3f
+                                    val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+                                    val radius = (size.width - strokeW) / 2
+                                    
+                                    drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(center.x, center.y - radius - markerLength/2), end = androidx.compose.ui.geometry.Offset(center.x, center.y - radius + markerLength/2), strokeWidth = 4f)
+                                    
+                                    val angleRad = Math.toRadians((-90f + 360f * progressPercent).toDouble())
+                                    val mStartX = center.x + (radius - markerLength/2) * Math.cos(angleRad).toFloat()
+                                    val mStartY = center.y + (radius - markerLength/2) * Math.sin(angleRad).toFloat()
+                                    val mEndX = center.x + (radius + markerLength/2) * Math.cos(angleRad).toFloat()
+                                    val mEndY = center.y + (radius + markerLength/2) * Math.sin(angleRad).toFloat()
+                                    drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(mStartX, mStartY), end = androidx.compose.ui.geometry.Offset(mEndX, mEndY), strokeWidth = 4f)
+                                }
                             }
                         }
                     }
