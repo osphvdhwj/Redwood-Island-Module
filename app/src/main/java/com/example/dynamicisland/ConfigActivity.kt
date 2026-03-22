@@ -247,23 +247,38 @@ class ConfigActivity : ComponentActivity() {
             Spacer(modifier = Modifier.height(16.dp))
 
             val availableQS = listOf("None", "WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
-            val qsSlots = listOf("QS 1", "QS 2", "QS 3", "QS 4", "QS 5", "QS 6", "QS 7")
-            qsSlots.forEachIndexed { index, slot ->
-                var expanded by remember { mutableStateOf(false) }
-                var selectedQS by remember { mutableStateOf(prefs.getString("qs_tile_$index", availableQS[index + 1]) ?: availableQS[index + 1]) }
-
-                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-                    OutlinedTextField(
-                        value = selectedQS, onValueChange = {}, readOnly = true, label = { Text(slot) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp)
-                    )
-                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        availableQS.forEach { tile ->
-                            DropdownMenuItem(text = { Text(tile) }, onClick = {
-                                selectedQS = tile; prefs.edit().putString("qs_tile_$index", tile).apply(); expanded = false
-                                broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
-                            })
+            
+            // 🎛️ FIXED: Compact 2-Column Grid for QS Tiles
+            Column {
+                for (row in 0..3) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        for (col in 0..1) {
+                            val index = row * 2 + col
+                            if (index < 7) {
+                                var expanded by remember { mutableStateOf(false) }
+                                var selectedQS by remember { mutableStateOf(prefs.getString("qs_tile_$index", availableQS[index + 1]) ?: availableQS[index + 1]) }
+                                
+                                Box(modifier = Modifier.weight(1f)) {
+                                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                                        OutlinedTextField(
+                                            value = selectedQS, onValueChange = {}, readOnly = true, label = { Text("QS ${index + 1}") },
+                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp),
+                                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp)
+                                        )
+                                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                            availableQS.forEach { tile ->
+                                                DropdownMenuItem(text = { Text(tile) }, onClick = {
+                                                    selectedQS = tile; prefs.edit().putString("qs_tile_$index", tile).apply(); expanded = false
+                                                    broadcastUpdateSingle("dashboard", prefs)
+                                                })
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f)) // Empty slot for the 8th item
+                            }
                         }
                     }
                 }
@@ -292,28 +307,39 @@ class ConfigActivity : ComponentActivity() {
             if (installedApps.isEmpty()) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp))
             } else {
-                val pinnedApps = listOf("App 1", "App 2", "App 3", "App 4", "App 5", "App 6", "App 7", "App 8")
-                pinnedApps.forEachIndexed { index, slot ->
-                    var expanded by remember { mutableStateOf(false) }
-                    var selectedAppPkg by remember { mutableStateOf(prefs.getString("pinned_app_$index", "") ?: "") }
-                    val selectedAppName = installedApps.find { it.second == selectedAppPkg }?.first ?: "None"
+                // 🎛️ FIXED: Compact 2-Column Grid for Pinned Apps
+                Column {
+                    for (row in 0..3) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            for (col in 0..1) {
+                                val index = row * 2 + col
+                                var expanded by remember { mutableStateOf(false) }
+                                var selectedAppPkg by remember { mutableStateOf(prefs.getString("pinned_app_$index", "") ?: "") }
+                                val selectedAppName = installedApps.find { it.second == selectedAppPkg }?.first ?: "None"
 
-                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-                        OutlinedTextField(
-                            value = selectedAppName, onValueChange = {}, readOnly = true, label = { Text(slot) },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp)
-                        )
-                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            DropdownMenuItem(text = { Text("None") }, onClick = {
-                                selectedAppPkg = ""; prefs.edit().putString("pinned_app_$index", "").apply(); expanded = false
-                                broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
-                            })
-                            installedApps.forEach { pair ->
-                                DropdownMenuItem(text = { Text(pair.first) }, onClick = {
-                                    selectedAppPkg = pair.second; prefs.edit().putString("pinned_app_$index", pair.second).apply(); expanded = false
-                                    broadcastUpdate("dashboard", 0f, 0f, 0f, 0f, 0f, false)
-                                })
+                                Box(modifier = Modifier.weight(1f)) {
+                                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                                        OutlinedTextField(
+                                            value = selectedAppName, onValueChange = {}, readOnly = true, label = { Text("App ${index + 1}") },
+                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp),
+                                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp),
+                                            maxLines = 1
+                                        )
+                                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                            DropdownMenuItem(text = { Text("None") }, onClick = {
+                                                selectedAppPkg = ""; prefs.edit().putString("pinned_app_$index", "").apply(); expanded = false
+                                                broadcastUpdateSingle("dashboard", prefs)
+                                            })
+                                            installedApps.forEach { pair ->
+                                                DropdownMenuItem(text = { Text(pair.first) }, onClick = {
+                                                    selectedAppPkg = pair.second; prefs.edit().putString("pinned_app_$index", pair.second).apply(); expanded = false
+                                                    broadcastUpdateSingle("dashboard", prefs)
+                                                })
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -335,6 +361,9 @@ class ConfigActivity : ComponentActivity() {
             FeatureSwitch("Enable System Alerts (Battery/Temp)", "enable_alerts", true, prefs)
             FeatureSwitch("Enable App Timers (Wellbeing)", "enable_timers", true, prefs)
             
+            // 🎛️ FIXED: Added missing toggle for Mini Pill Album Art Rotation
+            FeatureSwitch("Spin Album Art in Mini Pill", "rotate_cube", true, prefs)
+            
             Spacer(modifier = Modifier.height(80.dp))
         }
     }
@@ -343,7 +372,7 @@ class ConfigActivity : ComponentActivity() {
     fun FeatureSwitch(label: String, key: String, default: Boolean, prefs: android.content.SharedPreferences) {
         var checked by remember { mutableStateOf(prefs.getBoolean(key, default)) }
         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(label, color = Color.White, fontSize = 16.sp)
+            Text(label, color = Color.White, fontSize = 16.sp, modifier = Modifier.weight(1f))
             Switch(checked = checked, onCheckedChange = { checked = it; prefs.edit().putBoolean(key, it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) })
         }
     }
@@ -458,6 +487,20 @@ class ConfigActivity : ComponentActivity() {
         broadcastUpdate(prefix, w, h, x, y, ringT, expandUp)
     }
 
+    private fun broadcastUpdateSingle(prefix: String, prefs: android.content.SharedPreferences) {
+        makePrefsWorldReadable()
+        val intent = Intent("com.example.dynamicisland.RELOAD_PREFS").apply {
+            @Suppress("WrongConstant")
+            addFlags(android.content.Intent.FLAG_RECEIVER_FOREGROUND or 0x01000000)
+            setPackage("com.android.systemui") 
+            putExtra("prefix", prefix)
+        }
+        for (i in 0..7) intent.putExtra("pinned_app_$i", prefs.getString("pinned_app_$i", ""))
+        val defaultQS = listOf("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
+        for (i in 0..6) intent.putExtra("qs_tile_$i", prefs.getString("qs_tile_$i", defaultQS[i]))
+        sendBroadcast(intent)
+    }
+
     private fun broadcastUpdate(prefix: String, w: Float, h: Float, x: Float, y: Float, ringT: Float, expandUp: Boolean) {
         val prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
         @Suppress("WrongConstant")
@@ -509,6 +552,7 @@ class ConfigActivity : ComponentActivity() {
             putExtra("enable_charging", prefs.getBoolean("enable_charging", true))
             putExtra("enable_alerts", prefs.getBoolean("enable_alerts", true))
             putExtra("enable_timers", prefs.getBoolean("enable_timers", true))
+            putExtra("rotate_cube", prefs.getBoolean("rotate_cube", true))
         }
         val matrix = JSONObject()
         prefs.all.forEach { (key, value) -> if (key.startsWith("TYPE_") && value is String) matrix.put(key, value) }
