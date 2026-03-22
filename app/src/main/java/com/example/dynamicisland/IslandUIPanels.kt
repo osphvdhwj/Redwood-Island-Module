@@ -118,73 +118,48 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
 }
 
 @OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
-    // Fallback to a nice Cyan if the dominant color is too dark
-    val dynamicTextColor = Color(music.titleTextColor).takeIf { it != Color.Transparent && it != Color.Black } ?: Color(0xFF00FFCC) 
-    
-    val safeDuration = if (music.durationMs <= 0L) 1f else music.durationMs.toFloat()
-    val currentPosition = currentMediaPos.longValue.toFloat().coerceAtLeast(0f)
-    val targetProgress = (currentPosition / safeDuration).coerceIn(0f, 1f)
-    
-    // Fluid animation for the climbing vine border
-    val animatedProgress by animateFloatAsState(targetValue = targetProgress, animationSpec = tween(durationMillis = 1000, easing = LinearEasing), label = "vine_progress")
+    @Composable
+    fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
+        val dynamicTextColor = Color(music.titleTextColor).takeIf { it != Color.Transparent && it != Color.Black } ?: Color(0xFF00FFCC) 
+        val safeDuration = if (music.durationMs <= 0L) 1f else music.durationMs.toFloat()
+        val currentPosition = currentMediaPos.longValue.toFloat().coerceAtLeast(0f)
+        val targetProgress = (currentPosition / safeDuration).coerceIn(0f, 1f)
+        val animatedProgress by animateFloatAsState(targetValue = targetProgress, animationSpec = tween(1000, easing = LinearEasing), label = "bottom_progress")
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically, 
-        modifier = Modifier
-            .fillMaxSize()
-            .drawWithCache {
-                val cornerRadius = size.height / 2f
-                // Create the exact physical boundary of the pill
-                val path = Path().apply {
-                    addRoundRect(
-                        RoundRect(
-                            rect = Rect(0f, 0f, size.width, size.height),
-                            cornerRadius = CornerRadius(cornerRadius, cornerRadius)
-                        )
-                    )
+        Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp))) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically, 
+                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)
+            ) {
+                val infiniteTransition = rememberInfiniteTransition(label="spin")
+                val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "spin")
+                val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
+                
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(22.dp)) {
+                    if (music.albumArt != null) {
+                        Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.fillMaxSize().clip(CircleShape).rotate(currentRotation))
+                    } else {
+                        Box(Modifier.fillMaxSize().background(Color.White.copy(0.2f), CircleShape))
+                    }
                 }
-                // Measure the path and extract just the portion based on song progress
-                val pathMeasure = PathMeasure()
-                pathMeasure.setPath(path, forceClosed = false)
-                val segmentPath = Path()
-                pathMeasure.getSegment(
-                    startDistance = 0f,
-                    stopDistance = pathMeasure.length * animatedProgress,
-                    destination = segmentPath,
-                    startWithMoveTo = true
-                )
-
-                onDrawWithContent {
-                    drawContent() // Draw the disk and text first
-                    // Draw the glowing vine on top of the borders
-                    drawPath(
-                        path = segmentPath,
-                        color = dynamicTextColor,
-                        style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
-                    )
-                }
+                
+                Spacer(Modifier.width(8.dp))
+                Text(text = music.title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f).safeMarquee(islandState.value))
+                Spacer(Modifier.width(8.dp))
+                
+                // 🎛️ ADDED: Current Time / Total Time text inside the mini pill
+                Text(text = "${formatTime(currentMediaPos.longValue)} / ${formatTime(music.durationMs)}", color = Color.White.copy(alpha=0.7f), fontSize = 10.sp, fontWeight = FontWeight.Medium)
             }
-            .padding(horizontal = 12.dp)
-    ) {
-        val infiniteTransition = rememberInfiniteTransition()
-        val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "spin")
-        val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
-        
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(26.dp)) {
-            if (music.albumArt != null) {
-                Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.fillMaxSize().clip(CircleShape).rotate(currentRotation))
-            } else {
-                Box(Modifier.fillMaxSize().background(Color.White.copy(0.2f), CircleShape))
+            
+            // 🎛️ FIXED: Clean, bottom-edge progress line with a glowing tracking dot
+            Canvas(modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().height(2.dp)) {
+                val activeWidth = size.width * animatedProgress
+                drawLine(color = dynamicTextColor.copy(alpha=0.2f), start = androidx.compose.ui.geometry.Offset(activeWidth, size.height/2), end = androidx.compose.ui.geometry.Offset(size.width, size.height/2), strokeWidth = size.height, cap = StrokeCap.Round)
+                drawLine(color = dynamicTextColor, start = androidx.compose.ui.geometry.Offset(0f, size.height/2), end = androidx.compose.ui.geometry.Offset(activeWidth, size.height/2), strokeWidth = size.height, cap = StrokeCap.Round)
+                drawCircle(color = Color.White, radius = 2.dp.toPx(), center = androidx.compose.ui.geometry.Offset(activeWidth, size.height/2))
             }
         }
-        
-        Spacer(Modifier.width(10.dp))
-        
-        Text(text = music.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f).safeMarquee(islandState.value))
     }
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -730,9 +705,12 @@ fun InteractiveWavyMediaBar(
     var isDragging by remember { mutableStateOf(false) }
     var dragProgress by remember { mutableFloatStateOf(0f) }
     val currentProgress = (posProvider() / safeDuration).coerceIn(0f, 1f)
-    val displayProgress = if (isDragging) dragProgress else currentProgress
-
+    
+    // 🎛️ FIXED: Smoothly interpolate the 1-second ticker jumps so the wave glides flawlessly!
+    val animatedProgress by animateFloatAsState(targetValue = currentProgress, animationSpec = tween(1000, easing = LinearEasing), label = "smooth_prog")
+    val displayProgress = if (isDragging) dragProgress else animatedProgress
     // Smooth thumb radius animation
+    
     val thumbRadius by animateFloatAsState(
         targetValue = if (isDragging) 7f else 4.5f,
         animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "thumb"
