@@ -7,6 +7,7 @@ import android.hardware.display.DisplayManager
 import android.view.Display
 import android.view.Gravity
 import android.view.WindowManager
+import android.graphics.PixelFormat
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XC_MethodHook
@@ -28,7 +29,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
-        // 1. SYSTEM SERVER HOOKS (RESTORED: Your exact logic for OTPs and Notifications)
+        // 1. SYSTEM SERVER HOOKS
         if (lpparam.packageName == "android") {
             try {
                 val atmsClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader)
@@ -92,13 +93,12 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             } catch (e: Throwable) { 
                 XposedBridge.log("DynamicIsland: System server hook failed -> ${e.message}") 
             }
-            // 🎛️ FIXED: Removed the fatal unconditional `return` statement here!
         }
 
         // 2. SYSTEM UI HOOK
         if (lpparam.packageName == "com.android.systemui") {
             try {
-                // 🎛️ FIXED: Application.onCreate is highly stable. Instrumentation often fails silently on Android 13/14 SystemUI.
+                // 🎛️ FIXED: Application.onCreate is highly stable.
                 XposedHelpers.findAndHookMethod(
                     Application::class.java.name,
                     lpparam.classLoader,
@@ -106,7 +106,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                     object : XC_MethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {
                             val app = param.thisObject as Application
-                            // Prevent multiple injections if Application.onCreate fires twice
                             if (app.packageName == "com.android.systemui") {
                                 injectDynamicIsland(app.applicationContext)
                             }
@@ -121,7 +120,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     }
 
     private fun injectDynamicIsland(systemUiContext: Context) {
-        // Kept your 15-second delay to ensure the OS is fully booted before injecting Compose
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             try {
                 XposedBridge.log("DynamicIsland: Starting Android 16 compliant injection...")
@@ -129,23 +127,21 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 val displayManager = systemUiContext.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
                 val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
                 
-                // Kept your precise WindowContext creation
-                val windowContext = systemUiContext.createWindowContext(display, WindowManager.LayoutParams.TYPE_NAVIGATION_BAR_PANEL, null)
-                // Kept your precise WindowContext creation
+                // 🎛️ FIXED: Using raw integer 2024 for hidden API TYPE_NAVIGATION_BAR_PANEL
                 val windowContext = systemUiContext.createWindowContext(display, 2024, null)
                 val windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
                 val layoutParams = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT, 
                     WindowManager.LayoutParams.MATCH_PARENT, 
-                    2024, // 🎛️ FIXED: Reverted to the raw integer since TYPE_NAVIGATION_BAR_PANEL is a hidden API
+                    2024, // 🎛️ FIXED: Raw integer for hidden API
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                     WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or 
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,   
-                    android.graphics.PixelFormat.TRANSLUCENT
+                    PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                     title = "DynamicIslandOverlay"
