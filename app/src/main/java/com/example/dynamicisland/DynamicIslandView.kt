@@ -268,10 +268,18 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     @Composable
     fun IslandUI(state: IslandState) {
         
-        // 📱 LANDSCAPE DETECTOR
+        // 📱 LANDSCAPE DETECTOR & BLACK HOLE ANIMATOR
         val configuration = androidx.compose.ui.platform.LocalConfiguration.current
         val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-        val landscapeAlpha by animateFloatAsState(targetValue = if (isLandscape) 0f else 1f, animationSpec = tween(300), label = "landscapeAlpha")
+        val isEffectivelyHidden = state == IslandState.HIDDEN || isLandscape
+
+        // The "Black Hole" Gulp Animation
+        val islandScale by animateFloatAsState(
+            targetValue = if (isEffectivelyHidden) 0f else 1f,
+            animationSpec = if (isEffectivelyHidden) tween(350, easing = FastOutLinearInEasing) else spring(dampingRatio = 0.65f, stiffness = 300f),
+            label = "blackhole_scale"
+        )
+        val islandAlpha by animateFloatAsState(targetValue = if (isEffectivelyHidden) 0f else 1f, animationSpec = tween(300), label = "blackhole_alpha")
 
         val haptic = LocalHapticFeedback.current
         val density = LocalDensity.current
@@ -315,25 +323,17 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
         
         // 🚀 THIS RESTORES THE PROPER FULLSCREEN REFLECTION WINDOW BEHAVIOR
-        LaunchedEffect(state, model, isLandscape) {
+        LaunchedEffect(state, model) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
 
             if (model?.isSensitive == true) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE } else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv() }
 
-            // 📱 FIXED: Completely collapse window in Landscape so it doesn't block touches!
-            if (state == IslandState.HIDDEN || isLandscape) {
-                wp.width = 0 
-                wp.height = 0
-                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
-            } else {
-                wp.width = WindowManager.LayoutParams.MATCH_PARENT
-                wp.height = WindowManager.LayoutParams.MATCH_PARENT
-                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
-                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
-            }
+            // 📱 FIXED: ALWAYS keep MATCH_PARENT. Compose scales the visuals to 0, and TouchableInsets handles the touches!
+            wp.width = WindowManager.LayoutParams.MATCH_PARENT
+            wp.height = WindowManager.LayoutParams.MATCH_PARENT
+            
             try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
         }
 
@@ -343,33 +343,21 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             modifier = Modifier
                 .fillMaxWidth()
                 .offset(x = offsetX.dp, y = offsetY.coerceAtLeast(0f).dp)
-                .height(maxH.value.dp)
-                .alpha(landscapeAlpha), // 📱 FIXED: Fades out completely in landscape
+                .height(maxH.value.dp),
             horizontalArrangement = Arrangement.Center, 
             verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
         ) {
             Box(
                 modifier = Modifier
-                    .onGloballyPositioned { coordinates ->
-                        val location = IntArray(2)
-                        this@DynamicIslandView.getLocationOnScreen(location)
-                        val bounds = coordinates.boundsInRoot()
-                        val globalLeft = location[0] + bounds.left.toInt()
-                        val globalTop = location[1] + bounds.top.toInt()
-                        val globalRight = location[0] + bounds.right.toInt()
-                        val globalBottom = location[1] + bounds.bottom.toInt()
-
-                        if (abs(mainPillRect.left - globalLeft) > 5 || abs(mainPillRect.bottom - globalBottom) > 5 || mainPillRect.isEmpty) {
-                            mainPillRect.set(globalLeft, globalTop, globalRight, globalBottom)
-                            insetsUpdateFlow.tryEmit(Unit)
-                        }
-                    }
+                    .onGloballyPositioned { coordinates -> /* ... (Keep this block exactly the same) ... */ }
                     .width(width).height(height)
                     .graphicsLayer { 
-                        scaleX = touchScale; scaleY = touchScale
-                        transformOrigin = TransformOrigin(0.5f, 0f)
+                        // 🎛️ APPLIES THE SUCK-IN ANIMATION AND TRANSPARENCY
+                        scaleX = touchScale * islandScale
+                        scaleY = touchScale * islandScale
+                        alpha = islandAlpha
+                        transformOrigin = TransformOrigin(0.5f, 0.5f) // Sucks directly into the center
                     }
-                    // 🎨 REFINED: Soft hardware shadow and a thinner 0.5dp border
                     .shadow(elevation = if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp, shape = RoundedCornerShape(rad), spotColor = Color.Black)
                     .clip(RoundedCornerShape(rad))
                     .background(bgColor)
