@@ -47,13 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathMeasure
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.core.graphics.drawable.toBitmap
 import de.robv.android.xposed.XSharedPreferences
 
@@ -104,7 +97,6 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
     val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.15f, targetValue = 0.45f, animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "glow")
     
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        // Ambient glowing background
         if (model.isPluggedIn) {
             Box(modifier = Modifier.size(50.dp).background(color.copy(alpha = glowAlpha), CircleShape).blur(12.dp).graphicsLayer { scaleX = pulseScale; scaleY = pulseScale })
         }
@@ -118,48 +110,45 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
 }
 
 @OptIn(ExperimentalFoundationApi::class)
-    @Composable
-    fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
-        val dynamicTextColor = Color(music.titleTextColor).takeIf { it != Color.Transparent && it != Color.Black } ?: Color(0xFF00FFCC) 
-        val safeDuration = if (music.durationMs <= 0L) 1f else music.durationMs.toFloat()
-        val currentPosition = currentMediaPos.longValue.toFloat().coerceAtLeast(0f)
-        val targetProgress = (currentPosition / safeDuration).coerceIn(0f, 1f)
-        val animatedProgress by animateFloatAsState(targetValue = targetProgress, animationSpec = tween(1000, easing = LinearEasing), label = "bottom_progress")
+@Composable
+fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
+    val dynamicTextColor = Color(music.titleTextColor).takeIf { it != Color.Transparent && it != Color.Black } ?: Color(0xFF00FFCC) 
+    val safeDuration = if (music.durationMs <= 0L) 1f else music.durationMs.toFloat()
+    val currentPosition = currentMediaPos.longValue.toFloat().coerceAtLeast(0f)
+    val targetProgress = (currentPosition / safeDuration).coerceIn(0f, 1f)
+    val animatedProgress by animateFloatAsState(targetValue = targetProgress, animationSpec = tween(1000, easing = LinearEasing), label = "bottom_progress")
 
-        Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp))) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically, 
-                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)
-            ) {
-                val infiniteTransition = rememberInfiniteTransition(label="spin")
-                val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "spin")
-                val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
-                
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(22.dp)) {
-                    if (music.albumArt != null) {
-                        Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.fillMaxSize().clip(CircleShape).rotate(currentRotation))
-                    } else {
-                        Box(Modifier.fillMaxSize().background(Color.White.copy(0.2f), CircleShape))
-                    }
+    Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp))) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically, 
+            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)
+        ) {
+            val infiniteTransition = rememberInfiniteTransition(label="spin")
+            val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "spin")
+            val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
+            
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(22.dp)) {
+                if (music.albumArt != null) {
+                    Image(bitmap = music.albumArt.asImageBitmap(), contentScale = ContentScale.Crop, contentDescription = "Art", modifier = Modifier.fillMaxSize().clip(CircleShape).rotate(currentRotation))
+                } else {
+                    Box(Modifier.fillMaxSize().background(Color.White.copy(0.2f), CircleShape))
                 }
-                
-                Spacer(Modifier.width(8.dp))
-                Text(text = music.title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f).safeMarquee(islandState.value))
-                Spacer(Modifier.width(8.dp))
-                
-                // 🎛️ ADDED: Current Time / Total Time text inside the mini pill
-                Text(text = "${formatTime(currentMediaPos.longValue)} / ${formatTime(music.durationMs)}", color = Color.White.copy(alpha=0.7f), fontSize = 10.sp, fontWeight = FontWeight.Medium)
             }
             
-            // 🎛️ FIXED: Clean, bottom-edge progress line with a glowing tracking dot
-            Canvas(modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().height(2.dp)) {
-                val activeWidth = size.width * animatedProgress
-                drawLine(color = dynamicTextColor.copy(alpha=0.2f), start = androidx.compose.ui.geometry.Offset(activeWidth, size.height/2), end = androidx.compose.ui.geometry.Offset(size.width, size.height/2), strokeWidth = size.height, cap = StrokeCap.Round)
-                drawLine(color = dynamicTextColor, start = androidx.compose.ui.geometry.Offset(0f, size.height/2), end = androidx.compose.ui.geometry.Offset(activeWidth, size.height/2), strokeWidth = size.height, cap = StrokeCap.Round)
-                drawCircle(color = Color.White, radius = 2.dp.toPx(), center = androidx.compose.ui.geometry.Offset(activeWidth, size.height/2))
-            }
+            Spacer(Modifier.width(8.dp))
+            Text(text = music.title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f).safeMarquee(islandState.value))
+            Spacer(Modifier.width(8.dp))
+            Text(text = "${formatTime(currentMediaPos.longValue)} / ${formatTime(music.durationMs)}", color = Color.White.copy(alpha=0.7f), fontSize = 10.sp, fontWeight = FontWeight.Medium)
+        }
+        
+        Canvas(modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().height(2.dp)) {
+            val activeWidth = size.width * animatedProgress
+            drawLine(color = dynamicTextColor.copy(alpha=0.2f), start = androidx.compose.ui.geometry.Offset(activeWidth, size.height/2), end = androidx.compose.ui.geometry.Offset(size.width, size.height/2), strokeWidth = size.height, cap = StrokeCap.Round)
+            drawLine(color = dynamicTextColor, start = androidx.compose.ui.geometry.Offset(0f, size.height/2), end = androidx.compose.ui.geometry.Offset(activeWidth, size.height/2), strokeWidth = size.height, cap = StrokeCap.Round)
+            drawCircle(color = Color.White, radius = 2.dp.toPx(), center = androidx.compose.ui.geometry.Offset(activeWidth, size.height/2))
         }
     }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -170,10 +159,13 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
     val rotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(4000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "spin")
     val currentRotation = if (isCubeRotationEnabled.value && music.isPlaying) rotation else 0f
 
-    // Shifted padding to left-align the disk
+    // 🎛️ HYBRID OPTIMISTIC UI: Syncs with system, but updates instantly on tap
+    var localIsLiked by remember(music.title, music.isLiked) { mutableStateOf(music.isLiked) }
+    var localIsShuffled by remember(music.title, music.isShuffled) { mutableStateOf(music.isShuffled) }
+    var localRepeatMode by remember(music.title, music.repeatMode) { mutableIntStateOf(music.repeatMode) }
+
     Row(modifier = Modifier.fillMaxSize().padding(start = 8.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         
-        // Disk moved to far left
         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(56.dp)) {
             IsolatedCircularProgress(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor)
             if (music.albumArt != null) { 
@@ -185,7 +177,6 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
         
         Spacer(modifier = Modifier.width(12.dp))
         
-        // Column for Text and Wavy Progress (Takes up all remaining left/middle space)
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
             Text(text = music.title, color = dynamicTextColor, fontSize = 15.sp, fontFamily = theme.titleFont, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
             Text(text = music.artist, color = dynamicTextColor.copy(alpha = 0.7f), fontSize = 13.sp, fontFamily = theme.titleFont, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
@@ -194,7 +185,7 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text(text = formatTime(currentMediaPos.longValue), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 10.sp)
                 Spacer(Modifier.width(6.dp))
-                InteractiveWavyMediaBar(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.2f), onSeek = { onSeekTo?.invoke(it) }, modifier = Modifier.weight(1f).height(12.dp))
+                InteractiveWavyMediaBar(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, isPlaying = music.isPlaying, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.2f), onSeek = { onSeekTo?.invoke(it) }, modifier = Modifier.weight(1f).height(12.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 10.sp)
             }
@@ -202,9 +193,7 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Transport Buttons (Stacked vertically to save width and look cleaner)
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            // Top Row: Core Transport Controls
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, tint = dynamicTextColor, baseSize = 26.dp, bgAlpha = 0f) { onPrevClick?.invoke() }
                 
@@ -216,44 +205,34 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            // Bottom Row: Custom Media Actions (Strictly Synced with System States)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    
-                    // 1. Heart/Favorite Binding
-                    val favoriteAction = music.customActions.find { 
-                        it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || 
-                        it.actionName.contains("thumb", true) || it.actionName.contains("like", true) 
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                val favoriteAction = music.customActions.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("thumb", true) || it.actionName.contains("like", true) }
+                if (favoriteAction != null) {
+                    val heartIcon = if (localIsLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder
+                    val heartTint = if (localIsLiked) Color(0xFFFF2A5F) else dynamicTextColor.copy(alpha=0.8f)
+                    InteractiveIconButton(icon = heartIcon, tint = heartTint, baseSize = 22.dp, bgAlpha = 0f) { 
+                        localIsLiked = !localIsLiked; onCustomMediaAction?.invoke(favoriteAction.actionName) 
                     }
-                    if (favoriteAction != null) {
-                        val heartIcon = if (music.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder
-                        val heartTint = if (music.isLiked) Color(0xFFFF2A5F) else dynamicTextColor.copy(alpha=0.8f)
-                        InteractiveIconButton(icon = heartIcon, tint = heartTint, baseSize = 22.dp, bgAlpha = 0f) { 
-                            onCustomMediaAction?.invoke(favoriteAction.actionName) 
-                        }
-                    }
+                }
 
-                    // 2. Loop & Shuffle Binding
-                    val repeatAction = music.customActions.find { 
-                        it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) || 
-                        it.actionName.contains("shuffle", true) 
-                    }
-                    if (repeatAction != null) {
-                        val isShuffleAct = repeatAction.actionName.contains("shuffle", true)
-                        
-                        if (isShuffleAct) {
-                            val shuffleTint = if (music.isShuffled) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f)
-                            InteractiveIconButton(icon = Icons.Default.Shuffle, tint = shuffleTint, baseSize = 22.dp, bgAlpha = 0f) { 
-                                onCustomMediaAction?.invoke(repeatAction.actionName) 
-                            }
-                        } else {
-                            val loopIcon = if (music.repeatMode == 1) Icons.Default.RepeatOne else Icons.Default.Repeat
-                            val loopTint = if (music.repeatMode > 0) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f)
-                            InteractiveIconButton(icon = loopIcon, tint = loopTint, baseSize = 22.dp, bgAlpha = 0f) { 
-                                onCustomMediaAction?.invoke(repeatAction.actionName) 
-                            }
+                val repeatAction = music.customActions.find { it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) || it.actionName.contains("shuffle", true) }
+                if (repeatAction != null) {
+                    val isShuffleAct = repeatAction.actionName.contains("shuffle", true)
+                    if (isShuffleAct) {
+                        val shuffleTint = if (localIsShuffled) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f)
+                        InteractiveIconButton(icon = Icons.Default.Shuffle, tint = shuffleTint, baseSize = 22.dp, bgAlpha = 0f) { 
+                            localIsShuffled = !localIsShuffled; onCustomMediaAction?.invoke(repeatAction.actionName) 
+                        }
+                    } else {
+                        val loopIcon = if (localRepeatMode == 1) Icons.Default.RepeatOne else Icons.Default.Repeat
+                        val loopTint = if (localRepeatMode > 0) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f)
+                        InteractiveIconButton(icon = loopIcon, tint = loopTint, baseSize = 22.dp, bgAlpha = 0f) { 
+                            localRepeatMode = if (localRepeatMode == 0) 1 else if (localRepeatMode == 1) 2 else 0
+                            onCustomMediaAction?.invoke(repeatAction.actionName) 
                         }
                     }
                 }
+            }
         }
     }
 }
@@ -265,6 +244,11 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
     val theme = LocalIslandTheme.current
     var audioIcon by remember { mutableStateOf(Icons.Default.Smartphone) }
     var audioLabel by remember { mutableStateOf("Phone") }
+    
+    // 🎛️ HYBRID OPTIMISTIC UI: Syncs with system, but updates instantly on tap
+    var localIsLiked by remember(music.title, music.isLiked) { mutableStateOf(music.isLiked) }
+    var localIsShuffled by remember(music.title, music.isShuffled) { mutableStateOf(music.isShuffled) }
+    var localRepeatMode by remember(music.title, music.repeatMode) { mutableIntStateOf(music.repeatMode) }
 
     LaunchedEffect(music) {
         try {
@@ -280,7 +264,6 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             if (music.appIcon != null) { Image(bitmap = music.appIcon.asImageBitmap(), contentDescription = "App Logo", modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))) } else Box(Modifier.size(36.dp).background(Color.White.copy(alpha=0.2f), RoundedCornerShape(10.dp)))
             
-            // FIXED: Wrapped the audio output button in a Surface. This perfectly intercepts window touches!
             Surface(
                 onClick = { onAudioOutputClick?.invoke() },
                 color = Color.White.copy(alpha=0.15f),
@@ -301,57 +284,49 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
         Spacer(modifier = Modifier.weight(0.5f))
 
         IsolatedTimeRow(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = dynamicTextColor)
-        InteractiveWavyMediaBar(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.2f), onSeek = { onSeekTo?.invoke(it) }, modifier = Modifier.padding(vertical = 8.dp))
+        InteractiveWavyMediaBar(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, isPlaying = music.isPlaying, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.2f), onSeek = { onSeekTo?.invoke(it) }, modifier = Modifier.padding(vertical = 8.dp))
         Spacer(modifier = Modifier.weight(1f))
         
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(theme.buttonSpacing, Alignment.CenterHorizontally)) {
-                
-                // System-Synced Heart/Favorite Implementation
-                val favoriteAction = music.customActions.find { 
-                    it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || 
-                    it.actionName.contains("thumb", true) || it.actionName.contains("like", true) 
+            
+            val favoriteAction = music.customActions.find { it.actionName.contains("heart", true) || it.actionName.contains("favorite", true) || it.actionName.contains("thumb", true) || it.actionName.contains("like", true) }
+            if (favoriteAction != null) {
+                val heartIcon = if (localIsLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder
+                val heartTint = if (localIsLiked) Color(0xFFFF2A5F) else dynamicTextColor.copy(alpha=0.8f)
+                InteractiveIconButton(icon = heartIcon, tint = heartTint, baseSize = theme.buttonSize, bgAlpha = 0f) { 
+                    localIsLiked = !localIsLiked; onCustomMediaAction?.invoke(favoriteAction.actionName) 
                 }
-                if (favoriteAction != null) {
-                    val heartIcon = if (music.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder
-                    val heartTint = if (music.isLiked) Color(0xFFFF2A5F) else dynamicTextColor.copy(alpha=0.8f)
-                    InteractiveIconButton(icon = heartIcon, tint = heartTint, baseSize = theme.buttonSize, bgAlpha = 0f) { 
-                        onCustomMediaAction?.invoke(favoriteAction.actionName) 
-                    }
-                } else {
-                    Spacer(Modifier.width(theme.buttonSize))
-                }
-                
-                InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) { onPrevClick?.invoke() }
-                
-                val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
-                InteractiveIconButton(icon = playIcon, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0.2f) { onPlayPauseClick?.invoke() }
-                
-                InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowForward, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) { onNextClick?.invoke() }
-
-                // System-Synced Shuffle & Repeat Implementation
-                val repeatAction = music.customActions.find { 
-                    it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) || 
-                    it.actionName.contains("shuffle", true) 
-                }
-                if (repeatAction != null) {
-                    val isShuffleAct = repeatAction.actionName.contains("shuffle", true)
-                    
-                    if (isShuffleAct) {
-                        val shuffleTint = if (music.isShuffled) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f)
-                        InteractiveIconButton(icon = Icons.Default.Shuffle, tint = shuffleTint, baseSize = theme.buttonSize, bgAlpha = 0f) { 
-                            onCustomMediaAction?.invoke(repeatAction.actionName) 
-                        }
-                    } else {
-                        val loopIcon = if (music.repeatMode == 1) Icons.Default.RepeatOne else Icons.Default.Repeat
-                        val loopTint = if (music.repeatMode > 0) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f)
-                        InteractiveIconButton(icon = loopIcon, tint = loopTint, baseSize = theme.buttonSize, bgAlpha = 0f) { 
-                            onCustomMediaAction?.invoke(repeatAction.actionName) 
-                        }
-                    }
-                } else {
-                    Spacer(Modifier.width(theme.buttonSize))
-                }
+            } else {
+                Spacer(Modifier.width(theme.buttonSize))
             }
+            
+            InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) { onPrevClick?.invoke() }
+            
+            val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
+            InteractiveIconButton(icon = playIcon, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0.2f) { onPlayPauseClick?.invoke() }
+            
+            InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowForward, tint = dynamicTextColor, baseSize = theme.buttonSize, bgAlpha = 0f) { onNextClick?.invoke() }
+
+            val repeatAction = music.customActions.find { it.actionName.contains("repeat", true) || it.actionName.contains("loop", true) || it.actionName.contains("shuffle", true) }
+            if (repeatAction != null) {
+                val isShuffleAct = repeatAction.actionName.contains("shuffle", true)
+                if (isShuffleAct) {
+                    val shuffleTint = if (localIsShuffled) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f)
+                    InteractiveIconButton(icon = Icons.Default.Shuffle, tint = shuffleTint, baseSize = theme.buttonSize, bgAlpha = 0f) { 
+                        localIsShuffled = !localIsShuffled; onCustomMediaAction?.invoke(repeatAction.actionName) 
+                    }
+                } else {
+                    val loopIcon = if (localRepeatMode == 1) Icons.Default.RepeatOne else Icons.Default.Repeat
+                    val loopTint = if (localRepeatMode > 0) Color(0xFF00FFCC) else dynamicTextColor.copy(alpha=0.8f)
+                    InteractiveIconButton(icon = loopIcon, tint = loopTint, baseSize = theme.buttonSize, bgAlpha = 0f) { 
+                        localRepeatMode = if (localRepeatMode == 0) 1 else if (localRepeatMode == 1) 2 else 0
+                        onCustomMediaAction?.invoke(repeatAction.actionName) 
+                    }
+                }
+            } else {
+                Spacer(Modifier.width(theme.buttonSize))
+            }
+        }
     }
 }
 
@@ -376,8 +351,6 @@ fun AppleControlCenterSlider(value: Float, onValueChange: (Float) -> Unit, onVal
         .pointerInput(Unit) { detectTapGestures(onTap = { offset -> onValueChange((offset.x / width).coerceIn(0f, 1f)); onValueChangeFinished() }) }
     ) {
         Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(fraction = value.coerceIn(0f, 1f)).background(activeColor))
-        
-        // 🎛️ FIXED: Icon is now an interactive button for Auto-Brightness / Volume Switching
         Box(modifier = Modifier.align(Alignment.CenterStart).padding(start = 6.dp).size(32.dp).clip(CircleShape).clickable(enabled = onIconClick != null) { onIconClick?.invoke() }, contentAlignment = Alignment.Center) {
             Icon(icon, null, modifier = Modifier.size(20.dp), tint = if (value > 0.15f) Color.Black else Color.White)
         }
@@ -385,118 +358,142 @@ fun AppleControlCenterSlider(value: Float, onValueChange: (Float) -> Unit, onVal
 }
 
 @Suppress("UNUSED_PARAMETER", "DEPRECATION")
-    @Composable
-    fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
-        val context = LocalContext.current
-        val theme = LocalIslandTheme.current
+@Composable
+fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
+    val context = LocalContext.current
+    val theme = LocalIslandTheme.current
+    val safeQsTiles: List<String> = this.qsTiles.toList()
+    val safePinnedApps: List<String> = this.pinnedApps.toList()
+
+    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
+    val wifiManager = remember { try { context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager } catch(e: Throwable) { null } }
+    val btAdapter = remember { try { (context.applicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager)?.adapter } catch(e: Throwable) { null } }
+
+    // 🎛️ FIXED: Auto-Brightness & Math
+    var isAutoBrightness by remember { mutableStateOf(try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE) == 1 } catch(e:Throwable){false}) }
+    val maxBrightness = 255f
+    val initialBrightness = remember { try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS) / maxBrightness } catch (e: Throwable) { 0.5f } }
+    var brightness by remember { mutableFloatStateOf(initialBrightness) }
+
+    LaunchedEffect(brightness, isAutoBrightness) { 
+        kotlinx.coroutines.delay(50)
+        try { 
+            android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE, if(isAutoBrightness) 1 else 0)
+            if (!isAutoBrightness) android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * maxBrightness).toInt().coerceIn(1, 255)) 
+        } catch (e: Throwable) {} 
+    }
+
+    var isWifiOn by remember { mutableStateOf(try { wifiManager?.isWifiEnabled == true } catch(e: Throwable) { false }) }
+    var isBtOn by remember { mutableStateOf(try { btAdapter?.isEnabled == true } catch(e: Throwable) { false }) }
+    var isTorchOn by remember { mutableStateOf(false) }
+    val cameraManager = remember { try { context.getSystemService(Context.CAMERA_SERVICE) as? android.hardware.camera2.CameraManager } catch(e: Throwable) { null } }
+    val cameraId = remember { try { cameraManager?.cameraIdList?.firstOrNull() } catch(e: Throwable) { null } }
+    var torchLevel by remember { mutableIntStateOf(1) }
+    var maxTorchLevel by remember { mutableIntStateOf(1) }
+    
+    LaunchedEffect(Unit) {
+        try {
+            if (cameraId != null) {
+                val characteristics = cameraManager?.getCameraCharacteristics(cameraId)
+                maxTorchLevel = characteristics?.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_STRENGTH_MAXIMUM_LEVEL) ?: 1
+            }
+        } catch(e: Throwable) {}
+    }
+
+    val launchAndCollapse = { intent: Intent -> try { intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); context.startActivity(intent); setState(IslandState.HIDDEN) } catch(e: Throwable) {} }
+
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
         
-        val safeQsTiles: List<String> = this.qsTiles.toList()
-        val safePinnedApps: List<String> = this.pinnedApps.toList()
-
-        val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
-        val wifiManager = remember { try { context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager } catch(e: Throwable) { null } }
-        val btAdapter = remember { try { (context.applicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager)?.adapter } catch(e: Throwable) { null } }
-
-        // 🎛️ FIXED: Brightness Math & Auto Toggle
-        var isAutoBrightness by remember { mutableStateOf(try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE) == android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC } catch(e:Throwable){false}) }
-        val initialBrightness = remember { try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS) / 255f } catch (e: Throwable) { 0.5f } }
-        var brightness by remember { mutableFloatStateOf(initialBrightness) }
-
-        LaunchedEffect(brightness, isAutoBrightness) { 
-            kotlinx.coroutines.delay(50)
-            try { 
-                android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE, if(isAutoBrightness) 1 else 0)
-                if (!isAutoBrightness) android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * 255).toInt().coerceIn(1, 255)) 
-            } catch (e: Throwable) {} 
-        }
-
-        var isWifiOn by remember { mutableStateOf(try { wifiManager?.isWifiEnabled == true } catch(e: Throwable) { false }) }
-        var isBtOn by remember { mutableStateOf(try { btAdapter?.isEnabled == true } catch(e: Throwable) { false }) }
-
-        // Helper to launch intent and hide island
-        val launchAndCollapse = { intent: Intent ->
-            try { intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); context.startActivity(intent); setState(IslandState.HIDDEN) } catch(e: Throwable) {}
-        }
-
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
-            
-            // 🎛️ FIXED: Tighter, Premium QS Tiles
-            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)) {
-                val activeQS = safeQsTiles.filter { it.isNotEmpty() && it != "None" }
-                if (activeQS.isEmpty()) {
-                    DashboardQuickToggle(Icons.Default.Settings, true, "Settings") { launchAndCollapse(Intent(android.provider.Settings.ACTION_SETTINGS)) }
-                } else {
-                    activeQS.forEach { tileStr ->
-                        when (tileStr) {
-                            "WiFi" -> DashboardQuickToggle(Icons.Default.Wifi, isWifiOn, "Wi-Fi") { try { val newState = !isWifiOn; wifiManager?.isWifiEnabled = newState; isWifiOn = newState } catch(e: Throwable) { launchAndCollapse(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)) } }
-                            "Bluetooth" -> DashboardQuickToggle(Icons.Default.Bluetooth, isBtOn, "Bluetooth") { try { val newState = !isBtOn; @SuppressLint("MissingPermission") if (newState) btAdapter?.enable() else btAdapter?.disable(); isBtOn = newState } catch(e: Throwable) { launchAndCollapse(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)) } }
-                            "Location" -> DashboardQuickToggle(Icons.Default.LocationOn, true, "Location") { launchAndCollapse(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }
-                            "Airplane" -> DashboardQuickToggle(Icons.Default.AirplanemodeActive, false, "Airplane") { launchAndCollapse(Intent(android.provider.Settings.ACTION_AIRPLANE_MODE_SETTINGS)) }
-                            "DND" -> DashboardQuickToggle(Icons.Default.DoNotDisturbOn, false, "DND") { launchAndCollapse(Intent(android.provider.Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS)) }
-                            "Settings" -> DashboardQuickToggle(Icons.Default.Settings, true, "Settings") { launchAndCollapse(Intent(android.provider.Settings.ACTION_SETTINGS)) }
-                        }
+        Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(theme.buttonSpacing, Alignment.CenterHorizontally)) {
+            val activeQS = safeQsTiles.filter { it.isNotEmpty() && it != "None" }
+            if (activeQS.isEmpty()) {
+                DashboardQuickToggle(Icons.Default.Settings, true, "Settings") { launchAndCollapse(Intent(android.provider.Settings.ACTION_SETTINGS)) }
+            } else {
+                activeQS.forEach { tileStr ->
+                    when (tileStr) {
+                        "WiFi" -> DashboardQuickToggle(Icons.Default.Wifi, isWifiOn, "Wi-Fi") { try { val newState = !isWifiOn; wifiManager?.isWifiEnabled = newState; isWifiOn = newState } catch(e: Throwable) { launchAndCollapse(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)) } }
+                        "Bluetooth" -> DashboardQuickToggle(Icons.Default.Bluetooth, isBtOn, "Bluetooth") { try { val newState = !isBtOn; @SuppressLint("MissingPermission") if (newState) btAdapter?.enable() else btAdapter?.disable(); isBtOn = newState } catch(e: Throwable) { launchAndCollapse(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)) } }
+                        "Torch" -> DashboardQuickToggle(Icons.Default.FlashlightOn, isTorchOn, "Torch") { try { isTorchOn = !isTorchOn; cameraId?.let { cameraManager?.setTorchMode(it, isTorchOn) } } catch(e: Throwable) {} }
+                        "Location" -> DashboardQuickToggle(Icons.Default.LocationOn, true, "Location") { launchAndCollapse(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }
+                        "Airplane" -> DashboardQuickToggle(Icons.Default.AirplanemodeActive, false, "Airplane") { launchAndCollapse(Intent(android.provider.Settings.ACTION_AIRPLANE_MODE_SETTINGS)) }
+                        "DND" -> DashboardQuickToggle(Icons.Default.DoNotDisturbOn, false, "DND") { launchAndCollapse(Intent(android.provider.Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS)) }
+                        "Settings" -> DashboardQuickToggle(Icons.Default.Settings, true, "Settings") { launchAndCollapse(Intent(android.provider.Settings.ACTION_SETTINGS)) }
                     }
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.weight(1f))
 
-            // 🎛️ FIXED: App Dock auto-hides island
-            val pm = context.packageManager
-            Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp)).padding(horizontal = 16.dp, vertical = 14.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                val validApps = safePinnedApps.filter { it.isNotEmpty() }
+        val pm = context.packageManager
+        Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 12.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            val validApps = safePinnedApps.filter { it.isNotEmpty() }
+            if (validApps.isEmpty()) {
+                Box(Modifier.size(36.dp).background(Color.White.copy(0.05f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, null, tint = Color.White.copy(0.3f), modifier = Modifier.size(16.dp)) }
+            } else {
                 validApps.forEach { pkgStr ->
-                    val iconBmp = remember(pkgStr) { try { pm.getApplicationIcon(pkgStr).toBitmap().asImageBitmap() } catch(e: Throwable) { null } }
+                    val iconBmp = remember(pkgStr) { 
+                        try { 
+                            val drawable = pm.getApplicationIcon(pkgStr)
+                            val bmp = android.graphics.Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), android.graphics.Bitmap.Config.ARGB_8888)
+                            val canvas = android.graphics.Canvas(bmp)
+                            drawable.setBounds(0, 0, canvas.width, canvas.height)
+                            drawable.draw(canvas)
+                            bmp.asImageBitmap()
+                        } catch(e: Throwable) { null } 
+                    }
                     if (iconBmp != null) {
-                        Image(bitmap = iconBmp, contentDescription = null, modifier = Modifier.size(40.dp).clip(CircleShape).clickable {
-                            pm.getLaunchIntentForPackage(pkgStr)?.let { launchAndCollapse(it) }
-                        })
+                        Image(bitmap = iconBmp, contentDescription = null, modifier = Modifier.size(36.dp).clip(CircleShape).clickable { pm.getLaunchIntentForPackage(pkgStr)?.let { launchAndCollapse(it) } })
                     }
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.weight(1f))
 
-            // Auto-Brightness Toggle
+        if (isTorchOn && maxTorchLevel > 1) {
+            AppleControlCenterSlider(
+                value = torchLevel.toFloat() / maxTorchLevel.toFloat(), 
+                onValueChange = { torchLevel = (it * maxTorchLevel).toInt().coerceAtLeast(1); try { cameraId?.let { id -> cameraManager?.turnOnTorchWithStrengthLevel(id, torchLevel) } } catch(e:Throwable){} }, 
+                activeColor = Color.White, icon = Icons.Default.FlashlightOn
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        } else {
             val brightIcon = if(isAutoBrightness) Icons.Default.BrightnessAuto else Icons.Default.BrightnessHigh
             AppleControlCenterSlider(value = brightness, onValueChange = { brightness = it; isAutoBrightness = false }, activeColor = Color(0xFFFFD700), icon = brightIcon, onIconClick = { isAutoBrightness = !isAutoBrightness })
-            
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // 🎛️ FIXED: Volume Stream Switcher Menu
-            var activeStream by remember { mutableIntStateOf(android.media.AudioManager.STREAM_MUSIC) }
-            var isVolumeMenuExpanded by remember { mutableStateOf(false) }
-            
-            val maxVol = remember(activeStream) { val mv = audioManager.getStreamMaxVolume(activeStream).toFloat(); if (mv <= 0f) 1f else mv }
-            var currentVol by remember(activeStream) { mutableFloatStateOf( (audioManager.getStreamVolume(activeStream) / maxVol).coerceIn(0f, 1f) ) }
-            val volIcon = when(activeStream) { android.media.AudioManager.STREAM_RING -> Icons.Default.Vibration; android.media.AudioManager.STREAM_ALARM -> Icons.Default.AccessAlarm; android.media.AudioManager.STREAM_NOTIFICATION -> Icons.Default.Notifications; else -> Icons.Default.MusicNote }
-            
-            Box(modifier = Modifier.fillMaxWidth()) {
-                AppleControlCenterSlider(value = currentVol, onValueChange = { currentVol = it }, onValueChangeFinished = { try{ audioManager.setStreamVolume(activeStream, (currentVol * maxVol).toInt(), 0) } catch(e: Throwable){} }, activeColor = Color(0xFF00FFCC), icon = volIcon, onIconClick = { isVolumeMenuExpanded = true })
-                
-                DropdownMenu(expanded = isVolumeMenuExpanded, onDismissRequest = { isVolumeMenuExpanded = false }, modifier = Modifier.background(Color(0xFF222222))) {
-                    DropdownMenuItem(text = { Text("Media", color = Color.White) }, leadingIcon = { Icon(Icons.Default.MusicNote, null, tint=Color.White) }, onClick = { activeStream = android.media.AudioManager.STREAM_MUSIC; isVolumeMenuExpanded = false })
-                    DropdownMenuItem(text = { Text("Ring", color = Color.White) }, leadingIcon = { Icon(Icons.Default.Vibration, null, tint=Color.White) }, onClick = { activeStream = android.media.AudioManager.STREAM_RING; isVolumeMenuExpanded = false })
-                    DropdownMenuItem(text = { Text("Notifications", color = Color.White) }, leadingIcon = { Icon(Icons.Default.Notifications, null, tint=Color.White) }, onClick = { activeStream = android.media.AudioManager.STREAM_NOTIFICATION; isVolumeMenuExpanded = false })
-                    DropdownMenuItem(text = { Text("Alarm", color = Color.White) }, leadingIcon = { Icon(Icons.Default.AccessAlarm, null, tint=Color.White) }, onClick = { activeStream = android.media.AudioManager.STREAM_ALARM; isVolumeMenuExpanded = false })
-                }
-            }
+            Spacer(modifier = Modifier.height(12.dp))
         }
-    }
 
-    @Composable
-    fun DynamicIslandView.DashboardQuickToggle(icon: androidx.compose.ui.graphics.vector.ImageVector, isActive: Boolean, label: String? = null, onClick: () -> Unit = {}) {
-        val bgColor = if (isActive) Color(0xFF00FFCC) else Color.White.copy(alpha=0.15f)
-        val tint = if (isActive) Color.Black else Color.White
+        // 🎛️ FIXED: Tap the icon to Cycle Streams instead of DropdownMenu (Fixes SystemUI BadTokenException Crash)
+        var activeStream by remember { mutableIntStateOf(android.media.AudioManager.STREAM_MUSIC) }
+        val streams = remember { listOf(android.media.AudioManager.STREAM_MUSIC to Icons.Default.MusicNote, android.media.AudioManager.STREAM_RING to Icons.Default.Vibration, android.media.AudioManager.STREAM_NOTIFICATION to Icons.Default.Notifications, android.media.AudioManager.STREAM_ALARM to Icons.Default.AccessAlarm) }
+        val currentStreamIndex = streams.indexOfFirst { it.first == activeStream }.takeIf { it >= 0 } ?: 0
+        val maxVol = remember(activeStream) { val mv = audioManager.getStreamMaxVolume(activeStream).toFloat(); if (mv <= 0f) 1f else mv }
+        var currentVol by remember(activeStream) { mutableFloatStateOf( (audioManager.getStreamVolume(activeStream) / maxVol).coerceIn(0f, 1f) ) }
         
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(modifier = Modifier.size(52.dp).clip(RoundedCornerShape(18.dp)).background(bgColor).clickable { onClick() }, contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(24.dp))
-            }
-            if (label != null) { Spacer(modifier = Modifier.height(6.dp)); Text(label, color = Color.White.copy(alpha=0.9f), fontSize = 11.sp, fontWeight = FontWeight.Medium) }
-        }
+        AppleControlCenterSlider(
+            value = currentVol, 
+            onValueChange = { currentVol = it }, 
+            onValueChangeFinished = { try{ audioManager.setStreamVolume(activeStream, (currentVol * maxVol).toInt(), 0) } catch(e: Throwable){} }, 
+            activeColor = Color(0xFF00FFCC), 
+            icon = streams[currentStreamIndex].second,
+            onIconClick = { activeStream = streams[(currentStreamIndex + 1) % streams.size].first } // Cycle streams
+        )
     }
- 
+}
+
+@Composable
+fun DynamicIslandView.DashboardQuickToggle(icon: androidx.compose.ui.graphics.vector.ImageVector, isActive: Boolean, label: String? = null, onClick: () -> Unit = {}) {
+    val theme = LocalIslandTheme.current
+    val bgColor = if (isActive) Color(0xFF00FFCC) else Color.White.copy(alpha=0.1f)
+    val tint = if (isActive) Color.Black else Color.White
+    
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        InteractiveIconButton(icon = icon, tint = tint, baseSize = theme.buttonSize, bgAlpha = if (isActive) 1f else 0.1f) { onClick() }
+        if (label != null) { Spacer(modifier = Modifier.height(6.dp)); Text(label, color = Color.White.copy(alpha=0.9f), fontSize = 10.sp, fontWeight = FontWeight.Medium) }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DynamicIslandView.SystemAlertMid(alert: LiveActivityModel.SystemAlert) {
@@ -544,39 +541,25 @@ fun DynamicIslandView.UniversalMid(textColor: Color, activity: LiveActivityModel
 @Composable
 fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) {
     val batteryColor = if (charging.isPluggedIn) Color(0xFF00FF41) else if (charging.level <= 20) Color.Red else Color.White
-    
-    // Glow animation for charging
     val infiniteTransition = rememberInfiniteTransition(label = "charging_glow")
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.2f, targetValue = 0.6f,
-        animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "alpha"
-    )
-    
-    // Fluid fill animation for battery level
+    val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.2f, targetValue = 0.6f, animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "alpha")
     val targetFill = charging.level / 100f
     val animatedFill by animateFloatAsState(targetValue = targetFill, animationSpec = tween(1500, easing = FastOutSlowInEasing), label = "fill")
 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        // Animated Charging Icon
         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) {
             Box(modifier = Modifier.size(36.dp).background(batteryColor.copy(alpha = if (charging.isPluggedIn) glowAlpha else 0.05f), CircleShape).blur(if (charging.isPluggedIn) 8.dp else 0.dp))
             Icon(imageVector = if (charging.isPluggedIn) Icons.Default.Add else Icons.Default.Warning, contentDescription = null, tint = batteryColor, modifier = Modifier.size(24.dp))
         }
-        
         Spacer(Modifier.width(12.dp))
-        
         Column(modifier = Modifier.weight(1f)) {
              Text(text = if (charging.isPluggedIn) "Charging" else "Battery", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
              Text(text = "${charging.level}% Available", color = Color.White.copy(alpha=0.7f), fontSize = 13.sp, maxLines = 1)
         }
-        
         Spacer(Modifier.width(12.dp))
-        
-        // Custom Visual Battery Indicator
         Box(modifier = Modifier.width(42.dp).height(20.dp).border(1.5.dp, Color.White.copy(alpha=0.4f), RoundedCornerShape(4.dp)).padding(2.dp), contentAlignment = Alignment.CenterStart) {
             Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(fraction = animatedFill).background(batteryColor, RoundedCornerShape(2.dp)))
         }
-        // Battery Tip
         Box(modifier = Modifier.width(3.dp).height(8.dp).background(Color.White.copy(alpha=0.4f), RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp)))
     }
 }
@@ -715,6 +698,7 @@ fun androidx.compose.ui.Modifier.safeMarquee(state: IslandState): androidx.compo
 fun InteractiveWavyMediaBar(
     durationMs: Long,
     posProvider: () -> Long,
+    isPlaying: Boolean, // 🎛️ NEW: Required to flatten the wave when paused
     color: Color,
     trackColor: Color,
     onSeek: (Long) -> Unit,
@@ -724,18 +708,18 @@ fun InteractiveWavyMediaBar(
     var isDragging by remember { mutableStateOf(false) }
     var dragProgress by remember { mutableFloatStateOf(0f) }
     val currentProgress = (posProvider() / safeDuration).coerceIn(0f, 1f)
-    
-    // 🎛️ FIXED: Smoothly interpolate the 1-second ticker jumps so the wave glides flawlessly!
     val animatedProgress by animateFloatAsState(targetValue = currentProgress, animationSpec = tween(1000, easing = LinearEasing), label = "smooth_prog")
     val displayProgress = if (isDragging) dragProgress else animatedProgress
-    // Smooth thumb radius animation
-    
+
     val thumbRadius by animateFloatAsState(
         targetValue = if (isDragging) 7f else 4.5f,
         animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "thumb"
     )
 
-    // Sine wave animation phase
+    // 🎛️ FIXED: Amplitude smoothly animates to 0f (straight line) when paused!
+    val targetAmplitude = if (isDragging) 4f else if (isPlaying) 2.5f else 0f
+    val amplitude by animateFloatAsState(targetValue = targetAmplitude, animationSpec = spring(dampingRatio = 0.6f, stiffness = 300f), label = "amp")
+
     val phaseShift by rememberInfiniteTransition(label = "wave").animateFloat(
         initialValue = 0f, targetValue = 2f * Math.PI.toFloat(),
         animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing)), label = "phase"
@@ -744,7 +728,7 @@ fun InteractiveWavyMediaBar(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(24.dp) // Larger invisible hit-box for easier grabbing
+            .height(24.dp) 
             .pointerInput(Unit) {
                 val velocityTracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
                 detectDragGestures(
@@ -756,7 +740,6 @@ fun InteractiveWavyMediaBar(
                     onDragEnd = {
                         val finalVelocity = velocityTracker.calculateVelocity().x
                         isDragging = false
-                        // THROW TO CANCEL: If horizontal velocity is > 1500px/sec, ignore the seek
                         if (kotlin.math.abs(finalVelocity) < 1500f) {
                             onSeek((dragProgress * safeDuration).toLong())
                         }
@@ -780,24 +763,20 @@ fun InteractiveWavyMediaBar(
         val midY = size.height / 2
         val activeWidth = size.width * displayProgress
 
-        // 1. Draw inactive straight track
         drawLine(color = trackColor, start = androidx.compose.ui.geometry.Offset(activeWidth, midY), end = androidx.compose.ui.geometry.Offset(size.width, midY), strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round)
 
-        // 2. Draw active WAVY track
         val path = androidx.compose.ui.graphics.Path()
         path.moveTo(0f, midY)
-        val amplitude = if (isDragging) 4.dp.toPx() else 2.5.dp.toPx() // Wave gets bigger when grabbing
         val frequency = 0.08f
+        val ampPx = amplitude.dp.toPx()
         
         for (x in 0..activeWidth.toInt() step 4) {
-            val y = midY + kotlin.math.sin((x * frequency) + phaseShift) * amplitude
+            val y = midY + kotlin.math.sin((x * frequency) + phaseShift) * ampPx
             path.lineTo(x.toFloat(), y)
         }
         path.lineTo(activeWidth, midY)
 
         drawPath(path = path, color = color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
-        
-        // 3. Draw Thumb (Smoothly animated)
         drawCircle(color = Color.White, radius = thumbRadius.dp.toPx(), center = androidx.compose.ui.geometry.Offset(activeWidth, midY))
     }
 }
