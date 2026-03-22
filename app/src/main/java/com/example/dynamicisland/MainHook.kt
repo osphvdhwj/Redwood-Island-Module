@@ -131,12 +131,14 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 
                 // Kept your precise WindowContext creation
                 val windowContext = systemUiContext.createWindowContext(display, WindowManager.LayoutParams.TYPE_NAVIGATION_BAR_PANEL, null)
+                // Kept your precise WindowContext creation
+                val windowContext = systemUiContext.createWindowContext(display, 2024, null)
                 val windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
                 val layoutParams = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT, 
                     WindowManager.LayoutParams.MATCH_PARENT, 
-                    WindowManager.LayoutParams.TYPE_NAVIGATION_BAR_PANEL, 
+                    2024, // 🎛️ FIXED: Reverted to the raw integer since TYPE_NAVIGATION_BAR_PANEL is a hidden API
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
