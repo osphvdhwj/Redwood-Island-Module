@@ -327,27 +327,18 @@ fun DynamicIslandView.DashboardMid(model: LiveActivityModel.Dashboard) {
 }
 
 @Composable
-fun AppleControlCenterSlider(value: Float, onValueChange: (Float) -> Unit, onValueChangeFinished: () -> Unit = {}, activeColor: Color, icon: ImageVector) {
+fun AppleControlCenterSlider(value: Float, onValueChange: (Float) -> Unit, onValueChangeFinished: () -> Unit = {}, activeColor: Color, icon: ImageVector, onIconClick: (() -> Unit)? = null) {
     var width by remember { mutableIntStateOf(1) }
     Box(modifier = Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha=0.15f))
         .onGloballyPositioned { width = it.size.width.coerceAtLeast(1) }
-        .pointerInput(Unit) {
-            detectDragGestures(
-                onDragEnd = { onValueChangeFinished() }
-            ) { change, _ ->
-                change.consume()
-                onValueChange((change.position.x / width).coerceIn(0f, 1f))
-            }
-        }
-        .pointerInput(Unit) {
-            detectTapGestures(
-                onTap = { offset -> onValueChange((offset.x / width).coerceIn(0f, 1f)); onValueChangeFinished() }
-            )
-        }
+        .pointerInput(Unit) { detectDragGestures(onDragEnd = { onValueChangeFinished() }) { change, _ -> change.consume(); onValueChange((change.position.x / width).coerceIn(0f, 1f)) } }
+        .pointerInput(Unit) { detectTapGestures(onTap = { offset -> onValueChange((offset.x / width).coerceIn(0f, 1f)); onValueChangeFinished() }) }
     ) {
         Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(fraction = value.coerceIn(0f, 1f)).background(activeColor))
+        
+        // 🎛️ FIXED: Icon is now an interactive button for Auto-Brightness / Volume Switching
         Box(modifier = Modifier.align(Alignment.CenterStart).padding(start = 6.dp).size(32.dp).clip(CircleShape).clickable(enabled = onIconClick != null) { onIconClick?.invoke() }, contentAlignment = Alignment.Center) {
-                Icon(icon, null, modifier = Modifier.size(20.dp), tint = if (value > 0.15f) Color.Black else Color.White)
+            Icon(icon, null, modifier = Modifier.size(20.dp), tint = if (value > 0.15f) Color.Black else Color.White)
         }
     }
 }
