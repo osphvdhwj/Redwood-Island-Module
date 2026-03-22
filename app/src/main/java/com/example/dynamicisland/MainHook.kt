@@ -21,7 +21,16 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
         lateinit var modulePath: String
     }
 
-    // 1. SYSTEM SERVER HOOKS (RESTORED: Your exact logic for OTPs and Notifications)
+    // 🎛️ FIXED: Restored the missing initZygote function wrapper!
+    override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
+        modulePath = startupParam.modulePath
+        XposedBridge.log("DynamicIsland: Zygote Initialized")
+    }
+
+    // 🎛️ FIXED: Restored the missing handleLoadPackage function wrapper!
+    override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
+        
+        // 1. SYSTEM SERVER HOOKS
         if (lpparam.packageName == "android") {
             try {
                 val atmsClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader)
@@ -33,7 +42,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     val activityRecord = param.args[0] ?: return
                                     val packageName = XposedHelpers.getObjectField(activityRecord, "packageName") as? String ?: return
                                     val mContext = XposedHelpers.getObjectField(param.thisObject, "mContext") as? Context
-                                    // 🎛️ FIXED: Added setPackage to make it an Explicit Intent
+                                    // Explicit Intent Fix
                                     val intent = Intent("com.example.dynamicisland.APP_CHANGED").setPackage("com.android.systemui").putExtra("pkg", packageName)
                                     mContext?.sendBroadcast(intent)
                                 } catch (e: Throwable) {}
@@ -62,7 +71,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                         val progress = extras.getInt(android.app.Notification.EXTRA_PROGRESS, -1)
                                         val progressMax = extras.getInt(android.app.Notification.EXTRA_PROGRESS_MAX, -1)
                                         
-                                        // 🎛️ FIXED: Added setPackage to bypass OS Security Block
+                                        // Explicit Intent Fix
                                         val intent = Intent("com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT").apply {
                                             setPackage("com.android.systemui")
                                             putExtra("pkg", pkgName)
@@ -78,7 +87,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                         val otpRegex = Regex("\\b\\d{4,8}\\b")
                                         val match = otpRegex.find(text)
                                         if (match != null) {
-                                            // 🎛️ FIXED: Added setPackage
+                                            // Explicit Intent Fix
                                             val intent = Intent("com.example.dynamicisland.OTP_CAUGHT").setPackage("com.android.systemui").putExtra("otp", match.value).putExtra("pkg", pkgName)
                                             mContext?.sendBroadcast(intent)
                                         }
@@ -96,7 +105,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
         // 2. SYSTEM UI HOOK
         if (lpparam.packageName == "com.android.systemui") {
             try {
-                // 🎛️ FIXED: Application.onCreate is highly stable.
                 XposedHelpers.findAndHookMethod(
                     Application::class.java.name,
                     lpparam.classLoader,
@@ -125,14 +133,13 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 val displayManager = systemUiContext.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
                 val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
                 
-                // 🎛️ FIXED: Using raw integer 2024 for hidden API TYPE_NAVIGATION_BAR_PANEL
                 val windowContext = systemUiContext.createWindowContext(display, 2024, null)
                 val windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
                 val layoutParams = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT, 
                     WindowManager.LayoutParams.MATCH_PARENT, 
-                    2024, // 🎛️ FIXED: Raw integer for hidden API
+                    2024, 
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
