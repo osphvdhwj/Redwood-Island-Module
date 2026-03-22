@@ -440,13 +440,23 @@ class IslandController(private val context: Context) {
 
                 val extractedActions = pbState.customActions.map { CustomMediaAction(it.action, null, null, true) }
 
+                // 🎛️ NEW: Extract real system states for Shuffle, Repeat, and Liked!
+                val systemShuffle = controller.shuffleMode == PlaybackState.SHUFFLE_MODE_ALL || controller.shuffleMode == PlaybackState.SHUFFLE_MODE_GROUP
+                val systemRepeat = controller.repeatMode // 0=None, 1=One, 2=All
+                // If the app offers an "unlike" or "remove" action, it means it is currently liked!
+                val systemLiked = pbState.customActions.any { 
+                    val act = it.action.lowercase(); val name = it.name?.toString()?.lowercase() ?: ""
+                    act.contains("unlike") || act.contains("remove") || name.contains("unlike") || name.contains("remove") 
+                }
+
                 currentMedia = LiveActivityModel.Music(
                     id = "media_main", title = newTitle,
                     artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
                     albumArt = albumArtBitmap, blurredAlbumArt = blurredArtBitmap,
                     appIcon = appIconBmp, dominantColor = bgColor, titleTextColor = txtColor,
                     isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position,
-                    appPackageName = controller.packageName, customActions = extractedActions
+                    appPackageName = controller.packageName, customActions = extractedActions,
+                    isShuffled = systemShuffle, repeatMode = systemRepeat, isLiked = systemLiked
                 )
 
                 if (isPlaying && !wasPlaying) { userForceCollapsed = false; pauseFadeJob?.cancel() }
