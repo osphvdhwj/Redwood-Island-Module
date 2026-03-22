@@ -21,13 +21,11 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
         lateinit var modulePath: String
     }
 
-    // 🎛️ FIXED: Restored the missing initZygote function wrapper!
     override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
         modulePath = startupParam.modulePath
         XposedBridge.log("DynamicIsland: Zygote Initialized")
     }
 
-    // 🎛️ FIXED: Restored the missing handleLoadPackage function wrapper!
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
         // 1. SYSTEM SERVER HOOKS
@@ -42,9 +40,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     val activityRecord = param.args[0] ?: return
                                     val packageName = XposedHelpers.getObjectField(activityRecord, "packageName") as? String ?: return
                                     val mContext = XposedHelpers.getObjectField(param.thisObject, "mContext") as? Context
-                                    // Explicit Intent Fix
                                     val intent = Intent("com.example.dynamicisland.APP_CHANGED").setPackage("com.android.systemui").putExtra("pkg", packageName)
-                                    mContext?.sendBroadcast(intent)
+                                    mContext?.sendBroadcastAsUser(intent, android.os.UserHandle.ALL)
                                 } catch (e: Throwable) {}
                             }
                         }
@@ -71,7 +68,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                         val progress = extras.getInt(android.app.Notification.EXTRA_PROGRESS, -1)
                                         val progressMax = extras.getInt(android.app.Notification.EXTRA_PROGRESS_MAX, -1)
                                         
-                                        // Explicit Intent Fix
                                         val intent = Intent("com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT").apply {
                                             setPackage("com.android.systemui")
                                             putExtra("pkg", pkgName)
@@ -80,16 +76,15 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                             if (progress != -1) putExtra("progress", progress)
                                             if (progressMax != -1) putExtra("progressMax", progressMax)
                                         }
-                                        mContext?.sendBroadcast(intent)
+                                        mContext?.sendBroadcastAsUser(intent, android.os.UserHandle.ALL)
                                     }
 
                                     if (text.contains("OTP", true) || text.contains("code", true) || text.contains("verification", true)) {
                                         val otpRegex = Regex("\\b\\d{4,8}\\b")
                                         val match = otpRegex.find(text)
                                         if (match != null) {
-                                            // Explicit Intent Fix
                                             val intent = Intent("com.example.dynamicisland.OTP_CAUGHT").setPackage("com.android.systemui").putExtra("otp", match.value).putExtra("pkg", pkgName)
-                                            mContext?.sendBroadcast(intent)
+                                            mContext?.sendBroadcastAsUser(intent, android.os.UserHandle.ALL)
                                         }
                                     }
                                 } catch (e: Throwable) {}
@@ -104,6 +99,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
         // 2. SYSTEM UI HOOK
         if (lpparam.packageName == "com.android.systemui") {
+            // 🎛️ FIXED: Prevent injecting into SystemUI ghost/background processes!
+            if (lpparam.processName != "com.android.systemui") return 
+
             try {
                 XposedHelpers.findAndHookMethod(
                     Application::class.java.name,
@@ -118,7 +116,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                         }
                     }
                 )
-                XposedBridge.log("DynamicIsland: SystemUI Application.onCreate hook deployed successfully.")
+                XposedBridge.log("DynamicIsland: SystemUI Application.onCreate hook deployed successfully in main process.")
             } catch (e: Exception) {
                 XposedBridge.log("DynamicIsland: Failed to hook SystemUI Application - ${e.message}")
             }
@@ -126,6 +124,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     }
 
     private fun injectDynamicIsland(systemUiContext: Context) {
+        // 🎛️ FIXED: Reduced to 4 seconds so the handler isn't killed before firing
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             try {
                 XposedBridge.log("DynamicIsland: Starting Android 16 compliant injection...")
@@ -164,6 +163,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             } catch (e: Exception) {
                 XposedBridge.log("DynamicIsland: FATAL ERROR during injection: ${e.stackTraceToString()}")
             }
-        }, 15000) 
+        }, 4000) 
     }
 }
