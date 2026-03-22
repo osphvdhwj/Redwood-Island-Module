@@ -41,7 +41,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     val packageName = XposedHelpers.getObjectField(activityRecord, "packageName") as? String ?: return
                                     val mContext = XposedHelpers.getObjectField(param.thisObject, "mContext") as? Context
                                     val intent = Intent("com.example.dynamicisland.APP_CHANGED").setPackage("com.android.systemui").putExtra("pkg", packageName)
-                                    // 🎛️ FIXED: Reverted to standard broadcast to bypass hidden API compiler error
                                     mContext?.sendBroadcast(intent)
                                 } catch (e: Throwable) {}
                             }
@@ -77,7 +76,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                             if (progress != -1) putExtra("progress", progress)
                                             if (progressMax != -1) putExtra("progressMax", progressMax)
                                         }
-                                        // 🎛️ FIXED: Reverted to standard broadcast
                                         mContext?.sendBroadcast(intent)
                                     }
 
@@ -86,7 +84,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                         val match = otpRegex.find(text)
                                         if (match != null) {
                                             val intent = Intent("com.example.dynamicisland.OTP_CAUGHT").setPackage("com.android.systemui").putExtra("otp", match.value).putExtra("pkg", pkgName)
-                                            // 🎛️ FIXED: Reverted to standard broadcast
                                             mContext?.sendBroadcast(intent)
                                         }
                                     }
@@ -100,33 +97,34 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             }
         }
 
-        // 2. SYSTEM UI HOOK
+        // 2. SYSTEM UI HOOK (Restored: The Instrumentation Fix)
         if (lpparam.packageName == "com.android.systemui") {
-            // Prevent injecting into SystemUI ghost/background processes
-            if (lpparam.processName != "com.android.systemui") return 
-
             try {
+                // 🎛️ FIXED: Restored your un-bypassable OS Ignition Switch
                 XposedHelpers.findAndHookMethod(
-                    Application::class.java.name,
+                    "android.app.Instrumentation",
                     lpparam.classLoader,
-                    "onCreate",
+                    "callApplicationOnCreate",
+                    Application::class.java,
                     object : XC_MethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {
-                            val app = param.thisObject as Application
+                            val app = param.args[0] as Application
+                            // Make sure we only inject into the main UI process
                             if (app.packageName == "com.android.systemui") {
                                 injectDynamicIsland(app.applicationContext)
                             }
                         }
                     }
                 )
-                XposedBridge.log("DynamicIsland: SystemUI Application.onCreate hook deployed successfully in main process.")
+                XposedBridge.log("DynamicIsland: Instrumentation hook deployed successfully.")
             } catch (e: Exception) {
-                XposedBridge.log("DynamicIsland: Failed to hook SystemUI Application - ${e.message}")
+                XposedBridge.log("DynamicIsland: Failed to hook Instrumentation - ${e.message}")
             }
         }
     }
 
     private fun injectDynamicIsland(systemUiContext: Context) {
+        // 🎛️ FIXED: 6-second delay to ensure SystemUI is fully drawn and stable before we add the WindowContext
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             try {
                 XposedBridge.log("DynamicIsland: Starting Android 16 compliant injection...")
@@ -165,6 +163,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             } catch (e: Exception) {
                 XposedBridge.log("DynamicIsland: FATAL ERROR during injection: ${e.stackTraceToString()}")
             }
-        }, 4000) 
+        }, 6000) 
     }
 }
