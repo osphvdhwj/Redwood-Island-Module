@@ -149,7 +149,7 @@ class IslandController(private val context: Context) {
         this.windowManager = wm 
         
         view.onSplitPillClick = { 
-            val sModel = _splitModel.value; 
+            val sModel = _splitModel.value;
             if (sModel is LiveActivityModel.Charging) { 
                 try {
                     val intent = Intent().setComponent(ComponentName("com.crdroid.batterywellbeing", "com.crdroid.batterywellbeing.MainActivity"))
@@ -159,7 +159,8 @@ class IslandController(private val context: Context) {
             } 
         }
         
-        view.windowManager = wm; view.windowParams = params
+        view.windowManager = wm;
+        view.windowParams = params
 
         view.onGestureSettingsUpdated = { payload ->
             try {
@@ -256,12 +257,19 @@ class IslandController(private val context: Context) {
 
     private fun launchAudioOutputSwitcher() {
         try {
-            val intent = Intent("com.android.systemui.action.LAUNCH_SYSTEM_MEDIA_OUTPUT_DIALOG")
+            // Method 1: The standard Android 13+ broadcast intent
+            val intent = Intent("com.android.systemui.action.LAUNCH_MEDIA_OUTPUT_DIALOG")
             intent.setPackage("com.android.systemui")
             currentMedia?.appPackageName?.let { intent.putExtra("package_name", it) }
-            val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
-            pendingIntent.send()
-        } catch (e: Exception) {}
+            context.sendBroadcast(intent)
+        } catch (e: Exception) {
+            try {
+                // Method 2: If the system blocks the broadcast, safely fallback to Sound Settings
+                val fallback = Intent(android.provider.Settings.ACTION_SOUND_SETTINGS)
+                fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(fallback)
+            } catch (ex: Exception) {}
+        }
     }
 
     private fun evaluatePriority() {
