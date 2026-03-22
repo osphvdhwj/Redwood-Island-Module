@@ -323,14 +323,20 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
         
         // 🚀 THIS RESTORES THE PROPER FULLSCREEN REFLECTION WINDOW BEHAVIOR
-        LaunchedEffect(state, model) {
+        LaunchedEffect(state, model, isLandscape) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
 
             if (model?.isSensitive == true) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE } else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv() }
 
-            // 📱 FIXED: ALWAYS keep MATCH_PARENT. Compose scales the visuals to 0, and TouchableInsets handles the touches!
+            // 📱 FIXED: We keep MATCH_PARENT to prevent deadzones, but we MUST explicitly toggle the touch flag!
+            if (state == IslandState.HIDDEN || isLandscape) {
+                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            } else {
+                wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+            }
+
             wp.width = WindowManager.LayoutParams.MATCH_PARENT
             wp.height = WindowManager.LayoutParams.MATCH_PARENT
             
