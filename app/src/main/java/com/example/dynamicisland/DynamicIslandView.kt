@@ -156,7 +156,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     private val receiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
-            if (intent.action == "com.example.dynamicisland.RELOAD_PREFS") {
+          if (intent.action == "com.example.dynamicisland.RELOAD_PREFS") {
                 val prefix = intent.getStringExtra("prefix")
                 if (prefix != null) {
                     val w = intent.getFloatExtra("w", 0f); val h = intent.getFloatExtra("h", 0f); val x = intent.getFloatExtra("x", 0f); val y = intent.getFloatExtra("y", 0f)
@@ -267,6 +267,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     @OptIn(ExperimentalAnimationApi::class)
     @Composable
     fun IslandUI(state: IslandState) {
+        
         // 📱 LANDSCAPE DETECTOR
         val configuration = androidx.compose.ui.platform.LocalConfiguration.current
         val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -419,11 +420,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         Image(
                             bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
                             modifier = Modifier.fillMaxSize()
-                            .drawWithContent {
-                                drawContent()
-                                drawRect(brush = Brush.horizontalGradient(0.0f to Color.Transparent, 0.8f to Color.Black, 1.0f to Color.Black))
-                            }
-                            .alpha(if (state == IslandState.TYPE_3_MAX) 0.65f else 0.35f).blur(if (state == IslandState.TYPE_3_MAX) 12.dp else 24.dp)
+                            // Removed the murky black gradient mask, lowered blur slightly for clarity
+                            .alpha(if (state == IslandState.TYPE_3_MAX) 0.5f else 0.25f)
+                            .blur(if (state == IslandState.TYPE_3_MAX) 16.dp else 24.dp)
                         )
                     }
 
@@ -466,11 +465,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             }
                         }
 
-                        if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX || state == IslandState.TYPE_SPLIT) {
+                        // 🎛️ REFINED: Ultra-slim grab handle ONLY for Mid and Max pills
+                        if (state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) {
                             Box(
-                                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(when(state) { IslandState.TYPE_3_MAX -> 32.dp; IslandState.TYPE_2_MID -> 20.dp; else -> 16.dp }),
+                                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(10.dp).padding(bottom = 4.dp),
                                 contentAlignment = Alignment.Center
-                            ) { Box(modifier = Modifier.width(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 24.dp else 40.dp).height(if (state == IslandState.TYPE_1_MINI || state == IslandState.TYPE_SPLIT) 3.dp else 5.dp).shadow(2.dp, CircleShape).background(Color.White.copy(alpha=0.8f), CircleShape)) }
+                            ) { Box(modifier = Modifier.width(36.dp).height(4.dp).background(Color.White.copy(alpha=0.25f), CircleShape)) }
                         }
                     }
                     
