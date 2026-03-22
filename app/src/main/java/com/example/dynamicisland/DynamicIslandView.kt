@@ -371,13 +371,18 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         }
                     }
                     .pointerInput(state) {
-                        if (state != IslandState.TYPE_3_MAX) {
-                            detectTapGestures(
-                                onTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) },
-                                onDoubleTap = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) },
-                                onLongPress = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) }
-                            )
-                        }
+                        // 🎛️ FIXED: ALWAYS detect tap gestures so touches don't ghost through the pill to the OS!
+                        detectTapGestures(
+                            onTap = { 
+                                if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) } 
+                            },
+                            onDoubleTap = { 
+                                if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) } 
+                            },
+                            onLongPress = { 
+                                if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) } 
+                            }
+                        )
                     }
                     .pointerInput(state) {
                         var dragOffsetX = 0f
