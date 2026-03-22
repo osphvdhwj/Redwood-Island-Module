@@ -34,7 +34,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
@@ -50,6 +52,25 @@ class ConfigActivity : ComponentActivity() {
                     ConfigScreen(prefs) 
                 } 
             } 
+        }
+    }
+
+    // 🎛️ CORE IPC FIX: Handles IO threading, synchronous disk commits, permission granting, and main-thread broadcasting.
+    private fun commitAndBroadcast(
+        prefs: android.content.SharedPreferences,
+        editBlock: android.content.SharedPreferences.Editor.() -> Unit,
+        broadcastBlock: () -> Unit
+    ) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val editor = prefs.edit()
+            editor.editBlock()
+            editor.commit() // Synchronous disk write to prevent race conditions
+
+            makePrefsWorldReadable() // Traverse permissions granted AFTER file is saved
+
+            withContext(Dispatchers.Main) {
+                broadcastBlock() // Safe to alert SystemUI
+            }
         }
     }
 
@@ -146,20 +167,34 @@ class ConfigActivity : ComponentActivity() {
 
                     var offsetY by remember { mutableFloatStateOf(prefs.getFloat("tweak_offset_y", 0f)) }
                     Text(text = "Y-Axis Offset (Push down from top): ${offsetY.toInt()}px", color = Color.White)
-                    Slider(value = offsetY, onValueChange = { offsetY = it; prefs.edit().putFloat("tweak_offset_y", it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) }, valueRange = 0f..150f)
+                    Slider(value = offsetY, onValueChange = { 
+                        offsetY = it
+                        commitAndBroadcast(prefs, { putFloat("tweak_offset_y", it) }) { sendGestureUpdate(prefs, this@ConfigActivity) }
+                    }, valueRange = 0f..150f)
 
                     var baseWidth by remember { mutableFloatStateOf(prefs.getFloat("tweak_base_width", 100f)) }
                     Text(text = "Mini Pill Width: ${baseWidth.toInt()}dp", color = Color.White)
-                    Slider(value = baseWidth, onValueChange = { baseWidth = it; prefs.edit().putFloat("tweak_base_width", it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) }, valueRange = 50f..200f)
+                    Slider(value = baseWidth, onValueChange = { 
+                        baseWidth = it
+                        commitAndBroadcast(prefs, { putFloat("tweak_base_width", it) }) { sendGestureUpdate(prefs, this@ConfigActivity) }
+                    }, valueRange = 50f..200f)
                 } else {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(text = "Configure ${tabs[selectedTab]}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        Button(onClick = { w = getDefaultWidth(currentPrefix); h = getDefaultHeight(currentPrefix); x = 0f; y = 48f; prefs.edit().putFloat("pad_t", 0f).putFloat("pad_b", 0f).putFloat("pad_l", 0f).putFloat("pad_r", 0f).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha=0.7f))) { Text("Reset") }
+                        Button(onClick = { 
+                            w = getDefaultWidth(currentPrefix); h = getDefaultHeight(currentPrefix); x = 0f; y = 48f
+                            commitAndBroadcast(prefs, {
+                                putFloat("pad_t", 0f).putFloat("pad_b", 0f).putFloat("pad_l", 0f).putFloat("pad_r", 0f)
+                            }) { saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
+                        }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha=0.7f))) { Text("Reset") }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("Expand Upwards (From Bottom)", fontSize = 14.sp)
-                        Switch(checked = expandUpwards, onCheckedChange = { expandUpwards = it; prefs.edit().putBoolean("expand_upwards", it).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) })
+                        Switch(checked = expandUpwards, onCheckedChange = { 
+                            expandUpwards = it
+                            saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, it)
+                        })
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Outer Dimensions", fontSize = 12.sp, color = Color.Gray)
@@ -170,15 +205,17 @@ class ConfigActivity : ComponentActivity() {
                     if (currentPrefix == "ring") {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text("Ring Properties", fontSize = 12.sp, color = Color.Gray)
-                        PrecisionSlider("Thickness", ringT, 1f..20f, { ringT = it }) { prefs.edit().putFloat("ring_thickness", ringT).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
+                        PrecisionSlider("Thickness", ringT, 1f..20f, { ringT = it }) { 
+                            commitAndBroadcast(prefs, { putFloat("ring_thickness", ringT) }) { saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
+                        }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Inner Compression (Padding)", fontSize = 12.sp, color = Color.Gray)
                     var padT by remember { mutableFloatStateOf(prefs.getFloat("pad_t", 0f)) }; var padB by remember { mutableFloatStateOf(prefs.getFloat("pad_b", 0f)) }; var padL by remember { mutableFloatStateOf(prefs.getFloat("pad_l", 0f)) }; var padR by remember { mutableFloatStateOf(prefs.getFloat("pad_r", 0f)) }
-                    PrecisionSlider("Top", padT, 0f..100f, { padT = it }) { prefs.edit().putFloat("pad_t", padT).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
-                    PrecisionSlider("Bottom", padB, 0f..100f, { padB = it }) { prefs.edit().putFloat("pad_b", padB).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
-                    PrecisionSlider("Left", padL, 0f..100f, { padL = it }) { prefs.edit().putFloat("pad_l", padL).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
-                    PrecisionSlider("Right", padR, 0f..100f, { padR = it }) { prefs.edit().putFloat("pad_r", padR).apply(); saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) }
+                    PrecisionSlider("Top", padT, 0f..100f, { padT = it }) { commitAndBroadcast(prefs, { putFloat("pad_t", padT) }) { saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) } }
+                    PrecisionSlider("Bottom", padB, 0f..100f, { padB = it }) { commitAndBroadcast(prefs, { putFloat("pad_b", padB) }) { saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) } }
+                    PrecisionSlider("Left", padL, 0f..100f, { padL = it }) { commitAndBroadcast(prefs, { putFloat("pad_l", padL) }) { saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) } }
+                    PrecisionSlider("Right", padR, 0f..100f, { padR = it }) { commitAndBroadcast(prefs, { putFloat("pad_r", padR) }) { saveAndBroadcast(prefs, currentPrefix, w, h, x, y, ringT, expandUpwards) } }
                 }
                 Spacer(modifier = Modifier.height(80.dp))
             }
@@ -201,7 +238,10 @@ class ConfigActivity : ComponentActivity() {
                 OutlinedTextField(value = selectedAnim, onValueChange = {}, readOnly = true, label = { Text("Click Animation Type") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = animExpanded) }, modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 8.dp))
                 ExposedDropdownMenu(expanded = animExpanded, onDismissRequest = { animExpanded = false }) {
                     listOf("CHECKMARK", "BOUNCE", "PULSE", "NONE").forEach { opt ->
-                        DropdownMenuItem(text = { Text(opt) }, onClick = { selectedAnim = opt; prefs.edit().putString("theme_anim_type", opt).apply(); animExpanded = false; sendGestureUpdate(prefs, this@ConfigActivity) })
+                        DropdownMenuItem(text = { Text(opt) }, onClick = { 
+                            selectedAnim = opt; animExpanded = false
+                            commitAndBroadcast(prefs, { putString("theme_anim_type", opt) }) { sendGestureUpdate(prefs, this@ConfigActivity) }
+                        })
                     }
                 }
             }
@@ -248,7 +288,6 @@ class ConfigActivity : ComponentActivity() {
 
             val availableQS = listOf("None", "WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
             
-            // 🎛️ FIXED: Compact 2-Column Grid for QS Tiles
             Column {
                 for (row in 0..3) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -269,15 +308,15 @@ class ConfigActivity : ComponentActivity() {
                                         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                             availableQS.forEach { tile ->
                                                 DropdownMenuItem(text = { Text(tile) }, onClick = {
-                                                    selectedQS = tile; prefs.edit().putString("qs_tile_$index", tile).apply(); expanded = false
-                                                    broadcastUpdateSingle("dashboard", prefs)
+                                                    selectedQS = tile; expanded = false
+                                                    commitAndBroadcast(prefs, { putString("qs_tile_$index", tile) }) { broadcastUpdateSingle("dashboard", prefs) }
                                                 })
                                             }
                                         }
                                     }
                                 }
                             } else {
-                                Spacer(modifier = Modifier.weight(1f)) // Empty slot for the 8th item
+                                Spacer(modifier = Modifier.weight(1f)) 
                             }
                         }
                     }
@@ -307,7 +346,6 @@ class ConfigActivity : ComponentActivity() {
             if (installedApps.isEmpty()) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp))
             } else {
-                // 🎛️ FIXED: Compact 2-Column Grid for Pinned Apps
                 Column {
                     for (row in 0..3) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -328,13 +366,13 @@ class ConfigActivity : ComponentActivity() {
                                         )
                                         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                             DropdownMenuItem(text = { Text("None") }, onClick = {
-                                                selectedAppPkg = ""; prefs.edit().putString("pinned_app_$index", "").apply(); expanded = false
-                                                broadcastUpdateSingle("dashboard", prefs)
+                                                selectedAppPkg = ""; expanded = false
+                                                commitAndBroadcast(prefs, { putString("pinned_app_$index", "") }) { broadcastUpdateSingle("dashboard", prefs) }
                                             })
                                             installedApps.forEach { pair ->
                                                 DropdownMenuItem(text = { Text(pair.first) }, onClick = {
-                                                    selectedAppPkg = pair.second; prefs.edit().putString("pinned_app_$index", pair.second).apply(); expanded = false
-                                                    broadcastUpdateSingle("dashboard", prefs)
+                                                    selectedAppPkg = pair.second; expanded = false
+                                                    commitAndBroadcast(prefs, { putString("pinned_app_$index", pair.second) }) { broadcastUpdateSingle("dashboard", prefs) }
                                                 })
                                             }
                                         }
@@ -360,8 +398,6 @@ class ConfigActivity : ComponentActivity() {
             FeatureSwitch("Enable Charging Cube", "enable_charging", true, prefs)
             FeatureSwitch("Enable System Alerts (Battery/Temp)", "enable_alerts", true, prefs)
             FeatureSwitch("Enable App Timers (Wellbeing)", "enable_timers", true, prefs)
-            
-            // 🎛️ FIXED: Added missing toggle for Mini Pill Album Art Rotation
             FeatureSwitch("Spin Album Art in Mini Pill", "rotate_cube", true, prefs)
             
             Spacer(modifier = Modifier.height(80.dp))
@@ -373,7 +409,10 @@ class ConfigActivity : ComponentActivity() {
         var checked by remember { mutableStateOf(prefs.getBoolean(key, default)) }
         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(label, color = Color.White, fontSize = 16.sp, modifier = Modifier.weight(1f))
-            Switch(checked = checked, onCheckedChange = { checked = it; prefs.edit().putBoolean(key, it).apply(); sendGestureUpdate(prefs, this@ConfigActivity) })
+            Switch(checked = checked, onCheckedChange = { 
+                checked = it
+                commitAndBroadcast(prefs, { putBoolean(key, it) }) { sendGestureUpdate(prefs, this@ConfigActivity) }
+            })
         }
     }
 
@@ -419,8 +458,7 @@ class ConfigActivity : ComponentActivity() {
             value = localValue, 
             onValueChange = { localValue = it }, 
             onValueChangeFinished = { 
-                prefs.edit().putFloat(key, localValue).apply() 
-                sendGestureUpdate(prefs, this@ConfigActivity) 
+                commitAndBroadcast(prefs, { putFloat(key, localValue) }) { sendGestureUpdate(prefs, this@ConfigActivity) }
             }, 
             valueRange = range
         )
@@ -438,10 +476,8 @@ class ConfigActivity : ComponentActivity() {
                     DropdownMenuItem(
                         text = { Text(option.name.replace("_", " ")) },
                         onClick = {
-                            selectedOption = option.name
-                            prefs.edit().putString(prefKey, option.name).apply()
-                            expanded = false
-                            sendGestureUpdate(prefs, this@ConfigActivity)
+                            selectedOption = option.name; expanded = false
+                            commitAndBroadcast(prefs, { putString(prefKey, option.name) }) { sendGestureUpdate(prefs, this@ConfigActivity) }
                         }
                     )
                 }
@@ -482,13 +518,15 @@ class ConfigActivity : ComponentActivity() {
     }
 
     private fun saveAndBroadcast(prefs: android.content.SharedPreferences, prefix: String, w: Float, h: Float, x: Float, y: Float, ringT: Float, expandUp: Boolean) {
-        prefs.edit().putFloat("${prefix}_w", w).putFloat("${prefix}_h", h).putFloat("${prefix}_x", x).putFloat("${prefix}_y", y).apply()
-        makePrefsWorldReadable()
-        broadcastUpdate(prefix, w, h, x, y, ringT, expandUp)
+        commitAndBroadcast(prefs, {
+            putFloat("${prefix}_w", w).putFloat("${prefix}_h", h).putFloat("${prefix}_x", x).putFloat("${prefix}_y", y)
+            putBoolean("expand_upwards", expandUp)
+        }) {
+            broadcastUpdate(prefix, w, h, x, y, ringT, expandUp)
+        }
     }
 
     private fun broadcastUpdateSingle(prefix: String, prefs: android.content.SharedPreferences) {
-        makePrefsWorldReadable()
         val intent = Intent("com.example.dynamicisland.RELOAD_PREFS").apply {
             @Suppress("WrongConstant")
             addFlags(android.content.Intent.FLAG_RECEIVER_FOREGROUND or 0x01000000)
@@ -566,12 +604,28 @@ class ConfigActivity : ComponentActivity() {
     private fun getDefaultWidth(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 180f; "mid" -> 320f; "max" -> 360f; "cube" -> 85f; else -> 0f }
     private fun getDefaultHeight(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 36f; "mid" -> 80f; "max" -> 220f; "cube" -> 85f; else -> 0f }
 
+    // 🎛️ CORE IPC FIX: Guaranteed Root Access
     private fun makePrefsWorldReadable() {
         try {
+            // Fix 1: The Root Data Directory must allow SystemUI traversal
+            val rootDir = File(applicationInfo.dataDir)
+            rootDir.setExecutable(true, false)
+            rootDir.setReadable(true, false)
+
+            // Fix 2: The Shared Prefs Directory traversal
             val prefsDir = File(applicationInfo.dataDir, "shared_prefs")
+            if (prefsDir.exists()) { 
+                prefsDir.setExecutable(true, false)
+                prefsDir.setReadable(true, false) 
+            }
+            
+            // Fix 3: The actual XML file read permission
             val prefsFile = File(prefsDir, "island_prefs.xml")
-            if (prefsDir.exists()) { prefsDir.setExecutable(true, false); prefsDir.setReadable(true, false) }
-            if (prefsFile.exists()) prefsFile.setReadable(true, false)
-        } catch (e: Exception) {}
+            if (prefsFile.exists()) {
+                prefsFile.setReadable(true, false)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
