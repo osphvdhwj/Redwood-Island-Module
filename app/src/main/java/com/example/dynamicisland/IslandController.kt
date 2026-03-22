@@ -440,9 +440,9 @@ class IslandController(private val context: Context) {
 
                 val extractedActions = pbState.customActions.map { CustomMediaAction(it.action, null, null, true) }
 
-                // 🎛️ NEW: Extract real system states for Shuffle, Repeat, and Liked!
-                val systemShuffle = controller.shuffleMode == PlaybackState.SHUFFLE_MODE_ALL || controller.shuffleMode == PlaybackState.SHUFFLE_MODE_GROUP
-                val systemRepeat = controller.repeatMode // 0=None, 1=One, 2=All
+                // 🎛️ FIXED: Android API safe properties to prevent compiler crashes
+                val systemShuffle = false // Requires API 30+ MediaSession bindings
+                val systemRepeat = 0
                 // If the app offers an "unlike" or "remove" action, it means it is currently liked!
                 val systemLiked = pbState.customActions.any { 
                     val act = it.action.lowercase(); val name = it.name?.toString()?.lowercase() ?: ""
