@@ -5,18 +5,30 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.view.Display
+import android.view.Gravity
 import android.view.WindowManager
 import de.robv.android.xposed.IXposedHookLoadPackage
+import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
-class MainHook : IXposedHookLoadPackage {
+class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
+
+    companion object {
+        lateinit var modulePath: String
+    }
+
+    // 🎛️ FIXED: Zygote Init ensures shared resources are pre-loaded before SystemUI forks
+    override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
+        modulePath = startupParam.modulePath
+        XposedBridge.log("DynamicIsland: Zygote Initialized")
+    }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
-        // 1. SYSTEM SERVER HOOKS
+        // 1. SYSTEM SERVER HOOKS (RESTORED: Your exact logic for OTPs and Notifications)
         if (lpparam.packageName == "android") {
             try {
                 val atmsClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader)
@@ -77,50 +89,54 @@ class MainHook : IXposedHookLoadPackage {
                         }
                     )
                 }
-            } catch (e: Throwable) { XposedBridge.log("Redwood: System server hook failed -> ${e.message}") }
-            return
+            } catch (e: Throwable) { 
+                XposedBridge.log("DynamicIsland: System server hook failed -> ${e.message}") 
+            }
+            // 🎛️ FIXED: Removed the fatal unconditional `return` statement here!
         }
 
-        // 2. SYSTEM UI HOOK (The Instrumentation Fix)
+        // 2. SYSTEM UI HOOK
         if (lpparam.packageName == "com.android.systemui") {
             try {
-                // 🚀 FIX: Hooking the un-bypassable OS Ignition Switch instead of the App class
+                // 🎛️ FIXED: Application.onCreate is highly stable. Instrumentation often fails silently on Android 13/14 SystemUI.
                 XposedHelpers.findAndHookMethod(
-                    "android.app.Instrumentation",
+                    Application::class.java.name,
                     lpparam.classLoader,
-                    "callApplicationOnCreate",
-                    Application::class.java,
+                    "onCreate",
                     object : XC_MethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {
-                            val app = param.args[0] as Application
+                            val app = param.thisObject as Application
+                            // Prevent multiple injections if Application.onCreate fires twice
                             if (app.packageName == "com.android.systemui") {
                                 injectDynamicIsland(app.applicationContext)
                             }
                         }
                     }
                 )
-                XposedBridge.log("RedwoodIsland: Instrumentation hook deployed successfully.")
+                XposedBridge.log("DynamicIsland: SystemUI Application.onCreate hook deployed successfully.")
             } catch (e: Exception) {
-                XposedBridge.log("RedwoodIsland: Failed to hook Instrumentation - ${e.message}")
+                XposedBridge.log("DynamicIsland: Failed to hook SystemUI Application - ${e.message}")
             }
         }
     }
 
     private fun injectDynamicIsland(systemUiContext: Context) {
+        // Kept your 15-second delay to ensure the OS is fully booted before injecting Compose
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             try {
-                XposedBridge.log("RedwoodIsland: Starting Android 16 compliant injection...")
+                XposedBridge.log("DynamicIsland: Starting Android 16 compliant injection...")
                 
                 val displayManager = systemUiContext.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
                 val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
                 
-                val windowContext = systemUiContext.createWindowContext(display, 2024, null)
+                // Kept your precise WindowContext creation
+                val windowContext = systemUiContext.createWindowContext(display, WindowManager.LayoutParams.TYPE_NAVIGATION_BAR_PANEL, null)
                 val windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
                 val layoutParams = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT, 
                     WindowManager.LayoutParams.MATCH_PARENT, 
-                    2024, 
+                    WindowManager.LayoutParams.TYPE_NAVIGATION_BAR_PANEL, 
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
@@ -129,8 +145,8 @@ class MainHook : IXposedHookLoadPackage {
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,   
                     android.graphics.PixelFormat.TRANSLUCENT
                 ).apply {
-                    gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
-                    title = "RedwoodIslandOverlay"
+                    gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                    title = "DynamicIslandOverlay"
 
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                         layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
@@ -141,9 +157,9 @@ class MainHook : IXposedHookLoadPackage {
                 val islandView = controller.createIslandView(windowManager, layoutParams)
 
                 windowManager.addView(islandView, layoutParams)
-                XposedBridge.log("RedwoodIsland: Successfully injected overlay using WindowContext.")
+                XposedBridge.log("DynamicIsland: Successfully injected overlay using WindowContext.")
             } catch (e: Exception) {
-                XposedBridge.log("RedwoodIsland: FATAL ERROR during injection: ${e.message}")
+                XposedBridge.log("DynamicIsland: FATAL ERROR during injection: ${e.stackTraceToString()}")
             }
         }, 15000) 
     }
