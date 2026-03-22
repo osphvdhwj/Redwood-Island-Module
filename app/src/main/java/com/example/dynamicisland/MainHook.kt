@@ -21,15 +21,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
         lateinit var modulePath: String
     }
 
-    // 🎛️ FIXED: Zygote Init ensures shared resources are pre-loaded before SystemUI forks
-    override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
-        modulePath = startupParam.modulePath
-        XposedBridge.log("DynamicIsland: Zygote Initialized")
-    }
-
-    override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
-        
-        // 1. SYSTEM SERVER HOOKS
+    // 1. SYSTEM SERVER HOOKS (RESTORED: Your exact logic for OTPs and Notifications)
         if (lpparam.packageName == "android") {
             try {
                 val atmsClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader)
@@ -41,7 +33,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     val activityRecord = param.args[0] ?: return
                                     val packageName = XposedHelpers.getObjectField(activityRecord, "packageName") as? String ?: return
                                     val mContext = XposedHelpers.getObjectField(param.thisObject, "mContext") as? Context
-                                    mContext?.sendBroadcast(Intent("com.example.dynamicisland.APP_CHANGED").putExtra("pkg", packageName))
+                                    // 🎛️ FIXED: Added setPackage to make it an Explicit Intent
+                                    val intent = Intent("com.example.dynamicisland.APP_CHANGED").setPackage("com.android.systemui").putExtra("pkg", packageName)
+                                    mContext?.sendBroadcast(intent)
                                 } catch (e: Throwable) {}
                             }
                         }
@@ -68,7 +62,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                         val progress = extras.getInt(android.app.Notification.EXTRA_PROGRESS, -1)
                                         val progressMax = extras.getInt(android.app.Notification.EXTRA_PROGRESS_MAX, -1)
                                         
+                                        // 🎛️ FIXED: Added setPackage to bypass OS Security Block
                                         val intent = Intent("com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT").apply {
+                                            setPackage("com.android.systemui")
                                             putExtra("pkg", pkgName)
                                             putExtra("title", title)
                                             putExtra("text", text)
@@ -82,7 +78,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                         val otpRegex = Regex("\\b\\d{4,8}\\b")
                                         val match = otpRegex.find(text)
                                         if (match != null) {
-                                            mContext?.sendBroadcast(Intent("com.example.dynamicisland.OTP_CAUGHT").putExtra("otp", match.value).putExtra("pkg", pkgName))
+                                            // 🎛️ FIXED: Added setPackage
+                                            val intent = Intent("com.example.dynamicisland.OTP_CAUGHT").setPackage("com.android.systemui").putExtra("otp", match.value).putExtra("pkg", pkgName)
+                                            mContext?.sendBroadcast(intent)
                                         }
                                     }
                                 } catch (e: Throwable) {}
