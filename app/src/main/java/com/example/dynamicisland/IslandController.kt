@@ -164,7 +164,8 @@ class IslandController(private val context: Context) {
 
         view.onGestureSettingsUpdated = { payload ->
             try {
-                val prefs = context.getSharedPreferences("island_prefs", Context.MODEPRIVATE)
+                // FIXED: Added the missing underscore to MODE_PRIVATE
+                val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
                 isMediaEnabled = prefs.getBoolean("enable_media", true)
                 isChargingEnabled = prefs.getBoolean("enable_charging", true)
                 isAlertsEnabled = prefs.getBoolean("enable_alerts", true)
