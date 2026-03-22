@@ -20,7 +20,28 @@ sealed class LiveActivityModel {
     
     data class Charging(override val id: String, override val type: ActivityType = ActivityType.CHARGING, val level: Int, val isPluggedIn: Boolean, override val isTransient: Boolean = true, override val isCritical: Boolean = false, override val isSensitive: Boolean = false) : LiveActivityModel()
 
-    data class Music(override val id: String, override val type: ActivityType = ActivityType.MESSAGE, val title: String, val artist: String, val albumArt: Bitmap?, val blurredAlbumArt: Bitmap?, val appIcon: Bitmap?, val dominantColor: Int?, val titleTextColor: Int, val isPlaying: Boolean, val durationMs: Long, val positionMs: Long, val appPackageName: String, val customActions: List<CustomMediaAction> = emptyList(), override val isTransient: Boolean = false, override val isCritical: Boolean = false, override val isSensitive: Boolean = false) : LiveActivityModel()
+    data class Music(
+        override val id: String, 
+        override val type: ActivityType = ActivityType.MESSAGE, 
+        val title: String, 
+        val artist: String, 
+        val albumArt: Bitmap?, 
+        val blurredAlbumArt: Bitmap?, 
+        val appIcon: Bitmap?, 
+        val dominantColor: Int?, 
+        val titleTextColor: Int, 
+        val isPlaying: Boolean, 
+        val durationMs: Long, 
+        val positionMs: Long, 
+        val appPackageName: String, 
+        val customActions: List<CustomMediaAction> = emptyList(), 
+        val isShuffled: Boolean = false,
+        val repeatMode: Int = 0,
+        val isLiked: Boolean = false,
+        override val isTransient: Boolean = false, 
+        override val isCritical: Boolean = false, 
+        override val isSensitive: Boolean = false
+    ) : LiveActivityModel()
 
     data class HardwareMonitor(override val id: String, override val type: ActivityType = ActivityType.HARDWARE, val cpuTempCelsius: Float, val cpuFreqMhz: Int, val isGamingModeOn: Boolean, override val isTransient: Boolean = false, override val isCritical: Boolean = false, override val isSensitive: Boolean = false) : LiveActivityModel()
 
