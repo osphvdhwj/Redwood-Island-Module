@@ -350,33 +350,84 @@ class IslandController(private val context: Context) {
         return Bitmap.createScaledBitmap(bitmap, (bitmap.width * ratio).toInt(), (bitmap.height * ratio).toInt(), true)
     }
 
-    private fun extractMediaData(controller: MediaController?) {
-        if (controller == null || !isMediaEnabled) return
-        val metadata = controller.metadata
-        val pbState = controller.playbackState ?: return
+    withContext(Dispatchers.Main) {
+                currentMedia?.blurredAlbumArt?.takeIf { it != currentMedia?.albumArt }?.recycle()
 
-        val isPlaying = pbState.state == PlaybackState.STATE_PLAYING
-        val wasPlaying = currentMedia?.isPlaying == true
-        if (!isPlaying && currentMedia == null) return 
+                val extractedActions = pbState.customActions.map { CustomMediaAction(it.action, null, null, true) }
 
-        val duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
-        val rawAlbumArt = try { metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART) } catch (e: Exception) { null }
-        val albumArtBitmap = getScaledBitmap(rawAlbumArt)
-        
-        val newTitle = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown"
-        val isNewTrack = newTitle != lastTrackTitle && lastTrackTitle.isNotEmpty()
-        lastTrackTitle = newTitle
+                // 🎛️ ADVANCED MEDIA STATE HEURISTICS ENGINE
+                var systemLiked = false
+                var systemShuffle = false
+                var systemRepeat = 0
 
-        if (isNewTrack && userForceCollapsed && isPlaying && !isPeeking) {
-            isPeeking = true
-            userForceCollapsed = false
-            scope.launch(Dispatchers.Main) {
-                delay(3000)
-                userForceCollapsed = true
-                isPeeking = false
+                // 1. Semantic Parsing of Custom Actions
+                // Media players dynamically change the action string based on the current state.
+                if (pbState.customActions != null) {
+                    for (action in pbState.customActions) {
+                        val actionId = action.action?.lowercase() ?: ""
+                        val localizedName = action.name?.toString()?.lowercase() ?: ""
+
+                        // Liked/Heart State Analysis
+                        // If the application offers the user the ability to "Unlike" or "Remove", the track is currently Liked.
+                        if (actionId.contains("unlike") || actionId.contains("remove") || 
+                            localizedName.contains("unlike") || localizedName.contains("remove") ||
+                            localizedName.contains("dislike")) {
+                            systemLiked = true
+                        }
+
+                        // Shuffle State Analysis
+                        if (actionId.contains("shuffle") || localizedName.contains("shuffle")) {
+                            if (localizedName.contains("disable") || localizedName.contains("off") || localizedName.contains("stop")) {
+                                systemShuffle = true
+                            }
+                        }
+
+                        // Repeat/Loop State Analysis
+                        if (actionId.contains("repeat") || localizedName.contains("repeat") || 
+                            actionId.contains("loop") || localizedName.contains("loop")) {
+                            if (localizedName.contains("one") || localizedName.contains("single")) {
+                                systemRepeat = 1 // Repeat One
+                            } else if (localizedName.contains("disable") || localizedName.contains("off") || localizedName.contains("stop")) {
+                                systemRepeat = 2 // Repeat All
+                            }
+                        }
+                    }
+                }
+
+                // 2. AndroidX Compat Bundle Extraction
+                // Modern players bundle the compat states directly into the PlaybackState extras.
+                val extras = pbState.extras
+                if (extras != null) {
+                    if (extras.containsKey("android.media.session.extra.SHUFFLE_MODE")) {
+                        val shuf = extras.getInt("android.media.session.extra.SHUFFLE_MODE", 0)
+                        if (shuf == 1 || shuf == 2) systemShuffle = true
+                    }
+                    if (extras.containsKey("android.media.session.extra.REPEAT_MODE")) {
+                        val rep = extras.getInt("android.media.session.extra.REPEAT_MODE", 0)
+                        if (rep > 0) systemRepeat = rep
+                    }
+                }
+
+                currentMedia = LiveActivityModel.Music(
+                    id = "media_main", title = newTitle,
+                    artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
+                    albumArt = albumArtBitmap, blurredAlbumArt = blurredArtBitmap,
+                    appIcon = appIconBmp, dominantColor = bgColor, titleTextColor = txtColor,
+                    isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position,
+                    appPackageName = controller.packageName, customActions = extractedActions,
+                    isShuffled = systemShuffle, repeatMode = systemRepeat, isLiked = systemLiked
+                )
+
+                if (isPlaying && !wasPlaying) { userForceCollapsed = false; pauseFadeJob?.cancel() }
+                if (isPlaying) { startMediaTicker() } else {
+                    stopMediaTicker()
+                    if (wasPlaying) {
+                        pauseFadeJob?.cancel()
+                        pauseFadeJob = scope.launch { delay(3000); userForceCollapsed = true; evaluatePriority() }
+                    }
+                }
                 evaluatePriority()
             }
-        }
 
         scope.launch(Dispatchers.IO) {
             
