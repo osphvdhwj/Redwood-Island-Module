@@ -138,6 +138,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         replay = 1, onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
     )
 
+    // Extract ComposeView to class level to allow receivers to modify its visibility
+    private val composeView = ComposeView(context)
+
     private fun loadPreferences() {
         try {
             val pref = XSharedPreferences("com.example.dynamicisland", "island_prefs")
@@ -156,7 +159,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     private val receiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
-          if (intent.action == "com.example.dynamicisland.RELOAD_PREFS") {
+            if (intent.action == "com.example.dynamicisland.RELOAD_PREFS") {
                 val prefix = intent.getStringExtra("prefix")
                 if (prefix != null) {
                     val w = intent.getFloatExtra("w", 0f); val h = intent.getFloatExtra("h", 0f); val x = intent.getFloatExtra("x", 0f); val y = intent.getFloatExtra("y", 0f)
@@ -177,6 +180,25 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
                 val payload = intent.getStringExtra("gesture_payload")
                 if (payload != null) onGestureSettingsUpdated?.invoke(payload) else loadPreferences()
+            }
+        }
+    }
+
+    // 🎛️ NEW: Wake the Island up when app changes
+    private val appChangeReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent) {
+            if (intent.action == "com.example.dynamicisland.APP_CHANGED") {
+                composeView.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    // 🎛️ NEW: Safer Screen Receiver (no Lifecycle choking)
+    private val screenReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_SCREEN_OFF -> composeView.visibility = View.GONE
+                Intent.ACTION_SCREEN_ON -> composeView.visibility = View.VISIBLE
             }
         }
     }
@@ -203,7 +225,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListenerProxy)
         } catch (e: Exception) {}
 
-        val composeView = ComposeView(context).apply {
+        composeView.apply {
             setViewTreeLifecycleOwner(lifecycleOwner)
             setViewTreeSavedStateRegistryOwner(lifecycleOwner)
             setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
@@ -237,13 +259,23 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         }
 
         val filter = IntentFilter("com.example.dynamicisland.RELOAD_PREFS")
+        val appChangeFilter = IntentFilter("com.example.dynamicisland.APP_CHANGED")
         val securePermission = "com.redwood.permission.SECURE_IPC"
+        
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(receiver, filter, securePermission, null, Context.RECEIVER_EXPORTED)
+            context.registerReceiver(appChangeReceiver, appChangeFilter, Context.RECEIVER_EXPORTED)
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             context.registerReceiver(receiver, filter, securePermission, null)
+            context.registerReceiver(appChangeReceiver, appChangeFilter)
         }
+
+        val screenFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+        }
+        context.registerReceiver(screenReceiver, screenFilter)
     }
 
     override fun onDetachedFromWindow() {
@@ -259,6 +291,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         flowJob?.cancel()
         flowJob = null
         try { context.unregisterReceiver(receiver) } catch (e: Exception) {}
+        try { context.unregisterReceiver(appChangeReceiver) } catch (e: Exception) {}
+        try { context.unregisterReceiver(screenReceiver) } catch (e: Exception) {}
 
         BatteryPlugin.stop(context)
         context.sendBroadcast(android.content.Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui"))
@@ -397,20 +431,20 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         .pointerInput(state) {
                             detectTapGestures(
                                 onTap = { 
-                                    if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) } 
+                                     if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) } 
                                 },
                                 onDoubleTap = { 
-                                    if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) } 
+                                     if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) } 
                                 },
                                 onLongPress = { 
-                                    if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) } 
+                                     if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) } 
                                 }
                             )
                         }
                         .pointerInput(state) {
                             var dragOffsetX = 0f
                             var dragOffsetY = 0f
-                            
+                             
                             detectDragGestures(
                                 onDragEnd = {
                                     if (abs(dragOffsetX) > abs(dragOffsetY)) {
@@ -434,9 +468,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         
                         if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
                             Image(
-                                bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
+                                 bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
                                 modifier = Modifier.fillMaxSize()
-                                .alpha(if (state == IslandState.TYPE_3_MAX) 0.5f else 0.25f)
+                                 .alpha(if (state == IslandState.TYPE_3_MAX) 0.5f else 0.25f)
                                 .blur(if (state == IslandState.TYPE_3_MAX) 16.dp else 24.dp)
                             )
                         }
@@ -452,7 +486,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                     label = "UI Transition"
                                 ) { s ->
                                     when (s) {
-                                        IslandState.TYPE_3_MAX -> { if (model is LiveActivityModel.Dashboard) DashboardMax(model) else if (model is LiveActivityModel.Music) MusicMax(model) }
+                                         IslandState.TYPE_3_MAX -> { if (model is LiveActivityModel.Dashboard) DashboardMax(model) else if (model is LiveActivityModel.Music) MusicMax(model) }
                                         IslandState.TYPE_2_MID -> { 
                                             when (model) {
                                                 is LiveActivityModel.Dashboard -> DashboardMid(model)
@@ -478,7 +512,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                         else -> {} 
                                     }
                                 }
-                            }
+                             }
 
                             // 🎛️ REFINED: Ultra-slim grab handle ONLY for Mid and Max pills
                             if (state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) {
@@ -499,28 +533,28 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
                                 
                                 val batteryLevel = globalBatteryLevel.intValue
-                                val baseColor = if (isMedia) {
+                                 val baseColor = if (isMedia) {
                                     musicModel?.dominantColor?.let { Color(it) } ?: Color.White
-                                } else if (globalIsCharging.value) {
+                                 } else if (globalIsCharging.value) {
                                     Color(0xFF00FF00) // Bright Green
                                 } else {
-                                    when {
+                                     when {
                                         batteryLevel <= 5 -> Color(0xFFFF0000) // Super Red
                                         batteryLevel <= 10 -> Color(0xFFFF3333) // Red
                                         batteryLevel <= 40 -> Color(0xFFFFA500) // Orange
                                         batteryLevel <= 60 -> Color(0xFFFFFF00) // Yellow
                                         else -> Color(0xFF006400) // Dark Green
                                     }
-                                }
+                                 }
 
                                 val infiniteTransition = rememberInfiniteTransition(label = "ring_pulse")
                                 val pulseAlpha by infiniteTransition.animateFloat(
-                                    initialValue = if (globalIsCharging.value && !isMedia) 0.3f else 1f,
+                                     initialValue = if (globalIsCharging.value && !isMedia) 0.3f else 1f,
                                     targetValue = 1f,
-                                    animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                                     animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
                                     label = "alpha"
                                 )
-                                val progressColor = baseColor.copy(alpha = pulseAlpha)
+                                 val progressColor = baseColor.copy(alpha = pulseAlpha)
 
                                 Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
                                     val strokeW = ringThickness.value.dp.toPx() 
@@ -540,7 +574,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                     val radius = (size.width - strokeW) / 2
                                     
                                     drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(center.x, center.y - radius - markerLength/2), end = androidx.compose.ui.geometry.Offset(center.x, center.y - radius + markerLength/2), strokeWidth = 4f)
-                                    
+                                     
                                     val angleRad = Math.toRadians((-90f + 360f * progressPercent).toDouble())
                                     val mStartX = center.x + (radius - markerLength/2) * Math.cos(angleRad).toFloat()
                                     val mStartY = center.y + (radius - markerLength/2) * Math.sin(angleRad).toFloat()
@@ -550,7 +584,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 }
                             }
                         }
-                    }
+                     }
                 }
             }
 
@@ -575,7 +609,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             }
                             .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape)
                             .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
+                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) { onSplitPillClick?.invoke() },
                         contentAlignment = Alignment.Center) {
