@@ -91,6 +91,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var isCubeRotationEnabled = mutableStateOf(true)
     var activeTheme = mutableStateOf(IslandTheme())
     var globalBatteryLevel = mutableIntStateOf(100)
+    // Add these next to your other mutable states
+    var hardwareVolume = mutableIntStateOf(0)
+    var hardwareBrightness = mutableIntStateOf(0)
+
+    // Helper functions for the Controller to push updates
+    fun updateHardwareVolume(vol: Int) { hardwareVolume.intValue = vol }
+    fun updateHardwareBrightness(bright: Int) { hardwareBrightness.intValue = bright }
+    
     var globalIsCharging = mutableStateOf(false)
     var currentMediaPos = mutableLongStateOf(0L)
     
@@ -586,12 +594,25 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 }
             }
 
-            AnimatedVisibility(visible = state == IslandState.TYPE_SPLIT, enter = scaleIn(spring(dampingRatio=0.8f, stiffness=300f)) + fadeIn(), exit = scaleOut() + fadeOut()) {
+            AnimatedVisibility(
+                visible = state == IslandState.TYPE_SPLIT,
+                enter = scaleIn(spring(dampingRatio = 0.8f, stiffness = 300f)) + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
                 val sModel = splitModel.value
-                val splitBg = if (sModel is LiveActivityModel.Charging) { if (sModel.isPluggedIn) Color.Green.copy(alpha=0.2f) else if (sModel.level <= 20) Color.Red.copy(alpha=0.2f) else Color(0xFF121212).copy(alpha=0.75f) } else Color(0xFF121212).copy(alpha=0.75f)
+                
+                // 1. Dynamic Backgrounds based on priority/state
+                val splitBg = when {
+                    sModel is LiveActivityModel.Charging && sModel.isPluggedIn -> Color.Green.copy(alpha = 0.2f)
+                    sModel is LiveActivityModel.Charging && sModel.level <= 20 -> Color.Red.copy(alpha = 0.2f)
+                    else -> Color(0xFF121212).copy(alpha = 0.75f)
+                }
+
                 Row {
                     Spacer(modifier = Modifier.width(8.dp))
-                    Box(modifier = Modifier.size(height)
+                    Box(
+                        modifier = Modifier
+                            .size(height) // Keeps it perfectly synced with the main pill's dynamic height
                             .onGloballyPositioned { coordinates ->
                                 val location = IntArray(2)
                                 this@DynamicIslandView.getLocationOnScreen(location)
@@ -600,21 +621,71 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 val globalTop = location[1] + bounds.top.toInt()
                                 val globalRight = location[0] + bounds.right.toInt()
                                 val globalBottom = location[1] + bounds.bottom.toInt()
+                                
                                 if (abs(splitCubeRect.left - globalLeft) > 5 || splitCubeRect.isEmpty) {
                                     splitCubeRect.set(globalLeft, globalTop, globalRight, globalBottom)
                                     insetsUpdateFlow.tryEmit(Unit)
                                 }
                             }
-                            .clip(CircleShape).background(splitBg).border(1.dp, borderColor, CircleShape)
+                            .clip(CircleShape)
+                            .background(splitBg)
+                            .border(1.dp, borderColor, CircleShape)
                             .clickable(
-                                 interactionSource = remember { MutableInteractionSource() },
+                                interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) { onSplitPillClick?.invoke() },
-                        contentAlignment = Alignment.Center) {
-                        if (sModel is LiveActivityModel.Charging) { val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White; Text(text = "${sModel.level}%", color = iconColor, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // 🎛️ FIXED: Exhaustive UI routing for the secondary cube
+                        when (sModel) {
+                            is LiveActivityModel.Charging -> {
+                                val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White
+                                Text(
+                                    text = "${sModel.level}%",
+                                    color = iconColor,
+                                    fontSize = 11.sp, // Slightly larger for readability
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            is LiveActivityModel.SystemAlert -> {
+                                // Renders the specific alert icon (e.g., Ringing, Silent, Do Not Disturb)
+                                Icon(
+                                    imageVector = sModel.icon, 
+                                    contentDescription = sModel.title,
+                                    tint = sModel.iconTint ?: Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            is LiveActivityModel.AppTimerWarning -> {
+                                // Renders the timer/warning icon
+                                Icon(
+                                    imageVector = sModel.icon, 
+                                    contentDescription = "Timer Warning",
+                                    tint = Color(0xFFFFA500), // Standard warning orange
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            is LiveActivityModel.OngoingTask -> {
+                                // Renders a tiny circular progress bar inside the right cube!
+                                CircularProgressIndicator(
+                                    progress = { (sModel.progress.toFloat() / sModel.progressMax.toFloat()).coerceIn(0f, 1f) },
+                                    color = Color.White,
+                                    trackColor = Color.White.copy(alpha = 0.2f),
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                            is LiveActivityModel.General -> {
+                                // Fallback for standard notifications
+                                Icon(
+                                    imageVector = sModel.icon,
+                                    contentDescription = "Notification",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            else -> {} // Do nothing if model is null
+                        }
                     }
                 }
             }
-        }
-    }
-}
