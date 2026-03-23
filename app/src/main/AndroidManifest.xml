@@ -37,14 +37,13 @@
             android:value="true" />
         <meta-data
             android:name="xposeddescription"
-            android:value="@string/xposed_description" />
+            android:value="A Native Jetpack Compose Dynamic Island Overlay" />
         <meta-data
             android:name="xposedminversion"
-            android:value="82" />
-            
+            android:value="93" />
         <meta-data
             android:name="xposedscope"
-            android:resource="@array/xposedscope" />
+            android:resource="@array/xposed_scope" />
 
         <activity
             android:name=".ConfigActivity"
