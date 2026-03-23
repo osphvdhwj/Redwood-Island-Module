@@ -63,28 +63,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.debounce
 import kotlin.math.abs
 
-class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
-    private val lifecycleRegistry = LifecycleRegistry(this)
-    private val savedStateRegistryController = SavedStateRegistryController.create(this)
-    init { savedStateRegistryController.performRestore(Bundle()) }
-    override val lifecycle: Lifecycle get() = lifecycleRegistry
-    override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
-    
-    fun attach() {
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
-    }
-    fun detach() {
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-    }
-}
-
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @SuppressLint("ViewConstructor")
 class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLayout(context) {
+
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    private val savedStateRegistryController = SavedStateRegistryController.create(this)
+    private val store = ViewModelStore()
+
+    override val lifecycle: Lifecycle get() = lifecycleRegistry
+    override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
+    override val viewModelStore: ViewModelStore get() = store
 
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
@@ -206,6 +195,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     init {
         loadPreferences()
 
+        savedStateRegistryController.performRestore(Bundle())
+        lifecycleRegistry.currentState = Lifecycle.State.RESUMED
+
+        ViewTreeLifecycleOwner.set(this, this)
+        ViewTreeViewModelStoreOwner.set(this, this)
+        ViewTreeSavedStateRegistryOwner.set(this, this)
+
         try {
             val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
             insetsListenerProxy = java.lang.reflect.Proxy.newProxyInstance(context.classLoader, arrayOf(listenerClass)) { _, method, args ->
@@ -280,7 +276,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        
+
+        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
+    
         try {
             if (insetsListenerProxy != null) {
                 val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
