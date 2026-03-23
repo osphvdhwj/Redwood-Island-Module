@@ -54,7 +54,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp 
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.lifecycle.*
+
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.LifecycleOwner
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.SavedStateRegistryController
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.ViewTreeViewModelStoreOwner
+import androidx.lifecycle.ViewTreeViewModelStoreOwner
+import androidx.savedstate.ViewTreeSavedStateRegistryOwner
+import androidx.savedstate.ViewTreeSavedStateRegistryOwner
+
 import androidx.savedstate.*
 import de.robv.android.xposed.XSharedPreferences
 import kotlinx.coroutines.CoroutineScope
@@ -65,7 +78,7 @@ import kotlin.math.abs
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @SuppressLint("ViewConstructor")
-class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLayout(context) {
+class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLayout(context), LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
@@ -611,10 +624,52 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 indication = null
                             ) { onSplitPillClick?.invoke() },
                         contentAlignment = Alignment.Center) {
-                        if (sModel is LiveActivityModel.Charging) { val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White; Text(text = "${sModel.level}%", color = iconColor, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                        when (sModel) {
+                            is LiveActivityModel.Charging -> { val iconColor = if (sModel.isPluggedIn) Color.Green else if (sModel.level <= 20) Color.Red else Color.White; Text(text = "${sModel.level}%", color = iconColor, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                            is LiveActivityModel.SystemAlert -> { Icon(imageVector = getIconForType(sModel.type), contentDescription = null, tint = Color(sModel.alertColor), modifier = Modifier.size(20.dp)) }
+                            is LiveActivityModel.AppTimerWarning -> {
+                                if (sModel.appIcon != null && !sModel.appIcon.isRecycled) {
+                                    Image(bitmap = sModel.appIcon.asImageBitmap(), contentDescription = null, modifier = Modifier.size(20.dp).clip(CircleShape))
+                                } else {
+                                    Icon(imageVector = getIconForType(sModel.type), contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                }
+                            }
+                            is LiveActivityModel.HardwareMonitor -> {
+                                val tempColor = when { sModel.cpuTempCelsius > 45f -> Color.Red; sModel.cpuTempCelsius > 38f -> Color.Yellow; else -> Color.Green }
+                                Text(text = "${sModel.cpuTempCelsius.toInt()}°", color = tempColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                            is LiveActivityModel.General -> {
+                                Icon(imageVector = getIconForType(sModel.type), contentDescription = null, tint = Color(sModel.accentColor), modifier = Modifier.size(20.dp))
+                            }
+                            is LiveActivityModel.RealityPill -> {
+                                Icon(imageVector = getIconForType(sModel.type), contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                            }
+                            is LiveActivityModel.OngoingTask -> {
+                                CircularProgressIndicator(progress = { (sModel.progress.toFloat() / sModel.progressMax.toFloat()).coerceIn(0f, 1f) }, color = Color.White, trackColor = Color.White.copy(alpha=0.2f), modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            }
+                            else -> {
+                                if (sModel != null) {
+                                    Icon(imageVector = getIconForType(sModel.type), contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+class OverlayLifecycleOwner : LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
+    val lifecycleRegistry = LifecycleRegistry(this)
+    private val savedStateRegistryController = SavedStateRegistryController.create(this)
+    private val store = ViewModelStore()
+
+    override val lifecycle: Lifecycle get() = lifecycleRegistry
+    override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
+    override val viewModelStore: ViewModelStore get() = store
+
+    init {
+        savedStateRegistryController.performRestore(null)
     }
 }
