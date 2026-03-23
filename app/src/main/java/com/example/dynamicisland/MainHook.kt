@@ -19,6 +19,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     companion object {
         lateinit var modulePath: String
+        // Tracks the Timestamp AND the Last Title seen for each app
+        val lastBroadcastMap = mutableMapOf<String, Pair<Long, String>>()
     }
 
     override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
@@ -65,18 +67,33 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     val isOngoing = (notification.flags and android.app.Notification.FLAG_ONGOING_EVENT) != 0
 
                                     if (isOngoing && pkgName != "com.android.systemui" && pkgName != "android") {
-                                        val progress = extras.getInt(android.app.Notification.EXTRA_PROGRESS, -1)
-                                        val progressMax = extras.getInt(android.app.Notification.EXTRA_PROGRESS_MAX, -1)
                                         
-                                        val intent = Intent("com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT").apply {
-                                            setPackage("com.android.systemui")
-                                            putExtra("pkg", pkgName)
-                                            putExtra("title", title)
-                                            putExtra("text", text)
-                                            if (progress != -1) putExtra("progress", progress)
-                                            if (progressMax != -1) putExtra("progressMax", progressMax)
+                                        // 🎛️ SMART THROTTLE: Check if it's a new song or just a progress update
+                                        val currentTime = System.currentTimeMillis()
+                                        val lastData = lastBroadcastMap[pkgName]
+                                        val lastTime = lastData?.first ?: 0L
+                                        val lastTitle = lastData?.second ?: ""
+                                        
+                                        // If the title changed, it's a new song. Bypass the timer!
+                                        val isNewContent = title != lastTitle
+                                        
+                                        if (isNewContent || currentTime - lastTime > 1000) {
+                                            // Save the new timestamp and the new title
+                                            lastBroadcastMap[pkgName] = Pair(currentTime, title)
+                                            
+                                            val progress = extras.getInt(android.app.Notification.EXTRA_PROGRESS, -1)
+                                            val progressMax = extras.getInt(android.app.Notification.EXTRA_PROGRESS_MAX, -1)
+                                            
+                                            val intent = Intent("com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT").apply {
+                                                setPackage("com.android.systemui")
+                                                putExtra("pkg", pkgName)
+                                                putExtra("title", title)
+                                                putExtra("text", text)
+                                                if (progress != -1) putExtra("progress", progress)
+                                                if (progressMax != -1) putExtra("progressMax", progressMax)
+                                            }
+                                            mContext?.sendBroadcast(intent)
                                         }
-                                        mContext?.sendBroadcast(intent)
                                     }
 
                                     if (text.contains("OTP", true) || text.contains("code", true) || text.contains("verification", true)) {
