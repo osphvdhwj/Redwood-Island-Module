@@ -257,6 +257,19 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         composeView.setParentCompositionContext(recomposer)
         CoroutineScope(coroutineContext).launch { recomposer.runRecomposeAndApplyChanges() }
         addView(composeView)
+
+        // 🎛️ NEW: Auto-Fetch Settings on Boot (Bypasses SELinux locks)
+        try {
+            val pingIntent = Intent("com.example.dynamicisland.REQUEST_PREFS")
+            pingIntent.setPackage("com.example.dynamicisland")
+            context.sendBroadcast(pingIntent)
+        } catch (e: Exception) {}
+    }
+ 
+        val coroutineContext = AndroidUiDispatcher.CurrentThread; val recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
+        composeView.setParentCompositionContext(recomposer)
+        CoroutineScope(coroutineContext).launch { recomposer.runRecomposeAndApplyChanges() }
+        addView(composeView)
     }
 
     override fun onAttachedToWindow() {
