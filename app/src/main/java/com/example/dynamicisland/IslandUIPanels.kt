@@ -49,6 +49,49 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import de.robv.android.xposed.XSharedPreferences
+import androidx.compose.material.icons.filled.Phone
+
+@Composable
+fun CallMini(model: LiveActivityModel.Call) {
+    // 1. Create a smooth pulsing effect for the phone icon
+    val pulsingAlpha by rememberInfiniteTransition(label = "pulse").animateFloat(
+        initialValue = 0.5f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "alpha"
+    )
+    
+    // 2. The Live Chronometer Engine
+    var elapsedSecs by remember { mutableLongStateOf((System.currentTimeMillis() - model.startTime) / 1000) }
+    LaunchedEffect(model.startTime) {
+        while(isActive) {
+            delay(1000)
+            elapsedSecs = (System.currentTimeMillis() - model.startTime) / 1000
+        }
+    }
+    
+    val mins = elapsedSecs / 60
+    val secs = elapsedSecs % 60
+    val timeString = String.format("%02d:%02d", mins, secs)
+
+    // 3. The UI Layout
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Phone, 
+            contentDescription = "Ongoing Call",
+            tint = Color(0xFF00FF00).copy(alpha = pulsingAlpha), // Neon Green Pulse
+            modifier = Modifier.size(18.dp)
+        )
+        
+        Text(
+            text = timeString,
+            color = Color(0xFF00FF00),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
 
 @Composable
 fun InteractiveIconButton(icon: ImageVector, tint: Color, baseSize: Dp, bgAlpha: Float = 0f, onClick: () -> Unit) {
