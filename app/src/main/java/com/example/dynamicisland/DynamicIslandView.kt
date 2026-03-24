@@ -78,6 +78,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Info
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @SuppressLint("ViewConstructor")
@@ -221,10 +224,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         savedStateRegistryController.performRestore(Bundle())
         lifecycleRegistry.currentState = Lifecycle.State.RESUMED
 
-        ViewTreeLifecycleOwner.set(this, this)
-        ViewTreeViewModelStoreOwner.set(this, this)
-        ViewTreeSavedStateRegistryOwner.set(this, this)
-
         try {
             val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
             insetsListenerProxy = java.lang.reflect.Proxy.newProxyInstance(context.classLoader, arrayOf(listenerClass)) { _, method, args ->
@@ -244,24 +243,19 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListenerProxy)
         } catch (e: Exception) {}
 
-        composeView.apply {
-            setViewTreeLifecycleOwner(lifecycleOwner)
-            setViewTreeSavedStateRegistryOwner(lifecycleOwner)
-            setViewTreeViewModelStoreOwner(object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() })
+        // 🎛️ FIXED: Correctly assign this View's lifecycle directly to the Compose canvas
+        composeView.setViewTreeLifecycleOwner(this@DynamicIslandView)
+        composeView.setViewTreeViewModelStoreOwner(this@DynamicIslandView)
+        composeView.setViewTreeSavedStateRegistryOwner(this@DynamicIslandView)
 
-            addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-                override fun onViewAttachedToWindow(v: View) { lifecycleOwner.attach() }
-                override fun onViewDetachedFromWindow(v: View) { lifecycleOwner.detach() }
-            })
-
-            setContent {
-                MaterialTheme(colorScheme = darkColorScheme()) {
-                    CompositionLocalProvider(LocalContext provides moduleContext, LocalIslandTheme provides activeTheme.value) {
-                        IslandUI(islandState.value)
-                    }
+        composeView.setContent {
+            MaterialTheme(colorScheme = darkColorScheme()) {
+                CompositionLocalProvider(LocalContext provides moduleContext, LocalIslandTheme provides activeTheme.value) {
+                    IslandUI(islandState.value)
                 }
             }
         }
+ 
         val coroutineContext = AndroidUiDispatcher.CurrentThread; val recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
         composeView.setParentCompositionContext(recomposer)
         CoroutineScope(coroutineContext).launch { recomposer.runRecomposeAndApplyChanges() }
