@@ -29,6 +29,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 class IslandController(private val context: Context) {
 
+    private var isAutoBrightnessEnabled = false
+    private var currentRingerMode = AudioManager.RINGER_MODE_NORMAL
     private var windowManager: WindowManager? = null
     private var currentCall: LiveActivityModel.Call? = null
     private lateinit var layoutParams: WindowManager.LayoutParams
@@ -180,16 +182,38 @@ class IslandController(private val context: Context) {
         try {
             val resolver = context.contentResolver
             val brightness = Settings.System.getInt(resolver, Settings.System.SCREEN_BRIGHTNESS)
+            val maxBrightness = try { Settings.System.getInt(resolver, "screen_brightness_maximum") } catch (e: Exception) { 255 }
             
-            // AOSP/CrDroid safely defaults to 255.
-            val maxBrightness = try {
-                Settings.System.getInt(resolver, "screen_brightness_maximum")
-            } catch (e: Exception) {
-                255
-            }
+            // 🎛️ Read Auto-Brightness state
+            isAutoBrightnessEnabled = Settings.System.getInt(resolver, Settings.System.SCREEN_BRIGHTNESS_MODE, 0) == 1
             
             val percent = ((brightness.toFloat() / maxBrightness.toFloat()) * 100f).toInt()
             islandView?.updateHardwareBrightness(percent.coerceIn(0, 100))
+            islandView?.updateAutoBrightnessState(isAutoBrightnessEnabled)
+        } catch (e: Exception) {}
+    }
+
+    // 🎛️ NEW: Toggle Auto-Brightness
+    fun toggleAutoBrightness() {
+        try {
+            val resolver = context.contentResolver
+            val newMode = if (isAutoBrightnessEnabled) 0 else 1
+            Settings.System.putInt(resolver, Settings.System.SCREEN_BRIGHTNESS_MODE, newMode)
+            updateBrightnessState()
+        } catch (e: Exception) {}
+    }
+
+    // 🎛️ NEW: Toggle Ringer Mode (Ring -> Vibrate -> Silent)
+    fun toggleRingerMode() {
+        try {
+            currentRingerMode = audioManager.ringerMode
+            val nextMode = when (currentRingerMode) {
+                AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
+                AudioManager.RINGER_MODE_VIBRATE -> AudioManager.RINGER_MODE_SILENT
+                else -> AudioManager.RINGER_MODE_NORMAL
+            }
+            audioManager.ringerMode = nextMode
+            islandView?.updateRingerState(nextMode)
         } catch (e: Exception) {}
     }
 
@@ -227,6 +251,11 @@ class IslandController(private val context: Context) {
         
         view.windowManager = wm;
         view.windowParams = params
+        view.onAutoBrightnessToggle = { toggleAutoBrightness() }
+        view.onRingerToggle = { toggleRingerMode() }
+        
+        // Ensure initial ringer state is pushed
+        view.updateRingerState(audioManager.ringerMode)
 
         view.onGestureSettingsUpdated = { payload ->
             try {
