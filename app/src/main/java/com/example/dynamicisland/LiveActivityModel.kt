@@ -20,6 +20,14 @@ sealed class LiveActivityModel {
     
     data class Charging(override val id: String, override val type: ActivityType = ActivityType.CHARGING, val level: Int, val isPluggedIn: Boolean, override val isTransient: Boolean = true, override val isCritical: Boolean = false, override val isSensitive: Boolean = false) : LiveActivityModel()
 
+    // Add this inside your LiveActivityModel sealed class
+    data class Call(
+        override val id: String = "sys_call",
+        override val type: ActivityType = ActivityType.ONGOING_TASK, // Or create ActivityType.CALL
+        val state: String = "ONGOING", 
+        val startTime: Long = System.currentTimeMillis()
+    ) : LiveActivityModel()
+
     data class Music(
         override val id: String, 
         override val type: ActivityType = ActivityType.MESSAGE, 
