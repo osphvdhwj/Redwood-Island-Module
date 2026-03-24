@@ -375,6 +375,9 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
     val initialBrightness = remember { try { android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS) / maxBrightness } catch (e: Throwable) { 0.5f } }
     var brightness by remember { mutableFloatStateOf(initialBrightness) }
 
+    val liveVolume = hardwareVolume.intValue.toFloat() / 100f
+    val liveBrightness = hardwareBrightness.intValue.toFloat() / 100f
+
     LaunchedEffect(brightness, isAutoBrightness) { 
         kotlinx.coroutines.delay(50)
         try { 
@@ -382,6 +385,17 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
             if (!isAutoBrightness) android.provider.Settings.System.putInt(context.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS, (brightness * maxBrightness).toInt().coerceIn(1, 255)) 
         } catch (e: Throwable) {} 
     }
+
+    val animatedVolume by animateFloatAsState(
+        targetValue = liveVolume, 
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
+        label = "vol_anim"
+    )
+    val animatedBrightness by animateFloatAsState(
+        targetValue = liveBrightness, 
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
+        label = "bright_anim"
+    )
 
     var isWifiOn by remember { mutableStateOf(try { wifiManager?.isWifiEnabled == true } catch(e: Throwable) { false }) }
     var isBtOn by remember { mutableStateOf(try { btAdapter?.isEnabled == true } catch(e: Throwable) { false }) }
