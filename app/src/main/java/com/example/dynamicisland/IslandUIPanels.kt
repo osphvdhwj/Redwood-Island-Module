@@ -50,6 +50,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import de.robv.android.xposed.XSharedPreferences
 import androidx.compose.material.icons.filled.Phone
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 @Composable
 fun CallMini(model: LiveActivityModel.Call) {
