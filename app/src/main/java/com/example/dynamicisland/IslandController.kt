@@ -178,10 +178,19 @@ class IslandController(private val context: Context) {
 
     private fun updateBrightnessState() {
         try {
-            val brightness = Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS)
-            val percent = (brightness * 100) / 255
-            islandView?.updateHardwareBrightness(percent)
-        } catch (e: Settings.SettingNotFoundException) {}
+            val resolver = context.contentResolver
+            val brightness = Settings.System.getInt(resolver, Settings.System.SCREEN_BRIGHTNESS)
+            
+            // AOSP/CrDroid safely defaults to 255.
+            val maxBrightness = try {
+                Settings.System.getInt(resolver, "screen_brightness_maximum")
+            } catch (e: Exception) {
+                255
+            }
+            
+            val percent = ((brightness.toFloat() / maxBrightness.toFloat()) * 100f).toInt()
+            islandView?.updateHardwareBrightness(percent.coerceIn(0, 100))
+        } catch (e: Exception) {}
     }
 
     // 🎛️ NEW: Unified App Launcher Helper
