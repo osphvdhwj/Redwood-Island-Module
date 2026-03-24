@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap
 class IslandController(private val context: Context) {
 
     private var windowManager: WindowManager? = null
+    private var currentCall: LiveActivityModel.Call? = null
     private lateinit var layoutParams: WindowManager.LayoutParams
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val _islandState = MutableStateFlow(IslandState.TYPE_0_RING)
@@ -382,6 +383,21 @@ class IslandController(private val context: Context) {
         
         _splitModel.value = null
         if (_activeModel.value is LiveActivityModel.Dashboard) return
+
+        // 🎛️ NEW: Ongoing Call Priority
+        if (currentCall != null) {
+            _activeModel.value = currentCall
+            
+            // If music is ALSO playing, push the music to the split cube!
+            if (currentMedia != null && isMediaEnabled) {
+                _splitModel.value = currentMedia
+                _islandState.value = IslandState.TYPE_SPLIT
+            } else {
+                _splitModel.value = null
+                _islandState.value = IslandState.TYPE_1_MINI
+            }
+            return
+        }
         
         if (currentMedia != null && isMediaEnabled) {
             _activeModel.value = currentMedia
@@ -602,6 +618,33 @@ class IslandController(private val context: Context) {
         val filter = IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) }
         context.registerReceiver(screenStateReceiver, filter)
         context.registerComponentCallbacks(componentCallbacks)
+
+        // 🎛️ NEW: Native Call State Tracker
+        val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as android.telephony.TelephonyManager
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            telephonyManager.registerTelephonyCallback(
+                context.mainExecutor,
+                object : android.telephony.TelephonyCallback(), android.telephony.TelephonyCallback.CallStateListener {
+                    override fun onCallStateChanged(state: Int) {
+                        when (state) {
+                            android.telephony.TelephonyManager.CALL_STATE_RINGING -> {
+                                postTransientNotification(LiveActivityModel.SystemAlert(id = "call_ring", alertType = "CALL", title = "Incoming Call", message = "Ringing...", alertColor = android.graphics.Color.GREEN), 4000L)
+                            }
+                            android.telephony.TelephonyManager.CALL_STATE_OFFHOOK -> {
+                                // Call answered / ongoing
+                                currentCall = LiveActivityModel.Call(startTime = System.currentTimeMillis())
+                                evaluatePriority()
+                            }
+                            android.telephony.TelephonyManager.CALL_STATE_IDLE -> {
+                                // Call ended
+                                currentCall = null
+                                evaluatePriority()
+                            }
+                        }
+                    }
+                }
+            )
+        }
         
         // 🎛️ NEW: Register Hardware Listeners
         val volFilter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
