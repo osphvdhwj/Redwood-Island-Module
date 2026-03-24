@@ -111,6 +111,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var hardwareVolume = mutableIntStateOf(0)
     var hardwareBrightness = mutableIntStateOf(0)
 
+    // Add these next to your hardwareVolume variables
+    var hardwareAutoBrightness = mutableStateOf(false)
+    var hardwareRingerMode = mutableIntStateOf(android.media.AudioManager.RINGER_MODE_NORMAL)
+
+    var onAutoBrightnessToggle: (() -> Unit)? = null
+    var onRingerToggle: (() -> Unit)? = null
+
+    fun updateAutoBrightnessState(isAuto: Boolean) { hardwareAutoBrightness.value = isAuto }
+    fun updateRingerState(mode: Int) { hardwareRingerMode.intValue = mode }
+
     // Helper functions for the Controller to push updates
     fun updateHardwareVolume(vol: Int) { hardwareVolume.intValue = vol }
     fun updateHardwareBrightness(bright: Int) { hardwareBrightness.intValue = bright }
