@@ -107,21 +107,20 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var isCubeRotationEnabled = mutableStateOf(true)
     var activeTheme = mutableStateOf(IslandTheme())
     var globalBatteryLevel = mutableIntStateOf(100)
-    // Add these next to your other mutable states
+    
+    // 🎛️ Premium Control Slider Callbacks & States
     var hardwareVolume = mutableIntStateOf(0)
     var hardwareBrightness = mutableIntStateOf(0)
-
-    // Add these next to your hardwareVolume variables
     var hardwareAutoBrightness = mutableStateOf(false)
     var hardwareRingerMode = mutableIntStateOf(android.media.AudioManager.RINGER_MODE_NORMAL)
 
+    var onVolumeDrag: ((Int) -> Unit)? = null
+    var onBrightnessDrag: ((Int) -> Unit)? = null
     var onAutoBrightnessToggle: (() -> Unit)? = null
     var onRingerToggle: (() -> Unit)? = null
 
     fun updateAutoBrightnessState(isAuto: Boolean) { hardwareAutoBrightness.value = isAuto }
     fun updateRingerState(mode: Int) { hardwareRingerMode.intValue = mode }
-
-    // Helper functions for the Controller to push updates
     fun updateHardwareVolume(vol: Int) { hardwareVolume.intValue = vol }
     fun updateHardwareBrightness(bright: Int) { hardwareBrightness.intValue = bright }
     
@@ -149,11 +148,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onSeekTo: ((Long) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
     var onCustomMediaAction: ((String) -> Unit)? = null
-    var hardwareAutoBrightness = mutableStateOf(false)
-    var hardwareRingerMode = mutableIntStateOf(android.media.AudioManager.RINGER_MODE_NORMAL)
-
-    fun updateAutoBrightnessState(isAuto: Boolean) { hardwareAutoBrightness.value = isAuto }
-    fun updateRingerState(mode: Int) { hardwareRingerMode.intValue = mode }
 
     private var flowJob: Job? = null
     private val mainPillRect = android.graphics.Rect()
@@ -167,7 +161,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     // Extract ComposeView to class level to allow receivers to modify its visibility
     private val composeView = ComposeView(context)
-
+    
     private fun loadPreferences() {
         try {
             val pref = XSharedPreferences("com.example.dynamicisland", "island_prefs")
