@@ -25,6 +25,7 @@ sealed class LiveActivityModel {
         override val id: String = "sys_call",
         override val type: ActivityType = ActivityType.ONGOING_TASK,
         override val isTransient: Boolean = false, // 🎛️ ADD THIS LINE
+        override val isCritical: Boolean = true,
         val state: String = "ONGOING", 
         val startTime: Long = System.currentTimeMillis()
     ) : LiveActivityModel()
