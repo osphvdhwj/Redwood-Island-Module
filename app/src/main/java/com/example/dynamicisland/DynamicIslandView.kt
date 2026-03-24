@@ -62,10 +62,26 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.debounce
 import kotlin.math.abs
+//new
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.ViewTreeViewModelStoreOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.ViewTreeSavedStateRegistryOwner
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Info
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @SuppressLint("ViewConstructor")
-class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLayout(context) {
+class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLayout(context), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
@@ -125,7 +141,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onCustomMediaAction: ((String) -> Unit)? = null
 
     private var flowJob: Job? = null
-    private val lifecycleOwner = OverlayLifecycleOwner()
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
     
@@ -648,25 +663,22 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 )
                             }
                             is LiveActivityModel.SystemAlert -> {
-                                // Renders the specific alert icon (e.g., Ringing, Silent, Do Not Disturb)
                                 Icon(
-                                    imageVector = sModel.icon, 
+                                    imageVector = Icons.Default.Notifications, 
                                     contentDescription = sModel.title,
-                                    tint = sModel.iconTint ?: Color.White,
+                                    tint = Color(sModel.alertColor), // Uses your existing backend color!
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
                             is LiveActivityModel.AppTimerWarning -> {
-                                // Renders the timer/warning icon
                                 Icon(
-                                    imageVector = sModel.icon, 
+                                    imageVector = Icons.Default.Warning, 
                                     contentDescription = "Timer Warning",
-                                    tint = Color(0xFFFFA500), // Standard warning orange
+                                    tint = Color(0xFFFFA500), 
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
                             is LiveActivityModel.OngoingTask -> {
-                                // Renders a tiny circular progress bar inside the right cube!
                                 CircularProgressIndicator(
                                     progress = { (sModel.progress.toFloat() / sModel.progressMax.toFloat()).coerceIn(0f, 1f) },
                                     color = Color.White,
@@ -676,9 +688,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 )
                             }
                             is LiveActivityModel.General -> {
-                                // Fallback for standard notifications
                                 Icon(
-                                    imageVector = sModel.icon,
+                                    imageVector = Icons.Default.Info,
                                     contentDescription = "Notification",
                                     tint = Color.White,
                                     modifier = Modifier.size(22.dp)
@@ -689,3 +700,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     }
                 }
             }
+        }
+    }
+}
