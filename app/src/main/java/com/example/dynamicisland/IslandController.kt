@@ -629,30 +629,47 @@ class IslandController(private val context: Context) {
         context.registerComponentCallbacks(componentCallbacks)
 
         // 🎛️ NEW: Native Call State Tracker
-        val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as android.telephony.TelephonyManager
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            telephonyManager.registerTelephonyCallback(
-                context.mainExecutor,
-                object : android.telephony.TelephonyCallback(), android.telephony.TelephonyCallback.CallStateListener {
-                    override fun onCallStateChanged(state: Int) {
-                        when (state) {
-                            android.telephony.TelephonyManager.CALL_STATE_RINGING -> {
-                                postTransientNotification(LiveActivityModel.SystemAlert(id = "call_ring", alertType = "CALL", title = "Incoming Call", message = "Ringing...", alertColor = android.graphics.Color.GREEN), 4000L)
-                            }
-                            android.telephony.TelephonyManager.CALL_STATE_OFFHOOK -> {
-                                // Call answered / ongoing
-                                currentCall = LiveActivityModel.Call(startTime = System.currentTimeMillis())
-                                evaluatePriority()
-                            }
-                            android.telephony.TelephonyManager.CALL_STATE_IDLE -> {
-                                // Call ended
-                                currentCall = null
-                                evaluatePriority()
-                            }
-                        }
-                    }
+        // 🎛️ NEW: Universal Call & VoIP Detector (Zero Permissions Required)
+        scope.launch {
+            var wasRinging = false
+            var wasInCall = false
+
+            while (isActive) {
+                val mode = audioManager.mode
+                
+                // MODE_RINGTONE = Phone is ringing
+                // MODE_IN_CALL = Regular Phone Call
+                // MODE_IN_COMMUNICATION = WhatsApp, Telegram, Discord VoIP Calls
+                val isRinging = mode == AudioManager.MODE_RINGTONE
+                val isInCall = mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_IN_COMMUNICATION
+
+                if (isRinging && !wasRinging) {
+                    postTransientNotification(
+                        LiveActivityModel.SystemAlert(
+                            id = "call_ring", 
+                            alertType = "CALL", 
+                            title = "Incoming Call", 
+                            message = "Ringing...", 
+                            alertColor = android.graphics.Color.GREEN
+                        ), 4000L
+                    )
                 }
-            )
+
+                if (isInCall && !wasInCall) {
+                    // Call connected! Show the green timer pill.
+                    currentCall = LiveActivityModel.Call(startTime = System.currentTimeMillis())
+                    evaluatePriority()
+                } else if (!isInCall && wasInCall) {
+                    // Call ended. Hide the pill.
+                    currentCall = null
+                    evaluatePriority()
+                }
+
+                wasRinging = isRinging
+                wasInCall = isInCall
+
+                delay(1000) // Check the audio state every 1 second
+            }
         }
         
         // 🎛️ NEW: Register Hardware Listeners
