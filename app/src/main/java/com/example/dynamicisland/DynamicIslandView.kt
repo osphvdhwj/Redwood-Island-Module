@@ -264,7 +264,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             pingIntent.setPackage("com.example.dynamicisland")
             context.sendBroadcast(pingIntent)
         } catch (e: Exception) {}
-    }
+    
  
         val coroutineContext = AndroidUiDispatcher.CurrentThread; val recomposer = androidx.compose.runtime.Recomposer(coroutineContext)
         composeView.setParentCompositionContext(recomposer)
