@@ -149,6 +149,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onSeekTo: ((Long) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
     var onCustomMediaAction: ((String) -> Unit)? = null
+    var hardwareAutoBrightness = mutableStateOf(false)
+    var hardwareRingerMode = mutableIntStateOf(android.media.AudioManager.RINGER_MODE_NORMAL)
+
+    fun updateAutoBrightnessState(isAuto: Boolean) { hardwareAutoBrightness.value = isAuto }
+    fun updateRingerState(mode: Int) { hardwareRingerMode.intValue = mode }
 
     private var flowJob: Job? = null
     private val mainPillRect = android.graphics.Rect()
