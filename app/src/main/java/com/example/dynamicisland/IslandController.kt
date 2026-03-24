@@ -7,12 +7,17 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.database.ContentObserver
 import android.graphics.Bitmap
+import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.Rating
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
 import android.view.WindowManager
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
@@ -58,6 +63,26 @@ class IslandController(private val context: Context) {
     private val mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
     private var activeMediaController: MediaController? = null
     private var mediaTickerJob: Job? = null
+
+    // 🎛️ NEW: Hardware Manager
+    private val audioManager by lazy { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+
+    // 🎛️ NEW: Brightness Observer
+    private val brightnessObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) {
+            super.onChange(selfChange)
+            updateBrightnessState()
+        }
+    }
+
+    // 🎛️ NEW: Volume Receiver
+    private val hardwareSyncReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "android.media.VOLUME_CHANGED_ACTION") {
+                updateVolumeState()
+            }
+        }
+    }
 
     private fun getBestMediaController(controllers: List<MediaController>?): MediaController? {
         if (!isMediaEnabled) return null 
@@ -142,6 +167,37 @@ class IslandController(private val context: Context) {
         override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
     }
 
+    // 🎛️ NEW: Push Hardware Values to UI
+    private fun updateVolumeState() {
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val percent = if (maxVolume > 0) (current * 100) / maxVolume else 0
+        islandView?.updateHardwareVolume(percent)
+    }
+
+    private fun updateBrightnessState() {
+        try {
+            val brightness = Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS)
+            val percent = (brightness * 100) / 255
+            islandView?.updateHardwareBrightness(percent)
+        } catch (e: Settings.SettingNotFoundException) {}
+    }
+
+    // 🎛️ NEW: Unified App Launcher Helper
+    private fun launchAppIntent(packageName: String) {
+        try {
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                context.startActivity(launchIntent)
+                
+                userForceCollapsed = true
+                _islandState.value = IslandState.TYPE_0_RING
+                evaluatePriority()
+            }
+        } catch (e: Exception) {}
+    }
+
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
         val view = DynamicIslandView(context, moduleContext)
@@ -164,7 +220,6 @@ class IslandController(private val context: Context) {
 
         view.onGestureSettingsUpdated = { payload ->
             try {
-                // FIXED: Added the missing underscore to MODE_PRIVATE
                 val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
                 isMediaEnabled = prefs.getBoolean("enable_media", true)
                 isChargingEnabled = prefs.getBoolean("enable_charging", true)
@@ -233,6 +288,31 @@ class IslandController(private val context: Context) {
                         }
                         IslandState.TYPE_2_MID, IslandState.TYPE_SPLIT -> _islandState.value = IslandState.TYPE_3_MAX
                         else -> {}
+                    }
+                }
+                
+                // 🎛️ NEW: Hardware Controls inside Gesture Matrix
+                "VOLUME_UP" -> {
+                    audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
+                }
+                "VOLUME_DOWN" -> {
+                    audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+                }
+                "MUTE_TOGGLE" -> {
+                    val isMuted = audioManager.isStreamMute(AudioManager.STREAM_MUSIC)
+                    audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, if (isMuted) AudioManager.ADJUST_UNMUTE else AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
+                }
+                "LAUNCH_SETTINGS" -> launchAppIntent("com.android.settings")
+                "LAUNCH_CAMERA" -> {
+                    val cameraIntent = Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
+                    cameraIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    try { context.startActivity(cameraIntent) } catch (e: Exception) {}
+                }
+                else -> {
+                    // 🎛️ NEW: App Launching Router
+                    if (actionName.startsWith("LAUNCH_APP_")) {
+                        val pkgName = actionName.removePrefix("LAUNCH_APP_")
+                        launchAppIntent(pkgName)
                     }
                 }
             }
@@ -432,7 +512,6 @@ class IslandController(private val context: Context) {
 
                 val extractedActions = pbState.customActions.map { CustomMediaAction(it.action, null, null, true) }
 
-                // 🎛️ ADVANCED MEDIA STATE HEURISTICS ENGINE
                 var systemLiked = false
                 var systemShuffle = false
                 var systemRepeat = 0
@@ -516,10 +595,19 @@ class IslandController(private val context: Context) {
     private fun stopMediaTicker() { mediaTickerJob?.cancel() }
     
     init {
+        // 🎛️ NEW: Initial Hardware Fetch
+        updateVolumeState()
+        updateBrightnessState()
+
         val filter = IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) }
         context.registerReceiver(screenStateReceiver, filter)
         context.registerComponentCallbacks(componentCallbacks)
         
+        // 🎛️ NEW: Register Hardware Listeners
+        val volFilter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+        context.registerReceiver(hardwareSyncReceiver, volFilter)
+        context.contentResolver.registerContentObserver(Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS), true, brightnessObserver)
+
         val ecoFilter = IntentFilter().apply {
             addAction("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE")
             addAction("com.crdroid.batterywellbeing.SYSTEM_ALERT")
