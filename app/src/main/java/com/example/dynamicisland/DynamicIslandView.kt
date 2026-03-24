@@ -513,6 +513,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                         }
                                         IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> {
                                             when (model) {
+                                                is LiveActivityModel.Call -> CallMini(model) // 🎛️ NEW
                                                 is LiveActivityModel.Music -> MusicMini(model)
                                                 is LiveActivityModel.General -> GeneralMini(model)
                                                 is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model)
