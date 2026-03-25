@@ -50,5 +50,60 @@
         android:textSize="12sp"
         android:textColor="@android:color/darker_gray"
         android:layout_marginTop="16dp"/>
+    <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Premium Features"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:layout_marginTop="32dp"
+            android:layout_marginBottom="16dp"
+            android:textColor="#FFFFFF"/>
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_hide_landscape"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Auto-Hide in Landscape (Gaming/Video)" 
+            android:textColor="#CCCCCC"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Haptic Strength (0=Off, 3=Heavy)"
+            android:textColor="#CCCCCC"
+            android:layout_marginTop="24dp"/>
+        <SeekBar
+            android:id="@+id/seek_haptic"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="3"
+            android:progress="1"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Background Blur Quality (0=Off, 24=Max)"
+            android:textColor="#CCCCCC"
+            android:layout_marginTop="24dp"/>
+        <SeekBar
+            android:id="@+id/seek_blur"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="24"
+            android:progress="16"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Charging Animation Style"
+            android:textColor="#CCCCCC"
+            android:layout_marginTop="24dp"/>
+        <Spinner
+            android:id="@+id/spinner_charging_style"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:backgroundTint="#FFFFFF"
+            android:layout_marginTop="8dp"/>
 
 </LinearLayout>
