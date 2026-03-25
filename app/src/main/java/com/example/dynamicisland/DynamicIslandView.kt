@@ -18,6 +18,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow 
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -60,7 +62,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.debounce
 import kotlin.math.abs
-
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Warning
@@ -95,7 +96,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var activeTheme = mutableStateOf(IslandTheme())
     var globalBatteryLevel = mutableIntStateOf(100)
     
-    // 🎛️ Premium Control Slider Callbacks & States
     var hardwareVolume = mutableIntStateOf(0)
     var hardwareBrightness = mutableIntStateOf(0)
     var hardwareAutoBrightness = mutableStateOf(false)
@@ -139,15 +139,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onSeekTo: ((Long) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
     var onCustomMediaAction: ((String) -> Unit)? = null
-    
-    val theme = LocalIslandTheme.current
 
     private var flowJob: Job? = null
     private val mainPillRect = android.graphics.Rect()
     private val splitCubeRect = android.graphics.Rect()
-    
     private var insetsListenerProxy: Any? = null
-
     private val insetsUpdateFlow = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(
         replay = 1, onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
     )
@@ -184,7 +180,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     for (i in 0..6) { val qs = intent.getStringExtra("qs_tile_$i"); if (qs != null) qsTiles[i] = qs } 
                 } 
 
-                // 🎛️ FIXED: Fully map all theme variables sent from ConfigActivity
                 activeTheme.value = IslandTheme(
                     buttonSize = intent.getFloatExtra("theme_button_size", 48f).dp,
                     buttonSpacing = intent.getFloatExtra("theme_button_spacing", 16f).dp,
@@ -204,8 +199,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     batRingThick = intent.getFloatExtra("theme_bat_ring", 12f).dp,
                     alertTitleSize = intent.getFloatExtra("theme_alert_title", 16f).sp,
                     alertMsgSize = intent.getFloatExtra("theme_alert_msg", 14f).sp,
-                    
-                    // 🎛️ NEW: Catch the new premium settings
                     hapticStrength = intent.getIntExtra("haptic_strength", 1),
                     chargingStyle = intent.getStringExtra("charging_style") ?: "CUBE",
                     blurIntensity = intent.getFloatExtra("blur_intensity", 16f).dp,
@@ -277,11 +270,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         CoroutineScope(coroutineContext).launch { recomposer.runRecomposeAndApplyChanges() }
         addView(composeView)
 
-        // 🎛️ FIXED: Auto-Fetch Settings (Forces background app to wake up on SystemUI restart)
         try {
             val pingIntent = Intent("com.example.dynamicisland.REQUEST_PREFS")
             pingIntent.setPackage("com.example.dynamicisland")
-            pingIntent.addFlags(Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND) // THIS IS THE MAGIC LINE
+            pingIntent.addFlags(0x01000000) // FLAG_RECEIVER_INCLUDE_BACKGROUND
             context.sendBroadcast(pingIntent)
         } catch (e: Exception) {}
     }
@@ -317,9 +309,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
-    
         try {
             if (insetsListenerProxy != null) {
                 val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
@@ -335,25 +325,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         BatteryPlugin.stop(context)
         context.sendBroadcast(android.content.Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui"))
-    }
-
-    fun performCustomHaptic(context: Context, strength: Int) {
-    if (strength == 0) return
-    try {
-        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            val effect = when (strength) {
-                1 -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_TICK) // Light
-                2 -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK) // Medium
-                3 -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_HEAVY_CLICK) // Heavy Thud
-                else -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK)
-            }
-            vibrator.vibrate(effect)
-        } else {
-            val ms = when (strength) { 1 -> 10L; 2 -> 30L; 3 -> 60L; else -> 30L }
-            vibrator.vibrate(ms)
-        }
-    } catch (e: Exception) {}
     }
 
     @OptIn(ExperimentalAnimationApi::class)
@@ -475,7 +446,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             scaleX = touchScale * islandScale
                             scaleY = touchScale * islandScale
                             alpha = islandAlpha
-                            transformOrigin = TransformOrigin(0.5f, 0.5f)
+                            transformOrigin = TransformOrigin(0.5f, 0.5f) 
                         }
                         .shadow(elevation = if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp, shape = RoundedCornerShape(rad), spotColor = Color.Black)
                         .clip(RoundedCornerShape(rad))
@@ -506,7 +477,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             var dragOffsetX = 0f
                             var dragOffsetY = 0f
                              
-                            // 🎛️ FIXED: Explicit onDrag naming for safety
                             detectDragGestures(
                                 onDragEnd = {
                                     if (abs(dragOffsetX) > abs(dragOffsetY)) {
@@ -530,6 +500,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     Box(modifier = Modifier.fillMaxSize().padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp)) {
                         
                         if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
+                            val theme = LocalIslandTheme.current
                             Image(
                                  bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
                                 modifier = Modifier.fillMaxSize()
@@ -553,7 +524,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                             when (model) {
                                                 is LiveActivityModel.Dashboard -> DashboardMax(model)
                                                 is LiveActivityModel.Music -> MusicMax(model)
-                                                is LiveActivityModel.Call -> CallMax(model) 
                                                 else -> {}
                                             }
                                         }
@@ -597,38 +567,35 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         if (state == IslandState.TYPE_0_RING) {
                             val musicModel = model as? LiveActivityModel.Music
                             val isMedia = musicModel != null && musicModel.isPlaying
-                            
-                            // 🎛️ FIXED: The Ring is now ALWAYS ON when the island is closed! 
-                            // (If you only want it below 50%, change 'true' to 'globalBatteryLevel.intValue <= 50')
                             val shouldShowRing = isMedia || globalIsCharging.value || true
 
                             if (shouldShowRing) {
                                 val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
                                 val progress = if (isMedia) { (currentMediaPos.longValue.toFloat() / safeDur) } else { globalBatteryLevel.intValue / 100f }
-                                val batteryLevel = globalBatteryLevel.intValue
                                 
-                                // 🎛️ PREMIUM: Dynamic Color Engine
-                                val baseColor = if (isMedia) {
+                                val batteryLevel = globalBatteryLevel.intValue
+                                 val baseColor = if (isMedia) {
                                     musicModel?.dominantColor?.let { Color(it) } ?: Color.White
-                                } else if (globalIsCharging.value) {
-                                    Color(0xFF00FF55) // Neon Charging Green
+                                 } else if (globalIsCharging.value) {
+                                    Color(0xFF00FF00) 
                                 } else {
                                      when {
-                                        batteryLevel <= 15 -> Color(0xFFFF0033) // Critical Red
-                                        batteryLevel <= 30 -> Color(0xFFFFB300) // Warning Orange
-                                        batteryLevel <= 50 -> Color(0xFFFDD835) // Half Yellow
-                                        else -> Color(0xFF00E676) // Healthy Green
+                                        batteryLevel <= 5 -> Color(0xFFFF0000) 
+                                        batteryLevel <= 10 -> Color(0xFFFF3333) 
+                                        batteryLevel <= 40 -> Color(0xFFFFA500) 
+                                        batteryLevel <= 60 -> Color(0xFFFFFF00) 
+                                        else -> Color(0xFF006400) 
                                     }
-                                }
+                                 }
 
                                 val infiniteTransition = rememberInfiniteTransition(label = "ring_pulse")
                                 val pulseAlpha by infiniteTransition.animateFloat(
-                                     initialValue = if (globalIsCharging.value && !isMedia) 0.4f else 1f,
-                                     targetValue = 1f,
-                                     animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-                                     label = "alpha"
+                                     initialValue = if (globalIsCharging.value && !isMedia) 0.3f else 1f,
+                                    targetValue = 1f,
+                                     animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                                    label = "alpha"
                                 )
-                                val progressColor = baseColor.copy(alpha = pulseAlpha)
+                                 val progressColor = baseColor.copy(alpha = pulseAlpha)
 
                                 Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
                                     val strokeW = ringThickness.value.dp.toPx() 
@@ -637,25 +604,29 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                     val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
                                     val progressPercent = progress.coerceIn(0f, 1f)
 
-                                    // 🎛️ PREMIUM: Sleek background track with a gap
-                                    drawArc(color = Color.White.copy(alpha=0.08f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
-                                    
-                                    // 🎛️ PREMIUM: Glowing Sweeping Gradient Ring
-                                    val sweepGradient = Brush.sweepGradient(0.0f to progressColor.copy(alpha = 0.2f), 0.8f to progressColor, 1.0f to progressColor.copy(alpha = 0.2f))
-                                    drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 1f)
+                                    val sweepGradient = Brush.sweepGradient(0.0f to progressColor.copy(alpha = 0.4f), 0.8f to progressColor, 1.0f to progressColor.copy(alpha = 0.4f))
 
-                                    // White dot at the exact tip of the progress
-                                    if (progressPercent > 0.02f) {
-                                        val angleRad = Math.toRadians((-90f + 360f * progressPercent).toDouble())
-                                        val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
-                                        val radius = (size.width - strokeW) / 2
-                                        val tipX = center.x + radius * Math.cos(angleRad).toFloat()
-                                        val tipY = center.y + radius * Math.sin(angleRad).toFloat()
-                                        drawCircle(color = Color.White, radius = strokeW / 2.5f, center = androidx.compose.ui.geometry.Offset(tipX, tipY))
-                                    }
+                                    drawArc(color = baseColor.copy(alpha=0.20f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
+                                    drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 0.95f)
+
+                                    val markerLength = strokeW * 1.3f
+                                    val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+                                    val radius = (size.width - strokeW) / 2
+                                    
+                                    drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(center.x, center.y - radius - markerLength/2), end = androidx.compose.ui.geometry.Offset(center.x, center.y - radius + markerLength/2), strokeWidth = 4f)
+                                     
+                                    val angleRad = Math.toRadians((-90f + 360f * progressPercent).toDouble())
+                                    val mStartX = center.x + (radius - markerLength/2) * Math.cos(angleRad).toFloat()
+                                    val mStartY = center.y + (radius - markerLength/2) * Math.sin(angleRad).toFloat()
+                                    val mEndX = center.x + (radius + markerLength/2) * Math.cos(angleRad).toFloat()
+                                    val mEndY = center.y + (radius + markerLength/2) * Math.sin(angleRad).toFloat()
+                                    drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(mStartX, mStartY), end = androidx.compose.ui.geometry.Offset(mEndX, mEndY), strokeWidth = 4f)
                                 }
                             }
                         }
+                     }
+                }
+            }
 
             AnimatedVisibility(
                 visible = state == IslandState.TYPE_SPLIT,
@@ -748,4 +719,25 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             }
         }
     }
+}
+
+// 🎛️ Custom Haptics Wrapper Engine
+fun performCustomHaptic(context: Context, strength: Int) {
+    if (strength == 0) return
+    try {
+        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            val effect = when (strength) {
+                1 -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_TICK) // Light
+                2 -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK) // Medium
+                3 -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_HEAVY_CLICK) // Heavy Thud
+                else -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK)
+            }
+            vibrator.vibrate(effect)
+        } else {
+            val ms = when (strength) { 1 -> 10L; 2 -> 30L; 3 -> 60L; else -> 30L }
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(ms)
+        }
+    } catch (e: Exception) {}
 }
