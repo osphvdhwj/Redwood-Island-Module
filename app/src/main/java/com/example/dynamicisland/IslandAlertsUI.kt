@@ -1,11 +1,15 @@
 package com.example.dynamicisland
 
+import android.content.Context
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,26 +26,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import android.content.Context
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 
 @Composable
 fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
     val haptic = LocalHapticFeedback.current
     val isRinging = model.state == "RINGING"
     
-    // 🎛️ Premium Ringing Animation
     val ringPulse by rememberInfiniteTransition(label="ring").animateFloat(
         initialValue = 0.4f, targetValue = 1f, 
         animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse), label="alpha"
@@ -105,23 +104,25 @@ fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .border(1.dp, Color(0xFF00C853).copy(alpha = 0.3f), RoundedCornerShape(40.dp)) // 🎛️ Premium subtle glowing border
+            .border(1.dp, Color(0xFF00C853).copy(alpha = 0.3f), RoundedCornerShape(40.dp)) 
             .padding(horizontal = 16.dp)
             .pointerInput(Unit) {
-                detectDragGestures { change, dragAmount ->
-                    change.consume()
-                    if (dragAmount.y > 20f) { 
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onOpenCallUI?.invoke() 
-                    } else if (dragAmount.y < -20f) { 
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        setState(IslandState.TYPE_1_MINI) 
+                // 🎛️ FIXED: Explicitly defined 'onDrag' to prevent Kotlin compiler confusion
+                detectDragGestures(
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        if (dragAmount.y > 20f) { 
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onOpenCallUI?.invoke() 
+                        } else if (dragAmount.y < -20f) { 
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            setState(IslandState.TYPE_1_MINI) 
+                        }
                     }
-                }
+                )
             },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Caller Avatar with gentle pulse
         val pulseScale by rememberInfiniteTransition(label="pulse").animateFloat(initialValue = 0.95f, targetValue = 1.05f, animationSpec = infiniteRepeatable(tween(1500), RepeatMode.Reverse), label="scale")
         Box(modifier = Modifier.size(42.dp).graphicsLayer { scaleX=pulseScale; scaleY=pulseScale }.background(Color(0xFF333333), CircleShape), contentAlignment = Alignment.Center) {
             Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
@@ -134,7 +135,6 @@ fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {
             Text(text = String.format("%02d:%02d", elapsedSecs / 60, elapsedSecs % 60), color = Color(0xFF00C853), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         }
         
-        // Haptic Quick Actions
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(if(isMicMuted) Color.White else Color.White.copy(0.15f)).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onMicToggle?.invoke(); isMicMuted = !isMicMuted }, contentAlignment = Alignment.Center) {
                 Icon(if(isMicMuted) Icons.Default.MicOff else Icons.Default.Mic, contentDescription=null, tint=if(isMicMuted) Color.Black else Color.White, modifier = Modifier.size(20.dp))
@@ -150,100 +150,49 @@ fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {
 }
 
 @Composable
-fun DynamicIslandView.CallMax(model: LiveActivityModel.Call) {
-    val context = LocalContext.current
-    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
-    
-    // Auto-updating hardware states
-    var isMicMuted by remember { mutableStateOf(audioManager.isMicrophoneMute) }
-    var isSpeakerOn by remember { mutableStateOf(audioManager.isSpeakerphoneOn) }
-    var elapsedSecs by remember { mutableLongStateOf((System.currentTimeMillis() - model.startTime) / 1000) }
-
-    // Live Timer Engine
-    LaunchedEffect(model.startTime) {
-        while(isActive) {
-            delay(1000)
-            elapsedSecs = (System.currentTimeMillis() - model.startTime) / 1000
-            // Keep buttons synced with hardware in case changed from system UI
-            isMicMuted = audioManager.isMicrophoneMute
-            isSpeakerOn = audioManager.isSpeakerphoneOn
-        }
-    }
-    val timeString = String.format("%02d:%02d", elapsedSecs / 60, elapsedSecs % 60)
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // TOP: Caller Info
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            // Profile Avatar Placeholder
-            Box(
-                modifier = Modifier.size(54.dp).background(Color(0xFF444444), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = model.callerName, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-                Text(text = "Mobile", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
-            }
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // MIDDLE: Big Live Timer
-        Text(text = timeString, color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Light)
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // BOTTOM: Action Controls
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Mute Button
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier.size(60.dp).clip(CircleShape).background(if (isMicMuted) Color.White else Color.White.copy(alpha = 0.15f)).clickable { onMicToggle?.invoke(); isMicMuted = !isMicMuted },
-                    contentAlignment = Alignment.Center
-                ) { Icon(if (isMicMuted) Icons.Default.MicOff else Icons.Default.Mic, contentDescription = "Mute", tint = if (isMicMuted) Color.Black else Color.White, modifier = Modifier.size(28.dp)) }
-            }
-
-            // End Call Button (Big Red)
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier.size(72.dp).clip(CircleShape).background(Color(0xFFFF3B30)).clickable { onEndCallClick?.invoke() },
-                    contentAlignment = Alignment.Center
-                ) { Icon(Icons.Default.CallEnd, contentDescription = "End", tint = Color.White, modifier = Modifier.size(36.dp)) }
-            }
-
-            // Speaker Button
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier.size(60.dp).clip(CircleShape).background(if (isSpeakerOn) Color.White else Color.White.copy(alpha = 0.15f)).clickable { onSpeakerToggle?.invoke(); isSpeakerOn = !isSpeakerOn },
-                    contentAlignment = Alignment.Center
-                ) { Icon(Icons.Default.VolumeUp, contentDescription = "Speaker", tint = if (isSpeakerOn) Color.Black else Color.White, modifier = Modifier.size(28.dp)) }
-            }
-        }
-    }
-}
-
-@Composable
 fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
-    val color = if (model.isPluggedIn) Color(0xFF00FF41) else if (model.level <= 20) Color.Red else Color.White
-    val infiniteTransition = rememberInfiniteTransition(label = "cube_pulse")
-    val pulseScale by infiniteTransition.animateFloat(initialValue = 0.9f, targetValue = 1.1f, animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "scale")
-    val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.15f, targetValue = 0.45f, animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "glow")
-   
+    val theme = LocalIslandTheme.current
+    val isLow = model.level <= 20 && !model.isPluggedIn
+    val color = if (model.isPluggedIn) Color(0xFF00FF55) else if (isLow) Color(0xFFFF0033) else Color.White
+    
+    val infiniteTransition = rememberInfiniteTransition(label = "anim")
+    
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        if (model.isPluggedIn) { Box(modifier = Modifier.size(50.dp).background(color.copy(alpha = glowAlpha), CircleShape).blur(12.dp).graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }) }
+        
+        when (theme.chargingStyle) {
+            "APPLE" -> {
+                // 🎛️ STYLE 1: Apple MagSafe Ring
+                val fillProgress by animateFloatAsState(targetValue = model.level / 100f, animationSpec = tween(1500), label = "fill")
+                androidx.compose.foundation.Canvas(modifier = Modifier.size(54.dp)) {
+                    drawArc(color = Color.White.copy(alpha=0.1f), startAngle = 0f, sweepAngle = 360f, useCenter = false, style = androidx.compose.ui.graphics.drawscope.Stroke(10f))
+                    drawArc(color = color, startAngle = -90f, sweepAngle = 360f * fillProgress, useCenter = false, style = androidx.compose.ui.graphics.drawscope.Stroke(10f, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                }
+            }
+            "HYPEROS" -> {
+                // 🎛️ STYLE 2: HyperOS Bottom Glow
+                val glowAlpha by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 0.6f, animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse), label = "glow")
+                Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(20.dp).background(Brush.verticalGradient(listOf(Color.Transparent, color.copy(alpha = glowAlpha)))))
+            }
+            else -> {
+                // 🎛️ STYLE 3: The Original Spinning Neon Cube
+                val pulseScale by infiniteTransition.animateFloat(initialValue = 0.85f, targetValue = 1.15f, animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Reverse), label = "scale")
+                val spinAngle by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart), label = "spin")
+                if (model.isPluggedIn || isLow) { 
+                    Box(modifier = Modifier.size(54.dp).graphicsLayer { rotationZ = spinAngle; scaleX = pulseScale; scaleY = pulseScale }) {
+                        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                            val brush = Brush.sweepGradient(0f to Color.Transparent, 0.5f to color.copy(alpha=0.5f), 1f to Color.Transparent)
+                            drawCircle(brush = brush, radius = size.width/2, style = androidx.compose.ui.graphics.drawscope.Stroke(12f))
+                        }
+                    }
+                }
+            }
+        }
+
+        // The Center Icon & Text
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Icon(imageVector = if (model.isPluggedIn) Icons.Default.Add else Icons.Default.Warning, contentDescription = null, tint = color, modifier = Modifier.size(32.dp).graphicsLayer { scaleX = pulseScale; scaleY = pulseScale })
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(text = "${model.level}%", color = color, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+            val icon = if (model.isPluggedIn) Icons.Default.Add else if (isLow) Icons.Default.Warning else Icons.Default.BatteryFull
+            Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+            Text(text = "${model.level}%", color = color, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
         }
     }
 }
@@ -251,27 +200,56 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) {
-    val batteryColor = if (charging.isPluggedIn) Color(0xFF00FF41) else if (charging.level <= 20) Color.Red else Color.White
+    val theme = LocalIslandTheme.current
+    val isLow = charging.level <= 20 && !charging.isPluggedIn
+    val batteryColor = if (charging.isPluggedIn) Color(0xFF00FF55) else if (isLow) Color(0xFFFF0033) else Color.White
+    
     val infiniteTransition = rememberInfiniteTransition(label = "charging_glow")
-    val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.2f, targetValue = 0.6f, animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "alpha")
+    val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.3f, targetValue = 0.8f, animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "alpha")
+    
     val targetFill = charging.level / 100f
     val animatedFill by animateFloatAsState(targetValue = targetFill, animationSpec = tween(1500, easing = FastOutSlowInEasing), label = "fill")
 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) {
-            Box(modifier = Modifier.size(36.dp).background(batteryColor.copy(alpha = if (charging.isPluggedIn) glowAlpha else 0.05f), CircleShape).blur(if (charging.isPluggedIn) 8.dp else 0.dp))
-            Icon(imageVector = if (charging.isPluggedIn) Icons.Default.Add else Icons.Default.Warning, contentDescription = null, tint = batteryColor, modifier = Modifier.size(24.dp))
+        // Icon Circle
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(48.dp)) {
+            Box(modifier = Modifier.size(40.dp).background(batteryColor.copy(alpha = if (charging.isPluggedIn || isLow) glowAlpha else 0.1f), CircleShape).blur(if (charging.isPluggedIn || isLow) 12.dp else 0.dp))
+            Icon(imageVector = if (charging.isPluggedIn) Icons.Default.Add else if (isLow) Icons.Default.Warning else Icons.Default.BatteryFull, contentDescription = null, tint = batteryColor, modifier = Modifier.size(26.dp))
         }
-        Spacer(Modifier.width(12.dp))
+        
+        Spacer(Modifier.width(14.dp))
+        
         Column(modifier = Modifier.weight(1f)) {
-             Text(text = if (charging.isPluggedIn) "Charging" else "Battery", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-             Text(text = "${charging.level}% Available", color = Color.White.copy(alpha=0.7f), fontSize = 13.sp, maxLines = 1)
+             val titleText = if (charging.isPluggedIn) "Charging" else if (isLow) "Low Battery" else "Battery"
+             Text(text = titleText, color = if (isLow) batteryColor else Color.White, fontSize = theme.batTextSize, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+             Text(text = "${charging.level}% Remaining", color = Color.White.copy(alpha=0.7f), fontSize = theme.batTextSize * 0.85f, maxLines = 1)
         }
-        Spacer(Modifier.width(12.dp))
-        Box(modifier = Modifier.width(42.dp).height(20.dp).border(1.5.dp, Color.White.copy(alpha=0.4f), RoundedCornerShape(4.dp)).padding(2.dp), contentAlignment = Alignment.CenterStart) {
-             Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(fraction = animatedFill).background(batteryColor, RoundedCornerShape(2.dp)))
+        
+        Spacer(Modifier.width(14.dp))
+        
+        // 🎛️ PREMIUM: Liquid Fill Battery Shell
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .width(46.dp)
+                    .height(24.dp)
+                    .border(2.dp, Color.White.copy(alpha=0.3f), RoundedCornerShape(6.dp))
+                    .padding(3.dp), 
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(fraction = animatedFill)
+                        .background(batteryColor, RoundedCornerShape(3.dp))
+                )
+                if (charging.isPluggedIn) {
+                    Icon(Icons.Default.Add, contentDescription=null, tint=Color.Black.copy(alpha=0.5f), modifier = Modifier.align(Alignment.Center).size(16.dp))
+                }
+            }
+            // Battery Tip
+            Box(modifier = Modifier.width(4.dp).height(10.dp).background(Color.White.copy(alpha=0.3f), RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp)))
         }
-        Box(modifier = Modifier.width(3.dp).height(8.dp).background(Color.White.copy(alpha=0.4f), RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp)))
     }
 }
 
@@ -297,7 +275,7 @@ fun DynamicIslandView.SystemAlertMid(alert: LiveActivityModel.SystemAlert) {
 fun DynamicIslandView.OngoingTaskMid(task: LiveActivityModel.OngoingTask) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Box(modifier = Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape).border(1.dp, Color.White.copy(alpha=0.5f), CircleShape), contentAlignment = Alignment.Center) {
-            IsolatedCircularProgressIndicator(durationMs = task.progressMax.toLong(), posProvider = { task.progress.toLong() }, color = Color.Cyan, trackColor = Color.White.copy(alpha=0.2f), strokeWidth = 2.dp)
+            CircularProgressIndicator(progress = { (task.progress.toFloat() / task.progressMax.toFloat()).coerceIn(0f, 1f) }, color = Color.Cyan, trackColor = Color.White.copy(alpha=0.2f), strokeWidth = 2.dp)
             Icon(Icons.Default.Build, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
         }
         Spacer(Modifier.width(14.dp))
