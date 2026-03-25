@@ -139,6 +139,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onSeekTo: ((Long) -> Unit)? = null
     var onAudioOutputClick: (() -> Unit)? = null
     var onCustomMediaAction: ((String) -> Unit)? = null
+    
+    val theme = LocalIslandTheme.current
 
     private var flowJob: Job? = null
     private val mainPillRect = android.graphics.Rect()
@@ -282,6 +284,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             pingIntent.addFlags(Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND) // THIS IS THE MAGIC LINE
             context.sendBroadcast(pingIntent)
         } catch (e: Exception) {}
+    }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
