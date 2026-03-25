@@ -53,6 +53,66 @@ class ConfigActivity : ComponentActivity() {
                 } 
             } 
         }
+        // 🎛️ WIRING UP THE PREMIUM FEATURES
+        val switchHideLandscape = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switch_hide_landscape)
+        val seekHaptic = findViewById<SeekBar>(R.id.seek_haptic)
+        val seekBlur = findViewById<SeekBar>(R.id.seek_blur)
+        val spinnerCharging = findViewById<Spinner>(R.id.spinner_charging_style)
+
+        // Setup the Dropdown Options (No extra XML files needed!)
+        val styles = arrayOf("CUBE", "APPLE", "HYPEROS")
+        val adapter = android.widget.ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, styles)
+        spinnerCharging.adapter = adapter
+
+        // 1. Load your saved preferences when the app opens
+        switchHideLandscape.isChecked = prefs.getBoolean("hide_landscape", false)
+        seekHaptic.progress = prefs.getInt("haptic_strength", 1)
+        seekBlur.progress = prefs.getFloat("blur_intensity", 16f).toInt()
+        val savedStyle = prefs.getString("charging_style", "CUBE")
+        spinnerCharging.setSelection(styles.indexOf(savedStyle).takeIf { it >= 0 } ?: 0)
+
+        // 2. The Universal Save & Broadcast function
+        fun saveAndSyncPremiumFeatures() {
+            val editor = prefs.edit()
+            editor.putBoolean("hide_landscape", switchHideLandscape.isChecked)
+            editor.putInt("haptic_strength", seekHaptic.progress)
+            editor.putFloat("blur_intensity", seekBlur.progress.toFloat())
+            val selectedStyle = styles[spinnerCharging.selectedItemPosition]
+            editor.putString("charging_style", selectedStyle)
+            editor.apply()
+
+            // Ping the Island to update instantly
+            val syncIntent = android.content.Intent("com.example.dynamicisland.RELOAD_PREFS")
+            syncIntent.setPackage("com.example.dynamicisland")
+            syncIntent.addFlags(android.content.Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND)
+            
+            // Package the new data directly into the ping
+            syncIntent.putExtra("hide_landscape", switchHideLandscape.isChecked)
+            syncIntent.putExtra("haptic_strength", seekHaptic.progress)
+            syncIntent.putExtra("blur_intensity", seekBlur.progress.toFloat())
+            syncIntent.putExtra("charging_style", selectedStyle)
+            sendBroadcast(syncIntent)
+        }
+
+        // 3. Attach "Listeners" so it saves the exact moment you touch a button
+        switchHideLandscape.setOnCheckedChangeListener { _, _ -> saveAndSyncPremiumFeatures() }
+
+        val seekListener = object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) { 
+                if (fromUser) saveAndSyncPremiumFeatures() 
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        }
+        seekHaptic.setOnSeekBarChangeListener(seekListener)
+        seekBlur.setOnSeekBarChangeListener(seekListener)
+
+        spinnerCharging.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) { 
+                saveAndSyncPremiumFeatures() 
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+        }
     }
 
     // 🎛️ CORE IPC FIX: Handles IO threading, synchronous disk commits, permission granting, and main-thread broadcasting.
