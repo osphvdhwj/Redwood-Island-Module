@@ -119,8 +119,15 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
     var isBtOn by remember { mutableStateOf(try { btAdapter?.isEnabled == true } catch(e: Throwable) { false }) }
     var isTorchOn by remember { mutableStateOf(false) }
     
-    val launchAndCollapse = { intent: Intent -> try { intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); context.startActivity(intent); setState(IslandState.HIDDEN) } catch(e: Throwable) {} }
-
+    // 🎛️ FIXED: Collapse to Ring instead of completely hiding
+    val launchAndCollapse = { intent: Intent -> 
+        try { 
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent) 
+            setState(IslandState.TYPE_0_RING) // Changed from HIDDEN to TYPE_0_RING
+        } catch(e: Throwable) {} 
+    }
+    
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
         
         Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(theme.buttonSpacing, Alignment.CenterHorizontally)) {
