@@ -67,10 +67,8 @@ class IslandController(private val context: Context) {
     private var activeMediaController: MediaController? = null
     private var mediaTickerJob: Job? = null
 
-    // 🎛️ NEW: Hardware Manager
     private val audioManager by lazy { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
 
-    // 🎛️ NEW: Brightness Observer
     private val brightnessObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) {
             super.onChange(selfChange)
@@ -78,7 +76,6 @@ class IslandController(private val context: Context) {
         }
     }
 
-    // 🎛️ NEW: Volume Receiver
     private val hardwareSyncReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "android.media.VOLUME_CHANGED_ACTION") {
@@ -142,11 +139,11 @@ class IslandController(private val context: Context) {
                         }
                         "THERMAL_WARNING" -> {
                             val temp = intent.getStringExtra("extra_info") ?: "High"
-                            postTransientNotification(LiveActivityModel.SystemAlert(id = "sys_thermal", alertType = "THERMAL", title = "Thermal Throttling", message = "Battery temperature at $temp", alertColor = android.graphics.Color.RED), 6000L)
+                            postTransientNotification(LiveActivityModel.SystemAlert(id = "sys_thermal", alertType = "THERMAL", title = "Thermal Throttling", message = "Battery temp at $temp", alertColor = android.graphics.Color.RED), 6000L)
                         }
                         "ROGUE_APP_DETECTED" -> {
                             val appName = intent.getStringExtra("extra_info") ?: "Unknown App"
-                            postTransientNotification(LiveActivityModel.SystemAlert(id = "sys_rogue", alertType = "ROGUE", title = "High Background Drain", message = "$appName is draining battery", alertColor = android.graphics.Color.rgb(255, 165, 0)), 6000L)
+                            postTransientNotification(LiveActivityModel.SystemAlert(id = "sys_rogue", alertType = "ROGUE", title = "High Battery Drain", message = "$appName is draining battery", alertColor = android.graphics.Color.rgb(255, 165, 0)), 6000L)
                         }
                     }
                 }
@@ -170,7 +167,27 @@ class IslandController(private val context: Context) {
         override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
     }
 
-    // 🎛️ NEW: Push Hardware Values to UI
+    // 🎛️ NEW: Command System Volume from Dashboard Drag
+    fun setSystemVolume(percent: Int) {
+        try {
+            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            val targetVolume = ((percent.toFloat() / 100f) * maxVolume).toInt()
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVolume, 0)
+            islandView?.updateHardwareVolume(percent)
+        } catch (e: Exception) {}
+    }
+
+    // 🎛️ NEW: Command System Brightness from Dashboard Drag
+    fun setSystemBrightness(percent: Int) {
+        try {
+            val resolver = context.contentResolver
+            val maxBrightness = try { Settings.System.getInt(resolver, "screen_brightness_maximum") } catch (e: Exception) { 255 }
+            val targetBrightness = ((percent.toFloat() / 100f) * maxBrightness).toInt()
+            Settings.System.putInt(resolver, Settings.System.SCREEN_BRIGHTNESS, targetBrightness)
+            islandView?.updateHardwareBrightness(percent)
+        } catch (e: Exception) {}
+    }
+
     private fun updateVolumeState() {
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
@@ -184,7 +201,6 @@ class IslandController(private val context: Context) {
             val brightness = Settings.System.getInt(resolver, Settings.System.SCREEN_BRIGHTNESS)
             val maxBrightness = try { Settings.System.getInt(resolver, "screen_brightness_maximum") } catch (e: Exception) { 255 }
             
-            // 🎛️ Read Auto-Brightness state
             isAutoBrightnessEnabled = Settings.System.getInt(resolver, Settings.System.SCREEN_BRIGHTNESS_MODE, 0) == 1
             
             val percent = ((brightness.toFloat() / maxBrightness.toFloat()) * 100f).toInt()
@@ -193,7 +209,6 @@ class IslandController(private val context: Context) {
         } catch (e: Exception) {}
     }
 
-    // 🎛️ NEW: Toggle Auto-Brightness
     fun toggleAutoBrightness() {
         try {
             val resolver = context.contentResolver
@@ -203,7 +218,6 @@ class IslandController(private val context: Context) {
         } catch (e: Exception) {}
     }
 
-    // 🎛️ NEW: Toggle Ringer Mode (Ring -> Vibrate -> Silent)
     fun toggleRingerMode() {
         try {
             currentRingerMode = audioManager.ringerMode
@@ -217,7 +231,6 @@ class IslandController(private val context: Context) {
         } catch (e: Exception) {}
     }
 
-    // 🎛️ NEW: Unified App Launcher Helper
     private fun launchAppIntent(packageName: String) {
         try {
             val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
@@ -237,6 +250,16 @@ class IslandController(private val context: Context) {
         val view = DynamicIslandView(context, moduleContext)
         this.islandView = view 
         this.windowManager = wm 
+
+        // 🎛️ Connect Callbacks
+        view.onVolumeDrag = { pct -> setSystemVolume(pct) }
+        view.onBrightnessDrag = { pct -> setSystemBrightness(pct) }
+        view.onMicToggle = { toggleMicMute() }
+        view.onSpeakerToggle = { toggleSpeakerphone() }
+        view.onEndCallClick = { endActiveCall() }
+        view.onOpenCallUI = { openNativeCallUI() }
+        view.onAutoBrightnessToggle = { toggleAutoBrightness() }
+        view.onRingerToggle = { toggleRingerMode() }
         
         view.onSplitPillClick = { 
             val sModel = _splitModel.value;
@@ -251,10 +274,6 @@ class IslandController(private val context: Context) {
         
         view.windowManager = wm;
         view.windowParams = params
-        view.onAutoBrightnessToggle = { toggleAutoBrightness() }
-        view.onRingerToggle = { toggleRingerMode() }
-        
-        // Ensure initial ringer state is pushed
         view.updateRingerState(audioManager.ringerMode)
 
         view.onGestureSettingsUpdated = { payload ->
@@ -329,14 +348,8 @@ class IslandController(private val context: Context) {
                         else -> {}
                     }
                 }
-                
-                // 🎛️ NEW: Hardware Controls inside Gesture Matrix
-                "VOLUME_UP" -> {
-                    audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
-                }
-                "VOLUME_DOWN" -> {
-                    audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
-                }
+                "VOLUME_UP" -> audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
+                "VOLUME_DOWN" -> audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
                 "MUTE_TOGGLE" -> {
                     val isMuted = audioManager.isStreamMute(AudioManager.STREAM_MUSIC)
                     audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, if (isMuted) AudioManager.ADJUST_UNMUTE else AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
@@ -348,7 +361,6 @@ class IslandController(private val context: Context) {
                     try { context.startActivity(cameraIntent) } catch (e: Exception) {}
                 }
                 else -> {
-                    // 🎛️ NEW: App Launching Router
                     if (actionName.startsWith("LAUNCH_APP_")) {
                         val pkgName = actionName.removePrefix("LAUNCH_APP_")
                         launchAppIntent(pkgName)
@@ -399,7 +411,7 @@ class IslandController(private val context: Context) {
         val blacklistedGames = prefs.getString("gaming_blacklist", "com.dts.freefiremax,com.tencent.ig") ?: ""
         val isBlacklistedAppActive = topAppPackage.isNotEmpty() && blacklistedGames.contains(topAppPackage)
         
-        if ((isLandscapeNow || currentHardware?.isGamingModeOn == true || isBlacklistedAppActive) && !isAlertCritical) {
+        if ((isLandscapeNow || currentHardware?.isGamingModeOn == true || isBlacklistedAppActive) && !isAlertCritical && currentCall == null) {
             _islandState.value = IslandState.HIDDEN
             return
         }
@@ -422,11 +434,9 @@ class IslandController(private val context: Context) {
         _splitModel.value = null
         if (_activeModel.value is LiveActivityModel.Dashboard) return
 
-        // 🎛️ NEW: Ongoing Call Priority
         if (currentCall != null) {
             _activeModel.value = currentCall
             
-            // If music is ALSO playing, push the music to the split cube!
             if (currentMedia != null && isMediaEnabled) {
                 _splitModel.value = currentMedia
                 _islandState.value = IslandState.TYPE_SPLIT
@@ -512,7 +522,6 @@ class IslandController(private val context: Context) {
         }
 
         scope.launch(Dispatchers.IO) {
-            
             val pm = context.packageManager
             val appIconBmp = try {
                 val drawable = pm.getApplicationIcon(controller.packageName)
@@ -526,7 +535,6 @@ class IslandController(private val context: Context) {
             var blurredArtBitmap: Bitmap? = null
             var bgColor: Int? = null; var txtColor: Int = android.graphics.Color.WHITE
             if (albumArtBitmap != null) {
-                
                 @Suppress("DEPRECATION")
                 try {
                     val rs = android.renderscript.RenderScript.create(context)
@@ -538,10 +546,7 @@ class IslandController(private val context: Context) {
                     script.forEach(output)
                     blurredArtBitmap = Bitmap.createBitmap(albumArtBitmap.width, albumArtBitmap.height, albumArtBitmap.config ?: Bitmap.Config.ARGB_8888)
                     output.copyTo(blurredArtBitmap)
-                    input.destroy()
-                    output.destroy()
-                    script.destroy()
-                    rs.destroy()
+                    input.destroy(); output.destroy(); script.destroy(); rs.destroy()
                 } catch (e: Exception) {
                     blurredArtBitmap = albumArtBitmap
                 }
@@ -565,10 +570,7 @@ class IslandController(private val context: Context) {
                 currentMedia?.blurredAlbumArt?.takeIf { it != currentMedia?.albumArt }?.recycle()
 
                 val extractedActions = pbState.customActions.map { CustomMediaAction(it.action, null, null, true) }
-
-                var systemLiked = false
-                var systemShuffle = false
-                var systemRepeat = 0
+                var systemLiked = false; var systemShuffle = false; var systemRepeat = 0
 
                 if (pbState.customActions != null) {
                     for (action in pbState.customActions) {
@@ -582,17 +584,15 @@ class IslandController(private val context: Context) {
                         }
 
                         if (actionId.contains("shuffle") || localizedName.contains("shuffle")) {
-                            if (localizedName.contains("disable") || localizedName.contains("off") || localizedName.contains("stop")) {
-                                systemShuffle = true
-                            }
+                            if (localizedName.contains("disable") || localizedName.contains("off") || localizedName.contains("stop")) systemShuffle = true
                         }
 
                         if (actionId.contains("repeat") || localizedName.contains("repeat") || 
                             actionId.contains("loop") || localizedName.contains("loop")) {
                             if (localizedName.contains("one") || localizedName.contains("single")) {
-                                systemRepeat = 1 // Repeat One
+                                systemRepeat = 1 
                             } else if (localizedName.contains("disable") || localizedName.contains("off") || localizedName.contains("stop")) {
-                                systemRepeat = 2 // Repeat All
+                                systemRepeat = 2 
                             }
                         }
                     }
@@ -649,7 +649,6 @@ class IslandController(private val context: Context) {
     private fun stopMediaTicker() { mediaTickerJob?.cancel() }
     
     init {
-        // 🎛️ NEW: Initial Hardware Fetch
         updateVolumeState()
         updateBrightnessState()
 
@@ -657,51 +656,44 @@ class IslandController(private val context: Context) {
         context.registerReceiver(screenStateReceiver, filter)
         context.registerComponentCallbacks(componentCallbacks)
 
-        // 🎛️ NEW: Native Call State Tracker
-        // 🎛️ NEW: Universal Call & VoIP Detector (Zero Permissions Required)
-        scope.launch {
-            var wasRinging = false
-            var wasInCall = false
+        // 🎛️ FIXED: Kernel-Safe Universal Call Detector (Bypasses userfaultfd timeouts)
+        val callHandler = Handler(Looper.getMainLooper())
+        val callCheckRunnable = object : Runnable {
+            override fun run() {
+                try {
+                    val mode = audioManager.mode
+                    val isRinging = mode == AudioManager.MODE_RINGTONE
+                    val isInCall = mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_IN_COMMUNICATION
 
-            while (isActive) {
-                val mode = audioManager.mode
-                
-                // MODE_RINGTONE = Phone is ringing
-                // MODE_IN_CALL = Regular Phone Call
-                // MODE_IN_COMMUNICATION = WhatsApp, Telegram, Discord VoIP Calls
-                val isRinging = mode == AudioManager.MODE_RINGTONE
-                val isInCall = mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_IN_COMMUNICATION
+                    // 🎛️ UPGRADED: Distinct States for Ringing vs Active
+                    if (isRinging) {
+                        if (currentCall?.state != "RINGING") {
+                            currentCall = LiveActivityModel.Call(state = "RINGING", startTime = 0L)
+                            evaluatePriority()
+                        }
+                    } else if (isInCall) {
+                        if (currentCall?.state != "ONGOING") {
+                            currentCall = LiveActivityModel.Call(state = "ONGOING", startTime = System.currentTimeMillis())
+                            evaluatePriority()
+                        }
+                    } else {
+                        if (currentCall != null) {
+                            currentCall = null
+                            evaluatePriority()
+                        }
+                    }
+                } catch (e: Exception) {}
 
-                if (isRinging && !wasRinging) {
-                    postTransientNotification(
-                        LiveActivityModel.SystemAlert(
-                            id = "call_ring", 
-                            alertType = "CALL", 
-                            title = "Incoming Call", 
-                            message = "Ringing...", 
-                            alertColor = android.graphics.Color.GREEN
-                        ), 4000L
-                    )
+                // Re-queue the check safely without triggering Kernel memory throttles
+                if (isScreenOn) {
+                    callHandler.postDelayed(this, 1000)
+                } else {
+                    callHandler.postDelayed(this, 5000) // Super efficient while screen is off
                 }
-
-                if (isInCall && !wasInCall) {
-                    // Call connected! Show the green timer pill.
-                    currentCall = LiveActivityModel.Call(startTime = System.currentTimeMillis())
-                    evaluatePriority()
-                } else if (!isInCall && wasInCall) {
-                    // Call ended. Hide the pill.
-                    currentCall = null
-                    evaluatePriority()
-                }
-
-                wasRinging = isRinging
-                wasInCall = isInCall
-
-                delay(1000) // Check the audio state every 1 second
             }
         }
+        callHandler.post(callCheckRunnable)
         
-        // 🎛️ NEW: Register Hardware Listeners
         val volFilter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
         context.registerReceiver(hardwareSyncReceiver, volFilter)
         context.contentResolver.registerContentObserver(Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS), true, brightnessObserver)
@@ -741,5 +733,40 @@ class IslandController(private val context: Context) {
         BatteryPlugin.start(context)
         scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; evaluatePriority() } }
         setupMediaListener()
+    }
+
+    // 🎛️ PREMIUM CALL CONTROLS
+    fun toggleMicMute() {
+        try { audioManager.isMicrophoneMute = !audioManager.isMicrophoneMute } catch (e: Exception) {}
+    }
+
+    fun toggleSpeakerphone() {
+        try { audioManager.isSpeakerphoneOn = !audioManager.isSpeakerphoneOn } catch (e: Exception) {}
+    }
+
+    fun openNativeCallUI() {
+        try {
+            val tm = context.getSystemService(Context.TELECOM_SERVICE) as android.telecom.TelecomManager
+            tm.showInCallScreen(false) 
+            islandView?.setState(IslandState.TYPE_1_MINI)
+        } catch (e: Exception) {
+            val intent = Intent(Intent.ACTION_DIAL).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+            context.startActivity(intent)
+            islandView?.setState(IslandState.TYPE_1_MINI)
+        }
+    }
+
+    fun endActiveCall() {
+        try {
+            val tm = context.getSystemService(Context.TELECOM_SERVICE) as android.telecom.TelecomManager
+            tm.javaClass.getMethod("endCall").invoke(tm)
+        } catch (e: Exception) {
+            try {
+                val eventDown = android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_HEADSETHOOK)
+                val eventUp = android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_HEADSETHOOK)
+                audioManager.dispatchMediaKeyEvent(eventDown)
+                audioManager.dispatchMediaKeyEvent(eventUp)
+            } catch (e2: Exception) {}
+        }
     }
 }
