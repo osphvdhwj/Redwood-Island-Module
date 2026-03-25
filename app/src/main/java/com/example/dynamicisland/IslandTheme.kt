@@ -25,7 +25,27 @@ data class IslandTheme(
     val buttonCornerRadius: Dp = 50.dp,
     val actionAnimType: String = "BOUNCE",
     val handleWidth: Dp = 40.dp,
-    val handleHeight: Dp = 5.dp
+    val handleHeight: Dp = 5.dp,
+    
+    val textPrimary: TextUnit = 16.sp,
+    val textSecondary: TextUnit = 14.sp,
+    val progressThick: Dp = 4.dp,
+    val ringThick: Dp = 12.dp,
+    val elementGap: Dp = 8.dp,
+    val musicTitleSize: TextUnit = 16.sp,
+    val musicArtistSize: TextUnit = 14.sp,
+    val musicSeekerThick: Dp = 4.dp,
+    val batTextSize: TextUnit = 16.sp,
+    val batIconSize: Dp = 36.dp,
+    val batRingThick: Dp = 12.dp,
+    val alertTitleSize: TextUnit = 16.sp,
+    val alertMsgSize: TextUnit = 14.sp,
+
+    // 🎛️ NEW: The 4 Master Flagship Features
+    val hapticStrength: Int = 1, // 0 = Off, 1 = Light, 2 = Medium, 3 = Heavy
+    val chargingStyle: String = "CUBE", // CUBE, APPLE, HYPEROS
+    val blurIntensity: Dp = 16.dp,
+    val hideOnLandscape: Boolean = false
 )
 
 val LocalIslandTheme = compositionLocalOf { IslandTheme() }
