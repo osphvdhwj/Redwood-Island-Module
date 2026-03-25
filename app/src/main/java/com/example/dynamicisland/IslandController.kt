@@ -552,21 +552,6 @@ class IslandController(private val context: Context) {
             }
         }
 
-        // 🎛️ FIXED: Instant UI Update (Shows immediately before heavy palette math)
-        val isFirstLoad = currentMedia == null || isNewTrack
-        if (isFirstLoad) {
-            currentMedia = LiveActivityModel.Music(
-                id = "media_main", title = newTitle,
-                artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
-                albumArt = albumArtBitmap, blurredAlbumArt = null,
-                appIcon = null, dominantColor = android.graphics.Color.DKGRAY, titleTextColor = android.graphics.Color.WHITE,
-                isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position,
-                appPackageName = controller.packageName, customActions = emptyList(),
-                isShuffled = false, repeatMode = 0, isLiked = false
-            )
-            evaluatePriority() // Push to UI immediately!
-        }
-
         scope.launch(Dispatchers.IO) {
             val pm = context.packageManager
             val appIconBmp = try {
