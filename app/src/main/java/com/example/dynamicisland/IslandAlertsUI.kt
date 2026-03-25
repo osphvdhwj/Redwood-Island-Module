@@ -27,6 +27,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import android.content.Context
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 
 @Composable
 fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
@@ -57,7 +65,7 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
                 detectTapGestures(
                     onTap = { 
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        if (isRinging) onOpenCallUI?.invoke() else setState(IslandState.TYPE_MID) 
+                        if (isRinging) onOpenCallUI?.invoke() else setState(IslandState.TYPE_2_MID) 
                     },
                     onLongPress = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
