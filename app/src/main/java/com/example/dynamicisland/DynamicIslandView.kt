@@ -405,10 +405,13 @@ LaunchedEffect(state, model, isLandscape) {
 
             // 🎛️ NEW: Gaming & Immersive Mode Override for Calls
             if (model?.isCritical == true) {
-                // Force draw over everything, including full-screen games
-                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
-                wp.privateFlags = wp.privateFlags or 0x00000040 // PRIVATE_FLAG_TRUSTED_OVERLAY
+             wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+             wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+             try {
+                 val privateFlagsField = WindowManager.LayoutParams::class.java.getField("privateFlags")
+                 val currentPrivateFlags = privateFlagsField.getInt(wp)
+                 privateFlagsField.setInt(wp, currentPrivateFlags or 0x00000040)
+             } catch (e: Exception) {}
             }
 
             wp.width = WindowManager.LayoutParams.MATCH_PARENT
