@@ -6,9 +6,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,8 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsDraggedAsState
 
 @Composable
 fun InteractiveIconButton(icon: ImageVector, tint: Color, baseSize: Dp, bgAlpha: Float = 0f, onClick: () -> Unit) {
@@ -81,6 +82,7 @@ fun InteractiveIconButton(icon: ImageVector, tint: Color, baseSize: Dp, bgAlpha:
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
+    val theme = LocalIslandTheme.current
     val dynamicTextColor = Color(music.titleTextColor).takeIf { it != Color.Transparent && it != Color.Black } ?: Color(0xFF00FFCC) 
     val safeDuration = if (music.durationMs <= 0L) 1f else music.durationMs.toFloat()
     val currentPosition = currentMediaPos.longValue.toFloat().coerceAtLeast(0f)
@@ -146,14 +148,16 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
         Spacer(modifier = Modifier.width(12.dp))
         
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-            Text(text = music.title, color = dynamicTextColor, fontSize = 15.sp, fontFamily = theme.titleFont, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-            Text(text = music.artist, color = dynamicTextColor.copy(alpha = 0.7f), fontSize = 13.sp, fontFamily = theme.titleFont, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+            // 🎛️ FIXED: Now uses the Config App's Music Text Sizes
+            Text(text = music.title, color = dynamicTextColor, fontSize = theme.musicTitleSize, fontFamily = theme.titleFont, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+            Text(text = music.artist, color = dynamicTextColor.copy(alpha = 0.7f), fontSize = theme.musicArtistSize, fontFamily = theme.titleFont, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
             
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(theme.elementGap))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text(text = formatTime(currentMediaPos.longValue), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 10.sp)
                 Spacer(Modifier.width(6.dp))
-                InteractiveWavyMediaBar(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, isPlaying = music.isPlaying, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.2f), onSeek = { onSeekTo?.invoke(it) }, modifier = Modifier.weight(1f).height(12.dp))
+                // 🎛️ FIXED: Now uses the Config App's Seeker Thickness
+                InteractiveWavyMediaBar(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, isPlaying = music.isPlaying, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.2f), onSeek = { onSeekTo?.invoke(it) }, modifier = Modifier.weight(1f).height(theme.musicSeekerThick * 3))
                 Spacer(Modifier.width(6.dp))
                 Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 10.sp)
             }
@@ -248,13 +252,15 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
         }
         Spacer(modifier = Modifier.weight(0.5f))
         
-        Text(text = music.title, color = dynamicTextColor, fontSize = theme.titleSize * 1.25f, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.fillMaxWidth().safeMarquee(islandState.value))
-        Text(text = music.artist, color = dynamicTextColor.copy(alpha=0.8f), fontSize = (theme.titleSize * 0.85f) * 1.15f, maxLines = 1, modifier = Modifier.fillMaxWidth().safeMarquee(islandState.value))
+        // 🎛️ FIXED: Now uses the Config App's Music Text Sizes
+        Text(text = music.title, color = dynamicTextColor, fontSize = theme.musicTitleSize * 1.25f, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.fillMaxWidth().safeMarquee(islandState.value))
+        Text(text = music.artist, color = dynamicTextColor.copy(alpha=0.8f), fontSize = theme.musicArtistSize * 1.15f, maxLines = 1, modifier = Modifier.fillMaxWidth().safeMarquee(islandState.value))
         
         Spacer(modifier = Modifier.weight(0.5f))
 
         IsolatedTimeRow(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = dynamicTextColor)
-        InteractiveWavyMediaBar(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, isPlaying = music.isPlaying, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.2f), onSeek = { onSeekTo?.invoke(it) }, modifier = Modifier.padding(vertical = 8.dp))
+        // 🎛️ FIXED: Now uses the Config App's Seeker Thickness
+        InteractiveWavyMediaBar(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, isPlaying = music.isPlaying, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.2f), onSeek = { onSeekTo?.invoke(it) }, modifier = Modifier.padding(vertical = theme.elementGap).height(theme.musicSeekerThick * 3))
         Spacer(modifier = Modifier.weight(1f))
         
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(theme.buttonSpacing, Alignment.CenterHorizontally)) {
@@ -408,7 +414,6 @@ fun InteractiveWavyMediaBar(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(24.dp) 
             .pointerInput(Unit) {
                 val velocityTracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
                 detectDragGestures(
@@ -443,7 +448,7 @@ fun InteractiveWavyMediaBar(
         val midY = size.height / 2
         val activeWidth = size.width * displayProgress
 
-        drawLine(color = trackColor, start = androidx.compose.ui.geometry.Offset(activeWidth, midY), end = androidx.compose.ui.geometry.Offset(size.width, midY), strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(color = trackColor, start = androidx.compose.ui.geometry.Offset(activeWidth, midY), end = androidx.compose.ui.geometry.Offset(size.width, midY), strokeWidth = size.height, cap = StrokeCap.Round)
 
         val path = androidx.compose.ui.graphics.Path()
         path.moveTo(0f, midY)
@@ -456,7 +461,7 @@ fun InteractiveWavyMediaBar(
         }
         path.lineTo(activeWidth, midY)
 
-        drawPath(path = path, color = color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
+        drawPath(path = path, color = color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = size.height, cap = StrokeCap.Round))
         drawCircle(color = Color.White, radius = thumbRadius.dp.toPx(), center = androidx.compose.ui.geometry.Offset(activeWidth, midY))
     }
 }
