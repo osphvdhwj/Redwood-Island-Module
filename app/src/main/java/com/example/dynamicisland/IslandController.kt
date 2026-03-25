@@ -308,6 +308,18 @@ class IslandController(private val context: Context) {
                     if (_activeModel.value == null) _activeModel.value = LiveActivityModel.Dashboard()
                     _islandState.value = IslandState.TYPE_3_MAX
                 }
+                "OPEN_QUICK_TOGGLES" -> {
+                    if (_activeModel.value == null || _activeModel.value is LiveActivityModel.Dashboard) {
+                        _activeModel.value = LiveActivityModel.Dashboard()
+                        _islandState.value = IslandState.TYPE_2_MID
+                    }
+                }
+                "OPEN_QUICK_TOGGLES" -> {
+                    if (_activeModel.value == null || _activeModel.value is LiveActivityModel.Dashboard) {
+                        _activeModel.value = LiveActivityModel.Dashboard()
+                        _islandState.value = IslandState.TYPE_2_MID
+                    }
+                }
                 "COLLAPSE" -> {
                     if (_activeModel.value is LiveActivityModel.Dashboard) {
                         if (currentMedia != null) {
@@ -411,7 +423,12 @@ class IslandController(private val context: Context) {
         val blacklistedGames = prefs.getString("gaming_blacklist", "com.dts.freefiremax,com.tencent.ig") ?: ""
         val isBlacklistedAppActive = topAppPackage.isNotEmpty() && blacklistedGames.contains(topAppPackage)
         
-        if ((isLandscapeNow || currentHardware?.isGamingModeOn == true || isBlacklistedAppActive) && !isAlertCritical && currentCall == null) {
+        // 🎛️ NEW: Reads the user's Landscape Toggle preference
+        val hideOnLandscape = prefs.getBoolean("hide_landscape", false)
+        val shouldHideLandscape = isLandscapeNow && hideOnLandscape
+        
+        // 🎛️ FIXED: Safely hides the island during games/video, UNLESS it's a critical alert or phone call
+        if ((shouldHideLandscape || currentHardware?.isGamingModeOn == true || isBlacklistedAppActive) && !isAlertCritical && currentCall == null) {
             _islandState.value = IslandState.HIDDEN
             return
         }
@@ -510,6 +527,20 @@ class IslandController(private val context: Context) {
         val isNewTrack = newTitle != lastTrackTitle && lastTrackTitle.isNotEmpty()
         lastTrackTitle = newTitle
 
+        val isFirstLoad = currentMedia == null || isNewTrack
+        if (isFirstLoad) {
+            currentMedia = LiveActivityModel.Music(
+                id = "media_main", title = newTitle,
+                artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
+                albumArt = albumArtBitmap, blurredAlbumArt = null,
+                appIcon = null, dominantColor = android.graphics.Color.DKGRAY, titleTextColor = android.graphics.Color.WHITE,
+                isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position,
+                appPackageName = controller.packageName, customActions = emptyList(),
+                isShuffled = false, repeatMode = 0, isLiked = false
+            )
+            evaluatePriority() // Push to UI immediately!
+        }
+
         if (isNewTrack && userForceCollapsed && isPlaying && !isPeeking) {
             isPeeking = true
             userForceCollapsed = false
@@ -519,6 +550,21 @@ class IslandController(private val context: Context) {
                 isPeeking = false
                 evaluatePriority()
             }
+        }
+
+        // 🎛️ FIXED: Instant UI Update (Shows immediately before heavy palette math)
+        val isFirstLoad = currentMedia == null || isNewTrack
+        if (isFirstLoad) {
+            currentMedia = LiveActivityModel.Music(
+                id = "media_main", title = newTitle,
+                artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
+                albumArt = albumArtBitmap, blurredAlbumArt = null,
+                appIcon = null, dominantColor = android.graphics.Color.DKGRAY, titleTextColor = android.graphics.Color.WHITE,
+                isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position,
+                appPackageName = controller.packageName, customActions = emptyList(),
+                isShuffled = false, repeatMode = 0, isLiked = false
+            )
+            evaluatePriority() // Push to UI immediately!
         }
 
         scope.launch(Dispatchers.IO) {
@@ -722,7 +768,13 @@ class IslandController(private val context: Context) {
                      postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true), 4000L)
                  } else if (!isCharging) {
                      if (lastReportedBattery != -1 && level < lastReportedBattery) {
-                         if (level == 20 || level == 10 || level == 5) postTransientNotification(LiveActivityModel.Charging(id = "sys_battery_low", level = level, isPluggedIn = false, isTransient = true).copy(type = ActivityType.BATTERY_LOW), 6000L)
+                         // 🎛️ FIXED: Low Battery Alerts are now flagged as CRITICAL so they pierce through games/videos
+                         if (level == 20 || level == 10 || level == 5) {
+                             postTransientNotification(
+                                 LiveActivityModel.Charging(id = "sys_battery_low", level = level, isPluggedIn = false, isTransient = true, isCritical = true).copy(type = ActivityType.BATTERY_LOW), 
+                                 6000L
+                             )
+                         }
                      }
                  }
              }
