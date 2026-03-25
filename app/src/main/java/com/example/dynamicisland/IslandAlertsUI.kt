@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -107,7 +108,6 @@ fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {
             .border(1.dp, Color(0xFF00C853).copy(alpha = 0.3f), RoundedCornerShape(40.dp)) 
             .padding(horizontal = 16.dp)
             .pointerInput(Unit) {
-                // 🎛️ FIXED: Explicitly defined 'onDrag' to prevent Kotlin compiler confusion
                 detectDragGestures(
                     onDrag = { change, dragAmount ->
                         change.consume()
@@ -158,10 +158,8 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
     val infiniteTransition = rememberInfiniteTransition(label = "anim")
     
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        
         when (theme.chargingStyle) {
             "APPLE" -> {
-                // 🎛️ STYLE 1: Apple MagSafe Ring
                 val fillProgress by animateFloatAsState(targetValue = model.level / 100f, animationSpec = tween(1500), label = "fill")
                 androidx.compose.foundation.Canvas(modifier = Modifier.size(54.dp)) {
                     drawArc(color = Color.White.copy(alpha=0.1f), startAngle = 0f, sweepAngle = 360f, useCenter = false, style = androidx.compose.ui.graphics.drawscope.Stroke(10f))
@@ -169,12 +167,10 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
                 }
             }
             "HYPEROS" -> {
-                // 🎛️ STYLE 2: HyperOS Bottom Glow
                 val glowAlpha by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 0.6f, animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse), label = "glow")
                 Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(20.dp).background(Brush.verticalGradient(listOf(Color.Transparent, color.copy(alpha = glowAlpha)))))
             }
             else -> {
-                // 🎛️ STYLE 3: The Original Spinning Neon Cube
                 val pulseScale by infiniteTransition.animateFloat(initialValue = 0.85f, targetValue = 1.15f, animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Reverse), label = "scale")
                 val spinAngle by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart), label = "spin")
                 if (model.isPluggedIn || isLow) { 
@@ -188,7 +184,6 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
             }
         }
 
-        // The Center Icon & Text
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             val icon = if (model.isPluggedIn) Icons.Default.Add else if (isLow) Icons.Default.Warning else Icons.Default.BatteryFull
             Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
@@ -211,23 +206,23 @@ fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) {
     val animatedFill by animateFloatAsState(targetValue = targetFill, animationSpec = tween(1500, easing = FastOutSlowInEasing), label = "fill")
 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        // Icon Circle
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(48.dp)) {
-            Box(modifier = Modifier.size(40.dp).background(batteryColor.copy(alpha = if (charging.isPluggedIn || isLow) glowAlpha else 0.1f), CircleShape).blur(if (charging.isPluggedIn || isLow) 12.dp else 0.dp))
-            Icon(imageVector = if (charging.isPluggedIn) Icons.Default.Add else if (isLow) Icons.Default.Warning else Icons.Default.BatteryFull, contentDescription = null, tint = batteryColor, modifier = Modifier.size(26.dp))
+        // 🎛️ FIXED: Now uses Config App Battery Icon Size
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(theme.batIconSize + 8.dp)) {
+            Box(modifier = Modifier.size(theme.batIconSize).background(batteryColor.copy(alpha = if (charging.isPluggedIn || isLow) glowAlpha else 0.1f), CircleShape).blur(if (charging.isPluggedIn || isLow) 12.dp else 0.dp))
+            Icon(imageVector = if (charging.isPluggedIn) Icons.Default.Add else if (isLow) Icons.Default.Warning else Icons.Default.BatteryFull, contentDescription = null, tint = batteryColor, modifier = Modifier.size(theme.batIconSize * 0.65f))
         }
         
         Spacer(Modifier.width(14.dp))
         
         Column(modifier = Modifier.weight(1f)) {
              val titleText = if (charging.isPluggedIn) "Charging" else if (isLow) "Low Battery" else "Battery"
+             // 🎛️ FIXED: Now uses Config App Battery Text Size
              Text(text = titleText, color = if (isLow) batteryColor else Color.White, fontSize = theme.batTextSize, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
              Text(text = "${charging.level}% Remaining", color = Color.White.copy(alpha=0.7f), fontSize = theme.batTextSize * 0.85f, maxLines = 1)
         }
         
         Spacer(Modifier.width(14.dp))
         
-        // 🎛️ PREMIUM: Liquid Fill Battery Shell
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
@@ -247,7 +242,6 @@ fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) {
                     Icon(Icons.Default.Add, contentDescription=null, tint=Color.Black.copy(alpha=0.5f), modifier = Modifier.align(Alignment.Center).size(16.dp))
                 }
             }
-            // Battery Tip
             Box(modifier = Modifier.width(4.dp).height(10.dp).background(Color.White.copy(alpha=0.3f), RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp)))
         }
     }
@@ -256,6 +250,7 @@ fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DynamicIslandView.SystemAlertMid(alert: LiveActivityModel.SystemAlert) {
+    val theme = LocalIslandTheme.current
     val color = Color(alert.alertColor)
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Box(modifier = Modifier.size(44.dp).background(color.copy(alpha=0.2f), CircleShape).border(1.dp, color.copy(alpha=0.5f), CircleShape), contentAlignment = Alignment.Center) {
@@ -264,8 +259,9 @@ fun DynamicIslandView.SystemAlertMid(alert: LiveActivityModel.SystemAlert) {
         }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-             Text(text = alert.title, color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-             Text(text = alert.message, color = color.copy(alpha=0.8f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+             // 🎛️ FIXED: Now uses Config App Alert Text Sizes
+             Text(text = alert.title, color = color, fontSize = theme.alertTitleSize, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+             Text(text = alert.message, color = color.copy(alpha=0.8f), fontSize = theme.alertMsgSize, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
         }
     }
 }
@@ -273,6 +269,7 @@ fun DynamicIslandView.SystemAlertMid(alert: LiveActivityModel.SystemAlert) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DynamicIslandView.OngoingTaskMid(task: LiveActivityModel.OngoingTask) {
+    val theme = LocalIslandTheme.current
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Box(modifier = Modifier.size(44.dp).background(Color.White.copy(alpha=0.2f), CircleShape).border(1.dp, Color.White.copy(alpha=0.5f), CircleShape), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(progress = { (task.progress.toFloat() / task.progressMax.toFloat()).coerceIn(0f, 1f) }, color = Color.Cyan, trackColor = Color.White.copy(alpha=0.2f), strokeWidth = 2.dp)
@@ -280,8 +277,9 @@ fun DynamicIslandView.OngoingTaskMid(task: LiveActivityModel.OngoingTask) {
         }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-             Text(text = task.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-             Text(text = task.text, color = Color.White.copy(alpha=0.8f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+             // 🎛️ FIXED: Now uses Config App Alert Text Sizes
+             Text(text = task.title, color = Color.White, fontSize = theme.alertTitleSize, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+             Text(text = task.text, color = Color.White.copy(alpha=0.8f), fontSize = theme.alertMsgSize, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
         }
     }
 }
@@ -308,8 +306,8 @@ fun DynamicIslandView.AppTimerWarningMid(model: LiveActivityModel.AppTimerWarnin
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
              val theme = LocalIslandTheme.current
-             Text(text = "Time Limit Reached", color = Color.Red, fontSize = theme.titleSize, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
-             Text(text = "${model.appName} closing in ${remainingSeconds}s", color = Color.White, fontSize = (theme.titleSize * 0.85f), maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+             Text(text = "Time Limit Reached", color = Color.Red, fontSize = theme.alertTitleSize, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+             Text(text = "${model.appName} closing in ${remainingSeconds}s", color = Color.White, fontSize = theme.alertMsgSize, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
         }
     }
 }
@@ -332,8 +330,9 @@ fun DynamicIslandView.UniversalMid(textColor: Color, activity: LiveActivityModel
         }; 
         Spacer(Modifier.width(16.dp));
         Column(modifier = Modifier.weight(1f)) { 
-            Text(text = title, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value));
-            Text(text = dataText, color = textColor.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value)) 
+            val theme = LocalIslandTheme.current
+            Text(text = title, color = textColor, fontSize = theme.alertTitleSize, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value));
+            Text(text = dataText, color = textColor.copy(alpha = 0.7f), fontSize = theme.alertMsgSize, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value)) 
         } 
     } 
 }
