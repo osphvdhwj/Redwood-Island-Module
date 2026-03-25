@@ -53,69 +53,8 @@ class ConfigActivity : ComponentActivity() {
                 } 
             } 
         }
-        // 🎛️ WIRING UP THE PREMIUM FEATURES
-        val switchHideLandscape = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switch_hide_landscape)
-        val seekHaptic = findViewById<SeekBar>(R.id.seek_haptic)
-        val seekBlur = findViewById<SeekBar>(R.id.seek_blur)
-        val spinnerCharging = findViewById<Spinner>(R.id.spinner_charging_style)
-
-        // Setup the Dropdown Options (No extra XML files needed!)
-        val styles = arrayOf("CUBE", "APPLE", "HYPEROS")
-        val adapter = android.widget.ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, styles)
-        spinnerCharging.adapter = adapter
-
-        // 1. Load your saved preferences when the app opens
-        switchHideLandscape.isChecked = prefs.getBoolean("hide_landscape", false)
-        seekHaptic.progress = prefs.getInt("haptic_strength", 1)
-        seekBlur.progress = prefs.getFloat("blur_intensity", 16f).toInt()
-        val savedStyle = prefs.getString("charging_style", "CUBE")
-        spinnerCharging.setSelection(styles.indexOf(savedStyle).takeIf { it >= 0 } ?: 0)
-
-        // 2. The Universal Save & Broadcast function
-        fun saveAndSyncPremiumFeatures() {
-            val editor = prefs.edit()
-            editor.putBoolean("hide_landscape", switchHideLandscape.isChecked)
-            editor.putInt("haptic_strength", seekHaptic.progress)
-            editor.putFloat("blur_intensity", seekBlur.progress.toFloat())
-            val selectedStyle = styles[spinnerCharging.selectedItemPosition]
-            editor.putString("charging_style", selectedStyle)
-            editor.apply()
-
-            // Ping the Island to update instantly
-            val syncIntent = android.content.Intent("com.example.dynamicisland.RELOAD_PREFS")
-            syncIntent.setPackage("com.example.dynamicisland")
-            syncIntent.addFlags(android.content.Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND)
-            
-            // Package the new data directly into the ping
-            syncIntent.putExtra("hide_landscape", switchHideLandscape.isChecked)
-            syncIntent.putExtra("haptic_strength", seekHaptic.progress)
-            syncIntent.putExtra("blur_intensity", seekBlur.progress.toFloat())
-            syncIntent.putExtra("charging_style", selectedStyle)
-            sendBroadcast(syncIntent)
-        }
-
-        // 3. Attach "Listeners" so it saves the exact moment you touch a button
-        switchHideLandscape.setOnCheckedChangeListener { _, _ -> saveAndSyncPremiumFeatures() }
-
-        val seekListener = object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) { 
-                if (fromUser) saveAndSyncPremiumFeatures() 
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        }
-        seekHaptic.setOnSeekBarChangeListener(seekListener)
-        seekBlur.setOnSeekBarChangeListener(seekListener)
-
-        spinnerCharging.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) { 
-                saveAndSyncPremiumFeatures() 
-            }
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
-        }
     }
 
-    // 🎛️ CORE IPC FIX: Handles IO threading, synchronous disk commits, permission granting, and main-thread broadcasting.
     private fun commitAndBroadcast(
         prefs: android.content.SharedPreferences,
         editBlock: android.content.SharedPreferences.Editor.() -> Unit,
@@ -124,12 +63,12 @@ class ConfigActivity : ComponentActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             val editor = prefs.edit()
             editor.editBlock()
-            editor.commit() // Synchronous disk write to prevent race conditions
+            editor.commit()
 
-            makePrefsWorldReadable() // Traverse permissions granted AFTER file is saved
+            makePrefsWorldReadable()
 
             withContext(Dispatchers.Main) {
-                broadcastBlock() // Safe to alert SystemUI
+                broadcastBlock()
             }
         }
     }
@@ -290,6 +229,26 @@ class ConfigActivity : ComponentActivity() {
             Text(text = "Customize the physical appearance of inner elements.", fontSize = 14.sp, color = Color.Gray)
             Spacer(modifier = Modifier.height(16.dp))
 
+            // 🎛️ NEW: Premium Effects Section
+            Text("Premium Effects", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Magenta)
+            ThemeSlider("Haptic Strength (0=Off, 3=Heavy)", "haptic_strength", 1f, 0f..3f, prefs)
+            ThemeSlider("Background Blur Quality (0=Off)", "blur_intensity", 16f, 0f..24f, prefs)
+            
+            var chargingExpanded by remember { mutableStateOf(false) }
+            var selectedCharging by remember { mutableStateOf(prefs.getString("charging_style", "CUBE") ?: "CUBE") }
+            ExposedDropdownMenuBox(expanded = chargingExpanded, onExpandedChange = { chargingExpanded = !chargingExpanded }) {
+                OutlinedTextField(value = selectedCharging, onValueChange = {}, readOnly = true, label = { Text("Charging Animation Style") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = chargingExpanded) }, modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 8.dp))
+                ExposedDropdownMenu(expanded = chargingExpanded, onDismissRequest = { chargingExpanded = false }) {
+                    listOf("CUBE", "APPLE", "HYPEROS").forEach { opt ->
+                        DropdownMenuItem(text = { Text(opt) }, onClick = { 
+                            selectedCharging = opt; chargingExpanded = false
+                            commitAndBroadcast(prefs, { putString("charging_style", opt) }) { sendGestureUpdate(prefs, this@ConfigActivity) }
+                        })
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
             Text("Interactive Buttons (Max Pill)", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF00FFCC))
             
             var animExpanded by remember { mutableStateOf(false) }
@@ -454,6 +413,8 @@ class ConfigActivity : ComponentActivity() {
             Text(text = "Selectively disable Island behaviors.", fontSize = 14.sp, color = Color.Gray)
             Spacer(modifier = Modifier.height(16.dp))
 
+            // 🎛️ NEW: The Landscape Override Toggle
+            FeatureSwitch("Auto-Hide in Landscape (Gaming/Video)", "hide_landscape", false, prefs)
             FeatureSwitch("Enable Media Pill (Music/Spotify)", "enable_media", true, prefs)
             FeatureSwitch("Enable Charging Cube", "enable_charging", true, prefs)
             FeatureSwitch("Enable System Alerts (Battery/Temp)", "enable_alerts", true, prefs)
@@ -589,7 +550,7 @@ class ConfigActivity : ComponentActivity() {
     private fun broadcastUpdateSingle(prefix: String, prefs: android.content.SharedPreferences) {
         val intent = Intent("com.example.dynamicisland.RELOAD_PREFS").apply {
             @Suppress("WrongConstant")
-            addFlags(android.content.Intent.FLAG_RECEIVER_FOREGROUND or 0x01000000)
+            addFlags(0x01000000)
             setPackage("com.android.systemui") 
             putExtra("prefix", prefix)
         }
@@ -620,7 +581,7 @@ class ConfigActivity : ComponentActivity() {
     private fun sendGestureUpdate(prefs: android.content.SharedPreferences, context: android.content.Context) {
         val intent = android.content.Intent("com.example.dynamicisland.RELOAD_PREFS").apply {
             @Suppress("WrongConstant")
-            addFlags(android.content.Intent.FLAG_RECEIVER_FOREGROUND or 0x01000000)
+            addFlags(0x01000000)
             setPackage("com.android.systemui") 
             
             putExtra("tweak_offset_y", prefs.getFloat("tweak_offset_y", 0f))
@@ -645,6 +606,12 @@ class ConfigActivity : ComponentActivity() {
             putExtra("theme_bat_ring", prefs.getFloat("theme_bat_ring", 12f))
             putExtra("theme_alert_title", prefs.getFloat("theme_alert_title", 16f))
             putExtra("theme_alert_msg", prefs.getFloat("theme_alert_msg", 14f))
+            
+            // 🎛️ NEW: Send Premium Settings to Island
+            putExtra("haptic_strength", prefs.getInt("haptic_strength", 1))
+            putExtra("charging_style", prefs.getString("charging_style", "CUBE"))
+            putExtra("blur_intensity", prefs.getFloat("blur_intensity", 16f))
+            putExtra("hide_landscape", prefs.getBoolean("hide_landscape", false))
 
             putExtra("enable_media", prefs.getBoolean("enable_media", true))
             putExtra("enable_charging", prefs.getBoolean("enable_charging", true))
@@ -664,22 +631,18 @@ class ConfigActivity : ComponentActivity() {
     private fun getDefaultWidth(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 180f; "mid" -> 320f; "max" -> 360f; "cube" -> 85f; else -> 0f }
     private fun getDefaultHeight(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 36f; "mid" -> 80f; "max" -> 220f; "cube" -> 85f; else -> 0f }
 
-    // 🎛️ CORE IPC FIX: Guaranteed Root Access
     private fun makePrefsWorldReadable() {
         try {
-            // Fix 1: The Root Data Directory must allow SystemUI traversal
             val rootDir = File(applicationInfo.dataDir)
             rootDir.setExecutable(true, false)
             rootDir.setReadable(true, false)
 
-            // Fix 2: The Shared Prefs Directory traversal
             val prefsDir = File(applicationInfo.dataDir, "shared_prefs")
             if (prefsDir.exists()) { 
                 prefsDir.setExecutable(true, false)
                 prefsDir.setReadable(true, false) 
             }
             
-            // Fix 3: The actual XML file read permission
             val prefsFile = File(prefsDir, "island_prefs.xml")
             if (prefsFile.exists()) {
                 prefsFile.setReadable(true, false)
