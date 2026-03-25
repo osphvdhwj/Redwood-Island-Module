@@ -143,6 +143,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onSplitPillClick: (() -> Unit)? = null
 
     var onPlayPauseClick: (() -> Unit)? = null
+    var onMicToggle: (() -> Unit)? = null
+    var onSpeakerToggle: (() -> Unit)? = null
+    var onEndCallClick: (() -> Unit)? = null
+    var onOpenCallUI: (() -> Unit)? = null
     var onPrevClick: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
     var onSeekTo: ((Long) -> Unit)? = null
@@ -385,7 +389,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
         
         // 🚀 THIS RESTORES THE PROPER FULLSCREEN REFLECTION WINDOW BEHAVIOR
-        LaunchedEffect(state, model, isLandscape) {
+LaunchedEffect(state, model, isLandscape) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
             val wm = windowManager ?: return@LaunchedEffect
@@ -397,6 +401,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
             } else {
                 wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+            }
+
+            // 🎛️ NEW: Gaming & Immersive Mode Override for Calls
+            if (model?.isCritical == true) {
+                // Force draw over everything, including full-screen games
+                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                wp.privateFlags = wp.privateFlags or 0x00000040 // PRIVATE_FLAG_TRUSTED_OVERLAY
             }
 
             wp.width = WindowManager.LayoutParams.MATCH_PARENT
@@ -513,11 +525,20 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                     },
                                     label = "UI Transition"
                                 ) { s ->
+                                    // 🎛️ FIXED: Correctly routing the views to their assigned screens!
                                     when (s) {
-                                         IslandState.TYPE_3_MAX -> { if (model is LiveActivityModel.Dashboard) DashboardMax(model) else if (model is LiveActivityModel.Music) MusicMax(model) }
+                                        IslandState.TYPE_3_MAX -> { 
+                                            when (model) {
+                                                is LiveActivityModel.Dashboard -> DashboardMax(model)
+                                                is LiveActivityModel.Music -> MusicMax(model)
+                                                is LiveActivityModel.Call -> CallMax(model) // 🎛️ Added Call to MAX
+                                                else -> {}
+                                            }
+                                        }
                                         IslandState.TYPE_2_MID -> { 
                                             when (model) {
                                                 is LiveActivityModel.Dashboard -> DashboardMid(model)
+                                                is LiveActivityModel.Call -> CallMid(model)
                                                 is LiveActivityModel.Music -> MusicMid(model)
                                                 is LiveActivityModel.General -> GeneralMid(model)
                                                 is LiveActivityModel.Charging -> ChargingMid(model)
@@ -529,7 +550,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                         }
                                         IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> {
                                             when (model) {
-                                                is LiveActivityModel.Call -> CallMini(model) // 🎛️ NEW
+                                                is LiveActivityModel.Call -> CallMini(model)
                                                 is LiveActivityModel.Music -> MusicMini(model)
                                                 is LiveActivityModel.General -> GeneralMini(model)
                                                 is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model)
