@@ -21,12 +21,13 @@ sealed class LiveActivityModel {
     data class Charging(override val id: String, override val type: ActivityType = ActivityType.CHARGING, val level: Int, val isPluggedIn: Boolean, override val isTransient: Boolean = true, override val isCritical: Boolean = false, override val isSensitive: Boolean = false) : LiveActivityModel()
 
     // Add this inside your LiveActivityModel sealed class
-    data class Call(
+ data class Call(
         override val id: String = "sys_call",
         override val type: ActivityType = ActivityType.ONGOING_TASK,
-        override val isTransient: Boolean = false, // 🎛️ ADD THIS LINE
+        override val isTransient: Boolean = false,
         override val isCritical: Boolean = true,
         override val isSensitive: Boolean = true,
+        val callerName: String = "Unknown Caller", // 🎛️ NEW: Caller Name Slot
         val state: String = "ONGOING", 
         val startTime: Long = System.currentTimeMillis()
     ) : LiveActivityModel()
