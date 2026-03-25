@@ -29,27 +29,197 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
 @Composable
-fun CallMini(model: LiveActivityModel.Call) {
-    val pulsingAlpha by rememberInfiniteTransition(label = "pulse").animateFloat(
-        initialValue = 0.5f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "alpha"
-    )
+fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
+    val haptic = LocalHapticFeedback.current
+    val isRinging = model.state == "RINGING"
     
+    // 🎛️ Premium Ringing Animation
+    val ringPulse by rememberInfiniteTransition(label="ring").animateFloat(
+        initialValue = 0.4f, targetValue = 1f, 
+        animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse), label="alpha"
+    )
+
+    var elapsedSecs by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(model.startTime, isRinging) {
+        if (!isRinging) {
+            while(isActive) { delay(1000); elapsedSecs = (System.currentTimeMillis() - model.startTime) / 1000 }
+        }
+    }
+    
+    val displayString = if (isRinging) "Incoming" else String.format("%d:%02d", elapsedSecs / 60, elapsedSecs % 60)
+    val pillAlpha = if (isRinging) ringPulse else 1f
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF00C853).copy(alpha = pillAlpha), RoundedCornerShape(50))
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (isRinging) onOpenCallUI?.invoke() else setState(IslandState.TYPE_MID) 
+                    },
+                    onLongPress = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onOpenCallUI?.invoke() 
+                    }
+                )
+            }
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text = displayString, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
+    
+    var isMicMuted by remember { mutableStateOf(audioManager.isMicrophoneMute) }
+    var isSpeakerOn by remember { mutableStateOf(audioManager.isSpeakerphoneOn) }
     var elapsedSecs by remember { mutableLongStateOf((System.currentTimeMillis() - model.startTime) / 1000) }
+    
+    LaunchedEffect(model.startTime) {
+        while(isActive) { 
+            delay(1000)
+            elapsedSecs = (System.currentTimeMillis() - model.startTime) / 1000 
+            isMicMuted = audioManager.isMicrophoneMute
+            isSpeakerOn = audioManager.isSpeakerphoneOn
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .border(1.dp, Color(0xFF00C853).copy(alpha = 0.3f), RoundedCornerShape(40.dp)) // 🎛️ Premium subtle glowing border
+            .padding(horizontal = 16.dp)
+            .pointerInput(Unit) {
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+                    if (dragAmount.y > 20f) { 
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onOpenCallUI?.invoke() 
+                    } else if (dragAmount.y < -20f) { 
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        setState(IslandState.TYPE_1_MINI) 
+                    }
+                }
+            },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Caller Avatar with gentle pulse
+        val pulseScale by rememberInfiniteTransition(label="pulse").animateFloat(initialValue = 0.95f, targetValue = 1.05f, animationSpec = infiniteRepeatable(tween(1500), RepeatMode.Reverse), label="scale")
+        Box(modifier = Modifier.size(42.dp).graphicsLayer { scaleX=pulseScale; scaleY=pulseScale }.background(Color(0xFF333333), CircleShape), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+        }
+        
+        Spacer(Modifier.width(12.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = model.callerName, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+            Text(text = String.format("%02d:%02d", elapsedSecs / 60, elapsedSecs % 60), color = Color(0xFF00C853), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        }
+        
+        // Haptic Quick Actions
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(if(isMicMuted) Color.White else Color.White.copy(0.15f)).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onMicToggle?.invoke(); isMicMuted = !isMicMuted }, contentAlignment = Alignment.Center) {
+                Icon(if(isMicMuted) Icons.Default.MicOff else Icons.Default.Mic, contentDescription=null, tint=if(isMicMuted) Color.Black else Color.White, modifier = Modifier.size(20.dp))
+            }
+            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(if(isSpeakerOn) Color.White else Color.White.copy(0.15f)).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onSpeakerToggle?.invoke(); isSpeakerOn = !isSpeakerOn }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.VolumeUp, contentDescription=null, tint=if(isSpeakerOn) Color.Black else Color.White, modifier = Modifier.size(20.dp))
+            }
+            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(Color(0xFFFF3B30)).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onEndCallClick?.invoke() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.CallEnd, contentDescription=null, tint=Color.White, modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun DynamicIslandView.CallMax(model: LiveActivityModel.Call) {
+    val context = LocalContext.current
+    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
+    
+    // Auto-updating hardware states
+    var isMicMuted by remember { mutableStateOf(audioManager.isMicrophoneMute) }
+    var isSpeakerOn by remember { mutableStateOf(audioManager.isSpeakerphoneOn) }
+    var elapsedSecs by remember { mutableLongStateOf((System.currentTimeMillis() - model.startTime) / 1000) }
+
+    // Live Timer Engine
     LaunchedEffect(model.startTime) {
         while(isActive) {
             delay(1000)
             elapsedSecs = (System.currentTimeMillis() - model.startTime) / 1000
+            // Keep buttons synced with hardware in case changed from system UI
+            isMicMuted = audioManager.isMicrophoneMute
+            isSpeakerOn = audioManager.isSpeakerphoneOn
         }
     }
-    
-    val mins = elapsedSecs / 60
-    val secs = elapsedSecs % 60
-    val timeString = String.format("%02d:%02d", mins, secs)
+    val timeString = String.format("%02d:%02d", elapsedSecs / 60, elapsedSecs % 60)
 
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Icon(imageVector = Icons.Default.Phone, contentDescription = "Ongoing Call", tint = Color(0xFF00FF00).copy(alpha = pulsingAlpha), modifier = Modifier.size(18.dp))
-        Text(text = timeString, color = Color(0xFF00FF00), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // TOP: Caller Info
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            // Profile Avatar Placeholder
+            Box(
+                modifier = Modifier.size(54.dp).background(Color(0xFF444444), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = model.callerName, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+                Text(text = "Mobile", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // MIDDLE: Big Live Timer
+        Text(text = timeString, color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Light)
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // BOTTOM: Action Controls
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Mute Button
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier.size(60.dp).clip(CircleShape).background(if (isMicMuted) Color.White else Color.White.copy(alpha = 0.15f)).clickable { onMicToggle?.invoke(); isMicMuted = !isMicMuted },
+                    contentAlignment = Alignment.Center
+                ) { Icon(if (isMicMuted) Icons.Default.MicOff else Icons.Default.Mic, contentDescription = "Mute", tint = if (isMicMuted) Color.Black else Color.White, modifier = Modifier.size(28.dp)) }
+            }
+
+            // End Call Button (Big Red)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier.size(72.dp).clip(CircleShape).background(Color(0xFFFF3B30)).clickable { onEndCallClick?.invoke() },
+                    contentAlignment = Alignment.Center
+                ) { Icon(Icons.Default.CallEnd, contentDescription = "End", tint = Color.White, modifier = Modifier.size(36.dp)) }
+            }
+
+            // Speaker Button
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier.size(60.dp).clip(CircleShape).background(if (isSpeakerOn) Color.White else Color.White.copy(alpha = 0.15f)).clickable { onSpeakerToggle?.invoke(); isSpeakerOn = !isSpeakerOn },
+                    contentAlignment = Alignment.Center
+                ) { Icon(Icons.Default.VolumeUp, contentDescription = "Speaker", tint = if (isSpeakerOn) Color.Black else Color.White, modifier = Modifier.size(28.dp)) }
+            }
+        }
     }
 }
 
