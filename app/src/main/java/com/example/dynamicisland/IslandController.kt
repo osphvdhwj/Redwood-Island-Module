@@ -576,11 +576,6 @@ class IslandController(private val context: Context) {
         val rawAlbumArt = try { metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART) } catch (e: Exception) { null }
         val albumArtBitmap = getScaledBitmap(rawAlbumArt)
         
-        // 🎛️ FIXED: Prevent ART GC thrashing by immediately recycling the uncompressed buffer
-        if (rawAlbumArt != albumArtBitmap && rawAlbumArt != null && !rawAlbumArt.isRecycled) {
-            rawAlbumArt.recycle()
-        }
-        
         val newTitle = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown"
         val isNewTrack = newTitle != lastTrackTitle && lastTrackTitle.isNotEmpty()
         lastTrackTitle = newTitle
