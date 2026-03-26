@@ -26,8 +26,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 import android.util.LruCache
 import java.util.concurrent.ConcurrentHashMap
+import android.app.ActivityOptions
+import android.app.PendingIntent
 
 class IslandController(private val context: Context) {
+
+    private var mediaProcessJob: Job? = null
 
     private var isAutoBrightnessEnabled = false
     private var currentRingerMode = AudioManager.RINGER_MODE_NORMAL
@@ -68,6 +72,27 @@ class IslandController(private val context: Context) {
     private var mediaTickerJob: Job? = null
 
     private val audioManager by lazy { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+
+    // In IslandController.kt
+    private val volumeFlow = MutableStateFlow(-1)
+
+    init {
+        scope.launch(Dispatchers.IO) {
+            volumeFlow
+                .filter { it >= 0 }
+                .collectLatest { percent ->
+                    delay(50) // Debounce rapid drag events
+                    val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                    val targetVolume = ((percent.toFloat() / 100f) * maxVolume).toInt()
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVolume, 0)
+                }
+        }
+    }
+
+    fun setSystemVolume(percent: Int) {
+        islandView?.updateHardwareVolume(percent) // Instant UI update
+        volumeFlow.value = percent // Deferred hardware update
+    }
 
     private val brightnessObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) {
@@ -177,13 +202,23 @@ class IslandController(private val context: Context) {
         } catch (e: Exception) {}
     }
 
-    // 🎛️ NEW: Command System Brightness from Dashboard Drag
+    // 🎛️ FIXED: Dynamic Hardware Scaling (Bypasses 255 hardcode limits on Xiaomi/Poco)
     fun setSystemBrightness(percent: Int) {
         try {
             val resolver = context.contentResolver
-            val maxBrightness = try { Settings.System.getInt(resolver, "screen_brightness_maximum") } catch (e: Exception) { 255 }
+            
+            // Fetch true hardware ceiling (e.g. 4095 on Poco), fallback to 255 if standard AOSP
+            val maxBrightness = try { 
+                Settings.System.getInt(resolver, "screen_brightness_maximum") 
+            } catch (e: Exception) { 
+                255 
+            }
+            
+            // Map 0-100% UI slider perfectly to 0-HardwareMax
             val targetBrightness = ((percent.toFloat() / 100f) * maxBrightness).toInt()
             Settings.System.putInt(resolver, Settings.System.SCREEN_BRIGHTNESS, targetBrightness)
+            
+            // Push immediately to local state, avoiding the system return loop
             islandView?.updateHardwareBrightness(percent)
         } catch (e: Exception) {}
     }
@@ -232,17 +267,11 @@ class IslandController(private val context: Context) {
     }
 
     private fun launchAppIntent(packageName: String) {
-        try {
-            val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
-            if (launchIntent != null) {
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                context.startActivity(launchIntent)
-                
-                userForceCollapsed = true
-                _islandState.value = IslandState.TYPE_0_RING
-                evaluatePriority()
-            }
-        } catch (e: Exception) {}
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
+        if (launchIntent != null) {
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            executeBackgroundIntent(launchIntent)
+        }
     }
 
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
@@ -414,70 +443,79 @@ class IslandController(private val context: Context) {
         }
     }
 
+    // 🎛️ FIXED: Deterministic Priority Weights
+    private fun LiveActivityModel.getPriorityWeight(): Int {
+        return when (this) {
+            is LiveActivityModel.Call -> if (state == "RINGING") 100 else 90
+            is LiveActivityModel.SystemAlert -> if (alertType == "THERMAL") 85 else 60
+            is LiveActivityModel.Charging -> if (isCritical) 80 else 40 // 20% warning beats music, but not a call
+            is LiveActivityModel.AppTimerWarning -> 70
+            is LiveActivityModel.OngoingTask -> 50
+            is LiveActivityModel.Music -> 20
+            is LiveActivityModel.RealityPill -> 10
+            is LiveActivityModel.General -> 5
+            is LiveActivityModel.HardwareMonitor -> 1
+            else -> 0
+        }
+    }
+
+    // 🎛️ FIXED: Weighted State Machine Router
     private fun evaluatePriority() {
         val rotation = try { windowManager?.defaultDisplay?.rotation ?: 0 } catch(e: Throwable) { 0 }
         val isLandscapeNow = rotation == android.view.Surface.ROTATION_90 || rotation == android.view.Surface.ROTATION_270
-        val isAlertCritical = transientModel?.isCritical == true
         
         val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
         val blacklistedGames = prefs.getString("gaming_blacklist", "com.dts.freefiremax,com.tencent.ig") ?: ""
         val isBlacklistedAppActive = topAppPackage.isNotEmpty() && blacklistedGames.contains(topAppPackage)
-        
-        // 🎛️ NEW: Reads the user's Landscape Toggle preference
-        val hideOnLandscape = prefs.getBoolean("hide_landscape", false)
-        val shouldHideLandscape = isLandscapeNow && hideOnLandscape
-        
-        // 🎛️ FIXED: Safely hides the island during games/video, UNLESS it's a critical alert or phone call
-        if ((shouldHideLandscape || currentHardware?.isGamingModeOn == true || isBlacklistedAppActive) && !isAlertCritical && currentCall == null) {
-            _islandState.value = IslandState.HIDDEN
-            return
-        }
-        
-        if (transientModel != null) {
-            userForceCollapsed = false
-            if (currentHardware?.isGamingModeOn == true && transientModel is LiveActivityModel.Charging) { } 
-            else if (transientModel is LiveActivityModel.SystemAlert || transientModel is LiveActivityModel.AppTimerWarning || transientModel is LiveActivityModel.OngoingTask) {
-                _activeModel.value = transientModel; _splitModel.value = null; _islandState.value = IslandState.TYPE_2_MID
-            } else if (transientModel is LiveActivityModel.RealityPill) {
-                _activeModel.value = transientModel; _splitModel.value = null; _islandState.value = IslandState.TYPE_1_MINI
-            } else if (currentMedia?.isPlaying == true || currentMedia != null) {
-                _activeModel.value = currentMedia; _splitModel.value = transientModel; _islandState.value = IslandState.TYPE_SPLIT
-            } else {
-                _activeModel.value = transientModel; _splitModel.value = null; _islandState.value = IslandState.TYPE_CUBE
-            }
-            return
-        }
-        
-        _splitModel.value = null
-        if (_activeModel.value is LiveActivityModel.Dashboard) return
+        val shouldHideLandscape = isLandscapeNow && prefs.getBoolean("hide_landscape", false)
 
-        if (currentCall != null) {
-            _activeModel.value = currentCall
+        // 1. Gather all currently active states
+        val activeCandidates = listOfNotNull(
+            currentCall,
+            transientModel,
+            if (isMediaEnabled) currentMedia else null
+        ).sortedByDescending { it.getPriorityWeight() }
+
+        val dominantModel = activeCandidates.firstOrNull()
+
+        // 2. Global Hide Overrides (Games/Video)
+        if ((shouldHideLandscape || currentHardware?.isGamingModeOn == true || isBlacklistedAppActive)) {
+            // ONLY pierce the game overlay if the weight is critical (80+)
+            if (dominantModel == null || dominantModel.getPriorityWeight() < 80) {
+                _islandState.value = IslandState.HIDDEN
+                return
+            }
+        }
+
+        // 3. Apply the Dominant State
+        if (dominantModel != null) {
+            _activeModel.value = dominantModel
             
-            if (currentMedia != null && isMediaEnabled) {
-                _splitModel.value = currentMedia
+            // 4. Handle Split-Screen (Cube) Logic
+            val secondaryModel = activeCandidates.drop(1).firstOrNull { it is LiveActivityModel.Music || it is LiveActivityModel.Charging }
+            
+            if (secondaryModel != null && dominantModel.getPriorityWeight() >= 80) {
+                _splitModel.value = secondaryModel
                 _islandState.value = IslandState.TYPE_SPLIT
             } else {
                 _splitModel.value = null
-                _islandState.value = IslandState.TYPE_1_MINI
+                
+                // Route to correct visual state based on model type and user interaction
+                _islandState.value = when {
+                    userForceCollapsed -> IslandState.TYPE_0_RING
+                    dominantModel is LiveActivityModel.SystemAlert || dominantModel is LiveActivityModel.Charging || dominantModel is LiveActivityModel.AppTimerWarning -> IslandState.TYPE_2_MID
+                    dominantModel is LiveActivityModel.Call && dominantModel.state == "RINGING" -> IslandState.TYPE_1_MINI
+                    dominantModel is LiveActivityModel.Call && dominantModel.state == "ONGOING" -> IslandState.TYPE_1_MINI // User must tap to expand to MID
+                    dominantModel is LiveActivityModel.Music -> IslandState.TYPE_1_MINI
+                    else -> IslandState.TYPE_1_MINI
+                }
             }
-            return
+        } else {
+            // Nothing active
+            _activeModel.value = null
+            _splitModel.value = null
+            _islandState.value = IslandState.TYPE_0_RING
         }
-        
-        if (currentMedia != null && isMediaEnabled) {
-            _activeModel.value = currentMedia
-            if (userForceCollapsed) {
-                _islandState.value = IslandState.TYPE_0_RING
-                return
-            }
-            if (_islandState.value == IslandState.HIDDEN || _islandState.value == IslandState.TYPE_0_RING || _islandState.value == IslandState.TYPE_CUBE || _islandState.value == IslandState.TYPE_SPLIT) {
-                _islandState.value = IslandState.TYPE_1_MINI
-            }
-            return
-        }
-        
-        _activeModel.value = null
-        _islandState.value = IslandState.TYPE_0_RING
     }
 
     fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
@@ -512,6 +550,9 @@ class IslandController(private val context: Context) {
 
     private fun extractMediaData(controller: MediaController?) {
         if (controller == null || !isMediaEnabled) return
+
+        mediaProcessJob?.cancel()
+        
         val metadata = controller.metadata
         val pbState = controller.playbackState ?: return
 
@@ -522,6 +563,11 @@ class IslandController(private val context: Context) {
         val duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
         val rawAlbumArt = try { metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART) } catch (e: Exception) { null }
         val albumArtBitmap = getScaledBitmap(rawAlbumArt)
+        
+        // 🎛️ FIXED: Prevent ART GC thrashing by immediately recycling the uncompressed buffer
+        if (rawAlbumArt != albumArtBitmap && rawAlbumArt != null && !rawAlbumArt.isRecycled) {
+            rawAlbumArt.recycle()
+        }
         
         val newTitle = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown"
         val isNewTrack = newTitle != lastTrackTitle && lastTrackTitle.isNotEmpty()
