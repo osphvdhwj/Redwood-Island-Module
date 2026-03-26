@@ -386,82 +386,54 @@ fun IsolatedCircularProgress(durationMs: Long, posProvider: () -> Long, color: C
 }
 
 @Composable
-fun InteractiveWavyMediaBar(
-    durationMs: Long,
-    posProvider: () -> Long,
-    isPlaying: Boolean,
-    color: Color,
-    trackColor: Color,
-    onSeek: (Long) -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun InteractiveWavyMediaBar(durationMs: Long, posProvider: () -> Long, isPlaying: Boolean, color: Color, trackColor: Color, onSeek: (Long) -> Unit, modifier: Modifier = Modifier) {
+    val haptic = LocalHapticFeedback.current
+    var localPos by remember { mutableLongStateOf(posProvider()) }
+    LaunchedEffect(Unit) { while(isActive) { delay(50); if (!isDraggingMedia) localPos = posProvider() } }
+    
     val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
-    var isDragging by remember { mutableStateOf(false) }
     var dragProgress by remember { mutableFloatStateOf(0f) }
-    val currentProgress = (posProvider() / safeDuration).coerceIn(0f, 1f)
-    val animatedProgress by animateFloatAsState(targetValue = currentProgress, animationSpec = tween(1000, easing = LinearEasing), label = "smooth_prog")
-    val displayProgress = if (isDragging) dragProgress else animatedProgress
+    val currentProgress = (localPos / safeDuration).coerceIn(0f, 1f)
+    val displayProgress = if (isDraggingMedia) dragProgress else currentProgress
 
-    val thumbRadius by animateFloatAsState(targetValue = if (isDragging) 7f else 4.5f, animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "thumb")
-    val targetAmplitude = if (isDragging) 4f else if (isPlaying) 2.5f else 0f
-    val amplitude by animateFloatAsState(targetValue = targetAmplitude, animationSpec = spring(dampingRatio = 0.6f, stiffness = 300f), label = "amp")
+    val targetAmplitude = if (isDraggingMedia) 6f else if (isPlaying) 2.5f else 0f
+    
+    // 🎛️ TUNED SPRING PHYSICS
+    val amplitude by animateFloatAsState(targetValue = targetAmplitude, animationSpec = spring(dampingRatio = 0.85f, stiffness = 600f), label = "amp")
+    val phaseShift by rememberInfiniteTransition(label = "wave").animateFloat(initialValue = 0f, targetValue = 2f * Math.PI.toFloat(), animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing)), label = "phase")
 
-    val phaseShift by rememberInfiniteTransition(label = "wave").animateFloat(
-        initialValue = 0f, targetValue = 2f * Math.PI.toFloat(),
-        animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing)), label = "phase"
-    )
+    // 🎛️ ZERO-ALLOCATION MEMORY OPTIMIZATION
+    // We instantiate the Path object EXACTLY ONCE to prevent Garbage Collection micro-stutters
+    val wavePath = remember { androidx.compose.ui.graphics.Path() }
 
     Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .pointerInput(Unit) {
-                val velocityTracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        isDragging = true
-                        dragProgress = (offset.x / size.width).coerceIn(0f, 1f)
-                        velocityTracker.resetTracking()
-                    },
-                    onDragEnd = {
-                        val finalVelocity = velocityTracker.calculateVelocity().x
-                        isDragging = false
-                        if (kotlin.math.abs(finalVelocity) < 1500f) {
-                            onSeek((dragProgress * safeDuration).toLong())
-                        }
-                    },
-                    onDragCancel = { isDragging = false }
-                ) { change, dragAmount ->
-                    change.consume()
-                    velocityTracker.addPosition(change.uptimeMillis, change.position)
-                    dragProgress = (change.position.x / size.width).coerceIn(0f, 1f)
-                }
-            }
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { offset ->
-                        val tappedProgress = (offset.x / size.width).coerceIn(0f, 1f)
-                        onSeek((tappedProgress * safeDuration).toLong())
-                    }
-                )
-            }
+        modifier = modifier.fillMaxWidth().pointerInput(Unit) {
+            detectDragGestures(
+                onDragStart = { offset -> isDraggingMedia = true; dragProgress = (offset.x / size.width).coerceIn(0f, 1f); haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                onDragEnd = { isDraggingMedia = false; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onSeek((dragProgress * safeDuration).toLong()) },
+                onDragCancel = { isDraggingMedia = false }
+            ) { change, _ -> change.consume(); dragProgress = (change.position.x / size.width).coerceIn(0f, 1f) }
+        }.pointerInput(Unit) { detectTapGestures(onTap = { offset -> onSeek(((offset.x / size.width).coerceIn(0f, 1f) * safeDuration).toLong()) }) }
     ) {
         val midY = size.height / 2
         val activeWidth = size.width * displayProgress
-
         drawLine(color = trackColor, start = androidx.compose.ui.geometry.Offset(activeWidth, midY), end = androidx.compose.ui.geometry.Offset(size.width, midY), strokeWidth = size.height, cap = StrokeCap.Round)
 
-        val path = androidx.compose.ui.graphics.Path()
-        path.moveTo(0f, midY)
+        // 🎛️ REWIND INSTEAD OF REALLOCATE
+        wavePath.rewind() 
+        wavePath.moveTo(0f, midY)
         val frequency = 0.08f
-        val ampPx = amplitude.dp.toPx()
         
         for (x in 0..activeWidth.toInt() step 4) {
-            val y = midY + kotlin.math.sin((x * frequency) + phaseShift) * ampPx
-            path.lineTo(x.toFloat(), y)
+            val tension = if (isDraggingMedia) (1f - (kotlin.math.abs(x - activeWidth) / size.width)).coerceAtLeast(0.2f) else 1f
+            val y = midY + kotlin.math.sin((x * frequency) + phaseShift) * (amplitude.dp.toPx() * tension)
+            wavePath.lineTo(x.toFloat(), y)
         }
-        path.lineTo(activeWidth, midY)
+        wavePath.lineTo(activeWidth, midY)
 
-        drawPath(path = path, color = color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = size.height, cap = StrokeCap.Round))
-        drawCircle(color = Color.White, radius = thumbRadius.dp.toPx(), center = androidx.compose.ui.geometry.Offset(activeWidth, midY))
+        androidx.compose.ui.graphics.drawscope.drawIntoCanvas { 
+            drawPath(path = wavePath, color = color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = size.height, cap = StrokeCap.Round)) 
+        }
+        drawCircle(color = Color.White, radius = if(isDraggingMedia) 6.dp.toPx() else 4.dp.toPx(), center = androidx.compose.ui.geometry.Offset(activeWidth, midY))
     }
 }
