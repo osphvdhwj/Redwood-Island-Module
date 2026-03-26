@@ -1,6 +1,7 @@
 package com.example.dynamicisland
 
 import android.annotation.SuppressLint
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
 import android.content.Context
