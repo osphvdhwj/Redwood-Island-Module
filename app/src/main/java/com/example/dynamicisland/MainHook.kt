@@ -8,7 +8,7 @@ import android.view.Display
 import android.view.Gravity
 import android.view.WindowManager
 import android.graphics.PixelFormat
-import android.os.UserHandle // 🎛️ FIXED: Required for cross-profile system broadcasts
+import android.os.UserHandle
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XC_MethodHook
@@ -22,6 +22,12 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
         lateinit var modulePath: String
         // Tracks the Timestamp AND the Last Title seen for each app
         val lastBroadcastMap = mutableMapOf<String, Pair<Long, String>>()
+        
+        // 🎛️ FIXED: Bypass Compiler SDK Restrictions
+        // We use Reflection to fetch the hidden UserHandle.ALL variable dynamically at runtime.
+        val USER_ALL: UserHandle by lazy {
+            UserHandle::class.java.getField("ALL").get(null) as UserHandle
+        }
     }
 
     override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
@@ -47,8 +53,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     .setPackage("com.android.systemui")
                                     .putExtra("pkg", packageName)
                                 
-                                // 🎛️ FIXED: System Process Broadcast Requires UserHandle.ALL
-                                mContext?.sendBroadcastAsUser(intent, UserHandle.ALL)
+                                // 🎛️ FIXED: Uses our Reflection-based USER_ALL
+                                mContext?.sendBroadcastAsUser(intent, USER_ALL)
                             } catch (e: Throwable) {}
                         }
                     })
@@ -69,17 +75,14 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                 val isOngoing = (notification.flags and android.app.Notification.FLAG_ONGOING_EVENT) != 0
 
                                 if (isOngoing && pkgName != "com.android.systemui" && pkgName != "android") {
-                                    // 🎛️ SMART THROTTLE: Check if it's a new song or just a progress update
                                     val currentTime = System.currentTimeMillis()
                                     val lastData = lastBroadcastMap[pkgName]
                                     val lastTime = lastData?.first ?: 0L
                                     val lastTitle = lastData?.second ?: ""
 
-                                    // If the title changed, it's a new song. Bypass the timer!
                                     val isNewContent = title != lastTitle
 
                                     if (isNewContent || currentTime - lastTime > 1000) {
-                                        // Save the new timestamp and the new title
                                         lastBroadcastMap[pkgName] = Pair(currentTime, title)
                                         val progress = extras.getInt(android.app.Notification.EXTRA_PROGRESS, -1)
                                         val progressMax = extras.getInt(android.app.Notification.EXTRA_PROGRESS_MAX, -1)
@@ -92,8 +95,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                             if (progress != -1) putExtra("progress", progress)
                                             if (progressMax != -1) putExtra("progressMax", progressMax)
                                         }
-                                        // 🎛️ FIXED: System Process Broadcast Requires UserHandle.ALL
-                                        mContext?.sendBroadcastAsUser(intent, UserHandle.ALL)
+                                        // 🎛️ FIXED: Uses our Reflection-based USER_ALL
+                                        mContext?.sendBroadcastAsUser(intent, USER_ALL)
                                     }
                                 }
 
@@ -105,8 +108,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                                             .setPackage("com.android.systemui")
                                             .putExtra("otp", match.value)
                                             .putExtra("pkg", pkgName)
-                                        // 🎛️ FIXED: System Process Broadcast Requires UserHandle.ALL
-                                        mContext?.sendBroadcastAsUser(intent, UserHandle.ALL)
+                                        // 🎛️ FIXED: Uses our Reflection-based USER_ALL
+                                        mContext?.sendBroadcastAsUser(intent, USER_ALL)
                                     }
                                 }
                             } catch (e: Throwable) {}
