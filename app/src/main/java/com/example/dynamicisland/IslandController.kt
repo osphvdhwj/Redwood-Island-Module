@@ -27,7 +27,8 @@ import org.json.JSONObject
 import android.util.LruCache
 import java.util.concurrent.ConcurrentHashMap
 import android.app.ActivityOptions
-import android.app.PendingIntent
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.collectLatest
 
 class IslandController(private val context: Context) {
 
@@ -87,11 +88,6 @@ class IslandController(private val context: Context) {
                     audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVolume, 0)
                 }
         }
-    }
-
-    fun setSystemVolume(percent: Int) {
-        islandView?.updateHardwareVolume(percent) // Instant UI update
-        volumeFlow.value = percent // Deferred hardware update
     }
 
     private val brightnessObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
