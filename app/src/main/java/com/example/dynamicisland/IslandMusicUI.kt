@@ -6,7 +6,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -27,6 +26,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -39,10 +39,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+
+// Global flag to prevent local position from fighting the drag
+var isDraggingMedia by mutableStateOf(false)
 
 @Composable
 fun InteractiveIconButton(icon: ImageVector, tint: Color, baseSize: Dp, bgAlpha: Float = 0f, onClick: () -> Unit) {
@@ -52,7 +53,7 @@ fun InteractiveIconButton(icon: ImageVector, tint: Color, baseSize: Dp, bgAlpha:
 
     LaunchedEffect(isClicked) {
         if (isClicked) {
-            kotlinx.coroutines.delay(if(theme.actionAnimType == "CHECKMARK") 1000 else 300)
+            delay(if(theme.actionAnimType == "CHECKMARK") 1000 else 300)
             isClicked = false
         }
     }
@@ -152,7 +153,6 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
         Spacer(modifier = Modifier.width(12.dp))
         
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-            // 🎛️ FIXED: Now uses the Config App's Music Text Sizes
             Text(text = music.title, color = dynamicTextColor, fontSize = theme.musicTitleSize, fontFamily = theme.titleFont, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
             Text(text = music.artist, color = dynamicTextColor.copy(alpha = 0.7f), fontSize = theme.musicArtistSize, fontFamily = theme.titleFont, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
             
@@ -160,7 +160,6 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text(text = formatTime(currentMediaPos.longValue), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 10.sp)
                 Spacer(Modifier.width(6.dp))
-                // 🎛️ FIXED: Now uses the Config App's Seeker Thickness
                 InteractiveWavyMediaBar(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, isPlaying = music.isPlaying, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.2f), onSeek = { onSeekTo?.invoke(it) }, modifier = Modifier.weight(1f).height(theme.musicSeekerThick * 3))
                 Spacer(Modifier.width(6.dp))
                 Text(text = formatTime(music.durationMs), color = dynamicTextColor.copy(alpha=0.7f), fontSize = 10.sp)
@@ -256,14 +255,12 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
         }
         Spacer(modifier = Modifier.weight(0.5f))
         
-        // 🎛️ FIXED: Now uses the Config App's Music Text Sizes
         Text(text = music.title, color = dynamicTextColor, fontSize = theme.musicTitleSize * 1.25f, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.fillMaxWidth().safeMarquee(islandState.value))
         Text(text = music.artist, color = dynamicTextColor.copy(alpha=0.8f), fontSize = theme.musicArtistSize * 1.15f, maxLines = 1, modifier = Modifier.fillMaxWidth().safeMarquee(islandState.value))
         
         Spacer(modifier = Modifier.weight(0.5f))
 
         IsolatedTimeRow(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, textColor = dynamicTextColor)
-        // 🎛️ FIXED: Now uses the Config App's Seeker Thickness
         InteractiveWavyMediaBar(durationMs = music.durationMs, posProvider = { currentMediaPos.longValue }, isPlaying = music.isPlaying, color = dynamicTextColor, trackColor = dynamicTextColor.copy(alpha=0.2f), onSeek = { onSeekTo?.invoke(it) }, modifier = Modifier.padding(vertical = theme.elementGap).height(theme.musicSeekerThick * 3))
         Spacer(modifier = Modifier.weight(1f))
         
@@ -325,9 +322,11 @@ fun IsolatedTimeText(durationMs: Long, posProvider: () -> Long, textColor: Color
 
 @Composable
 fun IsolatedTimeRow(durationMs: Long, posProvider: () -> Long, textColor: Color) {
-    val pos = posProvider()
+    var localPos by remember { mutableLongStateOf(posProvider()) }
+    LaunchedEffect(Unit) { while(isActive) { delay(100); localPos = posProvider() } }
+
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(text = formatTime(pos), color = textColor.copy(alpha=0.7f), fontSize = 12.sp)
+        Text(text = formatTime(localPos), color = textColor.copy(alpha=0.7f), fontSize = 12.sp)
         Text(text = formatTime(durationMs), color = textColor.copy(alpha=0.7f), fontSize = 12.sp)
     }
 }
@@ -339,11 +338,9 @@ fun IsolatedMediaSlider(durationMs: Long, posProvider: () -> Long, dynamicTextCo
     val interactionSource = remember { MutableInteractionSource() }
     val isDragged by interactionSource.collectIsDraggedAsState()
 
-    val currentPos = posProvider().toFloat()
-    var localPosition by remember(isDragged) { mutableFloatStateOf(currentPos) }
-
     val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
     val currentPosition = posProvider().toFloat().coerceAtLeast(0f)
+    var localPosition by remember(isDragged) { mutableFloatStateOf(currentPosition) }
     val safePosition = if (isDragged) localPosition else currentPosition
 
     Slider(
@@ -370,22 +367,25 @@ fun IsolatedLinearProgressIndicator(durationMs: Long, posProvider: () -> Long, c
     val targetProgress = (currentPosition / safeDuration).coerceIn(0f, 1f)
     val animatedProgress by animateFloatAsState(targetValue = targetProgress, animationSpec = tween(durationMillis = 1000, easing = LinearEasing), label = "liquid_progress")
 
-    androidx.compose.foundation.Canvas(modifier = modifier.height(theme.mediaBarThickness)) {
+    Canvas(modifier = modifier.height(theme.mediaBarThickness)) {
         drawLine(color = trackColor, start = androidx.compose.ui.geometry.Offset(0f, size.height / 2), end = androidx.compose.ui.geometry.Offset(size.width, size.height / 2), strokeWidth = theme.mediaBarThickness.toPx(), cap = theme.mediaBarCap)
         drawLine(color = color, start = androidx.compose.ui.geometry.Offset(0f, size.height / 2), end = androidx.compose.ui.geometry.Offset(size.width * animatedProgress, size.height / 2), strokeWidth = theme.mediaBarThickness.toPx(), cap = theme.mediaBarCap)
     }
 }
 
 @Composable
-fun IsolatedCircularProgressIndicator(durationMs: Long, posProvider: () -> Long, color: Color, trackColor: Color, strokeWidth: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+fun IsolatedCircularProgressIndicator(durationMs: Long, posProvider: () -> Long, color: Color, trackColor: Color, strokeWidth: Dp, modifier: Modifier = Modifier) {
     val safeDuration = if (durationMs > 0) durationMs.toFloat() else 1f
     CircularProgressIndicator(progress = { (posProvider().toFloat() / safeDuration).coerceIn(0f, 1f) }, color = color, trackColor = trackColor, strokeWidth = strokeWidth, modifier = modifier)
 }
 
 @Composable
 fun IsolatedCircularProgress(durationMs: Long, posProvider: () -> Long, color: Color) {
+    var localPos by remember { mutableLongStateOf(posProvider()) }
+    LaunchedEffect(Unit) { while(isActive) { delay(100); localPos = posProvider() } }
+
     val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
-    val currentPosition = posProvider().toFloat().coerceAtLeast(0f)
+    val currentPosition = localPos.toFloat().coerceAtLeast(0f)
     CircularProgressIndicator(progress = { (currentPosition / safeDuration).coerceIn(0f, 1f) }, color = color, trackColor = color.copy(alpha = 0.2f), strokeWidth = 2.dp, modifier = Modifier.fillMaxSize())
 }
 
@@ -402,12 +402,9 @@ fun InteractiveWavyMediaBar(durationMs: Long, posProvider: () -> Long, isPlaying
 
     val targetAmplitude = if (isDraggingMedia) 6f else if (isPlaying) 2.5f else 0f
     
-    // 🎛️ TUNED SPRING PHYSICS
     val amplitude by animateFloatAsState(targetValue = targetAmplitude, animationSpec = spring(dampingRatio = 0.85f, stiffness = 600f), label = "amp")
     val phaseShift by rememberInfiniteTransition(label = "wave").animateFloat(initialValue = 0f, targetValue = 2f * Math.PI.toFloat(), animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing)), label = "phase")
 
-    // 🎛️ ZERO-ALLOCATION MEMORY OPTIMIZATION
-    // We instantiate the Path object EXACTLY ONCE to prevent Garbage Collection micro-stutters
     val wavePath = remember { androidx.compose.ui.graphics.Path() }
 
     Canvas(
@@ -423,7 +420,6 @@ fun InteractiveWavyMediaBar(durationMs: Long, posProvider: () -> Long, isPlaying
         val activeWidth = size.width * displayProgress
         drawLine(color = trackColor, start = androidx.compose.ui.geometry.Offset(activeWidth, midY), end = androidx.compose.ui.geometry.Offset(size.width, midY), strokeWidth = size.height, cap = StrokeCap.Round)
 
-        // 🎛️ REWIND INSTEAD OF REALLOCATE
         wavePath.rewind() 
         wavePath.moveTo(0f, midY)
         val frequency = 0.08f
@@ -435,10 +431,9 @@ fun InteractiveWavyMediaBar(durationMs: Long, posProvider: () -> Long, isPlaying
         }
         wavePath.lineTo(activeWidth, midY)
 
-        androidx.compose.ui.graphics.drawscope.drawIntoCanvas { 
+        drawIntoCanvas { 
             drawPath(path = wavePath, color = color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = size.height, cap = StrokeCap.Round)) 
         }
         drawCircle(color = Color.White, radius = if(isDraggingMedia) 6.dp.toPx() else 4.dp.toPx(), center = androidx.compose.ui.geometry.Offset(activeWidth, midY))
     }
 }
-var isDraggingMedia by mutableStateOf(false)
