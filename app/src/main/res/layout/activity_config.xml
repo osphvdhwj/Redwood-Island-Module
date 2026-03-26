@@ -105,5 +105,46 @@
             android:layout_height="wrap_content"
             android:backgroundTint="#FFFFFF"
             android:layout_marginTop="8dp"/>
+    <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Physics & Animation Tuning"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:layout_marginTop="32dp"
+            android:layout_marginBottom="16dp"
+            android:textColor="#FFFFFF"/>
 
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_glassmorphism"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="True Glassmorphism (Translucent Background)" 
+            android:textColor="#CCCCCC"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Animation Bounciness (Lower = More Wobble)"
+            android:textColor="#CCCCCC"
+            android:layout_marginTop="24dp"/>
+        <SeekBar
+            android:id="@+id/seek_damping"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:progress="85"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Animation Speed/Stiffness"
+            android:textColor="#CCCCCC"
+            android:layout_marginTop="24dp"/>
+        <SeekBar
+            android:id="@+id/seek_stiffness"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="1000"
+            android:progress="400"/>
 </LinearLayout>
