@@ -203,8 +203,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     chargingStyle = intent.getStringExtra("charging_style") ?: "CUBE",
                     blurIntensity = intent.getFloatExtra("blur_intensity", 16f).dp,
                     hideOnLandscape = intent.getBooleanExtra("hide_landscape", false)
+                    isGlassmorphism = intent.getBooleanExtra("glass_mode", true),
+                    springDamping = intent.getFloatExtra("spring_damping", 0.85f),
+                    springStiffness = intent.getFloatExtra("spring_stiffness", 400f)
                 )
-
                 val payload = intent.getStringExtra("gesture_payload")
                 if (payload != null) onGestureSettingsUpdated?.invoke(payload) else loadPreferences()
             }
@@ -310,10 +312,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
+        
+        // 🎛️ FIXED: Prevent Observer Leak by ensuring ViewTreeObserver is alive
         try {
             if (insetsListenerProxy != null) {
+                val aliveObserver = if (viewTreeObserver.isAlive) viewTreeObserver else this.viewTreeObserver
                 val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
-                viewTreeObserver.javaClass.getMethod("removeOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListenerProxy)
+                aliveObserver.javaClass.getMethod("removeOnComputeInternalInsetsListener", listenerClass).invoke(aliveObserver, insetsListenerProxy)
             }
         } catch (e: Exception) {}
 
@@ -340,6 +345,22 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             animationSpec = if (isEffectivelyHidden) tween(350, easing = FastOutLinearInEasing) else spring(dampingRatio = 0.65f, stiffness = 300f),
             label = "blackhole_scale"
         )
+
+        // 🎛️ FIXED: Live, dynamically adjustable physics pipeline
+        val theme = LocalIslandTheme.current
+        val physicsSpec = spring<Dp>(dampingRatio = theme.springDamping, stiffness = theme.springStiffness)
+        val floatPhysicsSpec = spring<Float>(dampingRatio = theme.springDamping, stiffness = theme.springStiffness)
+        
+        // 🎛️ 2. CALCULATE TARGETS AS FLOATS (For GPU Scaling)
+        val targetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }.coerceAtLeast(minSafeWidth)
+        val targetHeight = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniH.value; IslandState.TYPE_2_MID -> midH.value; IslandState.TYPE_3_MAX -> if (model is LiveActivityModel.Music) (maxH.value * 0.70f) else maxH.value; IslandState.TYPE_CUBE -> cubeH.value; else -> ringH.value }
+        
+        val animatedWidth by animateFloatAsState(targetWidth, floatPhysicsSpec, label = "width")
+        val animatedHeight by animateFloatAsState(targetHeight, floatPhysicsSpec, label = "height")
+        val animatedRadius by animateFloatAsState(if (state == IslandState.TYPE_3_MAX) 42f else if (state == IslandState.TYPE_2_MID) 16f else if (state == IslandState.TYPE_CUBE) 24f else (targetHeight / 2), radPhysicsSpec, label = "rad")
+        val offsetX by animateFloatAsState(targetX, floatPhysicsSpec, label = "x")
+        val offsetY by animateFloatAsState(targetY, floatPhysicsSpec, label = "y")
+        
         val islandAlpha by animateFloatAsState(targetValue = if (isEffectivelyHidden) 0f else 1f, animationSpec = tween(300), label = "blackhole_alpha")
 
         val haptic = LocalHapticFeedback.current
@@ -368,16 +389,22 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val physicsSpec = spring<Dp>(dampingRatio = 0.65f, stiffness = 250f)
         val width by animateDpAsState(targetWidth.dp, physicsSpec, label = "width")
         val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
-        val offsetX by animateFloatAsState(targetX, spring<Float>(dampingRatio=0.65f, stiffness=250f), label = "x")
-        val offsetY by animateFloatAsState(targetY, spring<Float>(dampingRatio=0.65f, stiffness=250f), label = "y")
-        val radTarget = when (state) { IslandState.TYPE_3_MAX -> 42.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_CUBE -> 24.dp; else -> (targetHeight / 2).dp }
+        val offsetX by animateFloatAsState(targetX, floatPhysicsSpec, label = "x")
+        val offsetY by animateFloatAsState(targetY, floatPhysicsSpec, label = "y")
         val rad by animateDpAsState(radTarget, physicsSpec, label = "rad")
+        val radTarget = when (state) { IslandState.TYPE_3_MAX -> 42.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_CUBE -> 24.dp; else -> (targetHeight / 2).dp }
 
+        // 🎛️ FIXED: Dynamic background opacity allowing for true Glassmorphism
         val targetBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent 
         else {
-            if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor).copy(alpha = 0.85f) 
-            else if (state == IslandState.TYPE_3_MAX) Color(0xFF080808).copy(alpha = 0.85f) 
-            else Color.Black 
+            val baseAlpha = if (theme.isGlassmorphism) 0.65f else 1.0f
+            if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) {
+                Color(model.dominantColor).copy(alpha = baseAlpha) 
+            } else if (state == IslandState.TYPE_3_MAX) {
+                Color(0xFF080808).copy(alpha = baseAlpha) 
+            } else {
+                Color.Black.copy(alpha = baseAlpha)
+            }
         }
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
@@ -437,17 +464,27 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             insetsUpdateFlow.tryEmit(Unit)
                         }
                     }
-                    .width(width).height(height)
+                    .width(maxW.value.dp) 
+                    .height(maxH.value.dp)
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer { 
-                            scaleX = touchScale * islandScale
-                            scaleY = touchScale * islandScale
+                            .graphicsLayer { 
+                            // Convert width/height to scale percentages
+                            scaleX = (animatedWidth / maxW.value).coerceAtLeast(0.01f)
+                            scaleY = (animatedHeight / maxH.value).coerceAtLeast(0.01f)
                             alpha = islandAlpha
-                            transformOrigin = TransformOrigin(0.5f, 0.5f) 
-                        }
+                            
+                            // Scale down from Top-Center to match native camera cutout behavior
+                            transformOrigin = TransformOrigin(0.5f, 0f) 
+                            
+                            clip = true
+                            shape = RoundedCornerShape(animatedRadius.dp)
+                            }
+                            .background(bgColor)
+                        .border(0.5.dp, borderColor, RoundedCornerShape(animatedRadius.dp))
                         .shadow(elevation = if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp, shape = RoundedCornerShape(rad), spotColor = Color.Black)
                         .clip(RoundedCornerShape(rad))
                         .background(bgColor)
