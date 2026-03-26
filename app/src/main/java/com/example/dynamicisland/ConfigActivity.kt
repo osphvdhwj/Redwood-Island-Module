@@ -229,7 +229,32 @@ class ConfigActivity : ComponentActivity() {
             Text(text = "Customize the physical appearance of inner elements.", fontSize = 14.sp, color = Color.Gray)
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 🎛️ NEW: Premium Effects Section
+            // 🎛️ FIXED: Premium Physics & Glassmorphism (Native Compose UI)
+            Text("Physics & Animation Tuning", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Yellow)
+            
+            var glassMode by remember { mutableStateOf(prefs.getBoolean("glass_mode", true)) }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Text("True Glassmorphism", color = Color.White, modifier = Modifier.weight(1f))
+                Switch(checked = glassMode, onCheckedChange = { 
+                    glassMode = it
+                    commitAndBroadcast(prefs, { putBoolean("glass_mode", it) }) { sendGestureUpdate(prefs, this@ConfigActivity) }
+                })
+            }
+
+            var damping by remember { mutableFloatStateOf(prefs.getFloat("spring_damping", 0.85f) * 100f) }
+            Text(text = "Animation Bounciness (Lower = Wobble): ${damping.toInt()}", color = Color.White, modifier = Modifier.padding(top = 8.dp))
+            Slider(value = damping, onValueChange = { damping = it }, onValueChangeFinished = {
+                commitAndBroadcast(prefs, { putFloat("spring_damping", damping / 100f) }) { sendGestureUpdate(prefs, this@ConfigActivity) }
+            }, valueRange = 10f..100f)
+
+            var stiffness by remember { mutableFloatStateOf(prefs.getFloat("spring_stiffness", 400f)) }
+            Text(text = "Animation Speed/Stiffness: ${stiffness.toInt()}", color = Color.White, modifier = Modifier.padding(top = 8.dp))
+            Slider(value = stiffness, onValueChange = { stiffness = it }, onValueChangeFinished = {
+                commitAndBroadcast(prefs, { putFloat("spring_stiffness", stiffness) }) { sendGestureUpdate(prefs, this@ConfigActivity) }
+            }, valueRange = 50f..1000f)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text("Premium Effects", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Magenta)
             ThemeSlider("Haptic Strength (0=Off, 3=Heavy)", "haptic_strength", 1f, 0f..3f, prefs)
             ThemeSlider("Background Blur Quality (0=Off)", "blur_intensity", 16f, 0f..24f, prefs)
@@ -413,7 +438,6 @@ class ConfigActivity : ComponentActivity() {
             Text(text = "Selectively disable Island behaviors.", fontSize = 14.sp, color = Color.Gray)
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 🎛️ NEW: The Landscape Override Toggle
             FeatureSwitch("Auto-Hide in Landscape (Gaming/Video)", "hide_landscape", false, prefs)
             FeatureSwitch("Enable Media Pill (Music/Spotify)", "enable_media", true, prefs)
             FeatureSwitch("Enable Charging Cube", "enable_charging", true, prefs)
@@ -618,6 +642,11 @@ class ConfigActivity : ComponentActivity() {
             putExtra("enable_alerts", prefs.getBoolean("enable_alerts", true))
             putExtra("enable_timers", prefs.getBoolean("enable_timers", true))
             putExtra("rotate_cube", prefs.getBoolean("rotate_cube", true))
+
+            // 🎛️ FIXED: Send Live Physics Specs to Island
+            putExtra("glass_mode", prefs.getBoolean("glass_mode", true))
+            putExtra("spring_damping", prefs.getFloat("spring_damping", 0.85f))
+            putExtra("spring_stiffness", prefs.getFloat("spring_stiffness", 400f))
         }
         val matrix = JSONObject()
         prefs.all.forEach { (key, value) -> if (key.startsWith("TYPE_") && value is String) matrix.put(key, value) }
