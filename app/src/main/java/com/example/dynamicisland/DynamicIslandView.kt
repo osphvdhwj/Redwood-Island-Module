@@ -66,6 +66,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.animation.AnimatedVisibility
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @SuppressLint("ViewConstructor")
@@ -348,18 +349,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         // 🎛️ FIXED: Live, dynamically adjustable physics pipeline
         val theme = LocalIslandTheme.current
-        val physicsSpec = spring<Dp>(dampingRatio = theme.springDamping, stiffness = theme.springStiffness)
         val floatPhysicsSpec = spring<Float>(dampingRatio = theme.springDamping, stiffness = theme.springStiffness)
-        
-        // 🎛️ 2. CALCULATE TARGETS AS FLOATS (For GPU Scaling)
-        val targetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }.coerceAtLeast(minSafeWidth)
-        val targetHeight = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniH.value; IslandState.TYPE_2_MID -> midH.value; IslandState.TYPE_3_MAX -> if (model is LiveActivityModel.Music) (maxH.value * 0.70f) else maxH.value; IslandState.TYPE_CUBE -> cubeH.value; else -> ringH.value }
         
         val animatedWidth by animateFloatAsState(targetWidth, floatPhysicsSpec, label = "width")
         val animatedHeight by animateFloatAsState(targetHeight, floatPhysicsSpec, label = "height")
         val animatedRadius by animateFloatAsState(if (state == IslandState.TYPE_3_MAX) 42f else if (state == IslandState.TYPE_2_MID) 16f else if (state == IslandState.TYPE_CUBE) 24f else (targetHeight / 2), radPhysicsSpec, label = "rad")
-        val offsetX by animateFloatAsState(targetX, floatPhysicsSpec, label = "x")
-        val offsetY by animateFloatAsState(targetY, floatPhysicsSpec, label = "y")
         
         val islandAlpha by animateFloatAsState(targetValue = if (isEffectivelyHidden) 0f else 1f, animationSpec = tween(300), label = "blackhole_alpha")
 
