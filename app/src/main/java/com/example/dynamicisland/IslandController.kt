@@ -262,6 +262,22 @@ class IslandController(private val context: Context) {
         } catch (e: Exception) {}
     }
 
+    private fun executeBackgroundIntent(intent: android.content.Intent) {
+        try {
+            val options = android.app.ActivityOptions.makeBasic()
+            if (android.os.Build.VERSION.SDK_INT >= 34) {
+                options.pendingIntentBackgroundActivityStartMode = android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+            }
+            val pendingIntent = android.app.PendingIntent.getActivity(context, System.currentTimeMillis().toInt(), intent, android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
+            pendingIntent.send(options.toBundle())
+            userForceCollapsed = true
+            _islandState.value = IslandState.TYPE_0_RING
+            evaluatePriority()
+        } catch (e: Exception) {
+            try { context.startActivity(intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e2: Exception) {}
+        }
+    }
+
     private fun launchAppIntent(packageName: String) {
         val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
         if (launchIntent != null) {
