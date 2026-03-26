@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 data class IslandTheme(
+    // Original UI Properties
     val mediaBarCap: StrokeCap = StrokeCap.Round,
     val mediaBarThickness: Dp = 4.dp,
     val titleOffsetX: Dp = 0.dp,
@@ -41,11 +42,17 @@ data class IslandTheme(
     val alertTitleSize: TextUnit = 16.sp,
     val alertMsgSize: TextUnit = 14.sp,
 
-    // 🎛️ NEW: The 4 Master Flagship Features
-    val hapticStrength: Int = 1, // 0 = Off, 1 = Light, 2 = Medium, 3 = Heavy
-    val chargingStyle: String = "CUBE", // CUBE, APPLE, HYPEROS
+    // Premium Features
+    val hapticStrength: Int = 1, 
+    val chargingStyle: String = "CUBE", 
     val blurIntensity: Dp = 16.dp,
-    val hideOnLandscape: Boolean = false
+    val hideOnLandscape: Boolean = false,
+
+    // 🎛️ NEW: The "Shadow Properties" (Physics & Deep Colors)
+    val springDamping: Float = 0.85f, // Critically damped (Apple style)
+    val springStiffness: Float = 400f, // Snappy expansion
+    val autoCollapseTimeMs: Long = 3000L,
+    val isGlassmorphism: Boolean = true // Toggles deep black vs translucent glass
 )
 
 val LocalIslandTheme = compositionLocalOf { IslandTheme() }
