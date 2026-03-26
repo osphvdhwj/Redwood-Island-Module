@@ -188,13 +188,14 @@ class IslandController(private val context: Context) {
         override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
     }
 
-    // 🎛️ NEW: Command System Volume from Dashboard Drag
+    // 🎛️ FIXED: Send to background flow instead of blocking UI Thread
     fun setSystemVolume(percent: Int) {
         try {
-            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-            val targetVolume = ((percent.toFloat() / 100f) * maxVolume).toInt()
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVolume, 0)
+            // 1. Instantly update the UI slider so it feels 120fps smooth
             islandView?.updateHardwareVolume(percent)
+            
+            // 2. Pass the data to our background Coroutine Flow (which safely handles the audioManager)
+            volumeFlow.value = percent
         } catch (e: Exception) {}
     }
 
