@@ -332,12 +332,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         BatteryPlugin.stop(context)
         context.sendBroadcast(android.content.Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui"))
     }
-
     @OptIn(ExperimentalAnimationApi::class)
     @Composable
     fun IslandUI(state: IslandState) {
         
-        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+        val configuration = LocalConfiguration.current
         val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val isEffectivelyHidden = state == IslandState.HIDDEN || isLandscape
 
@@ -351,7 +350,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val floatPhysicsSpec = spring<Float>(dampingRatio = theme.springDamping, stiffness = theme.springStiffness)
         
         val haptic = LocalHapticFeedback.current
-        val density = LocalDensity.current
         var isSquished by remember { mutableStateOf(false) }
         val touchScale by animateFloatAsState(
             targetValue = if (isSquished) 0.96f else 1f,
@@ -395,6 +393,27 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
         
+        // 🎛️ FIXED: The Touch Region Math Engine
+        // This calculates the exact bounding box so the invisible layout container doesn't block touches.
+        val densityPx = LocalDensity.current.density
+        var anchorLeft by remember { mutableIntStateOf(0) }
+        var anchorTop by remember { mutableIntStateOf(0) }
+        var anchorWidth by remember { mutableIntStateOf(0) }
+
+        LaunchedEffect(targetWidth, targetHeight, anchorLeft, anchorTop, anchorWidth) {
+            if (anchorWidth == 0) return@LaunchedEffect
+            val wPx = (targetWidth * densityPx).toInt()
+            val hPx = (targetHeight * densityPx).toInt()
+            
+            val centerX = anchorLeft + (anchorWidth / 2)
+            val left = centerX - (wPx / 2)
+            val right = centerX + (wPx / 2)
+            val bottom = anchorTop + hPx
+            
+            mainPillRect.set(left, anchorTop, right, bottom)
+            insetsUpdateFlow.tryEmit(Unit)
+        }
+
         LaunchedEffect(state, model, isLandscape) {
             if (!isAttachedToWindow) return@LaunchedEffect
             val wp = windowParams ?: return@LaunchedEffect
@@ -440,15 +459,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         val location = IntArray(2)
                         this@DynamicIslandView.getLocationOnScreen(location)
                         val bounds = coordinates.boundsInRoot()
-                        val globalLeft = location[0] + bounds.left.toInt()
-                        val globalTop = location[1] + bounds.top.toInt()
-                        val globalRight = location[0] + bounds.right.toInt()
-                        val globalBottom = location[1] + bounds.bottom.toInt()
-
-                        if (abs(mainPillRect.left - globalLeft) > 5 || abs(mainPillRect.bottom - globalBottom) > 5 || mainPillRect.isEmpty) {
-                            mainPillRect.set(globalLeft, globalTop, globalRight, globalBottom)
-                            insetsUpdateFlow.tryEmit(Unit)
-                        }
+                        
+                        // We only use this to grab the physical screen anchor, not the bounds
+                        anchorLeft = location[0] + bounds.left.toInt()
+                        anchorTop = location[1] + bounds.top.toInt()
+                        anchorWidth = bounds.width.toInt()
                     }
                     .width(maxW.value.dp) 
                     .height(maxH.value.dp)
@@ -456,7 +471,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        // 🎛️ FIXED: Corrected graphicsLayer application
                         .graphicsLayer { 
                             scaleX = (animatedWidth / maxW.value).coerceAtLeast(0.01f) * touchScale * islandScale
                             scaleY = (animatedHeight / maxH.value).coerceAtLeast(0.01f) * touchScale * islandScale
@@ -661,7 +675,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
-                            .size(maxH.value.dp) 
+                            .size(targetHeight.dp) // 🎛️ FIXED: This was accidentally set to maxH (220dp) instead of targetHeight!
                             .onGloballyPositioned { coordinates ->
                                 val location = IntArray(2)
                                 this@DynamicIslandView.getLocationOnScreen(location)
