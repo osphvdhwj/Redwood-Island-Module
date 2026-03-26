@@ -394,6 +394,26 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         }
         val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
         val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
+
+// 🎛️ THE TOUCH MATH ENGINE: Calculates bounds mathematically instead of reading view pixels
+        val densityPx = LocalDensity.current.density
+        var anchorLeft by remember { mutableIntStateOf(0) }
+        var anchorTop by remember { mutableIntStateOf(0) }
+        var anchorWidth by remember { mutableIntStateOf(0) }
+
+        LaunchedEffect(targetWidth, targetHeight, anchorLeft, anchorTop, anchorWidth) {
+            if (anchorWidth == 0) return@LaunchedEffect
+            val wPx = (targetWidth * densityPx).toInt()
+            val hPx = (targetHeight * densityPx).toInt()
+            
+            val centerX = anchorLeft + (anchorWidth / 2)
+            val left = centerX - (wPx / 2)
+            val right = centerX + (wPx / 2)
+            val bottom = anchorTop + hPx
+            
+            mainPillRect.set(left, anchorTop, right, bottom)
+            insetsUpdateFlow.tryEmit(Unit)
+        }
         
         LaunchedEffect(state, model, isLandscape) {
             if (!isAttachedToWindow) return@LaunchedEffect
@@ -444,15 +464,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                         val location = IntArray(2)
                         this@DynamicIslandView.getLocationOnScreen(location)
                         val bounds = coordinates.boundsInRoot()
-                        val globalLeft = location[0] + bounds.left.toInt()
-                        val globalTop = location[1] + bounds.top.toInt()
-                        val globalRight = location[0] + bounds.right.toInt()
-                        val globalBottom = location[1] + bounds.bottom.toInt()
-
-                        if (abs(mainPillRect.left - globalLeft) > 5 || abs(mainPillRect.bottom - globalBottom) > 5 || mainPillRect.isEmpty) {
-                            mainPillRect.set(globalLeft, globalTop, globalRight, globalBottom)
-                            insetsUpdateFlow.tryEmit(Unit)
-                        }
+                        
+                        // We ONLY capture the static anchor, we do not spam WindowManager with updates!
+                        anchorLeft = location[0] + bounds.left.toInt()
+                        anchorTop = location[1] + bounds.top.toInt()
+                        anchorWidth = bounds.width.toInt()
                     }
                     .graphicsLayer { 
                         // GPU Layer is only used for the micro squish scale and alpha fading now.
