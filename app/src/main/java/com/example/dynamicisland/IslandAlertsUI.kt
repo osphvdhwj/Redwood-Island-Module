@@ -369,3 +369,19 @@ fun QuickCircleBtn(icon: ImageVector, isActive: Boolean, activeColor: Color, ina
 }
 
 fun getIconForType(type: ActivityType): ImageVector { return when(type) { ActivityType.CALL -> Icons.Default.Phone; ActivityType.NAVIGATION -> Icons.Default.LocationOn; ActivityType.TIMER -> Icons.Default.Notifications; ActivityType.MESSAGE -> Icons.Default.Email; ActivityType.ALARM -> Icons.Default.Notifications; ActivityType.CHARGING -> Icons.Default.Add; ActivityType.BATTERY_LOW -> Icons.Default.Warning; ActivityType.BLUETOOTH -> Icons.Default.Bluetooth; ActivityType.WIFI -> Icons.Default.Wifi; ActivityType.HARDWARE -> Icons.Default.Info; else -> Icons.Default.Info } }
+// ============================================================================
+// 📱 SHARED HELPER FUNCTIONS
+// ============================================================================
+
+fun DynamicIslandView.setState(newState: IslandState) { islandState.value = newState }
+fun DynamicIslandView.setModel(model: LiveActivityModel?) { activeModel.value = model }
+fun DynamicIslandView.setSplitModel(model: LiveActivityModel?) { splitModel.value = model }
+
+@OptIn(ExperimentalFoundationApi::class)
+fun Modifier.safeMarquee(state: IslandState): Modifier {
+    return if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING && state != IslandState.TYPE_CUBE) {
+        this.basicMarquee()
+    } else {
+        this
+    }
+}
