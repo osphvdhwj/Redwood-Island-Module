@@ -49,6 +49,15 @@ class IslandController(private val context: Context) {
 
     private var currentMedia: LiveActivityModel.Music? = null
     private var islandView: DynamicIslandView? = null
+    // 🎛️ HARDWARE SCALE DETECTOR (Fixes 0-4095 Brightness Bug)
+    private val maxHardwareBrightness: Int by lazy {
+        try {
+            val resId = context.resources.getIdentifier("config_screenBrightnessSettingMaximum", "integer", "android")
+            if (resId != 0) context.resources.getInteger(resId) else 255
+        } catch (e: Exception) {
+            255
+        }
+    }
     private var currentHardware: LiveActivityModel.HardwareMonitor? = null
     private var transientModel: LiveActivityModel? = null
     private var transientJob: Job? = null
@@ -375,6 +384,7 @@ class IslandController(private val context: Context) {
                             _activeModel.value = currentMedia
                             evaluatePriority() 
                         } else {
+                            _activeModel.value = null // 🎛️ FIXED: Explicitly clear the Dashboard data
                             _islandState.value = IslandState.TYPE_0_RING
                             evaluatePriority()
                         }
@@ -472,7 +482,7 @@ class IslandController(private val context: Context) {
         }
     }
 
-    // 🎛️ FIXED: Weighted State Machine Router
+    // 🎛️ FIXED: Weighted State Machine Router with User State Protection
     private fun evaluatePriority() {
         val rotation = try { windowManager?.defaultDisplay?.rotation ?: 0 } catch(e: Throwable) { 0 }
         val isLandscapeNow = rotation == android.view.Surface.ROTATION_90 || rotation == android.view.Surface.ROTATION_270
@@ -500,6 +510,17 @@ class IslandController(private val context: Context) {
             }
         }
 
+        val currentActiveModel = _activeModel.value
+        val currentVisualState = _islandState.value
+
+        // 🎛️ NEW: Protect User's Manual Dashboard
+        // If you have the Dashboard open, do not interrupt it with background music/hardware ticks!
+        if (currentActiveModel is LiveActivityModel.Dashboard && currentVisualState != IslandState.TYPE_0_RING && currentVisualState != IslandState.HIDDEN) {
+            if (dominantModel == null || dominantModel.getPriorityWeight() < 80) {
+                return // Abort state calculation, keep the Dashboard open!
+            }
+        }
+
         // 3. Apply the Dominant State
         if (dominantModel != null) {
             _activeModel.value = dominantModel
@@ -513,24 +534,35 @@ class IslandController(private val context: Context) {
             } else {
                 _splitModel.value = null
                 
-                // Route to correct visual state based on model type and user interaction
-                _islandState.value = when {
-                    userForceCollapsed -> IslandState.TYPE_0_RING
-                    dominantModel is LiveActivityModel.SystemAlert || dominantModel is LiveActivityModel.Charging || dominantModel is LiveActivityModel.AppTimerWarning -> IslandState.TYPE_2_MID
-                    dominantModel is LiveActivityModel.Call && dominantModel.state == "RINGING" -> IslandState.TYPE_1_MINI
-                    dominantModel is LiveActivityModel.Call && dominantModel.state == "ONGOING" -> IslandState.TYPE_1_MINI // User must tap to expand to MID
-                    dominantModel is LiveActivityModel.Music -> IslandState.TYPE_1_MINI
-                    else -> IslandState.TYPE_1_MINI
+                // 🎛️ NEW: Protect User's Expanded Pill (Mid/Max)
+                // If you expanded the pill, don't let hardware ticks collapse it back to MINI.
+                val isSameBaseModel = currentActiveModel?.javaClass == dominantModel.javaClass
+                val isExpanded = currentVisualState == IslandState.TYPE_2_MID || currentVisualState == IslandState.TYPE_3_MAX
+                
+                if (isSameBaseModel && isExpanded && !userForceCollapsed) {
+                    // Do nothing! Respect the user's manual expansion.
+                } else {
+                    // Route to correct default visual state
+                    _islandState.value = when {
+                        userForceCollapsed -> IslandState.TYPE_0_RING
+                        dominantModel is LiveActivityModel.SystemAlert || dominantModel is LiveActivityModel.Charging || dominantModel is LiveActivityModel.AppTimerWarning -> IslandState.TYPE_2_MID
+                        dominantModel is LiveActivityModel.Call && dominantModel.state == "RINGING" -> IslandState.TYPE_1_MINI
+                        dominantModel is LiveActivityModel.Call && dominantModel.state == "ONGOING" -> IslandState.TYPE_1_MINI 
+                        dominantModel is LiveActivityModel.Music -> IslandState.TYPE_1_MINI
+                        else -> IslandState.TYPE_1_MINI
+                    }
                 }
             }
         } else {
             // Nothing active
-            _activeModel.value = null
-            _splitModel.value = null
-            _islandState.value = IslandState.TYPE_0_RING
+            if (currentActiveModel !is LiveActivityModel.Dashboard) {
+                _activeModel.value = null
+                _splitModel.value = null
+                _islandState.value = IslandState.TYPE_0_RING
+            }
         }
+        
     }
-
     fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
         transientJob?.cancel(); transientModel = model; evaluatePriority()
         transientJob = scope.launch { delay(durationMs); transientModel = null; evaluatePriority() }
@@ -741,6 +773,60 @@ class IslandController(private val context: Context) {
         context.registerReceiver(screenStateReceiver, filter)
         context.registerComponentCallbacks(componentCallbacks)
 
+        // 🎛️ THE HARDWARE ACTION RECEIVER
+        // This listens for clicks from the Dashboard and physically triggers the phone's hardware.
+        var isTorchOn = false
+        val hardwareReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(ctx: Context, intent: Intent) {
+                when (intent.action) {
+                    "com.example.dynamicisland.ACTION_LAUNCH_APP" -> {
+                        val pkg = intent.getStringExtra("pkg") ?: return
+                        val launchIntent = ctx.packageManager.getLaunchIntentForPackage(pkg)
+                        if (launchIntent != null) {
+                            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                            executeBackgroundIntent(launchIntent)
+                        }
+                    }
+                    "com.example.dynamicisland.ACTION_QS" -> {
+                        val tile = intent.getStringExtra("tile") ?: return
+                        try {
+                            val settingsIntent = when (tile) {
+                                "WiFi" -> Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)
+                                "Bluetooth" -> Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
+                                "Location" -> Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                                "Airplane" -> Intent(android.provider.Settings.ACTION_AIRPLANE_MODE_SETTINGS)
+                                "DND" -> Intent(android.provider.Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS)
+                                "Battery Saver" -> Intent(android.provider.Settings.ACTION_BATTERY_SAVER_SETTINGS)
+                                "Hotspot" -> Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS)
+                                "NFC" -> Intent(android.provider.Settings.ACTION_NFC_SETTINGS)
+                                "Cast" -> Intent(android.provider.Settings.ACTION_CAST_SETTINGS)
+                                "Settings" -> Intent(android.provider.Settings.ACTION_SETTINGS)
+                                "Torch" -> {
+                                    val cameraManager = ctx.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
+                                    val cameraId = cameraManager.cameraIdList[0]
+                                    isTorchOn = !isTorchOn
+                                    cameraManager.setTorchMode(cameraId, isTorchOn) // Directly flip the hardware flashlight
+                                    null
+                                }
+                                else -> Intent(android.provider.Settings.ACTION_SETTINGS)
+                            }
+                            // Securely launch the specific settings panel over top of everything
+                            if (settingsIntent != null) {
+                                settingsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                executeBackgroundIntent(settingsIntent)
+                            }
+                        } catch (e: Exception) {}
+                    }
+                }
+            }
+        }
+        
+        val hardwareFilter = android.content.IntentFilter().apply {
+            addAction("com.example.dynamicisland.ACTION_LAUNCH_APP")
+            addAction("com.example.dynamicisland.ACTION_QS")
+        }
+        context.registerReceiver(hardwareReceiver, hardwareFilter, Context.RECEIVER_EXPORTED)
+        
         // 🎛️ FIXED: Kernel-Safe Universal Call Detector (Bypasses userfaultfd timeouts)
         val callHandler = Handler(Looper.getMainLooper())
         val callCheckRunnable = object : Runnable {
