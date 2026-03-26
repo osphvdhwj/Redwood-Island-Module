@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 
 @Composable
 fun InteractiveIconButton(icon: ImageVector, tint: Color, baseSize: Dp, bgAlpha: Float = 0f, onClick: () -> Unit) {
@@ -439,5 +440,5 @@ fun InteractiveWavyMediaBar(durationMs: Long, posProvider: () -> Long, isPlaying
         }
         drawCircle(color = Color.White, radius = if(isDraggingMedia) 6.dp.toPx() else 4.dp.toPx(), center = androidx.compose.ui.geometry.Offset(activeWidth, midY))
     }
-    var isDraggingMedia by mutableStateOf(false)
 }
+var isDraggingMedia by mutableStateOf(false)
