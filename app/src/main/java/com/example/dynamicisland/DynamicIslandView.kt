@@ -16,9 +16,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow 
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -66,7 +66,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.animation.AnimatedVisibility
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @SuppressLint("ViewConstructor")
@@ -203,11 +202,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     hapticStrength = intent.getIntExtra("haptic_strength", 1),
                     chargingStyle = intent.getStringExtra("charging_style") ?: "CUBE",
                     blurIntensity = intent.getFloatExtra("blur_intensity", 16f).dp,
-                    hideOnLandscape = intent.getBooleanExtra("hide_landscape", false)
+                    // 🎛️ FIXED: Corrected comma placement
+                    hideOnLandscape = intent.getBooleanExtra("hide_landscape", false),
                     isGlassmorphism = intent.getBooleanExtra("glass_mode", true),
                     springDamping = intent.getFloatExtra("spring_damping", 0.85f),
                     springStiffness = intent.getFloatExtra("spring_stiffness", 400f)
                 )
+
                 val payload = intent.getStringExtra("gesture_payload")
                 if (payload != null) onGestureSettingsUpdated?.invoke(payload) else loadPreferences()
             }
@@ -314,7 +315,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         super.onDetachedFromWindow()
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         
-        // 🎛️ FIXED: Prevent Observer Leak by ensuring ViewTreeObserver is alive
         try {
             if (insetsListenerProxy != null) {
                 val aliveObserver = if (viewTreeObserver.isAlive) viewTreeObserver else this.viewTreeObserver
@@ -347,16 +347,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             label = "blackhole_scale"
         )
 
-        // 🎛️ FIXED: Live, dynamically adjustable physics pipeline
         val theme = LocalIslandTheme.current
         val floatPhysicsSpec = spring<Float>(dampingRatio = theme.springDamping, stiffness = theme.springStiffness)
         
-        val animatedWidth by animateFloatAsState(targetWidth, floatPhysicsSpec, label = "width")
-        val animatedHeight by animateFloatAsState(targetHeight, floatPhysicsSpec, label = "height")
-        val animatedRadius by animateFloatAsState(if (state == IslandState.TYPE_3_MAX) 42f else if (state == IslandState.TYPE_2_MID) 16f else if (state == IslandState.TYPE_CUBE) 24f else (targetHeight / 2), radPhysicsSpec, label = "rad")
-        
-        val islandAlpha by animateFloatAsState(targetValue = if (isEffectivelyHidden) 0f else 1f, animationSpec = tween(300), label = "blackhole_alpha")
-
         val haptic = LocalHapticFeedback.current
         val density = LocalDensity.current
         var isSquished by remember { mutableStateOf(false) }
@@ -380,15 +373,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val targetX = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value; IslandState.TYPE_2_MID -> midX.value; IslandState.TYPE_3_MAX -> maxX.value; IslandState.TYPE_CUBE -> cubeX.value; else -> ringX.value }
         val targetY = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value; IslandState.TYPE_2_MID -> midY.value; IslandState.TYPE_3_MAX -> maxY.value; IslandState.TYPE_CUBE -> cubeY.value; else -> ringY.value }
 
-        val physicsSpec = spring<Dp>(dampingRatio = 0.65f, stiffness = 250f)
-        val width by animateDpAsState(targetWidth.dp, physicsSpec, label = "width")
-        val height by animateDpAsState(targetHeight.dp, physicsSpec, label = "height")
+        val animatedWidth by animateFloatAsState(targetWidth, floatPhysicsSpec, label = "width")
+        val animatedHeight by animateFloatAsState(targetHeight, floatPhysicsSpec, label = "height")
+        val radTarget = when (state) { IslandState.TYPE_3_MAX -> 42f; IslandState.TYPE_2_MID -> 16f; IslandState.TYPE_CUBE -> 24f; else -> (targetHeight / 2) }
+        val animatedRadius by animateFloatAsState(radTarget, floatPhysicsSpec, label = "rad")
         val offsetX by animateFloatAsState(targetX, floatPhysicsSpec, label = "x")
         val offsetY by animateFloatAsState(targetY, floatPhysicsSpec, label = "y")
-        val rad by animateDpAsState(radTarget, physicsSpec, label = "rad")
-        val radTarget = when (state) { IslandState.TYPE_3_MAX -> 42.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_CUBE -> 24.dp; else -> (targetHeight / 2).dp }
+        val islandAlpha by animateFloatAsState(targetValue = if (isEffectivelyHidden) 0f else 1f, animationSpec = tween(300), label = "blackhole_alpha")
 
-        // 🎛️ FIXED: Dynamic background opacity allowing for true Glassmorphism
         val targetBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent 
         else {
             val baseAlpha = if (theme.isGlassmorphism) 0.65f else 1.0f
@@ -464,25 +456,18 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        // 🎛️ FIXED: Corrected graphicsLayer application
                         .graphicsLayer { 
-                            .graphicsLayer { 
-                            // Convert width/height to scale percentages
-                            scaleX = (animatedWidth / maxW.value).coerceAtLeast(0.01f)
-                            scaleY = (animatedHeight / maxH.value).coerceAtLeast(0.01f)
+                            scaleX = (animatedWidth / maxW.value).coerceAtLeast(0.01f) * touchScale * islandScale
+                            scaleY = (animatedHeight / maxH.value).coerceAtLeast(0.01f) * touchScale * islandScale
                             alpha = islandAlpha
-                            
-                            // Scale down from Top-Center to match native camera cutout behavior
                             transformOrigin = TransformOrigin(0.5f, 0f) 
-                            
                             clip = true
                             shape = RoundedCornerShape(animatedRadius.dp)
-                            }
-                            .background(bgColor)
-                        .border(0.5.dp, borderColor, RoundedCornerShape(animatedRadius.dp))
-                        .shadow(elevation = if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp, shape = RoundedCornerShape(rad), spotColor = Color.Black)
-                        .clip(RoundedCornerShape(rad))
+                        }
                         .background(bgColor)
-                        .border(0.5.dp, borderColor, RoundedCornerShape(rad))
+                        .border(0.5.dp, borderColor, RoundedCornerShape(animatedRadius.dp))
+                        .shadow(elevation = if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp, shape = RoundedCornerShape(animatedRadius.dp), spotColor = Color.Black)
                         .pointerInput(Unit) {
                             awaitEachGesture {
                                 awaitFirstDown(pass = PointerEventPass.Initial)
@@ -531,9 +516,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     Box(modifier = Modifier.fillMaxSize().padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp)) {
                         
                         if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
-                            val theme = LocalIslandTheme.current
+                            val bgBitmap = if (theme.blurIntensity > 0.dp && model.blurredAlbumArt != null) { model.blurredAlbumArt.asImageBitmap() } else model.albumArt.asImageBitmap()
                             Image(
-                                 bitmap = model.albumArt.asImageBitmap(), contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
+                                 bitmap = bgBitmap, contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, 
                                 modifier = Modifier.fillMaxSize()
                                  .alpha(if (state == IslandState.TYPE_3_MAX) 0.5f else 0.25f)
                                 .blur(if (state == IslandState.TYPE_3_MAX) theme.blurIntensity else (theme.blurIntensity + 8.dp))
@@ -676,7 +661,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
-                            .size(height) 
+                            .size(maxH.value.dp) 
                             .onGloballyPositioned { coordinates ->
                                 val location = IntArray(2)
                                 this@DynamicIslandView.getLocationOnScreen(location)
@@ -752,16 +737,84 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     }
 }
 
-// 🎛️ Custom Haptics Wrapper Engine
+// ============================================================================
+// 📱 GENERAL MINI & MID STATES
+// ============================================================================
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun DynamicIslandView.GeneralMid(general: LiveActivityModel.General) {
+    val theme = LocalIslandTheme.current
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        Box(modifier = Modifier.size(44.dp).background(Color(general.accentColor).copy(alpha=0.2f), CircleShape).border(1.dp, Color(general.accentColor).copy(alpha=0.5f), CircleShape), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.Info, contentDescription = null, tint = Color(general.accentColor), modifier = Modifier.size(24.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+             Text(text = general.title, color = Color.White, fontSize = theme.alertTitleSize, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+             Text(text = general.dataText, color = Color.White.copy(alpha=0.8f), fontSize = theme.alertMsgSize, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun DynamicIslandView.GeneralMini(general: LiveActivityModel.General) { 
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) { 
+        Icon(imageVector = Icons.Default.Info, contentDescription = null, tint = Color(general.accentColor), modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(text = "${general.title} • ${general.dataText}", color = Color.White, fontSize = 14.sp, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value)) 
+    } 
+}
+
+@Composable
+fun DynamicIslandView.HardwareGaugeMini(hw: LiveActivityModel.HardwareMonitor) { 
+    val tempColor = when { hw.cpuTempCelsius > 45f -> Color.Red; hw.cpuTempCelsius > 38f -> Color.Yellow; else -> Color.Green }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) { 
+        Icon(imageVector = Icons.Default.Info, contentDescription = "Hardware", tint = tempColor, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        androidx.compose.material3.LinearProgressIndicator(progress = { (hw.cpuTempCelsius / 60f).coerceIn(0f, 1f) }, modifier = Modifier.width(60.dp).height(6.dp).clip(RoundedCornerShape(3.dp)), color = tempColor, trackColor = Color.White.copy(alpha=0.2f))
+        Spacer(Modifier.width(8.dp))
+        Text(text = "${hw.cpuFreqMhz} MHz", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) 
+    } 
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun DynamicIslandView.RealityPillMini(model: LiveActivityModel.RealityPill) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        Icon(Icons.Default.Notifications, contentDescription = "Session Time", tint = Color(0xFF00FF00), modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(text = "${model.appName} • ${model.sessionMinutes}m", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+    }
+}
+
+// ============================================================================
+// 📱 SHARED HELPER FUNCTIONS
+// ============================================================================
+
+fun DynamicIslandView.setState(newState: IslandState) { islandState.value = newState }
+fun DynamicIslandView.setModel(model: LiveActivityModel?) { activeModel.value = model }
+fun DynamicIslandView.setSplitModel(model: LiveActivityModel?) { splitModel.value = model }
+
+@OptIn(ExperimentalFoundationApi::class)
+fun Modifier.safeMarquee(state: IslandState): Modifier {
+    return if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING && state != IslandState.TYPE_CUBE) {
+        this.basicMarquee()
+    } else {
+        this
+    }
+}
+
 fun performCustomHaptic(context: Context, strength: Int) {
     if (strength == 0) return
     try {
         val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             val effect = when (strength) {
-                1 -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_TICK) // Light
-                2 -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK) // Medium
-                3 -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_HEAVY_CLICK) // Heavy Thud
+                1 -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_TICK) 
+                2 -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK) 
+                3 -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_HEAVY_CLICK) 
                 else -> android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK)
             }
             vibrator.vibrate(effect)
