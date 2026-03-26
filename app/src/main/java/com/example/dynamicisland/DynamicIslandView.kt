@@ -1,6 +1,8 @@
 package com.example.dynamicisland
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.basicMarquee
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
