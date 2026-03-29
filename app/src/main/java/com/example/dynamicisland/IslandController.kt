@@ -369,7 +369,7 @@ class IslandController(private val context: Context) {
         val hardwareFilter = android.content.IntentFilter().apply { addAction("com.example.dynamicisland.ACTION_LAUNCH_APP"); addAction("com.example.dynamicisland.ACTION_QS") }
         context.registerReceiver(hardwareReceiver, hardwareFilter, Context.RECEIVER_EXPORTED)
         
-        callManager.startMonitoring { mediaManager.isScreenOn }
+        callManager.startMonitoring()
         
         val volFilter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
         context.registerReceiver(hardwareSyncReceiver, volFilter)
