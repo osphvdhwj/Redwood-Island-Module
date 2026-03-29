@@ -23,83 +23,72 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     companion object {
         lateinit var modulePath: String
-        val USER_ALL: UserHandle by lazy {
-            UserHandle::class.java.getField("ALL").get(null) as UserHandle
-        }
+        val USER_ALL: UserHandle by lazy { UserHandle::class.java.getField("ALL").get(null) as UserHandle }
     }
 
     override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
         modulePath = startupParam.modulePath
-        XposedBridge.log("DynamicIsland: Zygote Initialized")
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
-        // 1. Delegate System Server Hooks
+        // 🚀 Extracting 100% Potential of System Server (Backend)
         if (lpparam.packageName == "android") {
             SystemEventsHook.apply(lpparam, USER_ALL)
+            FrameworkTelecomHook.apply(lpparam, USER_ALL)
+            FrameworkHardwareHook.apply(lpparam, USER_ALL) // <-- NEW
         }
 
-        // 2. Core SystemUI Injection
+        // 🎨 Extracting 100% Potential of SystemUI (Frontend)
         if (lpparam.packageName == "com.android.systemui") {
-            try {
-                XposedHelpers.findAndHookMethod(
-                    "android.app.Instrumentation", lpparam.classLoader, "callApplicationOnCreate",
-                    Application::class.java, object : XC_MethodHook() {
-                        override fun afterHookedMethod(param: MethodHookParam) {
-                            val app = param.args[0] as Application
-                            if (app.packageName == "com.android.systemui") {
-                                injectDynamicIsland(app.applicationContext)
-                            }
-                        }
+            SystemUIHardwareHook.apply(lpparam) // <-- NEW
+            
+            IslandHookEngine.hookMethodSafe(
+                "android.app.Instrumentation", lpparam.classLoader, "callApplicationOnCreate", Application::class.java,
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        val app = param.args[0] as Application
+                        if (app.packageName == "com.android.systemui") { injectDynamicIsland(app.applicationContext) }
                     }
-                )
-                XposedBridge.log("DynamicIsland: Instrumentation hook deployed successfully.")
-            } catch (e: Exception) {
-                XposedBridge.log("DynamicIsland: Failed to hook Instrumentation - ${e.message}")
-            }
-
-            try {
-                val qsTileHostClass = XposedHelpers.findClassIfExists("com.android.systemui.qs.QSTileHost", lpparam.classLoader)
-                if (qsTileHostClass != null) {
-                    XposedBridge.hookAllConstructors(qsTileHostClass, object : XC_MethodHook() {
-                        override fun afterHookedMethod(param: MethodHookParam) {
-                            SystemUIContextKeeper.qsTileHost = param.thisObject
-                        }
-                    })
                 }
-            } catch (e: Exception) {}
+            )
+
+            IslandHookEngine.hookAllConstructorsSafe(
+                "com.android.systemui.qs.QSTileHost", lpparam.classLoader,
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) { SystemUIContextKeeper.qsTileHost = param.thisObject }
+                }
+            )
         }
     }
 
+    // Inside MainHook.kt
     private fun injectDynamicIsland(systemUiContext: Context) {
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             try {
-                val displayManager = systemUiContext.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-                val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+                val displayManager = systemUiContext.getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
+                val display = displayManager.getDisplay(android.view.Display.DEFAULT_DISPLAY)
                 val windowContext = systemUiContext.createWindowContext(display, 2024, null)
-                val windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                val windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
                 
-                val layoutParams = WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, 2024,
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-                    PixelFormat.TRANSLUCENT
+                val layoutParams = android.view.WindowManager.LayoutParams(
+                    android.view.WindowManager.LayoutParams.MATCH_PARENT, android.view.WindowManager.LayoutParams.MATCH_PARENT, 2024,
+                    android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    android.view.WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
+                    android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    android.graphics.PixelFormat.TRANSLUCENT
                 ).apply {
-                    gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                    gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
                     title = "DynamicIslandOverlay"
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                        layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-                    }
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
                 }
                 
                 val controller = IslandController(windowContext)
                 val islandView = controller.createIslandView(windowManager, layoutParams)
                 windowManager.addView(islandView, layoutParams)
             } catch (e: Exception) {
-                XposedBridge.log("DynamicIsland: FATAL ERROR during injection: ${e.stackTraceToString()}")
+                de.robv.android.xposed.XposedBridge.log("DynamicIsland ❌: FATAL ERROR during injection: ${e.message}")
             }
-        }, 6000)
+        }, 1500) // ⚡ FIXED: Reduced from 6000ms to 1500ms for near-instant boot!
     }
 }
