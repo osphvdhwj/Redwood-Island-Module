@@ -322,45 +322,86 @@ class ConfigActivity : ComponentActivity() {
         }
     }
 
+    // In ConfigActivity.kt
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun DashboardScreen(prefs: android.content.SharedPreferences) {
+        val context = LocalContext.current
+        var dynamicQSTiles by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+
+        // Fetch tiles from SystemUI on launch
+        LaunchedEffect(Unit) {
+            val receiver = object : android.content.BroadcastReceiver() {
+                override fun onReceive(ctx: Context, intent: Intent) {
+                    if (intent.action == "com.example.dynamicisland.QS_TILES_REPLY") {
+                        val jsonStr = intent.getStringExtra("tiles_json") ?: return
+                        try {
+                            val array = org.json.JSONArray(jsonStr)
+                            val list = mutableListOf<Pair<String, String>>()
+                            for (i in 0 until array.length()) {
+                                val obj = array.getJSONObject(i)
+                                list.add(Pair(obj.getString("spec"), obj.getString("label")))
+                            }
+                            dynamicQSTiles = list
+                        } catch(e: Exception){}
+                    }
+                }
+            }
+            context.registerReceiver(receiver, android.content.IntentFilter("com.example.dynamicisland.QS_TILES_REPLY"), Context.RECEIVER_EXPORTED)
+            
+            // Send request to MainHook
+            val reqIntent = Intent("com.example.dynamicisland.FETCH_QS_TILES")
+            context.sendBroadcast(reqIntent)
+        }
+
         Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
             Text(text = "Quick Settings Grid", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
             Text(text = "Select 7 hardware toggles.", fontSize = 14.sp, color = Color.Gray)
             Spacer(modifier = Modifier.height(16.dp))
 
-            val availableQS = listOf("None", "WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
-            
-            Column {
-                for (row in 0..3) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                        for (col in 0..1) {
-                            val index = row * 2 + col
-                            if (index < 7) {
-                                var expanded by remember { mutableStateOf(false) }
-                                var selectedQS by remember { mutableStateOf(prefs.getString("qs_tile_$index", availableQS[index + 1]) ?: availableQS[index + 1]) }
-                                
-                                Box(modifier = Modifier.weight(1f)) {
-                                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-                                        OutlinedTextField(
-                                            value = selectedQS, onValueChange = {}, readOnly = true, label = { Text("QS ${index + 1}") },
-                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp),
-                                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp)
-                                        )
-                                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                            availableQS.forEach { tile ->
-                                                DropdownMenuItem(text = { Text(tile) }, onClick = {
-                                                    selectedQS = tile; expanded = false
-                                                    commitAndBroadcast(prefs, { putString("qs_tile_$index", tile) }) { broadcastUpdateSingle("dashboard", prefs) }
-                                                })
+            if (dynamicQSTiles.isEmpty()) {
+                 CircularProgressIndicator(color = Color.White, modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp))
+                 Text("Fetching native tiles from SystemUI...", color = Color.Gray, modifier = Modifier.align(Alignment.CenterHorizontally))
+            } else {
+                Column {
+                    for (row in 0..3) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            for (col in 0..1) {
+                                val index = row * 2 + col
+                                if (index < 7) {
+                                    var expanded by remember { mutableStateOf(false) }
+                                    // Store both spec (for backend) and label (for UI)
+                                    var selectedSpec by remember { mutableStateOf(prefs.getString("qs_tile_spec_$index", "") ?: "") }
+                                    var selectedLabel by remember { mutableStateOf(prefs.getString("qs_tile_label_$index", "Select Tile") ?: "Select Tile") }
+                                    
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                                            OutlinedTextField(
+                                                value = selectedLabel, onValueChange = {}, readOnly = true, label = { Text("QS ${index + 1}") },
+                                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 4.dp),
+                                                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp),
+                                                maxLines = 1
+                                            )
+                                            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                                dynamicQSTiles.forEach { (spec, label) ->
+                                                    DropdownMenuItem(text = { Text(label) }, onClick = {
+                                                        selectedSpec = spec
+                                                        selectedLabel = label
+                                                        expanded = false
+                                                        commitAndBroadcast(prefs, { 
+                                                            putString("qs_tile_spec_$index", spec)
+                                                            putString("qs_tile_label_$index", label) 
+                                                        }) { broadcastUpdateSingle("dashboard", prefs) }
+                                                    })
+                                                }
                                             }
                                         }
                                     }
+                                } else {
+                                    Spacer(modifier = Modifier.weight(1f)) 
                                 }
-                            } else {
-                                Spacer(modifier = Modifier.weight(1f)) 
                             }
                         }
                     }
