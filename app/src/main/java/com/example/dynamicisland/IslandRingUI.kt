@@ -47,30 +47,33 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
         )
          val progressColor = baseColor.copy(alpha = pulseAlpha)
 
-        Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp).align(Alignment.Center)) {
-            val strokeW = ringThickness.value.dp.toPx() 
-            val inset = strokeW / 2
-            val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
-            val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
-            val progressPercent = progress.coerceIn(0f, 1f)
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            // Remove `.align(Alignment.Center)` from the Canvas modifier
+            Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp)) {
+                val strokeW = ringThickness.value.dp.toPx() 
+                val inset = strokeW / 2
+                val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
+                val arcTopLeft = androidx.compose.ui.geometry.Offset(inset, inset)
+                val progressPercent = progress.coerceIn(0f, 1f)
 
-            val sweepGradient = Brush.sweepGradient(0.0f to progressColor.copy(alpha = 0.4f), 0.8f to progressColor, 1.0f to progressColor.copy(alpha = 0.4f))
+                val sweepGradient = Brush.sweepGradient(0.0f to progressColor.copy(alpha = 0.4f), 0.8f to progressColor, 1.0f to progressColor.copy(alpha = 0.4f))
 
-            drawArc(color = baseColor.copy(alpha=0.20f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
-            drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 0.95f)
+                drawArc(color = baseColor.copy(alpha=0.20f), startAngle = 0f, sweepAngle = 360f, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW))
+                drawArc(brush = sweepGradient, startAngle = -90f, sweepAngle = 360f * progressPercent, useCenter = false, topLeft = arcTopLeft, size = arcSize, style = Stroke(strokeW, cap = StrokeCap.Round), alpha = 0.95f)
 
-            val markerLength = strokeW * 1.3f
-            val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
-            val radius = (size.width - strokeW) / 2
+                val markerLength = strokeW * 1.3f
+                val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+                val radius = (size.width - strokeW) / 2
             
-            drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(center.x, center.y - radius - markerLength/2), end = androidx.compose.ui.geometry.Offset(center.x, center.y - radius + markerLength/2), strokeWidth = 4f)
+                drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(center.x, center.y - radius - markerLength/2), end = androidx.compose.ui.geometry.Offset(center.x, center.y - radius + markerLength/2), strokeWidth = 4f)
              
-            val angleRad = Math.toRadians((-90f + 360f * progressPercent).toDouble())
-            val mStartX = center.x + (radius - markerLength/2) * Math.cos(angleRad).toFloat()
-            val mStartY = center.y + (radius - markerLength/2) * Math.sin(angleRad).toFloat()
-            val mEndX = center.x + (radius + markerLength/2) * Math.cos(angleRad).toFloat()
-            val mEndY = center.y + (radius + markerLength/2) * Math.sin(angleRad).toFloat()
-            drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(mStartX, mStartY), end = androidx.compose.ui.geometry.Offset(mEndX, mEndY), strokeWidth = 4f)
+                val angleRad = Math.toRadians((-90f + 360f * progressPercent).toDouble())
+                val mStartX = center.x + (radius - markerLength/2) * Math.cos(angleRad).toFloat()
+                val mStartY = center.y + (radius - markerLength/2) * Math.sin(angleRad).toFloat()
+                val mEndX = center.x + (radius + markerLength/2) * Math.cos(angleRad).toFloat()
+                val mEndY = center.y + (radius + markerLength/2) * Math.sin(angleRad).toFloat()
+                drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(mStartX, mStartY), end = androidx.compose.ui.geometry.Offset(mEndX, mEndY), strokeWidth = 4f)
+            }
         }
     }
 }
