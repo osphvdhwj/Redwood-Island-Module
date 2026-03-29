@@ -30,6 +30,7 @@ import kotlin.math.abs
 
 @Composable
 fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.compose.ui.unit.Dp, borderColor: Color) {
+    val view = this
     AnimatedVisibility(
         visible = state == IslandState.TYPE_SPLIT,
         enter = scaleIn(spring(dampingRatio = 0.8f, stiffness = 300f)) + fadeIn(),
@@ -50,7 +51,7 @@ fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.c
                     .size(animatedHeight) 
                     .onGloballyPositioned { coordinates ->
                         val location = IntArray(2)
-                        this@DynamicIslandView.getLocationOnScreen(location)
+                        view.getLocationOnScreen(location)
                         val bounds = coordinates.boundsInRoot()
                         val globalLeft = location[0] + bounds.left.toInt()
                         val globalTop = location[1] + bounds.top.toInt()
