@@ -2,22 +2,6 @@ package com.example.dynamicisland
 
 import android.graphics.Bitmap
 
-enum class ActivityType { CALL, NAVIGATION, TIMER, MESSAGE, ALARM, CHARGING, BATTERY_LOW, BLUETOOTH, WIFI, HARDWARE, ONGOING_TASK }
-enum class IslandState { HIDDEN, TYPE_0_RING, TYPE_1_MINI, TYPE_2_MID, TYPE_3_MAX, TYPE_SPLIT, TYPE_CUBE }
-enum class IslandGesture { SINGLE_TAP, DOUBLE_TAP, LONG_PRESS, SWIPE_LEFT, SWIPE_RIGHT, SWIPE_UP, SWIPE_DOWN }
-enum class IslandAction { NONE, PLAY_PAUSE, NEXT_TRACK, PREV_TRACK, VOL_UP, VOL_DOWN, OPEN_APP, EXPAND, COLLAPSE, OPEN_DASHBOARD, HEART_SONG }
-
-data class CustomMediaAction(val actionName: String, val iconBitmap: Bitmap?, val iconResId: Int?, val isEnabled: Boolean)
-
-// 🎛️ NEW: Holds the state of an individual Quick Settings Tile from SystemUI
-data class QSTileState(
-    val tileSpec: String,       // The internal ID (e.g., "wifi", "custom(com.app/...)")
-    val label: String,          // The display name ("Wi-Fi", "AdGuard")
-    val isActive: Boolean,      // Is it currently ON?
-    val isUnavailable: Boolean, // Is it disabled/greyed out?
-    val iconBitmap: Bitmap? = null // Extracted native icon
-)
-
 sealed class LiveActivityModel {
     abstract val id: String
     abstract val type: ActivityType
@@ -53,7 +37,7 @@ sealed class LiveActivityModel {
         override val isTransient: Boolean = false,
         override val isCritical: Boolean = true,
         override val isSensitive: Boolean = true,
-        val callerName: String = "Unknown Caller", // 🎛️ NEW: Caller Name Slot
+        val callerName: String = "Unknown Caller", 
         val state: String = "ONGOING", 
         val startTime: Long = System.currentTimeMillis()
     ) : LiveActivityModel()
@@ -104,7 +88,6 @@ sealed class LiveActivityModel {
         override val isSensitive: Boolean = false
     ) : LiveActivityModel()
 
-    // 🎛️ UPDATED: Now supports the dynamic SystemUI QSTile list
     data class Dashboard(
         val activeTiles: List<QSTileState> = emptyList(),
         override val id: String = "dashboard", 
