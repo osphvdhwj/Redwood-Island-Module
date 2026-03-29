@@ -23,7 +23,7 @@ fun ThemeSlider(label: String, key: String, default: Float, range: ClosedFloatin
         value = localValue, 
         onValueChange = { localValue = it }, 
         onValueChangeFinished = { 
-            ConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat(key, localValue) }) { ConfigManager.sendGestureUpdate(prefs, context) }
+            ConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat(key, localValue) }) { ConfigManager.sendGestureUpdate(context, prefs) }
         }, 
         valueRange = range
     )
@@ -34,9 +34,25 @@ fun PrecisionSlider(label: String, value: Float, range: ClosedFloatingPointRange
     var localValue by remember(value) { mutableFloatStateOf(value) } 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text(label, modifier = Modifier.width(60.dp), fontSize = 14.sp)
-        IconButton(onClick = { localValue = (localValue - 1f).coerceIn(range); onValueChange(localValue); onValueChangeFinished() }) { Icon(Icons.Default.Remove, "-") }
-        Slider(value = localValue, onValueChange = { localValue = it }, onValueChangeFinished = { onValueChange(localValue); onValueChangeFinished() }, modifier = Modifier.weight(1f), valueRange = range)
-        IconButton(onClick = { localValue = (localValue + 1f).coerceIn(range); onValueChange(localValue); onValueChangeFinished() }) { Icon(Icons.Default.Add, "+") }
+        IconButton(onClick = { 
+            localValue = (localValue - 1f).coerceIn(range)
+            onValueChange(localValue)
+            onValueChangeFinished() 
+        }) { Icon(Icons.Default.Remove, contentDescription = "-") }
+        
+        Slider(
+            value = localValue, 
+            onValueChange = { localValue = it }, 
+            onValueChangeFinished = { onValueChange(localValue); onValueChangeFinished() }, 
+            modifier = Modifier.weight(1f), 
+            valueRange = range
+        )
+        
+        IconButton(onClick = { 
+            localValue = (localValue + 1f).coerceIn(range)
+            onValueChange(localValue)
+            onValueChangeFinished() 
+        }) { Icon(Icons.Default.Add, contentDescription = "+") }
         Text(String.format("%.0f", localValue), modifier = Modifier.width(40.dp), fontSize = 14.sp)
     }
 }
@@ -48,7 +64,7 @@ fun FeatureSwitch(label: String, key: String, default: Boolean, prefs: SharedPre
         Text(label, color = Color.White, fontSize = 16.sp, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = { 
             checked = it
-            ConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean(key, it) }) { ConfigManager.sendGestureUpdate(prefs, context) }
+            ConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean(key, it) }) { ConfigManager.sendGestureUpdate(context, prefs) }
         })
     }
 }
@@ -62,10 +78,13 @@ fun GestureDropdown(label: String, options: Array<IslandAction>, prefs: SharedPr
         OutlinedTextField(value = selectedOption.replace("_", " "), onValueChange = {}, readOnly = true, label = { Text(label) }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth())
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
-                DropdownMenuItem(text = { Text(option.name.replace("_", " ")) }, onClick = {
-                    selectedOption = option.name; expanded = false
-                    ConfigManager.commitAndBroadcast(prefs, scope, context, { putString(prefKey, option.name) }) { ConfigManager.sendGestureUpdate(prefs, context) }
-                })
+                DropdownMenuItem(
+                    text = { Text(option.name.replace("_", " ")) },
+                    onClick = {
+                        selectedOption = option.name; expanded = false
+                        ConfigManager.commitAndBroadcast(prefs, scope, context, { putString(prefKey, option.name) }) { ConfigManager.sendGestureUpdate(context, prefs) }
+                    }
+                )
             }
         }
     }
