@@ -34,6 +34,24 @@ class IslandController(private val context: Context) {
 
     private var mediaProcessJob: Job? = null
 
+    val targetSpec = gesture.name.removePrefix("QS_CLICK_")
+    val host = SystemUIContextKeeper.qsTileHost
+    val tilesCollection = XposedHelpers.callMethod(host, "getTiles") as Collection<*>
+    val targetTile = tilesCollection.firstOrNull { 
+        XposedHelpers.callMethod(it, "getTileSpec") == targetSpec 
+    }
+
+    // Invoke the native click! (Usually takes an optional View parameter for ripple animations, null is fine)
+    if (targetTile != null) {
+        XposedHelpers.callMethod(targetTile, "click", null) 
+    
+        // Briefly delay and resync to update the UI colors
+        scope.launch {
+            delay(300)
+            syncQSTiles()
+        }
+    }
+
     private var isAutoBrightnessEnabled = false
     private var currentRingerMode = AudioManager.RINGER_MODE_NORMAL
     private var windowManager: WindowManager? = null
@@ -58,6 +76,50 @@ class IslandController(private val context: Context) {
             255
         }
     }
+
+    private fun syncQSTiles() {
+        val host = SystemUIContextKeeper.qsTileHost ?: return
+        try {
+            // QSTileHost.getTiles() returns a Collection of QSTile objects
+            val tilesCollection = XposedHelpers.callMethod(host, "getTiles") as Collection<*>
+        
+            // Let's assume the user selected these 4 in ConfigActivity (saved in SharedPreferences)
+            val userSelectedSpecs = listOf("wifi", "bt", "flashlight", "custom(com.example.vpn/...)")
+        
+            val newTileStates = mutableListOf<QSTileState>()
+
+            for (tileObj in tilesCollection) {
+                if (tileObj == null) continue
+                val tileSpec = XposedHelpers.callMethod(tileObj, "getTileSpec") as String
+            
+                if (userSelectedSpecs.contains(tileSpec)) {
+                    // Read the current state object of the tile
+                    val stateObj = XposedHelpers.callMethod(tileObj, "getState")
+                    val label = XposedHelpers.getObjectField(stateObj, "label") as? CharSequence ?: ""
+                
+                    // Android QS State integers: 0 = UNAVAILABLE, 1 = INACTIVE, 2 = ACTIVE
+                    val stateInt = XposedHelpers.getIntField(stateObj, "state")
+                
+                    newTileStates.add(
+                        QSTileState(
+                            tileSpec = tileSpec,
+                            label = label.toString(),
+                            isActive = stateInt == 2,
+                            isUnavailable = stateInt == 0
+                        )
+                    )
+                }
+            }
+        
+            // Update the UI Model
+            if (_activeModel.value is LiveActivityModel.Dashboard) {
+                _activeModel.value = LiveActivityModel.Dashboard(activeTiles = newTileStates)
+            }
+        } catch (e: Exception) {
+            // Handle reflection errors
+        }
+    }
+    
     private var currentHardware: LiveActivityModel.HardwareMonitor? = null
     private var transientModel: LiveActivityModel? = null
     private var transientJob: Job? = null
