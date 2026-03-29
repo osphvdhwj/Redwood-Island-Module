@@ -107,6 +107,34 @@ class IslandController(private val context: Context) {
     private val ecosystemReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             when (intent.action) {
+                "com.example.dynamicisland.HARDWARE_TOGGLE" -> {
+                    if (!isAlertsEnabled) return
+                    val type = intent.getStringExtra("type") ?: return
+                    val state = intent.getIntExtra("state", 0)
+                    
+                    if (type == "RINGER") {
+                        val (title, text, color) = when (state) {
+                            0 -> Triple("Silent Mode", "Calls and notifications muted", android.graphics.Color.GRAY)
+                            1 -> Triple("Vibrate", "Device will vibrate", android.graphics.Color.rgb(255, 165, 0)) // Orange
+                            else -> Triple("Ring", "Ringer is active", android.graphics.Color.GREEN)
+                        }
+                        // Drop the island for exactly 3 seconds
+                        postTransientNotification(LiveActivityModel.General(
+                            id = "hw_ringer", type = ActivityType.HARDWARE,
+                            title = title, dataText = text, accentColor = color
+                        ), 3000L)
+                        
+                    } else if (type == "TORCH") {
+                        val title = if (state == 1) "Flashlight On" else "Flashlight Off"
+                        val text = if (state == 1) "System torch active" else "Torch disabled"
+                        val color = if (state == 1) android.graphics.Color.YELLOW else android.graphics.Color.GRAY
+                        
+                        postTransientNotification(LiveActivityModel.General(
+                            id = "hw_torch", type = ActivityType.HARDWARE,
+                            title = title, dataText = text, accentColor = color
+                        ), 3000L)
+                    }
+                }
                 "com.example.dynamicisland.APP_CHANGED" -> { topAppPackage = intent.getStringExtra("pkg") ?: ""; evaluatePriority() }
                 "com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT" -> {
                     val progress = intent.getIntExtra("progress", -1)
@@ -352,6 +380,7 @@ class IslandController(private val context: Context) {
             addAction("com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING"); addAction("com.crdroid.batterywellbeing.REALITY_PILL_TICK")
             addAction("com.crdroid.batterywellbeing.SYNC_CONFIG"); addAction("com.example.dynamicisland.APP_CHANGED")
             addAction("com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT")
+            addAction("com.example.dynamicisland.HARDWARE_TOGGLE") // <-- NEW
         }
 
         val securePermission = "com.redwood.permission.SECURE_IPC"
