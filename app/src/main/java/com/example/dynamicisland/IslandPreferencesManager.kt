@@ -13,15 +13,47 @@ object IslandPreferencesManager {
         try {
             val pref = XSharedPreferences("com.example.dynamicisland", "island_prefs")
             pref.makeWorldReadable(); pref.reload()
+            
+            // Layout Dimensions
             view.ringW.value = pref.getFloat("ring_w", 45f); view.ringH.value = pref.getFloat("ring_h", 45f); view.ringX.value = pref.getFloat("ring_x", 0f); view.ringY.value = pref.getFloat("ring_y", 48f)
             view.miniW.value = pref.getFloat("mini_w", 180f); view.miniH.value = pref.getFloat("mini_h", 36f); view.miniX.value = pref.getFloat("mini_x", 0f); view.miniY.value = pref.getFloat("mini_y", 48f)
             view.midW.value = pref.getFloat("mid_w", 320f); view.midH.value = pref.getFloat("mid_h", 80f); view.midX.value = pref.getFloat("mid_x", 0f); view.midY.value = pref.getFloat("mid_y", 48f)
             view.maxW.value = pref.getFloat("max_w", 360f); view.maxH.value = pref.getFloat("max_h", 220f); view.maxX.value = pref.getFloat("max_x", 0f); view.maxY.value = pref.getFloat("max_y", 48f)
             view.cubeW.value = pref.getFloat("cube_w", 85f); view.cubeH.value = pref.getFloat("cube_h", 85f); view.cubeX.value = pref.getFloat("cube_x", 0f); view.cubeY.value = pref.getFloat("cube_y", 48f)
+            
             view.padT.value = pref.getFloat("pad_t", 0f); view.padB.value = pref.getFloat("pad_b", 0f); view.padL.value = pref.getFloat("pad_l", 0f); view.padR.value = pref.getFloat("pad_r", 0f)
             view.ringThickness.value = pref.getFloat("ring_thickness", 6f)
             view.expandUpwards.value = pref.getBoolean("expand_upwards", false)
             view.isCubeRotationEnabled.value = pref.getBoolean("rotate_cube", true)
+
+            // 🎛️ FIXED: Now actively loads ALL "Just for Show" Theme Settings on boot
+            view.activeTheme.value = IslandTheme(
+                buttonSize = pref.getFloat("theme_button_size", 48f).dp,
+                buttonSpacing = pref.getFloat("theme_button_spacing", 16f).dp,
+                buttonCornerRadius = pref.getFloat("theme_button_radius", 50f).dp,
+                actionAnimType = pref.getString("theme_anim_type", "BOUNCE") ?: "BOUNCE",
+                cornerRadius = pref.getFloat("theme_corner_radius", 50f).dp,
+                textPrimary = pref.getFloat("theme_text_primary", 16f).sp,
+                textSecondary = pref.getFloat("theme_text_secondary", 14f).sp,
+                progressThick = pref.getFloat("theme_progress_thick", 4f).dp,
+                ringThick = pref.getFloat("theme_ring_thick", 12f).dp,
+                elementGap = pref.getFloat("theme_element_gap", 8f).dp,
+                musicTitleSize = pref.getFloat("theme_music_title", 16f).sp,
+                musicArtistSize = pref.getFloat("theme_music_artist", 14f).sp,
+                musicSeekerThick = pref.getFloat("theme_music_seeker", 4f).dp,
+                batTextSize = pref.getFloat("theme_bat_text", 16f).sp,
+                batIconSize = pref.getFloat("theme_bat_icon", 36f).dp,
+                batRingThick = pref.getFloat("theme_bat_ring", 12f).dp,
+                alertTitleSize = pref.getFloat("theme_alert_title", 16f).sp,
+                alertMsgSize = pref.getFloat("theme_alert_msg", 14f).sp,
+                hapticStrength = pref.getInt("haptic_strength", 1),
+                chargingStyle = pref.getString("charging_style", "CUBE") ?: "CUBE",
+                blurIntensity = pref.getFloat("blur_intensity", 16f).dp,
+                hideOnLandscape = pref.getBoolean("hide_landscape", false),
+                isGlassmorphism = pref.getBoolean("glass_mode", true),
+                springDamping = pref.getFloat("spring_damping", 0.85f),
+                springStiffness = pref.getFloat("spring_stiffness", 400f)
+            )
         } catch (e: Exception) {}
     }
 
