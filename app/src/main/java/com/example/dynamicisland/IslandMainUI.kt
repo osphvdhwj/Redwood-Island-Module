@@ -41,6 +41,7 @@ import kotlin.math.abs
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun DynamicIslandView.IslandUI(state: IslandState) {
+    val view = this
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val isEffectivelyHidden = state == IslandState.HIDDEN || isLandscape
@@ -126,7 +127,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                 .height(animatedHeight)
                 .onGloballyPositioned { coordinates ->
                     val location = IntArray(2)
-                    this@DynamicIslandView.getLocationOnScreen(location)
+                    view.getLocationOnScreen(location)
                     val bounds = coordinates.boundsInRoot()
                     anchorLeft = location[0] + bounds.left.toInt()
                     anchorTop = location[1] + bounds.top.toInt()
