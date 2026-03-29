@@ -28,10 +28,22 @@ object ConfigManager {
         }
     }
 
-    fun broadcastUpdateSingle(prefix: String, prefs: SharedPreferences, context: Context) {
+    fun saveAndBroadcast(
+        prefs: SharedPreferences, scope: CoroutineScope, context: Context,
+        prefix: String, w: Float, h: Float, x: Float, y: Float, ringT: Float, expandUp: Boolean
+    ) {
+        commitAndBroadcast(prefs, scope, context, {
+            putFloat("${prefix}_w", w).putFloat("${prefix}_h", h).putFloat("${prefix}_x", x).putFloat("${prefix}_y", y)
+            putBoolean("expand_upwards", expandUp)
+        }) {
+            broadcastUpdate(context, prefs, prefix, w, h, x, y, ringT, expandUp)
+        }
+    }
+
+    fun broadcastUpdateSingle(context: Context, prefs: SharedPreferences, prefix: String) {
         val intent = Intent("com.example.dynamicisland.RELOAD_PREFS").apply {
             @Suppress("WrongConstant") addFlags(0x01000000)
-            setPackage("com.android.systemui")
+            setPackage("com.android.systemui") 
             putExtra("prefix", prefix)
         }
         for (i in 0..7) intent.putExtra("pinned_app_$i", prefs.getString("pinned_app_$i", ""))
@@ -40,10 +52,9 @@ object ConfigManager {
         context.sendBroadcast(intent)
     }
 
-    fun broadcastUpdate(prefix: String, w: Float, h: Float, x: Float, y: Float, ringT: Float, expandUp: Boolean, context: Context) {
-        val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+    private fun broadcastUpdate(context: Context, prefs: SharedPreferences, prefix: String, w: Float, h: Float, x: Float, y: Float, ringT: Float, expandUp: Boolean) {
         @Suppress("WrongConstant")
-        val intent = Intent("com.example.dynamicisland.RELOAD_PREFS").addFlags(0x01000000).apply { setPackage("com.android.systemui") }
+        val intent = Intent("com.example.dynamicisland.RELOAD_PREFS").addFlags(0x01000000).apply { setPackage("com.android.systemui") } 
         intent.putExtra("prefix", prefix).putExtra("w", w).putExtra("h", h).putExtra("x", x).putExtra("y", y).putExtra("ring_thickness", ringT).putExtra("expand_upwards", expandUp)
         intent.putExtra("pad_t", prefs.getFloat("pad_t", 0f)).putExtra("pad_b", prefs.getFloat("pad_b", 0f)).putExtra("pad_l", prefs.getFloat("pad_l", 0f)).putExtra("pad_r", prefs.getFloat("pad_r", 0f))
         
@@ -56,7 +67,7 @@ object ConfigManager {
         context.sendBroadcast(intent)
     }
 
-    fun sendGestureUpdate(prefs: SharedPreferences, context: Context) {
+    fun sendGestureUpdate(context: Context, prefs: SharedPreferences) {
         val intent = Intent("com.example.dynamicisland.RELOAD_PREFS").apply {
             @Suppress("WrongConstant") addFlags(0x01000000)
             setPackage("com.android.systemui") 
@@ -81,6 +92,7 @@ object ConfigManager {
             putExtra("theme_bat_ring", prefs.getFloat("theme_bat_ring", 12f))
             putExtra("theme_alert_title", prefs.getFloat("theme_alert_title", 16f))
             putExtra("theme_alert_msg", prefs.getFloat("theme_alert_msg", 14f))
+            
             putExtra("haptic_strength", prefs.getInt("haptic_strength", 1))
             putExtra("charging_style", prefs.getString("charging_style", "CUBE"))
             putExtra("blur_intensity", prefs.getFloat("blur_intensity", 16f))
@@ -103,6 +115,9 @@ object ConfigManager {
         context.sendBroadcast(intent)
     }
 
+    fun getDefaultWidth(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 180f; "mid" -> 320f; "max" -> 360f; "cube" -> 85f; else -> 0f }
+    fun getDefaultHeight(prefix: String): Float = when(prefix) { "ring" -> 45f; "mini" -> 36f; "mid" -> 80f; "max" -> 220f; "cube" -> 85f; else -> 0f }
+
     private fun makePrefsWorldReadable(context: Context) {
         try {
             val rootDir = File(context.applicationInfo.dataDir)
@@ -110,7 +125,8 @@ object ConfigManager {
             rootDir.setReadable(true, false)
             val prefsDir = File(context.applicationInfo.dataDir, "shared_prefs")
             if (prefsDir.exists()) { 
-                prefsDir.setExecutable(true, false); prefsDir.setReadable(true, false) 
+                prefsDir.setExecutable(true, false)
+                prefsDir.setReadable(true, false) 
             }
             val prefsFile = File(prefsDir, "island_prefs.xml")
             if (prefsFile.exists()) prefsFile.setReadable(true, false)
