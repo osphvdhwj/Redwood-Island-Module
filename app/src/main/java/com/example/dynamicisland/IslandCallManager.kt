@@ -1,10 +1,10 @@
 package com.example.dynamicisland
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioManager
-import android.os.Handler
-import android.os.Looper
 
 class IslandCallManager(
     private val context: Context,
@@ -12,44 +12,43 @@ class IslandCallManager(
     private val onCallStateChanged: (LiveActivityModel.Call?) -> Unit
 ) {
     private var currentCall: LiveActivityModel.Call? = null
-    private val callHandler = Handler(Looper.getMainLooper())
     
-    // 🎛️ Kernel-Safe Universal Call Detector
-    fun startMonitoring(isScreenOn: () -> Boolean) {
-        val callCheckRunnable = object : Runnable {
-            override fun run() {
-                try {
-                    val mode = audioManager.mode
-                    val isRinging = mode == AudioManager.MODE_RINGTONE
-                    val isInCall = mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_IN_COMMUNICATION
-
-                    if (isRinging) {
-                        if (currentCall?.state != "RINGING") {
-                            currentCall = LiveActivityModel.Call(state = "RINGING", startTime = 0L)
-                            onCallStateChanged(currentCall)
-                        }
-                    } else if (isInCall) {
-                        if (currentCall?.state != "ONGOING") {
-                            currentCall = LiveActivityModel.Call(state = "ONGOING", startTime = System.currentTimeMillis())
-                            onCallStateChanged(currentCall)
-                        }
-                    } else {
-                        if (currentCall != null) {
-                            currentCall = null
-                            onCallStateChanged(null)
-                        }
+    // 🎛️ NEW: Listens to our highly-efficient Framework Hook instead of Polling!
+    private val callReceiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent) {
+            if (intent.action == "com.example.dynamicisland.CALL_STATE_CHANGED") {
+                val state = intent.getStringExtra("state") ?: return
+                val caller = intent.getStringExtra("caller") ?: "Unknown Caller"
+                
+                when (state) {
+                    "RINGING" -> {
+                        currentCall = LiveActivityModel.Call(state = "RINGING", callerName = caller, startTime = 0L)
+                        onCallStateChanged(currentCall)
                     }
-                } catch (e: Exception) {}
-
-                // Re-queue the check safely
-                if (isScreenOn()) {
-                    callHandler.postDelayed(this, 1000)
-                } else {
-                    callHandler.postDelayed(this, 5000) // Super efficient while screen is off
+                    "ONGOING" -> {
+                        // Only reset start time if it wasn't already ongoing
+                        val startTime = if (currentCall?.state == "ONGOING") currentCall!!.startTime else System.currentTimeMillis()
+                        currentCall = LiveActivityModel.Call(state = "ONGOING", callerName = caller, startTime = startTime)
+                        onCallStateChanged(currentCall)
+                    }
+                    "DISCONNECTED" -> {
+                        currentCall = null
+                        onCallStateChanged(null)
+                    }
                 }
             }
         }
-        callHandler.post(callCheckRunnable)
+    }
+
+    fun startMonitoring() {
+        val filter = IntentFilter("com.example.dynamicisland.CALL_STATE_CHANGED")
+        val securePermission = "com.redwood.permission.SECURE_IPC"
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(callReceiver, filter, securePermission, null, Context.RECEIVER_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            context.registerReceiver(callReceiver, filter, securePermission, null)
+        }
     }
 
     fun openNativeCallUI(islandView: DynamicIslandView?) {
