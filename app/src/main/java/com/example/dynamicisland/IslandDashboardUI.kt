@@ -115,26 +115,40 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
 
         // 3. Quick Settings (Adaptive Grid)
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            val toggles = listOf(
-                Pair(Icons.Default.Wifi, "WiFi"),
-                Pair(Icons.Default.Bluetooth, "BT"),
-                Pair(Icons.Default.FlashlightOn, "Torch"),
-                Pair(Icons.Default.Settings, "Settings")
-            )
+            // Take the first 4 active tiles from the model
+            val tilesToShow = model.activeTiles.take(4)
             
-            toggles.forEach { toggle ->
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { 
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    when(toggle.second) {
-                        "Settings" -> onGestureEvent?.invoke(IslandGesture.valueOf("LAUNCH_SETTINGS"))
-                        // Add other toggle intents here
-                    }
-                }) {
-                    Box(modifier = Modifier.size(54.dp).clip(CircleShape).background(Color.White.copy(alpha=0.15f)), contentAlignment = Alignment.Center) {
-                        Icon(toggle.first, contentDescription = toggle.second, tint = Color.White, modifier = Modifier.size(24.dp))
+            tilesToShow.forEach { tile ->
+                val bgColor = if (tile.isActive) Color.White else Color.White.copy(alpha = 0.15f)
+                val fgColor = if (tile.isActive) Color.Black else Color.White
+                val alpha = if (tile.isUnavailable) 0.5f else 1f
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally, 
+                    modifier = Modifier.clickable(enabled = !tile.isUnavailable) { 
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        // Fire the specific tile ID to the controller
+                        onGestureEvent?.invoke(IslandGesture.valueOf("QS_CLICK_${tile.tileSpec}"))
+                    }.alpha(alpha).weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier.size(54.dp).clip(CircleShape).background(bgColor), 
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // We use a generic settings icon if native icon extraction failed
+                        if (tile.iconBitmap != null) {
+                             androidx.compose.foundation.Image(
+                                bitmap = tile.iconBitmap.asImageBitmap(),
+                                contentDescription = tile.label,
+                                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(fgColor),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Icon(Icons.Default.Settings, contentDescription = null, tint = fgColor, modifier = Modifier.size(24.dp))
+                        }
                     }
                     Spacer(Modifier.height(6.dp))
-                    Text(text = toggle.second, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Text(text = tile.label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1)
                 }
             }
         }
@@ -236,21 +250,35 @@ fun DynamicIslandView.DashboardMid(model: LiveActivityModel.Dashboard) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val toggles = listOf(Icons.Default.Wifi, Icons.Default.Bluetooth, Icons.Default.FlashlightOn, Icons.Default.Settings)
+        val tilesToShow = model.activeTiles.take(4)
         
-        toggles.forEach { icon ->
+        tilesToShow.forEach { tile ->
+            val bgColor = if (tile.isActive) Color.White else Color.White.copy(alpha = 0.15f)
+            val fgColor = if (tile.isActive) Color.Black else Color.White
+            val alpha = if (tile.isUnavailable) 0.5f else 1f
+
             Box(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.15f))
-                    .clickable { 
+                    .background(bgColor)
+                    .alpha(alpha)
+                    .clickable(enabled = !tile.isUnavailable) { 
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        // Trigger specific intent based on icon
+                        onGestureEvent?.invoke(IslandGesture.valueOf("QS_CLICK_${tile.tileSpec}"))
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                 if (tile.iconBitmap != null) {
+                     androidx.compose.foundation.Image(
+                        bitmap = tile.iconBitmap.asImageBitmap(),
+                        contentDescription = tile.label,
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(fgColor),
+                        modifier = Modifier.size(20.dp)
+                    )
+                } else {
+                    Icon(Icons.Default.Settings, contentDescription = null, tint = fgColor, modifier = Modifier.size(20.dp))
+                }
             }
         }
     }
