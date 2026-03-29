@@ -111,7 +111,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
             } catch (e: Exception) {}
         }
         wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = WindowManager.LayoutParams.MATCH_PARENT
-        try { wm.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
+        try { wm.updateViewLayout(view, wp) } catch (e: Exception) {}
     }
 
     val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
