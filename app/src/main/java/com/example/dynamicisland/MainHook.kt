@@ -16,6 +16,11 @@ import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
+// 🎛️ NEW: Global object to hold SystemUI instances so IslandController can access them directly
+object SystemUIContextKeeper {
+    var qsTileHost: Any? = null
+}
+
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     companion object {
@@ -37,7 +42,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
-        // 1. SYSTEM SERVER HOOKS
+        // 1. SYSTEM SERVER HOOKS (Framework)
         if (lpparam.packageName == "android") {
             try {
                 val atmsClass = XposedHelpers.findClassIfExists("com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader)
@@ -121,7 +126,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             }
         }
 
-        // 2. SYSTEM UI HOOK
+        // 2. SYSTEM UI HOOK (Overlay & Quick Settings)
         if (lpparam.packageName == "com.android.systemui") {
             try {
                 XposedHelpers.findAndHookMethod(
@@ -141,6 +146,24 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 XposedBridge.log("DynamicIsland: Instrumentation hook deployed successfully.")
             } catch (e: Exception) {
                 XposedBridge.log("DynamicIsland: Failed to hook Instrumentation - ${e.message}")
+            }
+
+            // 🎛️ NEW: Hook QSTileHost to capture Quick Settings tiles
+            try {
+                val qsTileHostClass = XposedHelpers.findClassIfExists("com.android.systemui.qs.QSTileHost", lpparam.classLoader)
+                if (qsTileHostClass != null) {
+                    XposedBridge.hookAllConstructors(qsTileHostClass, object : XC_MethodHook() {
+                        override fun afterHookedMethod(param: MethodHookParam) {
+                            // Save the instance locally when SystemUI boots up!
+                            SystemUIContextKeeper.qsTileHost = param.thisObject
+                            XposedBridge.log("DynamicIsland: Successfully captured QSTileHost instance")
+                        }
+                    })
+                } else {
+                    XposedBridge.log("DynamicIsland: QSTileHost class not found!")
+                }
+            } catch (e: Exception) {
+                XposedBridge.log("DynamicIsland: Failed to hook QSTileHost - ${e.message}")
             }
         }
     }
