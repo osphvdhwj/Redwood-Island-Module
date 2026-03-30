@@ -189,7 +189,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                             label = "UI Transition"
                         ) { s ->
                             when (s) {
-                                IslandState.TYPE_3_MAX -> { when (model) { is LiveActivityModel.Dashboard -> DashboardMax(model); is LiveActivityModel.Music -> MusicMax(model); else -> {} } }
+                                IslandState.TYPE_3_MAX -> { when (model) { is LiveActivityModel.Dashboard -> IslandDashboardMax(model); is LiveActivityModel.Music -> MusicMax(model); else -> {} } }
                                 IslandState.TYPE_2_MID -> { when (model) { is LiveActivityModel.Dashboard -> DashboardMid(model); is LiveActivityModel.Call -> CallMid(model); is LiveActivityModel.Music -> MusicMid(model); is LiveActivityModel.General -> GeneralMid(model); is LiveActivityModel.Charging -> ChargingMid(model); is LiveActivityModel.SystemAlert -> SystemAlertMid(model); is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model); is LiveActivityModel.OngoingTask -> OngoingTaskMid(model); else -> {} } }
                                 IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { when (model) { is LiveActivityModel.Call -> CallMini(model); is LiveActivityModel.Music -> MusicMini(model); is LiveActivityModel.General -> GeneralMini(model); is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model); is LiveActivityModel.RealityPill -> RealityPillMini(model); else -> {} } }
                                 IslandState.TYPE_CUBE -> { if (model is LiveActivityModel.Charging) ChargingCube(model) }
