@@ -212,6 +212,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         try { context.unregisterReceiver(screenReceiver) } catch (e: Exception) {}
 
         BatteryPlugin.stop(context)
-        context.sendBroadcast(Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui"))
+        context.sendBroadcast(android.content.Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui"))
+        
+        // 🧹 TRIGGER THE KILL SWITCH TO PREVENT ZOMBIE RAM
+        (context as? IslandController)?.destroy() // Assuming controller reference or pass it safely. 
     }
+
+http://googleusercontent.com/immersive_entry_chip/0
 }
