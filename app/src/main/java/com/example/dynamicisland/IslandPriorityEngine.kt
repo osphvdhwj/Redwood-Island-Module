@@ -23,18 +23,16 @@ object IslandPriorityEngine {
         _islandState: MutableStateFlow<IslandState>
     ): Boolean {
         
-        // 🎬 Auto-Hide if watching a video in Landscape
         val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-        if (isLandscape && currentMedia?.isVideo == true) {
-            _islandState.value = IslandState.HIDDEN
-            return true
-        }
+        val isGaming = currentHardware?.isGamingModeOn == true
 
+        // 1. Notification Shade takes absolute priority (Hide Island)
         if (isPanelExpanded) {
             _islandState.value = IslandState.HIDDEN
             return userForceCollapsed
         }
 
+        // 2. 📞 CALLS: Always break through, even in games or videos!
         if (currentCall != null) {
             _activeModel.value = currentCall
             _islandState.value = if (userForceCollapsed) IslandState.TYPE_0_RING else IslandState.TYPE_2_MID
@@ -42,20 +40,36 @@ object IslandPriorityEngine {
             return userForceCollapsed
         }
 
-        if (transientModel != null) {
+        // 3. 🚨 CRITICAL ALERTS: (Low Battery, OTP) Break through games and videos!
+        if (transientModel != null && transientModel.isCritical) {
             _activeModel.value = transientModel
-            if (transientModel.isCritical && !userForceCollapsed) _islandState.value = IslandState.TYPE_2_MID
-            else _islandState.value = IslandState.TYPE_1_MINI
-            
-            if (currentMedia != null && isMediaEnabled) _splitModel.value = currentMedia
+            _islandState.value = IslandState.TYPE_2_MID
+            _splitModel.value = null
+            return userForceCollapsed
+        }
+
+        // 4. 🎬🎮 IMMERSION MODE: Hide idle states for Video and Landscape Games
+        if (currentMedia?.isVideo == true || (isGaming && isLandscape)) {
+            _islandState.value = IslandState.HIDDEN
+            return true
+        }
+
+        // 5. 🔔 STANDARD TRANSIENTS: (Downloads, Bluetooth, etc.)
+        if (transientModel != null && !transientModel.isCritical) {
+            _activeModel.value = transientModel
+            _islandState.value = IslandState.TYPE_1_MINI
+            // Only show split music pill if it's actually music, not a video in the background
+            if (currentMedia != null && isMediaEnabled && currentMedia.isVideo == false) _splitModel.value = currentMedia
             else _splitModel.value = null
             return userForceCollapsed
         }
 
+        // 6. 🎛️ DASHBOARD
         if (currentActiveModel is LiveActivityModel.Dashboard && currentVisualState == IslandState.TYPE_3_MAX) {
             return userForceCollapsed
         }
 
+        // 7. 🎵 MUSIC
         if (currentMedia != null && isMediaEnabled) {
             _activeModel.value = currentMedia
             _splitModel.value = null
@@ -69,13 +83,14 @@ object IslandPriorityEngine {
             return userForceCollapsed
         }
 
-        if (currentHardware?.isGamingModeOn == true) {
-            _activeModel.value = currentHardware
-            _islandState.value = IslandState.TYPE_1_MINI
-            _splitModel.value = null
-            return false
+        // 8. 📱 GAMING (Portrait) 
+        // If they are gaming in portrait mode, hide the idle ring so it's not distracting
+        if (isGaming) {
+            _islandState.value = IslandState.HIDDEN
+            return true
         }
 
+        // 9. DEFAULT IDLE (Camera Cutout Ring)
         _activeModel.value = null
         _splitModel.value = null
         _islandState.value = IslandState.TYPE_0_RING
