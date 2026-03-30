@@ -30,35 +30,11 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
+        // 🚀 BACKEND: SYSTEM FRAMEWORK
         if (lpparam.packageName == "android") {
             SystemEventsHook.apply(lpparam, USER_ALL)
             FrameworkTelecomHook.apply(lpparam, USER_ALL)
             FrameworkHardwareHook.apply(lpparam, USER_ALL)
-            
-            // 🚀 SHARE SHEET ASSASSIN & REDIRECTOR
-            try {
-                val chooserClass = XposedHelpers.findClassIfExists("com.android.internal.app.ChooserActivity", lpparam.classLoader)
-                if (chooserClass != null) {
-                    XposedHelpers.findAndHookMethod(
-                        chooserClass, "onCreate", android.os.Bundle::class.java,
-                        object : XC_MethodReplacement() {
-                            override fun replaceHookedMethod(param: MethodHookParam): Any? {
-                                val activity = param.thisObject as android.app.Activity
-                                val targetIntent = activity.intent.getParcelableExtra<android.content.Intent>(android.content.Intent.EXTRA_INTENT)
-                                
-                                if (targetIntent != null) {
-                                    val islandIntent = android.content.Intent("com.example.dynamicisland.SHARE_INTERCEPTED")
-                                    islandIntent.putExtra("raw_intent", targetIntent)
-                                    android.app.AndroidAppHelper.currentApplication().sendBroadcast(islandIntent)
-                                    activity.finish()
-                                    return null
-                                }
-                                return XposedBridge.invokeOriginalMethod(param.method, param.thisObject, param.args)
-                            }
-                        }
-                    )
-                }
-            } catch (e: Throwable) {}
 
             // 🔗 UNIVERSAL MEDIA LINK SWITCHER
             try {
@@ -88,6 +64,36 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             } catch (e: Throwable) {}
         }
 
+        // 🚀 SHARE SHEET ASSASSIN & REDIRECTOR (Android 10 through 14+)
+        if (lpparam.packageName == "android" || lpparam.packageName == "com.android.intentresolver") {
+            try {
+                val chooserClass = XposedHelpers.findClassIfExists("com.android.intentresolver.ChooserActivity", lpparam.classLoader)
+                    ?: XposedHelpers.findClassIfExists("com.android.internal.app.ChooserActivity", lpparam.classLoader)
+                
+                if (chooserClass != null) {
+                    XposedHelpers.findAndHookMethod(
+                        chooserClass, "onCreate", android.os.Bundle::class.java,
+                        object : XC_MethodReplacement() {
+                            override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                                val activity = param.thisObject as android.app.Activity
+                                val targetIntent = activity.intent.getParcelableExtra<android.content.Intent>(android.content.Intent.EXTRA_INTENT)
+                                
+                                if (targetIntent != null) {
+                                    val islandIntent = android.content.Intent("com.example.dynamicisland.SHARE_INTERCEPTED")
+                                    islandIntent.putExtra("raw_intent", targetIntent)
+                                    android.app.AndroidAppHelper.currentApplication().sendBroadcast(islandIntent)
+                                    activity.finish()
+                                    return null
+                                }
+                                return XposedBridge.invokeOriginalMethod(param.method, param.thisObject, param.args)
+                            }
+                        }
+                    )
+                }
+            } catch (e: Throwable) {}
+        }
+
+        // 🎨 FRONTEND: SYSTEM UI
         if (lpparam.packageName == "com.android.systemui") {
             SystemUIHardwareHook.apply(lpparam)
             
