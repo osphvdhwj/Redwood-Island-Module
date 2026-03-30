@@ -83,11 +83,44 @@ class IslandMediaManager(
         val isNewTrack = newTitle != lastTrackTitle && lastTrackTitle.isNotEmpty()
         lastTrackTitle = newTitle
 
-        val isFirstLoad = currentMedia == null || isNewTrack
-        if (isFirstLoad) {
-            currentMedia = LiveActivityModel.Music("media_main", ActivityType.MESSAGE, newTitle, metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown", albumArtBitmap, null, null, android.graphics.Color.DKGRAY, android.graphics.Color.WHITE, isPlaying, duration, pbState.position, controller.packageName, emptyList(), false, 0, false)
-            onMediaChanged(currentMedia)
-        }
+        // 🎬 THE VIDEO CLASSIFIER HEURISTIC
+                val pkg = controller.packageName ?: ""
+                
+                // Check 1: Known Video Dictionaries
+                val knownVideoApps = listOf(
+                    "com.netflix.mediaclient", "org.videolan.vlc", "com.mxtech.videoplayer.ad",
+                    "com.mxtech.videoplayer.pro", "com.amazon.avod.thirdpartyclient", 
+                    "com.plexapp.android", "tv.twitch.android", "com.google.android.youtube"
+                )
+                val isVideoPackage = knownVideoApps.contains(pkg)
+
+                // Check 2: The Aspect Ratio Trick
+                // If the thumbnail is significantly wider than it is tall (e.g., 16:9), it's almost certainly a video.
+                var isWideThumbnail = false
+                if (albumArtBitmap != null) {
+                    val ratio = albumArtBitmap.width.toFloat() / albumArtBitmap.height.toFloat()
+                    if (ratio > 1.3f) isWideThumbnail = true // 16:9 is ~1.77, 1:1 is 1.0
+                }
+
+                // If either condition is true, classify it as Video
+                val isVideoContent = isVideoPackage || isWideThumbnail
+
+                // 🎧 Check for Hi-Fi audio (from previous step)
+                var isHiFi = false
+                var codecName = "Standard"
+                try {
+                    if (audioManager.isBluetoothA2dpOn) { codecName = "Bluetooth" } 
+                    else if (audioManager.isWiredHeadsetOn) { isHiFi = true; codecName = "Wired DAC" }
+                } catch (e: Throwable) {}
+
+                val artistString = if (isHiFi && !isVideoContent) "$artist • $codecName" else artist
+
+                currentMedia = LiveActivityModel.Music(
+                    "media_main", ActivityType.MESSAGE, newTitle, artistString,
+                    albumArtBitmap, blurredArtBitmap, appIconBmp, bgColor, txtColor, isPlaying, duration, pbState.position, 
+                    pkg, extractedActions, nativeShuffle, nativeRepeat, systemLiked, 
+                    isVideoContent // 🚀 Pass the classification to the UI
+                )
 
         if (isNewTrack && isPlaying) { onPeekRequested() }
 
