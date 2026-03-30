@@ -13,7 +13,6 @@ import java.io.File
 
 object BatteryPlugin {
 
-    // 🚀 FIXED: Added the 'wattage' Float to your callback signature
     var onBatteryChanged: ((level: Int, isCharging: Boolean, color: Int, wattage: Float) -> Unit)? = null
     private var isRegistered = false
 
@@ -33,15 +32,12 @@ object BatteryPlugin {
                 val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
                 val percent = if (scale > 0) ((level * 100f) / scale).toInt() else 0
 
-                // Always update our local cache
                 lastChargingState = isCharging
                 lastLevel = percent
                 
-                // Fetch the immediate wattage
                 val wattage = calculateWattage()
                 onBatteryChanged?.invoke(percent, isCharging, getBatteryColor(percent), wattage)
                 
-                // 🧠 BATTERY SAVER: Only run the 3-second polling loop IF the device is plugged in
                 managePollingJob(isCharging)
             }
         }
@@ -51,9 +47,8 @@ object BatteryPlugin {
         if (isCharging && job?.isActive != true) {
             job = scope.launch {
                 while (isActive && lastChargingState == true) {
-                    delay(3000) // Poll the kernel every 3 seconds while charging
+                    delay(3000) 
                     val wattage = calculateWattage()
-                    
                     lastLevel?.let { level ->
                         onBatteryChanged?.invoke(level, true, getBatteryColor(level), wattage)
                     }
@@ -67,15 +62,12 @@ object BatteryPlugin {
 
     private fun calculateWattage(): Float {
         try {
-            // Read raw hardware nodes from the Linux kernel
             val currentFile = File("/sys/class/power_supply/battery/current_now")
             val voltageFile = File("/sys/class/power_supply/battery/voltage_now")
             
             if (currentFile.exists() && voltageFile.exists()) {
                 val currentMicroAmps = Math.abs(currentFile.readText().trim().toFloat())
                 val voltageMicroVolts = voltageFile.readText().trim().toFloat()
-                
-                // P = I * V (Convert micro to standard units)
                 return (currentMicroAmps / 1_000_000f) * (voltageMicroVolts / 1_000_000f)
             }
         } catch (e: Exception) {}
@@ -91,9 +83,7 @@ object BatteryPlugin {
 
     fun stop(context: Context) {
         if (isRegistered) {
-            try {
-                context.unregisterReceiver(receiver)
-            } catch (e: Exception) {}
+            try { context.unregisterReceiver(receiver) } catch (e: Exception) {}
             isRegistered = false
             job?.cancel()
             job = null
