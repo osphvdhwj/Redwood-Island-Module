@@ -1,13 +1,20 @@
 package com.example.dynamicisland
 
+import android.content.pm.PackageManager
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -16,91 +23,137 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
+import androidx.core.graphics.drawable.toBitmap
 import kotlin.math.sin
 
 @Composable
 fun IslandDashboardMax(
     dashboardModel: LiveActivityModel.Dashboard,
     currentMedia: LiveActivityModel.Music?,
-    onSliderDrag: (String, Float) -> Unit, // "VOL" or "BRIGHT", percentage 0f-1f
-    onQsClick: (String) -> Unit
+    onSliderDrag: (String, Float) -> Unit, 
+    onQsClick: (String) -> Unit,
+    onMediaCommand: (String) -> Unit = {}, // Default empty so it doesn't break IslandMainUI
+    onAppClick: (String) -> Unit = {}      // Default empty
 ) {
-    // The entire dashboard is wrapped in a massive column with generous padding
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 12.dp, start = 24.dp, end = 24.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(top = 16.dp, start = 20.dp, end = 20.dp, bottom = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // ZONE 1: The Apex (Hardware Stats flanking the camera)
-        ApexZone()
-
-        // ZONE 2: Consolidated Media Core (Only shows if music is playing)
-        if (currentMedia != null) {
-            MediaCoreZone(currentMedia)
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // ZONE 3: Liquid Sliders
-        LiquidSlidersZone(onSliderDrag)
-
-        // ZONE 4: The Void Grid (QS Toggles)
-        VoidGridZone(dashboardModel.activeTiles, onQsClick)
-
-        // ZONE 5: App Dock
-        AppDockZone(dashboardModel.pinnedApps)
-    }
-}
-
-@Composable
-private fun ApexZone() {
-    Row(
-        modifier = Modifier.fillMaxWidth().height(24.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Left: Battery & Clock
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("100%", color = Color.Green, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text("12:00", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-        }
-
-        // Space for physical camera cutout in the middle
-        Spacer(modifier = Modifier.width(100.dp))
-
-        // Right: Connections / Speeds
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("LTE", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Icon(painterResource(id = android.R.drawable.stat_sys_data_bluetooth), contentDescription = "BT", tint = Color(0xFF0082FC), modifier = Modifier.size(14.dp))
-        }
-    }
-}
-
-@Composable
-private fun MediaCoreZone(media: LiveActivityModel.Music) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Text(
-            text = media.title, color = Color.White, fontSize = 18.sp, 
-            fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = media.artist, color = Color.Gray, fontSize = 14.sp, 
-            fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis
-        )
         
-        // The Wavy Progress Bar (Physics-driven sine wave)
-        WavyProgressBar(isPlaying = media.isPlaying)
+        // --- TOP ROW: Media Player (Left) & Vertical Sliders (Right) ---
+        Row(
+            modifier = Modifier.fillMaxWidth().height(140.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Top Left: Media Box
+            Box(modifier = Modifier.weight(1.3f).fillMaxHeight()) {
+                if (currentMedia != null) {
+                    MediaControlSquarcle(currentMedia, onMediaCommand)
+                } else {
+                    // Empty state if no music is playing
+                    Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).background(Color(0xFF1A1A1A)), contentAlignment = Alignment.Center) {
+                        Text("Not Playing", color = Color.Gray, fontSize = 14.sp)
+                    }
+                }
+            }
+
+            // Top Right: Vertical Sliders
+            Row(
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Brightness Slider (Left)
+                VerticalLiquidSlider(
+                    value = 75f, // Placeholder, wire to actual brightness later
+                    iconRes = android.R.drawable.ic_menu_day, 
+                    activeColor = Color(0xFFFFD700), // Sun Yellow
+                    onValueChange = { pct -> onSliderDrag("BRIGHT", pct) }
+                )
+                // Volume Slider (Right)
+                VerticalLiquidSlider(
+                    value = 50f, // Placeholder, wire to actual volume later
+                    iconRes = android.R.drawable.ic_lock_silent_mode_off, 
+                    activeColor = Color(0xFF00FFFF), // Cyan
+                    onValueChange = { pct -> onSliderDrag("VOL", pct) }
+                )
+            }
+        }
+
+        // --- MIDDLE ROW: Quick Settings Grid ---
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            VoidGridZone(dashboardModel.activeTiles, onQsClick)
+        }
+
+        // --- BOTTOM ROW: Horizontal Line & App Dock ---
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // The Horizontal Separator
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF333333)))
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // The App Dock (Fetching actual icons!)
+            AppDockZone(
+                apps = dashboardModel.pinnedApps.ifEmpty { listOf("com.android.settings", "com.android.chrome", "com.google.android.youtube", "com.google.android.dialer") }, 
+                onClick = onAppClick
+            )
+        }
+    }
+}
+
+@Composable
+private fun MediaControlSquarcle(media: LiveActivityModel.Music, onCommand: (String) -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color(0xFF1A1A1A))
+    ) {
+        // Blurred Album Art Background
+        if (media.albumArt != null) {
+            Image(
+                bitmap = media.albumArt.asImageBitmap(),
+                contentDescription = "Background",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().alpha(0.3f)
+            )
+        }
+
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Track Info
+            Column {
+                Text(text = media.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(text = media.artist, color = Color.LightGray, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+
+            // The Wavy Line (Replaces standard progress bar)
+            WavyProgressBar(isPlaying = media.isPlaying)
+
+            // Playback Controls
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.SkipPrevious, contentDescription = "Prev", tint = Color.White, modifier = Modifier.size(28.dp).clickable { onCommand("PREV") })
+                Box(
+                    modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White).clickable { onCommand("PLAY_PAUSE") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(if (media.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, contentDescription = "PlayPause", tint = Color.Black, modifier = Modifier.size(24.dp))
+                }
+                Icon(Icons.Rounded.SkipNext, contentDescription = "Next", tint = Color.White, modifier = Modifier.size(28.dp).clickable { onCommand("NEXT") })
+            }
+        }
     }
 }
 
@@ -113,113 +166,96 @@ private fun WavyProgressBar(isPlaying: Boolean) {
         label = "wavePhase"
     )
 
-    Canvas(modifier = Modifier.fillMaxWidth().height(20.dp).padding(vertical = 8.dp)) {
+    Canvas(modifier = Modifier.fillMaxWidth().height(16.dp)) {
         val path = Path()
         val waveWidth = size.width
         val waveHeight = size.height
-        val frequency = 0.05f
+        val frequency = 0.08f
 
         path.moveTo(0f, waveHeight / 2)
-        for (x in 0 until waveWidth.toInt() step 5) {
-            // Flatten the wave if paused
-            val amplitude = if (isPlaying) (waveHeight / 2) else 1f
+        for (x in 0 until waveWidth.toInt() step 4) {
+            val amplitude = if (isPlaying) (waveHeight / 3) else 0.5f
             val y = (sin((x * frequency) + phase) * amplitude) + (waveHeight / 2)
             path.lineTo(x.toFloat(), y.toFloat())
         }
-
-        drawPath(
-            path = path, 
-            color = if (isPlaying) Color.White else Color.DarkGray, 
-            style = Stroke(width = 4f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
-        )
-    }
-}
-
-@Composable
-private fun LiquidSlidersZone(onDrag: (String, Float) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // We will pass in hardcoded '50f' for preview purposes right now. 
-        // Later we will link this to the actual hardwareManager volume/brightness flows.
-        IslandLiquidSlider(
-            value = 50f, 
-            onValueChange = { pct -> onDrag("VOL", pct) },
-            activeColor = Color(0xFF00FFFF) // Cyan Volume
-        )
-        
-        IslandLiquidSlider(
-            value = 75f, 
-            onValueChange = { pct -> onDrag("BRIGHT", pct) },
-            activeColor = Color(0xFFFFD700) // Sun Yellow Brightness
-        )
-    }
-}
-
-@Composable
-private fun SliderPlaceholder(color: Color, label: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xFF1A1A1A)) // Dark void background
-    ) {
-        // Filled portion
-        Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(0.7f).background(color))
+        drawPath(path = path, color = Color.White, style = Stroke(width = 3f))
     }
 }
 
 @Composable
 private fun VoidGridZone(tiles: List<QSTileState>, onClick: (String) -> Unit) {
-    // 2x2 Grid of Massive Black Buttons
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxWidth()) {
-            VoidButton(modifier = Modifier.weight(1f), iconRes = android.R.drawable.ic_menu_compass, activeColor = Color(0xFF0082FC), isActive = true)
-            VoidButton(modifier = Modifier.weight(1f), iconRes = android.R.drawable.ic_menu_mylocation, activeColor = Color.Green, isActive = false)
+    // 4x2 Grid of Circular/Squarcle Quick Settings
+    // Using hardcoded placeholders for the visual layout, wire them to the tiles list later
+    val icons = listOf(
+        Pair(android.R.drawable.ic_menu_camera, Color.Yellow),
+        Pair(android.R.drawable.ic_menu_mylocation, Color.Green),
+        Pair(android.R.drawable.ic_menu_compass, Color(0xFF0082FC)),
+        Pair(android.R.drawable.ic_lock_idle_alarm, Color(0xFF8A2BE2)),
+        Pair(android.R.drawable.ic_menu_info_details, Color.Cyan),
+        Pair(android.R.drawable.ic_menu_share, Color.Magenta),
+        Pair(android.R.drawable.ic_menu_manage, Color.White),
+        Pair(android.R.drawable.ic_menu_gallery, Color(0xFFFFA500))
+    )
+
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceEvenly) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            for (i in 0..3) { VoidButton(iconRes = icons[i].first, activeColor = icons[i].second, isActive = i % 2 == 0, onClick = { onClick("QS_$i") }) }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxWidth()) {
-            VoidButton(modifier = Modifier.weight(1f), iconRes = android.R.drawable.ic_menu_camera, activeColor = Color.Yellow, isActive = false)
-            VoidButton(modifier = Modifier.weight(1f), iconRes = android.R.drawable.ic_menu_info_details, activeColor = Color(0xFF8A2BE2), isActive = true)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            for (i in 4..7) { VoidButton(iconRes = icons[i].first, activeColor = icons[i].second, isActive = i % 2 != 0, onClick = { onClick("QS_$i") }) }
         }
     }
 }
 
 @Composable
-private fun VoidButton(modifier: Modifier, iconRes: Int, activeColor: Color, isActive: Boolean) {
-    // The Void Button physics
+private fun VoidButton(iconRes: Int, activeColor: Color, isActive: Boolean, onClick: () -> Unit) {
     val scale = remember { Animatable(1f) }
-    
     Box(
-        modifier = modifier
-            .aspectRatio(1.5f) // Wide rectangle
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color.Black) // Pure black
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null // Kill the default Android ripple
-            ) {
-                // We will add the haptic + scale down/up Coroutine launch here
-            },
+        modifier = Modifier
+            .size(56.dp)
+            .clip(RoundedCornerShape(16.dp)) // Squarcle
+            .background(if (isActive) activeColor else Color(0xFF1A1A1A))
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            tint = if (isActive) activeColor else Color.DarkGray,
-            modifier = Modifier.size(32.dp)
-        )
+        Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = if (isActive) Color.Black else Color.White, modifier = Modifier.size(24.dp))
     }
 }
 
 @Composable
-private fun AppDockZone(apps: List<String>) {
+private fun AppDockZone(apps: List<String>, onClick: (String) -> Unit) {
+    val context = LocalContext.current
+    val pm = context.packageManager
+
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Placeholder App Icons
-        repeat(5) {
-            Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF1A1A1A)))
+        apps.take(5).forEach { pkg ->
+            // Safely fetch the app icon from the Android OS
+            val iconBmp = remember(pkg) {
+                try {
+                    val drawable = pm.getApplicationIcon(pkg)
+                    drawable.toBitmap(width = 120, height = 120).asImageBitmap()
+                } catch (e: PackageManager.NameNotFoundException) { null }
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF1A1A1A))
+                    .clickable { onClick(pkg) },
+                contentAlignment = Alignment.Center
+            ) {
+                if (iconBmp != null) {
+                    Image(bitmap = iconBmp, contentDescription = pkg, modifier = Modifier.fillMaxSize())
+                } else {
+                    // Fallback letter if icon isn't found
+                    Text(pkg.take(1).uppercase(), color = Color.Gray, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
