@@ -41,16 +41,18 @@ fun IsolatedCircularProgress(durationMs: Long, posProvider: () -> Long, color: C
 fun InteractiveWavyMediaBar(durationMs: Long, posProvider: () -> Long, isPlaying: Boolean, color: Color, trackColor: Color, onSeek: (Long) -> Unit, modifier: Modifier = Modifier) {
     val haptic = LocalHapticFeedback.current
     var localPos by remember { mutableLongStateOf(posProvider()) }
-    LaunchedEffect(Unit) { while(isActive) { delay(50); if (!isDraggingMedia) localPos = posProvider() } }
+    
+    LaunchedEffect(Unit) { 
+        while(isActive) { delay(50); if (!isDraggingMedia) localPos = posProvider() } 
+    }
     
     val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
     var dragProgress by remember { mutableFloatStateOf(0f) }
-    val currentProgress = (localPos / safeDuration).coerceIn(0f, 1f)
-    val displayProgress = if (isDraggingMedia) dragProgress else currentProgress
-
+    
+    // 🚀 120FPS OPTIMIZATION: We keep these as State objects and DO NOT use 'by' here.
     val targetAmplitude = if (isDraggingMedia) 6f else if (isPlaying) 2.5f else 0f
-    val amplitude by animateFloatAsState(targetValue = targetAmplitude, animationSpec = spring(dampingRatio = 0.85f, stiffness = 600f), label = "amp")
-    val phaseShift by rememberInfiniteTransition(label = "wave").animateFloat(initialValue = 0f, targetValue = 2f * Math.PI.toFloat(), animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing)), label = "phase")
+    val amplitudeState = animateFloatAsState(targetValue = targetAmplitude, animationSpec = spring(dampingRatio = 0.85f, stiffness = 600f), label = "amp")
+    val phaseShiftState = rememberInfiniteTransition(label = "wave").animateFloat(initialValue = 0f, targetValue = 2f * Math.PI.toFloat(), animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing)), label = "phase")
 
     val wavePath = remember { Path() }
 
@@ -63,6 +65,14 @@ fun InteractiveWavyMediaBar(durationMs: Long, posProvider: () -> Long, isPlaying
             ) { change, _ -> change.consume(); dragProgress = (change.position.x / size.width).coerceIn(0f, 1f) }
         }.pointerInput(Unit) { detectTapGestures(onTap = { offset -> onSeek(((offset.x / size.width).coerceIn(0f, 1f) * safeDuration).toLong()) }) }
     ) {
+        // 🚀 We extract the .value INSIDE the Canvas. 
+        // This ensures the Compose Compiler ONLY redraws the canvas, saving massive CPU power.
+        val currentAmplitude = amplitudeState.value
+        val currentPhaseShift = phaseShiftState.value
+        
+        val currentProgress = (localPos / safeDuration).coerceIn(0f, 1f)
+        val displayProgress = if (isDraggingMedia) dragProgress else currentProgress
+
         val midY = size.height / 2
         val activeWidth = size.width * displayProgress
         drawLine(color = trackColor, start = androidx.compose.ui.geometry.Offset(activeWidth, midY), end = androidx.compose.ui.geometry.Offset(size.width, midY), strokeWidth = size.height, cap = StrokeCap.Round)
@@ -73,7 +83,7 @@ fun InteractiveWavyMediaBar(durationMs: Long, posProvider: () -> Long, isPlaying
         
         for (x in 0..activeWidth.toInt() step 4) {
             val tension = if (isDraggingMedia) (1f - (kotlin.math.abs(x - activeWidth) / size.width)).coerceAtLeast(0.2f) else 1f
-            val y = midY + kotlin.math.sin((x * frequency) + phaseShift) * (amplitude.dp.toPx() * tension)
+            val y = midY + kotlin.math.sin((x * frequency).toDouble() + currentPhaseShift).toFloat() * (currentAmplitude.dp.toPx() * tension)
             wavePath.lineTo(x.toFloat(), y)
         }
         wavePath.lineTo(activeWidth, midY)
