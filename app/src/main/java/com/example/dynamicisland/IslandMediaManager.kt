@@ -109,11 +109,7 @@ class IslandMediaManager(
             }
 
             withContext(Dispatchers.Main) {
-                // 🧹 AGGRESSIVE GARBAGE COLLECTION: Prevent SystemUI from crashing due to Bitmap OOM
-                if (currentMedia?.albumArt != albumArtBitmap) currentMedia?.albumArt?.recycle()
-                if (currentMedia?.blurredAlbumArt != blurredArtBitmap) currentMedia?.blurredAlbumArt?.recycle()
-                if (currentMedia?.appIcon != appIconBmp) currentMedia?.appIcon?.recycle()
-
+                
                 val extractedActions = pbState.customActions.map { CustomMediaAction(it.action, null, null, true) }
                 var systemLiked = false; var systemShuffle = false; var systemRepeat = 0
                 pbState.customActions?.forEach { action ->
