@@ -76,4 +76,10 @@ class IslandCallManager(
             } catch (e2: Exception) {}
         }
     }
+    
+    fun destroy() {
+        try {
+            context.unregisterReceiver(callReceiver)
+        } catch (e: Exception) {}
+    }
 }
