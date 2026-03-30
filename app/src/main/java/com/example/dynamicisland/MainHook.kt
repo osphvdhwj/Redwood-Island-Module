@@ -42,6 +42,57 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
         // 🎨 Extracting 100% Potential of SystemUI (Frontend)
         if (lpparam.packageName == "com.android.systemui") {
             SystemUIHardwareHook.apply(lpparam) // <-- NEW
+
+            // 🔪 ASSASSINATE THE NATIVE CLIPBOARD OVERLAY
+            // This prevents the annoying Android 13+ bottom-left clipboard chip from ever appearing
+            try {
+                val clipboardListenerClass = XposedHelpers.findClassIfExists("com.android.systemui.clipboardoverlay.ClipboardListener", lpparam.classLoader)
+                if (clipboardListenerClass != null) {
+                    XposedHelpers.findAndHookMethod(
+                        clipboardListenerClass, 
+                        "start", 
+                        object : XC_MethodReplacement() {
+                            override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                                // By returning null and replacing the method, SystemUI is entirely blocked 
+                                // from showing the default clipboard UI. The Island is now the sole owner.
+                                return null
+                            }
+                        }
+                    )
+                }
+            } catch (e: Throwable) {
+                XposedBridge.log("DynamicIsland: Failed to hook Clipboard Overlay - ${e.message}")
+            }
+
+            // 📸 THE SCREENSHOT ASSASSIN & HIJACKER
+            try {
+                val screenshotControllerClass = XposedHelpers.findClassIfExists("com.android.systemui.screenshot.ScreenshotController", lpparam.classLoader)
+                if (screenshotControllerClass != null) {
+                    // Hook the method that normally displays the bottom-corner preview
+                    XposedHelpers.findAndHookMethod(
+                        screenshotControllerClass,
+                        "showScreenshotDropInUI", // Name varies slightly by Android version, can also be "saveScreenshot"
+                        "com.android.systemui.screenshot.ScreenshotSavedResult",
+                        object : XC_MethodReplacement() {
+                            override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                                val result = param.args[0]
+                                val uri = XposedHelpers.getObjectField(result, "uri")?.toString() ?: ""
+                                
+                                // Send the broadcast to the Island with the Screenshot URI
+                                val intent = android.content.Intent("com.example.dynamicisland.SCREENSHOT_CAUGHT")
+                                intent.putExtra("uri", uri)
+                                intent.setPackage("com.android.systemui")
+                                android.app.AndroidAppHelper.currentApplication().sendBroadcast(intent)
+                                
+                                // Return null to abort the standard Android UI
+                                return null
+                            }
+                        }
+                    )
+                }
+            } catch (e: Throwable) {
+                XposedBridge.log("DynamicIsland: Failed to hook ScreenshotController - ${e.message}")
+            }
             
             IslandHookEngine.hookMethodSafe(
                 "android.app.Instrumentation", lpparam.classLoader, "callApplicationOnCreate", Application::class.java,
