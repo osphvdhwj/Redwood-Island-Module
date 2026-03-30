@@ -7,7 +7,10 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.collectLatest
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
+@Suppress("DEPRECATION")
 class IslandHardwareManager(
     private val context: Context,
     private val audioManager: AudioManager,
@@ -39,7 +42,7 @@ class IslandHardwareManager(
             view?.updateHardwareVolume(percent)
             // Pass the data to our background Coroutine Flow
             volumeFlow.value = percent
-        } catch (e: Exception) {}
+        } catch (e: Throwable) {}
     }
 
     fun updateVolumeState(view: DynamicIslandView?) {
@@ -54,33 +57,32 @@ class IslandHardwareManager(
             val resolver = context.contentResolver
             
             // Fetch true hardware ceiling (e.g. 4095 on Poco), fallback to 255
-            val maxBrightness = try { 
-                Settings.System.getInt(resolver, "screen_brightness_maximum") 
-            } catch (e: Exception) { 
-                255 
-            }
+            val maxHardware = try { Settings.System.getInt(resolver, "screen_brightness_maximum") } catch (e: Throwable) { 255 }
             
-            // Map 0-100% UI slider perfectly to 0-HardwareMax
-            val targetBrightness = ((percent.toFloat() / 100f) * maxBrightness).toInt()
+            // 🚀 FIXED: Gamma Curve (Slider to Hardware)
+            val normalizedSlider = percent.toFloat() / 100f
+            val targetBrightness = (normalizedSlider.pow(2.2f) * maxHardware).roundToInt().coerceIn(0, maxHardware)
+            
             Settings.System.putInt(resolver, Settings.System.SCREEN_BRIGHTNESS, targetBrightness)
-            
-            // Push immediately to local state
             view?.updateHardwareBrightness(percent)
-        } catch (e: Exception) {}
+        } catch (e: Throwable) {}
     }
 
     fun updateBrightnessState(view: DynamicIslandView?) {
         try {
             val resolver = context.contentResolver
-            val brightness = Settings.System.getInt(resolver, Settings.System.SCREEN_BRIGHTNESS)
-            val maxBrightness = try { Settings.System.getInt(resolver, "screen_brightness_maximum") } catch (e: Exception) { 255 }
+            val hardwareBrt = Settings.System.getInt(resolver, Settings.System.SCREEN_BRIGHTNESS)
+            val maxHardware = try { Settings.System.getInt(resolver, "screen_brightness_maximum") } catch (e: Throwable) { 255 }
             
             isAutoBrightnessEnabled = Settings.System.getInt(resolver, Settings.System.SCREEN_BRIGHTNESS_MODE, 0) == 1
             
-            val percent = ((brightness.toFloat() / maxBrightness.toFloat()) * 100f).toInt()
-            view?.updateHardwareBrightness(percent.coerceIn(0, 100))
+            // 🚀 FIXED: Inverse Gamma Curve (Hardware to Slider)
+            val normalizedHardware = hardwareBrt.toFloat() / maxHardware.toFloat()
+            val percent = (normalizedHardware.pow(1f / 2.2f) * 100f).roundToInt().coerceIn(0, 100)
+            
+            view?.updateHardwareBrightness(percent)
             view?.updateAutoBrightnessState(isAutoBrightnessEnabled)
-        } catch (e: Exception) {}
+        } catch (e: Throwable) {}
     }
 
     fun toggleAutoBrightness(view: DynamicIslandView?) {
@@ -89,7 +91,7 @@ class IslandHardwareManager(
             val newMode = if (isAutoBrightnessEnabled) 0 else 1
             Settings.System.putInt(resolver, Settings.System.SCREEN_BRIGHTNESS_MODE, newMode)
             updateBrightnessState(view)
-        } catch (e: Exception) {}
+        } catch (e: Throwable) {}
     }
 
     fun toggleRingerMode(view: DynamicIslandView?) {
@@ -102,14 +104,14 @@ class IslandHardwareManager(
             }
             audioManager.ringerMode = nextMode
             view?.updateRingerState(nextMode)
-        } catch (e: Exception) {}
+        } catch (e: Throwable) {}
     }
 
     fun toggleMicMute() {
-        try { audioManager.isMicrophoneMute = !audioManager.isMicrophoneMute } catch (e: Exception) {}
+        try { audioManager.isMicrophoneMute = !audioManager.isMicrophoneMute } catch (e: Throwable) {}
     }
 
     fun toggleSpeakerphone() {
-        try { audioManager.isSpeakerphoneOn = !audioManager.isSpeakerphoneOn } catch (e: Exception) {}
+        try { audioManager.isSpeakerphoneOn = !audioManager.isSpeakerphoneOn } catch (e: Throwable) {}
     }
 }
