@@ -116,8 +116,17 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
 
     val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
 
+    // 🚀 120FPS OPTIMIZATION: Deferred State Reading for Position
     Row(
-        modifier = Modifier.fillMaxWidth().offset(x = offsetX.dp, y = offsetY.coerceAtLeast(0f).dp).height(maxH.value.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .offset { 
+                androidx.compose.ui.unit.IntOffset(
+                    offsetX.dp.roundToPx(), 
+                    offsetY.coerceAtLeast(0f).dp.roundToPx()
+                ) 
+            }
+            .height(maxH.value.dp),
         horizontalArrangement = Arrangement.Center, 
         verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
     ) {
