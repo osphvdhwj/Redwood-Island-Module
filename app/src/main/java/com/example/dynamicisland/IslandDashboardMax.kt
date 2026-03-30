@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.ContextWrapper
 
 @Composable
 fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
@@ -55,7 +56,12 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
                         .clickable { 
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             val pkg = pinnedApps.getOrNull(index)
-                            if (!pkg.isNullOrEmpty()) onGestureEvent?.invoke(IslandGesture.valueOf("LAUNCH_APP_$pkg"))
+                            // 🚀 FIXED: Send a direct broadcast instead of parsing an Enum
+                            if (!pkg.isNullOrEmpty()) {
+                                val intent = android.content.Intent("com.example.dynamicisland.ACTION_LAUNCH_APP")
+                                intent.putExtra("pkg", pkg)
+                                android.content.ContextWrapper(this@DashboardMax).sendBroadcast(intent)
+                            }
                         },
                     contentAlignment = Alignment.Center
                 ) {
