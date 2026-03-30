@@ -224,6 +224,14 @@ class IslandController(private val context: Context) {
         this.islandView = view 
         this.windowManager = wm 
 
+        // 🏓 THE PING: Actively wake up the Config App and demand the latest settings
+        scope.launch {
+            delay(500) // Wait half a second for the View to finish attaching
+            val requestIntent = Intent("com.example.dynamicisland.REQUEST_PREFS")
+            requestIntent.setPackage("com.example.dynamicisland") // Force wake the app even if closed
+            context.sendBroadcast(requestIntent)
+        }
+
         view.onVolumeDrag = { pct -> hardwareManager.setSystemVolume(pct, view) }
         view.onBrightnessDrag = { pct -> hardwareManager.setSystemBrightness(pct, view) }
         view.onMicToggle = { hardwareManager.toggleMicMute() }
