@@ -243,7 +243,8 @@ fun DashboardScreen(prefs: SharedPreferences) {
     val scope = rememberCoroutineScope()
     var dynamicQSTiles by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
 
-    LaunchedEffect(Unit) {
+    // 🚀 FIXED: Use DisposableEffect to unregister the receiver and prevent memory leaks
+    DisposableEffect(Unit) {
         val receiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
                 if (intent.action == "com.example.dynamicisland.QS_TILES_REPLY") {
@@ -262,6 +263,10 @@ fun DashboardScreen(prefs: SharedPreferences) {
         }
         context.registerReceiver(receiver, android.content.IntentFilter("com.example.dynamicisland.QS_TILES_REPLY"), Context.RECEIVER_EXPORTED)
         context.sendBroadcast(Intent("com.example.dynamicisland.FETCH_QS_TILES"))
+        
+        onDispose {
+            try { context.unregisterReceiver(receiver) } catch (e: Exception) {}
+        }
     }
 
     Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
