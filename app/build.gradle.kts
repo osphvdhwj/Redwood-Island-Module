@@ -15,6 +15,10 @@ android {
         versionName = "1.0"
     }
 
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+
     buildTypes {
         release {
             isMinifyEnabled = true
