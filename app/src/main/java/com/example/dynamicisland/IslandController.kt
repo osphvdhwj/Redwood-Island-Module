@@ -23,6 +23,9 @@ class IslandController(private val context: Context) {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val audioManager by lazy { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+
+    private var qsTilesCache = listOf<Pair<String, String>>()
+    private var pinnedAppsCache = listOf<String>()
     
     // 🎛️ The Clean Helper Architecture
     private val hardwareManager = IslandHardwareManager(context, audioManager, scope)
@@ -187,6 +190,39 @@ class IslandController(private val context: Context) {
                     val colorInt = try { android.graphics.Color.parseColor(colorHex) } catch(e: Exception) { android.graphics.Color.WHITE }
                     postTransientNotification(LiveActivityModel.SystemAlert(id = "sys_alert_${intent.getStringExtra("alertType") ?: "INFO"}", alertType = intent.getStringExtra("alertType") ?: "INFO", title = intent.getStringExtra("title") ?: "System Alert", message = intent.getStringExtra("message") ?: "", alertColor = colorInt), 5000L)
                 }
+                "com.crdroid.batterywellbeing.SYNC_CONFIG" -> {
+                     // Keep your battery sync if it's there
+                }
+                "com.example.dynamicisland.SYNC_CONFIG" -> {
+                    val type = intent.getStringExtra("type")
+                    if (type == "dashboard") {
+                        val payload = intent.getStringExtra("payload") ?: return
+                        try {
+                            val json = org.json.JSONObject(payload)
+                            val appsArr = json.optJSONArray("pinned_apps")
+                            val tilesArr = json.optJSONArray("qs_tiles")
+                            
+                            val appsList = mutableListOf<String>()
+                            if (appsArr != null) for (i in 0 until appsArr.length()) appsList.add(appsArr.getString(i))
+                            
+                            val tilesList = mutableListOf<Pair<String, String>>()
+                            if (tilesArr != null) {
+                                for (i in 0 until tilesArr.length()) {
+                                    val obj = tilesArr.getJSONObject(i)
+                                    tilesList.add(Pair(obj.getString("spec"), obj.getString("label")))
+                                }
+                            }
+                            
+                            pinnedAppsCache = appsList
+                            qsTilesCache = tilesList
+                            
+                            // Immediately refresh the Dashboard if it's open!
+                            if (_activeModel.value is LiveActivityModel.Dashboard) {
+                                _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
+                            }
+                        } catch (e: Throwable) {}
+                    }
+                }
             }
         }
     }
@@ -240,6 +276,18 @@ class IslandController(private val context: Context) {
         view.onOpenCallUI = { callManager.openNativeCallUI(view) }
         view.onAutoBrightnessToggle = { hardwareManager.toggleAutoBrightness(view) }
         view.onRingerToggle = { hardwareManager.toggleRingerMode(view) }
+        // Wire up the new Direct Callbacks for Dashboard
+        view.onAppPinnedClick = { pkg -> 
+            actionManager.launchAppIntent(pkg) {
+                userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING; evaluatePriority()
+            }
+        }
+        
+        view.onQsTileClick = { tileSpec ->
+            actionManager.handleQSTileClick(tileSpec) { newTiles ->
+                // Optional: Update tile state visually if needed
+            }
+        }
         
         view.onSplitPillClick = { 
             if (_splitModel.value is LiveActivityModel.Charging) { 
@@ -290,7 +338,8 @@ class IslandController(private val context: Context) {
                     }
                     "OPEN_QUICK_TOGGLES" -> {
                         if (_activeModel.value == null || _activeModel.value is LiveActivityModel.Dashboard) {
-                            _activeModel.value = LiveActivityModel.Dashboard()
+                            // 🚀 FIXED: Pass the cached apps and tiles!
+                            _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
                             _islandState.value = IslandState.TYPE_2_MID
                         }
                     }
