@@ -18,6 +18,7 @@ android {
     lint {
         abortOnError = false
         checkReleaseBuilds = false
+    }
 
     buildTypes {
         release {
