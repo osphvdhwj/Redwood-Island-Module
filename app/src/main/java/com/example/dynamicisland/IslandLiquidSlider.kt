@@ -84,10 +84,18 @@ fun LiquidSlider(
             }
     ) {
         // The Liquid Fill
+        // 🚀 120FPS OPTIMIZATION: Use Modifier.fillMaxWidth(fraction) inside a derived context
+        // OR better yet, animate the width using graphicsLayer so layout is skipped.
         Box(
             modifier = Modifier
                 .fillMaxHeight()
-                .fillMaxWidth(fraction = progress.coerceIn(0.02f, 1f))
+                .fillMaxWidth() // Take up 100% of the parent layout width
+                .graphicsLayer {
+                    // We change the scaleX instead of the layout width!
+                    // This skips Phase 1 (Composition) and Phase 2 (Layout) entirely.
+                    scaleX = progress.coerceIn(0.02f, 1f)
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f) // Scale from the left edge
+                }
                 .background(activeColor)
         )
         
