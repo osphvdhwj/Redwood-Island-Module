@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -24,7 +26,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.content.ContextWrapper
 
 @Composable
 fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
@@ -56,11 +57,9 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
                         .clickable { 
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             val pkg = pinnedApps.getOrNull(index)
-                            // 🚀 FIXED: Send a direct broadcast instead of parsing an Enum
+                            // 🚀 FIXED: Call the local function directly to bypass Security Exception!
                             if (!pkg.isNullOrEmpty()) {
-                                val intent = android.content.Intent("com.example.dynamicisland.ACTION_LAUNCH_APP")
-                                intent.putExtra("pkg", pkg)
-                                this@DashboardMax.context.sendBroadcast(intent)
+                                onAppPinnedClick?.invoke(pkg)
                             }
                         },
                     contentAlignment = Alignment.Center
@@ -92,7 +91,8 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
 
             LiquidSlider(
                 modifier = Modifier.weight(1f),
-                icon = if (hardwareVolume.intValue == 0) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                // 🚀 FIXED: Using AutoMirrored icons to resolve the Lint deprecation warnings
+                icon = if (hardwareVolume.intValue == 0) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
                 progress = displayVolume,
                 activeColor = Color.White,
                 onDragStart = { 
@@ -122,7 +122,8 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
                     horizontalAlignment = Alignment.CenterHorizontally, 
                     modifier = Modifier.clickable(enabled = !tile.isUnavailable) { 
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onGestureEvent?.invoke(IslandGesture.valueOf("QS_CLICK_${tile.tileSpec}"))
+                        // 🚀 FIXED: Call the local function directly instead of using Enum Strings!
+                        onQsTileClick?.invoke(tile.tileSpec)
                     }.alpha(alpha).weight(1f)
                 ) {
                     Box(
