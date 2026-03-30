@@ -21,6 +21,34 @@ import android.util.LruCache
 
 class IslandController(private val context: Context) {
 
+    private val storageManager = IslandStorageManager(context)
+    private val clipboardManager = IslandClipboardManager(context, scope) { copiedText ->
+        // When text is copied, show it in the Island temporarily
+        if (isAlertsEnabled) {
+            postTransientNotification(
+                LiveActivityModel.General(
+                    id = "sys_clipboard",
+                    type = ActivityType.MESSAGE,
+                    title = "Copied to Clipboard",
+                    dataText = copiedText,
+                    accentColor = android.graphics.Color.CYAN
+                ), 
+                4000L
+            )
+        }
+    }
+    private val notificationManager = IslandNotificationManager(context, scope,
+        onProgressCaught = { progressModel ->
+            // Keep the island open while downloading
+            _activeModel.value = progressModel
+            if (_islandState.value == IslandState.TYPE_0_RING) _islandState.value = IslandState.TYPE_1_MINI
+            evaluatePriority()
+        },
+        onNavigationCaught = { navModel ->
+            postTransientNotification(navModel, 5000L) // Show directions for 5 seconds
+        }
+    )
+
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val audioManager by lazy { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
 
@@ -152,6 +180,20 @@ class IslandController(private val context: Context) {
                             title = title, dataText = text, accentColor = color
                         ), 3000L)
                     }
+                }
+                "com.example.dynamicisland.SCREENSHOT_CAUGHT" -> {
+                    if (!isAlertsEnabled) return
+                    val uriString = intent.getStringExtra("uri") ?: return
+                    postTransientNotification(
+                        LiveActivityModel.General(
+                            id = "sys_screenshot",
+                            type = ActivityType.MESSAGE,
+                            title = "Screenshot Saved",
+                            dataText = "Tap to view or share",
+                            accentColor = android.graphics.Color.WHITE
+                        ), 
+                        4000L
+                    )
                 }
                 "com.example.dynamicisland.PANEL_STATE_CHANGED" -> {
                     isPanelExpanded = intent.getBooleanExtra("isExpanded", false)
@@ -523,6 +565,7 @@ class IslandController(private val context: Context) {
         }
         BatteryPlugin.start(context)
         mediaManager.start()
+        clipboardManager.startListening()
         
         // ⬅️ FIXED: Removed old dead `HardwareMonitors` loop
     }
