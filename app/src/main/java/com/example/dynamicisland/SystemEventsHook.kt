@@ -14,25 +14,42 @@ object SystemEventsHook {
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, userAll: UserHandle) {
         
         // 1. Hook App Transitions (Activity Manager)
-        IslandHookEngine.hookMethodSafe(
-            "com.android.server.wm.ActivityTaskManagerService",
-            lpparam.classLoader,
-            "setResumedActivityUncheckLocked",
-            "com.android.server.wm.ActivityRecord",
-            String::class.java,
-            object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
-                    try {
-                        val activityRecord = param.args[0] ?: return
-                        val packageName = XposedHelpers.getObjectField(activityRecord, "packageName") as? String ?: return
-                        val mContext = XposedHelpers.getObjectField(param.thisObject, "mContext") as? Context
-                        
-                        val intent = Intent("com.example.dynamicisland.APP_CHANGED").setPackage("com.android.systemui").putExtra("pkg", packageName)
-                        mContext?.sendBroadcastAsUser(intent, userAll)
-                    } catch (e: Throwable) {}
+        // 1. Hook App Transitions (Activity Manager)
+        // We try both the AOSP 13+ signature and the standard signature safely
+        try {
+            IslandHookEngine.hookMethodSafe(
+                "com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader, "setResumedActivityUncheckLocked",
+                "com.android.server.wm.ActivityRecord", String::class.java,
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        try {
+                            val activityRecord = param.args[0] ?: return
+                            val packageName = XposedHelpers.getObjectField(activityRecord, "packageName") as? String ?: return
+                            val mContext = XposedHelpers.getObjectField(param.thisObject, "mContext") as? Context
+                            val intent = Intent("com.example.dynamicisland.APP_CHANGED").setPackage("com.android.systemui").putExtra("pkg", packageName)
+                            mContext?.sendBroadcastAsUser(intent, userAll)
+                        } catch (e: Throwable) {}
+                    }
                 }
-            }
-        )
+            )
+        } catch (e: Throwable) {
+            // Fallback for custom ROMs
+            IslandHookEngine.hookMethodSafe(
+                "com.android.server.wm.ActivityTaskManagerService", lpparam.classLoader, "setResumedActivityUncheckLocked",
+                "com.android.server.wm.ActivityRecord",
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        try {
+                            val activityRecord = param.args[0] ?: return
+                            val packageName = XposedHelpers.getObjectField(activityRecord, "packageName") as? String ?: return
+                            val mContext = XposedHelpers.getObjectField(param.thisObject, "mContext") as? Context
+                            val intent = Intent("com.example.dynamicisland.APP_CHANGED").setPackage("com.android.systemui").putExtra("pkg", packageName)
+                            mContext?.sendBroadcastAsUser(intent, userAll)
+                        } catch (e: Throwable) {}
+                    }
+                }
+            )
+        }
 
         // 2. Hook Notifications & OTP Extraction
         IslandHookEngine.hookMethodSafe(
