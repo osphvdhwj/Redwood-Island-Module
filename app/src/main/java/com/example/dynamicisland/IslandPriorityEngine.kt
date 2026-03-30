@@ -22,6 +22,14 @@ object IslandPriorityEngine {
         }
     }
 
+    val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        
+        // 🎬 Auto-Hide if watching a video in Landscape
+        if (isLandscape && currentMedia?.isVideo == true) {
+            _islandState.value = IslandState.HIDDEN
+            return true
+        }
+
     // 🎛️ Weighted State Machine Router with User State Protection
     fun evaluatePriority(
         context: Context,
