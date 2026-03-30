@@ -32,11 +32,77 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
+        
         // 🚀 Extracting 100% Potential of System Server (Backend)
         if (lpparam.packageName == "android") {
             SystemEventsHook.apply(lpparam, USER_ALL)
             FrameworkTelecomHook.apply(lpparam, USER_ALL)
             FrameworkHardwareHook.apply(lpparam, USER_ALL) // <-- NEW
+            // 🔗 UNIVERSAL MEDIA LINK SWITCHER
+            try {
+                IslandHookEngine.hookMethodSafe(
+                    "android.app.Instrumentation", lpparam.classLoader, "execStartActivity",
+                    Context::class.java, android.os.IBinder::class.java, android.os.IBinder::class.java, 
+                    android.app.Activity::class.java, android.content.Intent::class.java, 
+                    Int::class.javaPrimitiveType, android.os.Bundle::class.java,
+                    object : XC_MethodReplacement() {
+                        override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                            val intent = param.args[4] as android.content.Intent
+                            
+                            // Check if it's a web link being opened
+                            if (intent.action == android.content.Intent.ACTION_VIEW && intent.data?.scheme?.startsWith("http") == true) {
+                                val urlHost = intent.data?.host ?: ""
+                                
+                                // Example filter: Only intercept YouTube or Spotify links
+                                if (urlHost.contains("youtube.com") || urlHost.contains("youtu.be") || urlHost.contains("spotify.com")) {
+                                    
+                                    // Send broadcast to the Island Controller to show the Mini Pill
+                                    val islandIntent = android.content.Intent("com.example.dynamicisland.LINK_INTERCEPTED")
+                                    islandIntent.putExtra("url", intent.dataString)
+                                    islandIntent.putExtra("host", urlHost)
+                                    android.app.AndroidAppHelper.currentApplication().sendBroadcast(islandIntent)
+                                    
+                                    // Return null to BLOCK the original app from opening immediately
+                                    return null
+                                }
+                            }
+                            // If it's a normal app launch, let it proceed natively
+                            return XposedBridge.invokeOriginalMethod(param.method, param.thisObject, param.args)
+                        }
+                    }
+                )
+            } catch (e: Throwable) {
+                XposedBridge.log("DynamicIsland: Failed to hook Link Switcher - ${e.message}")
+            }
+            // 🚀 SHARE SHEET ASSASSIN & REDIRECTOR
+            try {
+                val chooserClass = XposedHelpers.findClassIfExists("com.android.internal.app.ChooserActivity", lpparam.classLoader)
+                if (chooserClass != null) {
+                    XposedHelpers.findAndHookMethod(
+                        chooserClass, "onCreate", android.os.Bundle::class.java,
+                        object : de.robv.android.xposed.XC_MethodReplacement() {
+                            override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                                val activity = param.thisObject as android.app.Activity
+                                val targetIntent = activity.intent.getParcelableExtra<android.content.Intent>(android.content.Intent.EXTRA_INTENT)
+                                
+                                if (targetIntent != null) {
+                                    // Send the raw share intent to the Island Controller
+                                    val islandIntent = android.content.Intent("com.example.dynamicisland.SHARE_INTERCEPTED")
+                                    islandIntent.putExtra("raw_intent", targetIntent)
+                                    android.app.AndroidAppHelper.currentApplication().sendBroadcast(islandIntent)
+                                    
+                                    // Kill the system share sheet instantly
+                                    activity.finish()
+                                    return null
+                                }
+                                return XposedBridge.invokeOriginalMethod(param.method, param.thisObject, param.args)
+                            }
+                        }
+                    )
+                }
+            } catch (e: Throwable) {
+                XposedBridge.log("DynamicIsland: Failed to hook ChooserActivity - ${e.message}")
+            }
         }
 
         // 🎨 Extracting 100% Potential of SystemUI (Frontend)
