@@ -16,10 +16,7 @@ object IslandImageCache {
         }
 
         override fun entryRemoved(evicted: Boolean, key: String, oldValue: CacheEntry, newValue: CacheEntry?) {
-            // 🧹 INSTANT GARBAGE COLLECTION: If pushed out of RAM, physically destroy the image
-            if (oldValue.bitmap != newValue?.bitmap && !oldValue.bitmap.isRecycled) {
-                oldValue.bitmap.recycle()
-            }
+       
         }
     }
 
