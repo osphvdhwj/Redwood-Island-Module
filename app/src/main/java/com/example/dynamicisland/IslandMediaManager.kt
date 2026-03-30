@@ -20,17 +20,13 @@ class IslandMediaManager(
     private val onUncollapseRequested: () -> Unit
 ) {
     var isMediaEnabled = true
-        set(value) {
-            field = value
-            if (!value) { currentMedia = null; stopMediaTicker(); onMediaChanged(null) }
-            else { updateActiveMediaController(getBestMediaController(mediaSessionManager.getActiveSessions(null))) }
-        }
+        set(value) { field = value; if (!value) { currentMedia = null; stopMediaTicker(); onMediaChanged(null) } else { updateActiveMediaController(getBestMediaController(mediaSessionManager.getActiveSessions(null))) } }
         
     var isScreenOn = true
-        set(value) {
-            field = value
-            if (value && currentMedia?.isPlaying == true && isMediaEnabled) startMediaTicker() else stopMediaTicker()
-        }
+        set(value) { field = value; evaluateTicker() }
+        
+    var isIslandVisible = false
+        set(value) { field = value; evaluateTicker() }
 
     private val mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
     var activeMediaController: MediaController? = null
@@ -42,9 +38,7 @@ class IslandMediaManager(
     private var mediaTickerJob: Job? = null
     private var lastTrackTitle = ""
 
-    private val sessionListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers -> 
-        updateActiveMediaController(getBestMediaController(controllers)) 
-    }
+    private val sessionListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers -> updateActiveMediaController(getBestMediaController(controllers)) }
 
     private val mediaCallback = object : MediaController.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackState?) { extractMediaData(activeMediaController) }
@@ -66,14 +60,8 @@ class IslandMediaManager(
     private fun updateActiveMediaController(controller: MediaController?) {
         activeMediaController?.unregisterCallback(mediaCallback)
         activeMediaController = controller
-        if (controller == null || !isMediaEnabled) {
-            currentMedia = null
-            stopMediaTicker()
-            onMediaChanged(null)
-            return
-        }
-        controller.registerCallback(mediaCallback)
-        extractMediaData(controller)
+        if (controller == null || !isMediaEnabled) { currentMedia = null; stopMediaTicker(); onMediaChanged(null); return }
+        controller.registerCallback(mediaCallback); extractMediaData(controller)
     }
 
     private fun extractMediaData(controller: MediaController?) {
@@ -97,12 +85,7 @@ class IslandMediaManager(
 
         val isFirstLoad = currentMedia == null || isNewTrack
         if (isFirstLoad) {
-            currentMedia = LiveActivityModel.Music(
-                id = "media_main", title = newTitle, artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
-                albumArt = albumArtBitmap, blurredAlbumArt = null, appIcon = null, dominantColor = android.graphics.Color.DKGRAY, 
-                titleTextColor = android.graphics.Color.WHITE, isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position,
-                appPackageName = controller.packageName, customActions = emptyList(), isShuffled = false, repeatMode = 0, isLiked = false
-            )
+            currentMedia = LiveActivityModel.Music("media_main", ActivityType.MESSAGE, newTitle, metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown", albumArtBitmap, null, null, android.graphics.Color.DKGRAY, android.graphics.Color.WHITE, isPlaying, duration, pbState.position, controller.packageName, emptyList(), false, 0, false)
             onMediaChanged(currentMedia)
         }
 
@@ -119,19 +102,19 @@ class IslandMediaManager(
                 val palette = Palette.from(albumArtBitmap).generate()
                 val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
                 if (swatch != null) {
-                    var rgb = swatch.rgb
-                    val hsl = FloatArray(3)
-                    androidx.core.graphics.ColorUtils.colorToHSL(rgb, hsl)
+                    var rgb = swatch.rgb; val hsl = FloatArray(3); androidx.core.graphics.ColorUtils.colorToHSL(rgb, hsl)
                     if (hsl[2] < 0.35f) { hsl[2] = 0.35f; rgb = androidx.core.graphics.ColorUtils.HSLToColor(hsl) }
-                    bgColor = rgb
-                    txtColor = if (androidx.core.graphics.ColorUtils.calculateLuminance(bgColor) > 0.5) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+                    bgColor = rgb; txtColor = if (androidx.core.graphics.ColorUtils.calculateLuminance(bgColor) > 0.5) android.graphics.Color.BLACK else android.graphics.Color.WHITE
                 }
             }
 
             withContext(Dispatchers.Main) {
-                currentMedia?.blurredAlbumArt?.takeIf { it != currentMedia?.albumArt }?.recycle()
+                // 🧹 AGGRESSIVE GARBAGE COLLECTION: Prevent SystemUI from crashing due to Bitmap OOM
+                if (currentMedia?.albumArt != albumArtBitmap) currentMedia?.albumArt?.recycle()
+                if (currentMedia?.blurredAlbumArt != blurredArtBitmap) currentMedia?.blurredAlbumArt?.recycle()
+                if (currentMedia?.appIcon != appIconBmp) currentMedia?.appIcon?.recycle()
+
                 val extractedActions = pbState.customActions.map { CustomMediaAction(it.action, null, null, true) }
-                
                 var systemLiked = false; var systemShuffle = false; var systemRepeat = 0
                 pbState.customActions?.forEach { action ->
                     val actionId = action.action?.lowercase() ?: ""
@@ -144,18 +127,28 @@ class IslandMediaManager(
                     }
                 }
 
-                currentMedia = LiveActivityModel.Music(
-                    id = "media_main", title = newTitle, artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown",
-                    albumArt = albumArtBitmap, blurredAlbumArt = blurredArtBitmap, appIcon = appIconBmp, dominantColor = bgColor, titleTextColor = txtColor,
-                    isPlaying = isPlaying, durationMs = duration, positionMs = pbState.position, appPackageName = controller.packageName, customActions = extractedActions,
-                    isShuffled = systemShuffle, repeatMode = systemRepeat, isLiked = systemLiked
-                )
+                currentMedia = LiveActivityModel.Music("media_main", ActivityType.MESSAGE, newTitle, metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown", albumArtBitmap, blurredArtBitmap, appIconBmp, bgColor, txtColor, isPlaying, duration, pbState.position, controller.packageName, extractedActions, systemShuffle, systemRepeat, systemLiked)
 
                 if (isPlaying && !wasPlaying) { onUncollapseRequested() }
-                if (isPlaying) { startMediaTicker() } else { stopMediaTicker(); if (wasPlaying) onPauseFadeRequested() }
-                
+                if (isPlaying) { evaluateTicker() } else { stopMediaTicker(); if (wasPlaying) onPauseFadeRequested() }
                 onMediaChanged(currentMedia)
             }
+        }
+    }
+
+    private fun evaluateTicker() {
+        // 🛑 TIER 2 & 3 SLEEP PROTOCOL: Only run the clock ticker if Screen is ON and Island is VISIBLE.
+        if (isScreenOn && isIslandVisible && currentMedia?.isPlaying == true && isMediaEnabled) {
+            if (mediaTickerJob == null || mediaTickerJob?.isActive != true) {
+                mediaTickerJob = scope.launch { 
+                    while (isActive) { 
+                        activeMediaController?.playbackState?.position?.let { pos -> onMediaTick(pos) }
+                        delay(1000) 
+                    } 
+                }
+            }
+        } else {
+            stopMediaTicker()
         }
     }
 
@@ -167,17 +160,33 @@ class IslandMediaManager(
     }
 
     private fun blurBitmap(bitmap: Bitmap): Bitmap? {
+        var rs: android.renderscript.RenderScript? = null
+        var input: android.renderscript.Allocation? = null
+        var output: android.renderscript.Allocation? = null
+        var script: android.renderscript.ScriptIntrinsicBlur? = null
+        
         return try {
-            val rs = android.renderscript.RenderScript.create(context)
-            val input = android.renderscript.Allocation.createFromBitmap(rs, bitmap)
-            val output = android.renderscript.Allocation.createTyped(rs, input.type)
-            val script = android.renderscript.ScriptIntrinsicBlur.create(rs, android.renderscript.Element.U8_4(rs))
-            script.setRadius(24f); script.setInput(input); script.forEach(output)
+            rs = android.renderscript.RenderScript.create(context)
+            input = android.renderscript.Allocation.createFromBitmap(rs, bitmap)
+            output = android.renderscript.Allocation.createTyped(rs, input.type)
+            script = android.renderscript.ScriptIntrinsicBlur.create(rs, android.renderscript.Element.U8_4(rs))
+            
+            script.setRadius(24f)
+            script.setInput(input)
+            script.forEach(output)
+            
             val blurred = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config ?: Bitmap.Config.ARGB_8888)
             output.copyTo(blurred)
-            input.destroy(); output.destroy(); script.destroy(); rs.destroy()
             blurred
-        } catch (e: Exception) { bitmap }
+        } catch (e: Exception) { 
+            bitmap 
+        } finally {
+            // 🛡️ MEMORY LEAK TRAP: Guarantee destruction even if it crashes!
+            input?.destroy()
+            output?.destroy()
+            script?.destroy()
+            rs?.destroy()
+        }
     }
 
     private fun getAppIcon(pkg: String): Bitmap? {
@@ -185,26 +194,23 @@ class IslandMediaManager(
             val drawable = context.packageManager.getApplicationIcon(pkg)
             val bmp = Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
             val canvas = android.graphics.Canvas(bmp)
-            drawable.setBounds(0, 0, canvas.width, canvas.height)
-            drawable.draw(canvas)
+            drawable.setBounds(0, 0, canvas.width, canvas.height); drawable.draw(canvas)
             getScaledBitmap(bmp, 100) 
         } catch(e: Exception) { null }
     }
-
-    private fun startMediaTicker() {
-        mediaTickerJob?.cancel()
-        mediaTickerJob = scope.launch { 
-            while (isActive) { 
-                activeMediaController?.playbackState?.position?.let { pos -> onMediaTick(pos) }
-                delay(1000) 
-            } 
-        }
-    }
     
-    private fun stopMediaTicker() { mediaTickerJob?.cancel() }
+    private fun stopMediaTicker() { mediaTickerJob?.cancel(); mediaTickerJob = null }
 
     fun sendMediaCommand(command: String) {
         val controls = activeMediaController?.transportControls ?: return
         try { when (command) { "PLAY" -> controls.play(); "PAUSE" -> controls.pause(); "NEXT" -> controls.skipToNext(); "PREV" -> controls.skipToPrevious() } } catch (e: Exception) {}
+    }
+    
+    fun destroy() {
+        try {
+            mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener)
+            activeMediaController?.unregisterCallback(mediaCallback)
+            stopMediaTicker()
+        } catch (e: Exception) {}
     }
 }
