@@ -199,6 +199,7 @@ class IslandController(private val context: Context) {
 
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
+        view.controller = this
         val view = DynamicIslandView(context, moduleContext)
         this.islandView = view 
         this.windowManager = wm 
