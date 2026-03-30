@@ -1,112 +1,142 @@
 package com.example.dynamicisland
 
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.TransformOrigin
 
 @Composable
-fun LiquidSlider(
-    modifier: Modifier = Modifier,
-    icon: ImageVector,
-    progress: Float,
-    activeColor: Color,
-    onDragStart: () -> Unit,
-    onDrag: (Float) -> Unit,
-    onDragEnd: () -> Unit
+fun IslandLiquidSlider(
+    value: Float, // 0f to 100f
+    onValueChange: (Float) -> Unit,
+    activeColor: Color
 ) {
     val haptic = LocalHapticFeedback.current
     var isDragging by remember { mutableStateOf(false) }
-    
-    // Physics: Slider dynamically expands when grabbed
-    val height by animateDpAsState(targetValue = if (isDragging) 48.dp else 36.dp, animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "height")
-    val corner by animateDpAsState(targetValue = if (isDragging) 24.dp else 18.dp, animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "corner")
+    var touchX by remember { mutableFloatStateOf(0f) }
+    var sliderWidth by remember { mutableFloatStateOf(1f) }
 
-    // Haptics Engine: Fire a tick every 5% change
-    var lastHapticTick by remember { mutableIntStateOf((progress * 20).toInt()) }
+    // Spring physics for the bulge impact
+    val bulgeScale by animateFloatAsState(
+        targetValue = if (isDragging) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f),
+        label = "bulge"
+    )
 
-    Box(
-        modifier = modifier
-            .height(height)
-            .clip(RoundedCornerShape(corner))
-            .background(Color.White.copy(alpha = 0.15f))
+    // Smoothly animate the fill level so it doesn't jump instantly
+    val animatedValue by animateFloatAsState(
+        targetValue = value / 100f,
+        animationSpec = spring(dampingRatio = 0.9f, stiffness = 400f),
+        label = "fill"
+    )
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp) // Thick, iOS 18 style height
             .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { 
-                        isDragging = true
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onDragStart() 
-                    },
-                    onDragEnd = { 
-                        isDragging = false
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onDragEnd() 
-                    },
-                    onDragCancel = { 
-                        isDragging = false
-                        onDragEnd() 
-                    }
-                ) { change, dragAmount ->
-                    change.consume()
-                    // Calculate precise delta based on the physical width of the slider
-                    val delta = dragAmount.x / size.width.toFloat()
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    isDragging = true
+                    touchX = down.position.x
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     
-                    // Rubberband Resistance Math
-                    val resistedDelta = if (progress <= 0f && delta < 0) delta * 0.2f 
-                                        else if (progress >= 1f && delta > 0) delta * 0.2f 
-                                        else delta
-                                        
-                    onDrag(resistedDelta)
+                    val newPct = (touchX / sliderWidth).coerceIn(0f, 1f)
+                    onValueChange(newPct * 100f)
 
-                    // Multi-Frequency Haptics
-                    val currentTick = (progress * 20).toInt()
-                    if (currentTick != lastHapticTick) {
-                        if (currentTick == 0 || currentTick == 20) {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress) // Heavy boundary pulse
-                        } else {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) // Light travel tick
+                    do {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull()
+                        if (change != null && change.pressed) {
+                            touchX = change.position.x
+                            val dragPct = (touchX / sliderWidth).coerceIn(0f, 1f)
+                            onValueChange(dragPct * 100f)
+                            change.consume()
                         }
-                        lastHapticTick = currentTick
-                    }
+                    } while (event.changes.any { it.pressed })
+
+                    isDragging = false
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 }
             }
     ) {
-        // The Liquid Fill
-        // 🚀 120FPS OPTIMIZATION: Use Modifier.fillMaxWidth(fraction) inside a derived context
-        // OR better yet, animate the width using graphicsLayer so layout is skipped.
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .fillMaxWidth() // Take up 100% of the parent layout width
-                .graphicsLayer {
-                    // We change the scaleX instead of the layout width!
-                    // This skips Phase 1 (Composition) and Phase 2 (Layout) entirely.
-                    scaleX = progress.coerceIn(0.02f, 1f)
-                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f) // Scale from the left edge
-                }
-                .background(activeColor)
+        sliderWidth = size.width
+        val cornerRad = size.height / 2f
+        val fillWidth = animatedValue * sliderWidth
+
+        // 1. Draw the Void Background (Dark Gray Track)
+        drawRoundRect(
+            color = Color(0xFF1A1A1A),
+            size = size,
+            cornerRadius = CornerRadius(cornerRad, cornerRad)
         )
-        
-        // The Icon
-        Icon(
-            imageVector = icon, 
-            contentDescription = null, 
-            tint = if (progress > 0.15f) Color.Black else Color.White, 
-            modifier = Modifier.align(Alignment.CenterStart).padding(start = 12.dp).size(20.dp)
-        )
+
+        // 2. Build the Liquid Fill Path
+        val fillPath = Path().apply {
+            // Standard rounded rectangle for the base fill
+            addRoundRect(
+                RoundRect(
+                    rect = Rect(0f, 0f, fillWidth, size.height),
+                    topLeft = CornerRadius(cornerRad, cornerRad),
+                    bottomLeft = CornerRadius(cornerRad, cornerRad),
+                    topRight = CornerRadius(if (animatedValue > 0.95f) cornerRad else 0f),
+                    bottomRight = CornerRadius(if (animatedValue > 0.95f) cornerRad else 0f)
+                )
+            )
+
+            // The Physical Bulge Math
+            if (bulgeScale > 0.01f) {
+                val bulgeCenter = touchX.coerceIn(cornerRad, sliderWidth - cornerRad)
+                val bulgeWidth = 120f // How wide the distortion spreads
+                val bulgeHeight = 12f * bulgeScale // How high it pushes up and down
+                
+                // Add an overlapping cubic bezier curve to simulate liquid surface tension
+                moveTo(bulgeCenter - bulgeWidth, 0f)
+                cubicTo(
+                    bulgeCenter - (bulgeWidth / 3), 0f,
+                    bulgeCenter - (bulgeWidth / 3), -bulgeHeight,
+                    bulgeCenter, -bulgeHeight
+                )
+                cubicTo(
+                    bulgeCenter + (bulgeWidth / 3), -bulgeHeight,
+                    bulgeCenter + (bulgeWidth / 3), 0f,
+                    bulgeCenter + bulgeWidth, 0f
+                )
+                
+                // Bottom bulge
+                moveTo(bulgeCenter - bulgeWidth, size.height)
+                cubicTo(
+                    bulgeCenter - (bulgeWidth / 3), size.height,
+                    bulgeCenter - (bulgeWidth / 3), size.height + bulgeHeight,
+                    bulgeCenter, size.height + bulgeHeight
+                )
+                cubicTo(
+                    bulgeCenter + (bulgeWidth / 3), size.height + bulgeHeight,
+                    bulgeCenter + (bulgeWidth / 3), size.height,
+                    bulgeCenter + bulgeWidth, size.height
+                )
+            }
+        }
+
+        // 3. Clip the bulge to the main pill bounds so it doesn't break the container shape,
+        // unless you want the bulge to actually break outside the bounds (which looks awesome).
+        // For a clean iOS look, we clip it inside the main rounded rect bounds.
+        clipPath(Path().apply { addRoundRect(RoundRect(Rect(0f, 0f, size.width, size.height), CornerRadius(cornerRad, cornerRad))) }) {
+            drawPath(path = fillPath, color = activeColor)
+        }
     }
 }
