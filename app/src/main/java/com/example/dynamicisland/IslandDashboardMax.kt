@@ -138,10 +138,19 @@ private fun WavyProgressBar(isPlaying: Boolean) {
 @Composable
 private fun LiquidSlidersZone(onDrag: (String, Float) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // We will build the actual "Bulge" modifier in a separate file, 
-        // using standard thick pills for the structural layout right now.
-        SliderPlaceholder(color = Color(0xFF00FFFF), label = "Volume")
-        SliderPlaceholder(color = Color(0xFFFFD700), label = "Brightness")
+        // We will pass in hardcoded '50f' for preview purposes right now. 
+        // Later we will link this to the actual hardwareManager volume/brightness flows.
+        IslandLiquidSlider(
+            value = 50f, 
+            onValueChange = { pct -> onDrag("VOL", pct) },
+            activeColor = Color(0xFF00FFFF) // Cyan Volume
+        )
+        
+        IslandLiquidSlider(
+            value = 75f, 
+            onValueChange = { pct -> onDrag("BRIGHT", pct) },
+            activeColor = Color(0xFFFFD700) // Sun Yellow Brightness
+        )
     }
 }
 
