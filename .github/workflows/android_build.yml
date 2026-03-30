@@ -28,7 +28,13 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
+    # 🚀 NEW STEP: Run Android Lint & Syntax Checks
+    # This acts as the gatekeeper. If there are code errors, it stops here.
+    - name: Run Code Checks
+      run: ./gradlew check --stacktrace
+
     - name: Build unsigned Release APK
+      # This step will ONLY run if the Code Checks pass perfectly.
       run: ./gradlew assembleRelease
 
     - name: Get Build Tools Version
