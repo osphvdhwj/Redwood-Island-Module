@@ -41,7 +41,7 @@ class BootReceiver : BroadcastReceiver() {
                     val ringT = prefs.getFloat("ring_thickness", 6f)
                     val expandUp = prefs.getBoolean("expand_upwards", false)
                     
-                    ConfigManager.saveAndBroadcast(prefs, scope, context, prefix, w, h, x, y, ringT, expandUpwards)
+                    ConfigManager.saveAndBroadcast(prefs, scope, context, prefix, w, h, x, y, ringT, expandUp)
                 }
             } catch (e: Throwable) {
                 e.printStackTrace()
