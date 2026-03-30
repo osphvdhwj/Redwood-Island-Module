@@ -37,6 +37,33 @@ class IslandNotificationManager(
                 }
             }
 
+            // 🔐 FEATURE 3: Smart OTP & 2FA Catcher
+            val lowerText = text.lowercase()
+            val lowerTitle = title.lowercase()
+            
+            if (lowerText.contains("code") || lowerText.contains("otp") || lowerText.contains("verification") ||
+                lowerTitle.contains("code") || lowerTitle.contains("otp") || lowerTitle.contains("verification")) {
+                
+                // Find 4 to 8 digit numbers isolated by word boundaries
+                val otpRegex = Regex("\\b\\d{4,8}\\b")
+                val match = otpRegex.find(text) ?: otpRegex.find(title)
+                
+                if (match != null) {
+                    val otpCode = match.value
+                    val alertModel = LiveActivityModel.SystemAlert(
+                        id = "sys_otp",
+                        alertType = "OTP_CATCHER",
+                        title = "Verification Code",
+                        message = otpCode, // The UI will render this massive with a Copy button
+                        alertColor = android.graphics.Color.parseColor("#4285F4"), // Google Blue
+                        isCritical = true
+                    )
+                    // Trigger your standard alert callback (Requires adding onAlertCaught to constructor)
+                    // onAlertCaught(alertModel) 
+                    return@launch
+                }
+            }
+
             // ⬇️ FEATURE 2: The Global Progress Director (Downloads & Installs)
             val progress = extras.getInt(Notification.EXTRA_PROGRESS, -1)
             val progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, -1)
