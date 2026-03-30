@@ -31,9 +31,12 @@ class IslandController(private val context: Context) {
         currentCall = newCall
         evaluatePriority()
     }
+    
+    // 🛑 3-Tier Sleep Protocol Hardware Monitor
     private val hardwareMonitor = IslandHardwareMonitor(scope) { newHw -> 
-        currentHardware = newHw; evaluatePriority() 
-    } // ⬅️ NEW HARDWARE MONITOR
+        currentHardware = newHw
+        evaluatePriority() 
+    }
     
     private val mediaManager = IslandMediaManager(context, scope,
         onMediaChanged = { newMedia -> currentMedia = newMedia; evaluatePriority() },
@@ -79,6 +82,7 @@ class IslandController(private val context: Context) {
     private var wasCharging = false 
     private var topAppPackage = "" 
     private var isPeeking = false
+    private var isPanelExpanded = false // ⬅️ FIXED: Added missing Panel tracker
 
     private var isChargingEnabled = true
     private var isAlertsEnabled = true
@@ -99,12 +103,12 @@ class IslandController(private val context: Context) {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 Intent.ACTION_SCREEN_OFF -> { 
-                    mediaManager.isScreenOn = false 
-                    hardwareMonitor.isScreenOn = false // ⬅️ Sleeps the hardware CPU reader
+                    mediaManager.isScreenOn = false
+                    hardwareMonitor.isScreenOn = false 
                 }
                 Intent.ACTION_SCREEN_ON -> { 
-                    mediaManager.isScreenOn = true 
-                    hardwareMonitor.isScreenOn = true // ⬅️ Wakes it up
+                    mediaManager.isScreenOn = true
+                    hardwareMonitor.isScreenOn = true 
                     evaluatePriority() 
                 }
             }
@@ -129,7 +133,6 @@ class IslandController(private val context: Context) {
                             1 -> Triple("Vibrate", "Device will vibrate", android.graphics.Color.rgb(255, 165, 0)) // Orange
                             else -> Triple("Ring", "Ringer is active", android.graphics.Color.GREEN)
                         }
-                        // Drop the island for exactly 3 seconds
                         postTransientNotification(LiveActivityModel.General(
                             id = "hw_ringer", type = ActivityType.HARDWARE,
                             title = title, dataText = text, accentColor = color
@@ -144,6 +147,22 @@ class IslandController(private val context: Context) {
                             id = "hw_torch", type = ActivityType.HARDWARE,
                             title = title, dataText = text, accentColor = color
                         ), 3000L)
+                    }
+                }
+                "com.example.dynamicisland.PANEL_STATE_CHANGED" -> {
+                    isPanelExpanded = intent.getBooleanExtra("isExpanded", false)
+                    evaluatePriority()
+                }
+                "com.example.dynamicisland.ALARM_SET" -> {
+                    if (!isAlertsEnabled) return
+                    val triggerTimeMs = intent.getLongExtra("triggerTime", 0L)
+                    if (triggerTimeMs > System.currentTimeMillis()) {
+                        val sdf = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+                        val timeStr = sdf.format(java.util.Date(triggerTimeMs))
+                        postTransientNotification(LiveActivityModel.General(
+                            id = "sys_alarm", type = ActivityType.ALARM, title = "Alarm Set",
+                            dataText = "Ringing at $timeStr", accentColor = android.graphics.Color.CYAN
+                        ), 3500L)
                     }
                 }
                 "com.example.dynamicisland.APP_CHANGED" -> { topAppPackage = intent.getStringExtra("pkg") ?: ""; evaluatePriority() }
@@ -179,10 +198,12 @@ class IslandController(private val context: Context) {
     }
 
     private fun evaluatePriority() {
+        // ⬅️ FIXED: Passed isPanelExpanded parameter correctly
         userForceCollapsed = IslandPriorityEngine.evaluatePriority(
             context = context,
             windowManager = windowManager,
             topAppPackage = topAppPackage,
+            isPanelExpanded = isPanelExpanded, 
             currentCall = currentCall,
             transientModel = transientModel,
             currentMedia = currentMedia,
@@ -199,7 +220,6 @@ class IslandController(private val context: Context) {
 
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
-        view.controller = this
         val view = DynamicIslandView(context, moduleContext)
         this.islandView = view 
         this.windowManager = wm 
@@ -318,14 +338,13 @@ class IslandController(private val context: Context) {
         view.onSeekTo = { position -> mediaManager.activeMediaController?.transportControls?.seekTo(position) }
         view.onCustomMediaAction = { action -> mediaManager.activeMediaController?.transportControls?.sendCustomAction(action, null) }
 
+        // 🛑 FIXED: Added 3-Tier Sleep Protocol Orchestrator
         scope.launch { 
             islandState.collect { state -> 
                 view.setState(state) 
-                
-                // 🛑 3-TIER SLEEP PROTOCOL ORCHESTRATION
                 val isVisible = state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING
-                mediaManager.isIslandVisible = isVisible // Only run timers if pill is visible
-                hardwareMonitor.isDashboardOpen = state == IslandState.TYPE_3_MAX // Only read CPU temp if dashboard is open
+                mediaManager.isIslandVisible = isVisible
+                hardwareMonitor.isDashboardOpen = state == IslandState.TYPE_3_MAX 
             } 
         }
         scope.launch { activeModel.collect { model -> view.setModel(model) } }
@@ -336,6 +355,12 @@ class IslandController(private val context: Context) {
     private fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
         transientJob?.cancel(); transientModel = model; evaluatePriority()
         transientJob = scope.launch { delay(durationMs); transientModel = null; evaluatePriority() }
+    }
+
+    // 🧹 Destroy Method for Memory Kill Switch
+    fun destroy() {
+        try { callManager.javaClass.getMethod("destroy").invoke(callManager) } catch (e: Exception) {}
+        try { mediaManager.javaClass.getMethod("destroy").invoke(mediaManager) } catch (e: Exception) {}
     }
     
     init {
@@ -396,12 +421,15 @@ class IslandController(private val context: Context) {
         context.registerReceiver(hardwareSyncReceiver, volFilter)
         context.contentResolver.registerContentObserver(Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS), true, brightnessObserver)
 
+        // ⬅️ FIXED: Re-added PANEL_STATE_CHANGED and ALARM_SET 
         val ecoFilter = IntentFilter().apply {
             addAction("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE"); addAction("com.crdroid.batterywellbeing.SYSTEM_ALERT")
             addAction("com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING"); addAction("com.crdroid.batterywellbeing.REALITY_PILL_TICK")
             addAction("com.crdroid.batterywellbeing.SYNC_CONFIG"); addAction("com.example.dynamicisland.APP_CHANGED")
             addAction("com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT")
-            addAction("com.example.dynamicisland.HARDWARE_TOGGLE") // <-- NEW
+            addAction("com.example.dynamicisland.HARDWARE_TOGGLE")
+            addAction("com.example.dynamicisland.PANEL_STATE_CHANGED") 
+            addAction("com.example.dynamicisland.ALARM_SET") 
         }
 
         val securePermission = "com.redwood.permission.SECURE_IPC"
@@ -429,13 +457,8 @@ class IslandController(private val context: Context) {
              islandView?.updateBattery(level, isCharging)
         }
         BatteryPlugin.start(context)
-        scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; evaluatePriority() } }
         mediaManager.start()
-    }
-    
-    fun destroy() {
-        callManager.destroy()
-        mediaManager.destroy()
-        IslandImageCache.clearAll()
+        
+        // ⬅️ FIXED: Removed old dead `HardwareMonitors` loop
     }
 }
