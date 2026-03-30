@@ -90,6 +90,7 @@ sealed class LiveActivityModel {
 
     data class Dashboard(
         val activeTiles: List<QSTileState> = emptyList(),
+        val pinnedApps: List<String> = emptyList(), // 🚀 FIXED: Added the missing pinnedApps variable!
         override val id: String = "dashboard", 
         override val type: ActivityType = ActivityType.HARDWARE, 
         override val isTransient: Boolean = false, 
