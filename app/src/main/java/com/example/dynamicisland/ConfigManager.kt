@@ -93,7 +93,7 @@ object ConfigManager {
             putExtra("theme_alert_title", prefs.getFloat("theme_alert_title", 16f))
             putExtra("theme_alert_msg", prefs.getFloat("theme_alert_msg", 14f))
             
-            putExtra("haptic_strength", prefs.getInt("haptic_strength", 1))
+            putExtra("haptic_strength", prefs.getFloat("haptic_strength", 1f).toInt())
             putExtra("charging_style", prefs.getString("charging_style", "CUBE"))
             putExtra("blur_intensity", prefs.getFloat("blur_intensity", 16f))
             putExtra("hide_landscape", prefs.getBoolean("hide_landscape", false))
