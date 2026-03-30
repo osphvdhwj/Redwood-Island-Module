@@ -1,150 +1,216 @@
 package com.example.dynamicisland
 
-import androidx.compose.foundation.Image
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlin.math.sin
 
 @Composable
-fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
-    val haptic = LocalHapticFeedback.current
+fun IslandDashboardMax(
+    dashboardModel: LiveActivityModel.Dashboard,
+    currentMedia: LiveActivityModel.Music?,
+    onSliderDrag: (String, Float) -> Unit, // "VOL" or "BRIGHT", percentage 0f-1f
+    onQsClick: (String) -> Unit
+) {
+    // The entire dashboard is wrapped in a massive column with generous padding
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 12.dp, start = 24.dp, end = 24.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        // ZONE 1: The Apex (Hardware Stats flanking the camera)
+        ApexZone()
 
-    var isVolumeDragging by remember { mutableStateOf(false) }
-    var localVolume by remember { mutableFloatStateOf(0f) }
-    val displayVolume = if (isVolumeDragging) localVolume else (hardwareVolume.intValue / 100f)
+        // ZONE 2: Consolidated Media Core (Only shows if music is playing)
+        if (currentMedia != null) {
+            MediaCoreZone(currentMedia)
+        }
 
-    var isBrightnessDragging by remember { mutableStateOf(false) }
-    var localBrightness by remember { mutableFloatStateOf(0f) }
-    val displayBrightness = if (isBrightnessDragging) localBrightness else (hardwareBrightness.intValue / 100f)
+        Spacer(modifier = Modifier.weight(1f))
 
-    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
+        // ZONE 3: Liquid Sliders
+        LiquidSlidersZone(onSliderDrag)
+
+        // ZONE 4: The Void Grid (QS Toggles)
+        VoidGridZone(dashboardModel.activeTiles, onQsClick)
+
+        // ZONE 5: App Dock
+        AppDockZone(dashboardModel.pinnedApps)
+    }
+}
+
+@Composable
+private fun ApexZone() {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(24.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Left: Battery & Clock
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("100%", color = Color.Green, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("12:00", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        }
+
+        // Space for physical camera cutout in the middle
+        Spacer(modifier = Modifier.width(100.dp))
+
+        // Right: Connections / Speeds
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("LTE", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Icon(painterResource(id = android.R.drawable.stat_sys_data_bluetooth), contentDescription = "BT", tint = Color(0xFF0082FC), modifier = Modifier.size(14.dp))
+        }
+    }
+}
+
+@Composable
+private fun MediaCoreZone(media: LiveActivityModel.Music) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = media.title, color = Color.White, fontSize = 18.sp, 
+            fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = media.artist, color = Color.Gray, fontSize = 14.sp, 
+            fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis
+        )
         
-        // 1. Pinned Apps (Adaptive Grid)
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxWidth().height(70.dp)
-        ) {
-            items(4) { index ->
-                Box(
-                    modifier = Modifier
-                        .aspectRatio(1f)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.1f))
-                        .clickable { 
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            val pkg = pinnedApps.getOrNull(index)
-                            // 🚀 FIXED: Call the local function directly to bypass Security Exception!
-                            if (!pkg.isNullOrEmpty()) {
-                                onAppPinnedClick?.invoke(pkg)
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Apps, contentDescription = null, tint = Color.White.copy(alpha=0.5f), modifier = Modifier.size(24.dp))
-                }
-            }
+        // The Wavy Progress Bar (Physics-driven sine wave)
+        WavyProgressBar(isPlaying = media.isPlaying)
+    }
+}
+
+@Composable
+private fun WavyProgressBar(isPlaying: Boolean) {
+    val infiniteTransition = rememberInfiniteTransition()
+    val phase by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = (2 * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(animation = tween(2000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
+        label = "wavePhase"
+    )
+
+    Canvas(modifier = Modifier.fillMaxWidth().height(20.dp).padding(vertical = 8.dp)) {
+        val path = Path()
+        val waveWidth = size.width
+        val waveHeight = size.height
+        val frequency = 0.05f
+
+        path.moveTo(0f, waveHeight / 2)
+        for (x in 0 until waveWidth.toInt() step 5) {
+            // Flatten the wave if paused
+            val amplitude = if (isPlaying) (waveHeight / 2) else 1f
+            val y = (sin((x * frequency) + phase) * amplitude) + (waveHeight / 2)
+            path.lineTo(x.toFloat(), y.toFloat())
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        drawPath(
+            path = path, 
+            color = if (isPlaying) Color.White else Color.DarkGray, 
+            style = Stroke(width = 4f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        )
+    }
+}
 
-        // 2. The Liquid Sliders
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            LiquidSlider(
-                modifier = Modifier.weight(1f),
-                icon = if (hardwareAutoBrightness.value) Icons.Default.BrightnessAuto else Icons.Default.BrightnessHigh,
-                progress = displayBrightness,
-                activeColor = Color.White,
-                onDragStart = { 
-                    isBrightnessDragging = true 
-                    localBrightness = hardwareBrightness.intValue / 100f
-                },
-                onDrag = { delta ->
-                    localBrightness = (localBrightness + delta).coerceIn(0f, 1f)
-                    onBrightnessDrag?.invoke((localBrightness * 100).toInt())
-                },
-                onDragEnd = { isBrightnessDragging = false }
-            )
+@Composable
+private fun LiquidSlidersZone(onDrag: (String, Float) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // We will build the actual "Bulge" modifier in a separate file, 
+        // using standard thick pills for the structural layout right now.
+        SliderPlaceholder(color = Color(0xFF00FFFF), label = "Volume")
+        SliderPlaceholder(color = Color(0xFFFFD700), label = "Brightness")
+    }
+}
 
-            LiquidSlider(
-                modifier = Modifier.weight(1f),
-                // 🚀 FIXED: Using AutoMirrored icons to resolve the Lint deprecation warnings
-                icon = if (hardwareVolume.intValue == 0) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                progress = displayVolume,
-                activeColor = Color.White,
-                onDragStart = { 
-                    isVolumeDragging = true 
-                    localVolume = hardwareVolume.intValue / 100f
-                },
-                onDrag = { delta ->
-                    localVolume = (localVolume + delta).coerceIn(0f, 1f)
-                    onVolumeDrag?.invoke((localVolume * 100).toInt())
-                },
-                onDragEnd = { isVolumeDragging = false }
-            )
+@Composable
+private fun SliderPlaceholder(color: Color, label: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color(0xFF1A1A1A)) // Dark void background
+    ) {
+        // Filled portion
+        Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(0.7f).background(color))
+    }
+}
+
+@Composable
+private fun VoidGridZone(tiles: List<QSTileState>, onClick: (String) -> Unit) {
+    // 2x2 Grid of Massive Black Buttons
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxWidth()) {
+            VoidButton(modifier = Modifier.weight(1f), iconRes = android.R.drawable.ic_menu_compass, activeColor = Color(0xFF0082FC), isActive = true)
+            VoidButton(modifier = Modifier.weight(1f), iconRes = android.R.drawable.ic_menu_mylocation, activeColor = Color.Green, isActive = false)
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxWidth()) {
+            VoidButton(modifier = Modifier.weight(1f), iconRes = android.R.drawable.ic_menu_camera, activeColor = Color.Yellow, isActive = false)
+            VoidButton(modifier = Modifier.weight(1f), iconRes = android.R.drawable.ic_menu_info_details, activeColor = Color(0xFF8A2BE2), isActive = true)
+        }
+    }
+}
 
-        Spacer(modifier = Modifier.weight(1f))
+@Composable
+private fun VoidButton(modifier: Modifier, iconRes: Int, activeColor: Color, isActive: Boolean) {
+    // The Void Button physics
+    val scale = remember { Animatable(1f) }
+    
+    Box(
+        modifier = modifier
+            .aspectRatio(1.5f) // Wide rectangle
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color.Black) // Pure black
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null // Kill the default Android ripple
+            ) {
+                // We will add the haptic + scale down/up Coroutine launch here
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            tint = if (isActive) activeColor else Color.DarkGray,
+            modifier = Modifier.size(32.dp)
+        )
+    }
+}
 
-        // 3. Quick Settings
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            val tilesToShow = model.activeTiles.take(4)
-            
-            tilesToShow.forEach { tile ->
-                val bgColor = if (tile.isActive) Color.White else Color.White.copy(alpha = 0.15f)
-                val fgColor = if (tile.isActive) Color.Black else Color.White
-                val alpha = if (tile.isUnavailable) 0.5f else 1f
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally, 
-                    modifier = Modifier.clickable(enabled = !tile.isUnavailable) { 
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        // 🚀 FIXED: Call the local function directly instead of using Enum Strings!
-                        onQsTileClick?.invoke(tile.tileSpec)
-                    }.alpha(alpha).weight(1f)
-                ) {
-                    Box(
-                        modifier = Modifier.size(54.dp).clip(CircleShape).background(bgColor), 
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (tile.iconBitmap != null) {
-                             Image(
-                                bitmap = tile.iconBitmap.asImageBitmap(),
-                                contentDescription = tile.label,
-                                colorFilter = ColorFilter.tint(fgColor),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        } else {
-                            Icon(Icons.Default.Settings, contentDescription = null, tint = fgColor, modifier = Modifier.size(24.dp))
-                        }
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text(text = tile.label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                }
-            }
+@Composable
+private fun AppDockZone(apps: List<String>) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Placeholder App Icons
+        repeat(5) {
+            Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF1A1A1A)))
         }
     }
 }
