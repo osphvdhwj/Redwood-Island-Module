@@ -27,6 +27,7 @@ object IslandPriorityEngine {
         context: Context,
         windowManager: WindowManager?,
         topAppPackage: String,
+        isPanelExpanded: Boolean,
         currentCall: LiveActivityModel.Call?,
         transientModel: LiveActivityModel?,
         currentMedia: LiveActivityModel.Music?,
@@ -47,6 +48,12 @@ object IslandPriorityEngine {
         val isBlacklistedAppActive = topAppPackage.isNotEmpty() && blacklistedGames.contains(topAppPackage)
         val shouldHideLandscape = isLandscapeNow && prefs.getBoolean("hide_landscape", false)
 
+        // 🧠 SMART VIDEO DETECTION
+        // If the media app is open on screen, AND it isn't explicitly a music app, hide the Island!
+        val isMediaAppForeground = topAppPackage.isNotEmpty() && currentMedia?.appPackageName == topAppPackage
+        val isDedicatedMusicApp = topAppPackage.contains("spotify") || topAppPackage.contains("music") || topAppPackage.contains("soundcloud") || topAppPackage.contains("audio")
+        val shouldSuppressVideo = isMediaAppForeground && !isDedicatedMusicApp
+
         // 1. Gather all currently active states
         val activeCandidates = listOfNotNull(
             currentCall,
@@ -56,15 +63,14 @@ object IslandPriorityEngine {
 
         val dominantModel = activeCandidates.firstOrNull()
 
-        // 2. Global Hide Overrides (Games/Video)
-        if ((shouldHideLandscape || currentHardware?.isGamingModeOn == true || isBlacklistedAppActive)) {
-            // ONLY pierce the game overlay if the weight is critical (80+)
+        // 2. Global Hide Overrides (Games/Video/Notification Shade)
+        if (isPanelExpanded || shouldHideLandscape || currentHardware?.isGamingModeOn == true || isBlacklistedAppActive || shouldSuppressVideo) {
+            // ONLY pierce the overlay if the weight is critical (80+)
             if (dominantModel == null || dominantModel.getPriorityWeight() < 80) {
                 _islandState.value = IslandState.HIDDEN
                 return userForceCollapsed
             }
         }
-
         // Protect User's Manual Dashboard
         if (currentActiveModel is LiveActivityModel.Dashboard && currentVisualState != IslandState.TYPE_0_RING && currentVisualState != IslandState.HIDDEN) {
             if (dominantModel == null || dominantModel.getPriorityWeight() < 80) {
