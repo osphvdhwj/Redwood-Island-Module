@@ -60,6 +60,7 @@ sealed class LiveActivityModel {
         val isShuffled: Boolean = false,
         val repeatMode: Int = 0,
         val isLiked: Boolean = false,
+        val isVideo: Boolean = false, // 🎬 NEW: The Video Classifier Flag
         override val isTransient: Boolean = false, 
         override val isCritical: Boolean = false, 
         override val isSensitive: Boolean = false
@@ -120,6 +121,20 @@ sealed class LiveActivityModel {
         override val isSensitive: Boolean = false
     ) : LiveActivityModel()
 
+    // 🔗 FOR THE LINK SWITCHER
+    data class LinkIntercept(
+        override val id: String = "sys_link", 
+        override val type: ActivityType = ActivityType.MESSAGE, 
+        val targetAppName: String, 
+        val targetAppIcon: Bitmap?, 
+        val urlHost: String, // e.g., "youtube.com"
+        val rawIntent: android.content.Intent,
+        override val isTransient: Boolean = false, 
+        override val isCritical: Boolean = true, 
+        override val isSensitive: Boolean = false
+    ) : LiveActivityModel()
+
+    // ⬇️ FOR THE DOWNLOAD SPEED MONITOR (Updated)
     data class OngoingTask(
         override val id: String = "ongoing_task", 
         override val type: ActivityType = ActivityType.ONGOING_TASK, 
@@ -128,6 +143,7 @@ sealed class LiveActivityModel {
         val text: String, 
         val progress: Int, 
         val progressMax: Int, 
+        val networkSpeed: String? = null, // 🚀 NEW: e.g., "4.2 MB/s"
         override val isTransient: Boolean = true, 
         override val isCritical: Boolean = false, 
         override val isSensitive: Boolean = false
