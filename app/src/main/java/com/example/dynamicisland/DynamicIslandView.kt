@@ -38,6 +38,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     var controller: IslandController? = null
 
+    var onAppPinnedClick: ((String) -> Unit)? = null
+    var onQsTileClick: ((String) -> Unit)? = null
+
     // State Variables
     var ringW = mutableStateOf(45f); var ringH = mutableStateOf(45f); var ringX = mutableStateOf(0f); var ringY = mutableStateOf(48f)
     var miniW = mutableStateOf(180f); var miniH = mutableStateOf(36f); var miniX = mutableStateOf(0f); var miniY = mutableStateOf(48f)
@@ -197,8 +200,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        // Trigger the kill switch safely
+        
+        // 🧹 Trigger the kill switch safely via the direct reference
         controller?.destroy()
+        
         lifecycleRegistry.currentState = androidx.lifecycle.Lifecycle.State.DESTROYED
         
         try {
@@ -211,14 +216,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         flowJob?.cancel()
         flowJob = null
+        
         try { context.unregisterReceiver(prefsReceiver) } catch (e: Exception) {}
         try { context.unregisterReceiver(appChangeReceiver) } catch (e: Exception) {}
         try { context.unregisterReceiver(screenReceiver) } catch (e: Exception) {}
 
         BatteryPlugin.stop(context)
         context.sendBroadcast(android.content.Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui"))
-        
-        // Trigger the kill switch to prevent zombie RAM
-        (context as? IslandController)?.destroy() 
     }
 }
