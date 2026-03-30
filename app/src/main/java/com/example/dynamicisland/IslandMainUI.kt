@@ -206,10 +206,10 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                             dashboardModel = model,
                                             currentMedia = activeMedia,
                                             onSliderDrag = { type, pct -> 
-                                                if (type == "VOL") onVolumeDrag?.invoke(pct) else onBrightnessDrag?.invoke(pct) 
+                                                if (type == "VOL") onVolumeDrag?.invoke(pct.toInt()) else onBrightnessDrag?.invoke(pct.toInt()) 
                                             },
                                             onQsClick = { tileSpec -> onQsTileClick?.invoke(tileSpec) }
-                                        ) 
+                                        )
                                         is LiveActivityModel.Music -> MusicMax(model) 
                                         else -> {} 
                                     } 
