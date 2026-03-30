@@ -37,15 +37,43 @@ class IslandController(private val context: Context) {
             )
         }
     }
+    
+    private var downloadSpeedJob: Job? = null
+    private var lastRxBytes = 0L
+
     private val notificationManager = IslandNotificationManager(context, scope,
         onProgressCaught = { progressModel ->
-            // Keep the island open while downloading
+            // Start the speed tracker if it isn't running
+            if (downloadSpeedJob?.isActive != true) {
+                lastRxBytes = android.net.TrafficStats.getTotalRxBytes()
+                downloadSpeedJob = scope.launch(Dispatchers.Main) {
+                    while (isActive) {
+                        delay(1000) // Calculate every 1 second
+                        val currentRx = android.net.TrafficStats.getTotalRxBytes()
+                        val bytesPerSec = currentRx - lastRxBytes
+                        lastRxBytes = currentRx
+                        
+                        val speedStr = if (bytesPerSec > 1048576) {
+                            String.format("%.1f MB/s", bytesPerSec / 1048576f)
+                        } else {
+                            String.format("%d KB/s", bytesPerSec / 1024)
+                        }
+
+                        // Update the active download model with the new speed
+                        val current = _activeModel.value
+                        if (current is LiveActivityModel.OngoingTask) {
+                            _activeModel.value = current.copy(networkSpeed = speedStr)
+                        }
+                    }
+                }
+            }
+
             _activeModel.value = progressModel
             if (_islandState.value == IslandState.TYPE_0_RING) _islandState.value = IslandState.TYPE_1_MINI
             evaluatePriority()
         },
-        onNavigationCaught = { navModel ->
-            postTransientNotification(navModel, 5000L) // Show directions for 5 seconds
+        onDownloadFinished = {
+            downloadSpeedJob?.cancel()
         }
     )
 
@@ -302,6 +330,25 @@ class IslandController(private val context: Context) {
             _splitModel = _splitModel,
             _islandState = _islandState
         )
+        // 🧠 FEATURE: Smart Focus Mode
+        val productivityApps = listOf("com.notion.id", "com.microsoft.teams", "com.google.android.apps.docs")
+        if (productivityApps.contains(topAppPackage)) {
+            // Check if we are already in a focus session to prevent spamming
+            if (_activeModel.value !is LiveActivityModel.RealityPill) {
+                _activeModel.value = LiveActivityModel.RealityPill(
+                    appName = "Focus Mode", 
+                    sessionMinutes = 0
+                )
+                _islandState.value = IslandState.TYPE_1_MINI
+                
+                // Silently enable DND via AudioManager
+                try {
+                    if (audioManager.ringerMode != AudioManager.RINGER_MODE_SILENT) {
+                        audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT
+                    }
+                } catch (e: Throwable) {}
+            }
+        }
     }
 
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
