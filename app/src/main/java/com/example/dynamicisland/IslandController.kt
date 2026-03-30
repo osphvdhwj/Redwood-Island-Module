@@ -345,7 +345,12 @@ class IslandController(private val context: Context) {
 
         view.onGestureEvent = { gesture ->
             val currentState = _islandState.value.name
-            val actionName = gestureMatrix["${currentState}_${gesture.name}"]?.name ?: "NONE"
+            
+            // 🚀 THE FIX: Check the matrix, but fallback to EXPAND for single taps!
+            var actionName = gestureMatrix["${currentState}_${gesture.name}"]?.name
+            if (actionName == null) {
+                actionName = if (gesture.name == "SINGLE_TAP") "EXPAND" else "NONE"
+            }
 
             if (gesture.name.startsWith("QS_CLICK_")) {
                 actionManager.handleQSTileClick(gesture.name) { newTiles ->
