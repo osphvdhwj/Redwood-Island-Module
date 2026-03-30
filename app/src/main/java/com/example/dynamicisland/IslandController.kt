@@ -206,12 +206,19 @@ class IslandController(private val context: Context) {
                             val appsList = mutableListOf<String>()
                             if (appsArr != null) for (i in 0 until appsArr.length()) appsList.add(appsArr.getString(i))
                             
-                            // 🚀 FIXED: Create proper QSTileState objects from the JSON
+                            // 🚀 FIXED: Provide the default initial states for the tiles
                             val tilesList = mutableListOf<QSTileState>()
                             if (tilesArr != null) {
                                 for (i in 0 until tilesArr.length()) {
                                     val obj = tilesArr.getJSONObject(i)
-                                    tilesList.add(QSTileState(tileSpec = obj.getString("spec"), label = obj.getString("label")))
+                                    tilesList.add(
+                                        QSTileState(
+                                            tileSpec = obj.getString("spec"), 
+                                            label = obj.getString("label"),
+                                            isActive = false,
+                                            isUnavailable = false
+                                        )
+                                    )
                                 }
                             }
                             
