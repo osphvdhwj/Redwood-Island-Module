@@ -24,7 +24,8 @@ class IslandController(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val audioManager by lazy { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
 
-    private var qsTilesCache = listOf<Pair<String, String>>()
+    // 🚀 FIXED: Change from Pair<String, String> to QSTileState
+    private var qsTilesCache = listOf<QSTileState>() 
     private var pinnedAppsCache = listOf<String>()
     
     // 🎛️ The Clean Helper Architecture
@@ -205,18 +206,18 @@ class IslandController(private val context: Context) {
                             val appsList = mutableListOf<String>()
                             if (appsArr != null) for (i in 0 until appsArr.length()) appsList.add(appsArr.getString(i))
                             
-                            val tilesList = mutableListOf<Pair<String, String>>()
+                            // 🚀 FIXED: Create proper QSTileState objects from the JSON
+                            val tilesList = mutableListOf<QSTileState>()
                             if (tilesArr != null) {
                                 for (i in 0 until tilesArr.length()) {
                                     val obj = tilesArr.getJSONObject(i)
-                                    tilesList.add(Pair(obj.getString("spec"), obj.getString("label")))
+                                    tilesList.add(QSTileState(tileSpec = obj.getString("spec"), label = obj.getString("label")))
                                 }
                             }
                             
                             pinnedAppsCache = appsList
                             qsTilesCache = tilesList
                             
-                            // Immediately refresh the Dashboard if it's open!
                             if (_activeModel.value is LiveActivityModel.Dashboard) {
                                 _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
                             }
