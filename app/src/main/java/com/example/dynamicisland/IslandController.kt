@@ -31,6 +31,10 @@ class IslandController(private val context: Context) {
         currentCall = newCall
         evaluatePriority()
     }
+    private val hardwareMonitor = IslandHardwareMonitor(scope) { newHw -> 
+        currentHardware = newHw; evaluatePriority() 
+    } // ⬅️ NEW HARDWARE MONITOR
+    
     private val mediaManager = IslandMediaManager(context, scope,
         onMediaChanged = { newMedia -> currentMedia = newMedia; evaluatePriority() },
         onMediaTick = { pos -> islandView?.updateTicker(pos) },
@@ -94,8 +98,15 @@ class IslandController(private val context: Context) {
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                Intent.ACTION_SCREEN_OFF -> { mediaManager.isScreenOn = false }
-                Intent.ACTION_SCREEN_ON -> { mediaManager.isScreenOn = true; evaluatePriority() }
+                Intent.ACTION_SCREEN_OFF -> { 
+                    mediaManager.isScreenOn = false 
+                    hardwareMonitor.isScreenOn = false // ⬅️ Sleeps the hardware CPU reader
+                }
+                Intent.ACTION_SCREEN_ON -> { 
+                    mediaManager.isScreenOn = true 
+                    hardwareMonitor.isScreenOn = true // ⬅️ Wakes it up
+                    evaluatePriority() 
+                }
             }
         }
     }
@@ -306,7 +317,16 @@ class IslandController(private val context: Context) {
         view.onSeekTo = { position -> mediaManager.activeMediaController?.transportControls?.seekTo(position) }
         view.onCustomMediaAction = { action -> mediaManager.activeMediaController?.transportControls?.sendCustomAction(action, null) }
 
-        scope.launch { islandState.collect { state -> view.setState(state) } }
+        scope.launch { 
+            islandState.collect { state -> 
+                view.setState(state) 
+                
+                // 🛑 3-TIER SLEEP PROTOCOL ORCHESTRATION
+                val isVisible = state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING
+                mediaManager.isIslandVisible = isVisible // Only run timers if pill is visible
+                hardwareMonitor.isDashboardOpen = state == IslandState.TYPE_3_MAX // Only read CPU temp if dashboard is open
+            } 
+        }
         scope.launch { activeModel.collect { model -> view.setModel(model) } }
         scope.launch { splitModel.collect { model -> view.setSplitModel(model) } }
         return view
@@ -410,5 +430,11 @@ class IslandController(private val context: Context) {
         BatteryPlugin.start(context)
         scope.launch { HardwareMonitors.startMonitoring().collect { hw -> currentHardware = hw; evaluatePriority() } }
         mediaManager.start()
+    }
+    
+    fun destroy() {
+        callManager.destroy()
+        mediaManager.destroy()
+        IslandImageCache.clearAll()
     }
 }
