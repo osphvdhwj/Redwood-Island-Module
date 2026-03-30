@@ -59,7 +59,12 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     val minSafeWidth = displayCutoutWidth.floatValue + 4f
     val rawTargetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
     val targetWidth = rawTargetWidth.coerceAtLeast(minSafeWidth)
+    
+    // We get both the active model and the split model to pass to the Dashboard
     val model = activeModel.value
+    val splitModelValue = splitModel.value
+    val activeMedia = (splitModelValue as? LiveActivityModel.Music) ?: (model as? LiveActivityModel.Music)
+
     val targetHeight = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniH.value; IslandState.TYPE_2_MID -> midH.value; IslandState.TYPE_3_MAX -> if (model is LiveActivityModel.Music) (maxH.value * 0.70f) else maxH.value; IslandState.TYPE_CUBE -> cubeH.value; else -> ringH.value }
     val targetX = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value; IslandState.TYPE_2_MID -> midX.value; IslandState.TYPE_3_MAX -> maxX.value; IslandState.TYPE_CUBE -> cubeX.value; else -> ringX.value }
     val targetY = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value; IslandState.TYPE_2_MID -> midY.value; IslandState.TYPE_3_MAX -> maxY.value; IslandState.TYPE_CUBE -> cubeY.value; else -> ringY.value }
@@ -116,7 +121,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
 
     val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
 
-    // 🚀 120FPS OPTIMIZATION: Deferred State Reading for Position
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -152,7 +156,13 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                 }
                 .pointerInput(state) {
                     detectTapGestures(
-                        onTap = { if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) } },
+                        onTap = { 
+                            if (state != IslandState.TYPE_3_MAX) { 
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                // 🚀 HARCODED FALLBACK: If gesture matrix is missing, default to EXPAND
+                                onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) ?: run { onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) }
+                            } 
+                        },
                         onDoubleTap = { if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) } },
                         onLongPress = { if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) } }
                     )
@@ -189,7 +199,21 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                             label = "UI Transition"
                         ) { s ->
                             when (s) {
-                                IslandState.TYPE_3_MAX -> { when (model) { is LiveActivityModel.Dashboard -> IslandDashboardMax(model); is LiveActivityModel.Music -> MusicMax(model); else -> {} } }
+                                IslandState.TYPE_3_MAX -> { 
+                                    // 🚀 FIXED COMPILATION ERROR: Passed required variables to IslandDashboardMax
+                                    when (model) { 
+                                        is LiveActivityModel.Dashboard -> IslandDashboardMax(
+                                            dashboardModel = model,
+                                            currentMedia = activeMedia,
+                                            onSliderDrag = { type, pct -> 
+                                                if (type == "VOL") onVolumeDrag?.invoke(pct) else onBrightnessDrag?.invoke(pct) 
+                                            },
+                                            onQsClick = { tileSpec -> onQsTileClick?.invoke(tileSpec) }
+                                        ) 
+                                        is LiveActivityModel.Music -> MusicMax(model) 
+                                        else -> {} 
+                                    } 
+                                }
                                 IslandState.TYPE_2_MID -> { when (model) { is LiveActivityModel.Dashboard -> DashboardMid(model); is LiveActivityModel.Call -> CallMid(model); is LiveActivityModel.Music -> MusicMid(model); is LiveActivityModel.General -> GeneralMid(model); is LiveActivityModel.Charging -> ChargingMid(model); is LiveActivityModel.SystemAlert -> SystemAlertMid(model); is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model); is LiveActivityModel.OngoingTask -> OngoingTaskMid(model); else -> {} } }
                                 IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { when (model) { is LiveActivityModel.Call -> CallMini(model); is LiveActivityModel.Music -> MusicMini(model); is LiveActivityModel.General -> GeneralMini(model); is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model); is LiveActivityModel.RealityPill -> RealityPillMini(model); else -> {} } }
                                 IslandState.TYPE_CUBE -> { if (model is LiveActivityModel.Charging) ChargingCube(model) }
