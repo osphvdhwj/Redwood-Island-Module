@@ -60,7 +60,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard) {
                             if (!pkg.isNullOrEmpty()) {
                                 val intent = android.content.Intent("com.example.dynamicisland.ACTION_LAUNCH_APP")
                                 intent.putExtra("pkg", pkg)
-                                android.content.ContextWrapper(this@DashboardMax).sendBroadcast(intent)
+                                this@DashboardMax.context.sendBroadcast(intent)
                             }
                         },
                     contentAlignment = Alignment.Center
