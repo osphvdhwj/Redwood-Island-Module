@@ -5,32 +5,6 @@ import android.view.WindowManager
 import kotlinx.coroutines.flow.MutableStateFlow
 
 object IslandPriorityEngine {
-
-    // 🎛️ Deterministic Priority Weights
-    fun LiveActivityModel.getPriorityWeight(): Int {
-        return when (this) {
-            is LiveActivityModel.Call -> if (state == "RINGING") 100 else 90
-            is LiveActivityModel.SystemAlert -> if (alertType == "THERMAL") 85 else 60
-            is LiveActivityModel.Charging -> if (isCritical) 80 else 40 
-            is LiveActivityModel.AppTimerWarning -> 70
-            is LiveActivityModel.OngoingTask -> 50
-            is LiveActivityModel.Music -> 20
-            is LiveActivityModel.RealityPill -> 10
-            is LiveActivityModel.General -> 5
-            is LiveActivityModel.HardwareMonitor -> 1
-            else -> 0
-        }
-    }
-
-    val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-        
-        // 🎬 Auto-Hide if watching a video in Landscape
-        if (isLandscape && currentMedia?.isVideo == true) {
-            _islandState.value = IslandState.HIDDEN
-            return true
-        }
-
-    // 🎛️ Weighted State Machine Router with User State Protection
     fun evaluatePriority(
         context: Context,
         windowManager: WindowManager?,
@@ -48,85 +22,63 @@ object IslandPriorityEngine {
         _splitModel: MutableStateFlow<LiveActivityModel?>,
         _islandState: MutableStateFlow<IslandState>
     ): Boolean {
-        val rotation = try { windowManager?.defaultDisplay?.rotation ?: 0 } catch(e: Throwable) { 0 }
-        val isLandscapeNow = rotation == android.view.Surface.ROTATION_90 || rotation == android.view.Surface.ROTATION_270
         
-        val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
-        val blacklistedGames = prefs.getString("gaming_blacklist", "com.dts.freefiremax,com.tencent.ig") ?: ""
-        val isBlacklistedAppActive = topAppPackage.isNotEmpty() && blacklistedGames.contains(topAppPackage)
-        val shouldHideLandscape = isLandscapeNow && prefs.getBoolean("hide_landscape", false)
-
-        // 🧠 SMART VIDEO DETECTION
-        // If the media app is open on screen, AND it isn't explicitly a music app, hide the Island!
-        val isMediaAppForeground = topAppPackage.isNotEmpty() && currentMedia?.appPackageName == topAppPackage
-        val isDedicatedMusicApp = topAppPackage.contains("spotify") || topAppPackage.contains("music") || topAppPackage.contains("soundcloud") || topAppPackage.contains("audio")
-        val shouldSuppressVideo = isMediaAppForeground && !isDedicatedMusicApp
-
-        // 1. Gather all currently active states
-        val activeCandidates = listOfNotNull(
-            currentCall,
-            transientModel,
-            if (isMediaEnabled) currentMedia else null
-        ).sortedByDescending { it.getPriorityWeight() }
-
-        val dominantModel = activeCandidates.firstOrNull()
-
-        // 2. Global Hide Overrides (Games/Video/Notification Shade)
-        if (isPanelExpanded || shouldHideLandscape || currentHardware?.isGamingModeOn == true || isBlacklistedAppActive || shouldSuppressVideo) {
-            // ONLY pierce the overlay if the weight is critical (80+)
-            if (dominantModel == null || dominantModel.getPriorityWeight() < 80) {
-                _islandState.value = IslandState.HIDDEN
-                return userForceCollapsed
-            }
-        }
-        // Protect User's Manual Dashboard
-        if (currentActiveModel is LiveActivityModel.Dashboard && currentVisualState != IslandState.TYPE_0_RING && currentVisualState != IslandState.HIDDEN) {
-            if (dominantModel == null || dominantModel.getPriorityWeight() < 80) {
-                return userForceCollapsed 
-            }
+        // 🎬 Auto-Hide if watching a video in Landscape
+        val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        if (isLandscape && currentMedia?.isVideo == true) {
+            _islandState.value = IslandState.HIDDEN
+            return true
         }
 
-        var newUserForceCollapsed = userForceCollapsed
+        if (isPanelExpanded) {
+            _islandState.value = IslandState.HIDDEN
+            return userForceCollapsed
+        }
 
-        // 3. Apply the Dominant State
-        if (dominantModel != null) {
-            _activeModel.value = dominantModel
+        if (currentCall != null) {
+            _activeModel.value = currentCall
+            _islandState.value = if (userForceCollapsed) IslandState.TYPE_0_RING else IslandState.TYPE_2_MID
+            _splitModel.value = null
+            return userForceCollapsed
+        }
+
+        if (transientModel != null) {
+            _activeModel.value = transientModel
+            if (transientModel.isCritical && !userForceCollapsed) _islandState.value = IslandState.TYPE_2_MID
+            else _islandState.value = IslandState.TYPE_1_MINI
             
-            // 4. Handle Split-Screen (Cube) Logic
-            val secondaryModel = activeCandidates.drop(1).firstOrNull { it is LiveActivityModel.Music || it is LiveActivityModel.Charging }
-            
-            if (secondaryModel != null && dominantModel.getPriorityWeight() >= 80) {
-                _splitModel.value = secondaryModel
-                _islandState.value = IslandState.TYPE_SPLIT
+            if (currentMedia != null && isMediaEnabled) _splitModel.value = currentMedia
+            else _splitModel.value = null
+            return userForceCollapsed
+        }
+
+        if (currentActiveModel is LiveActivityModel.Dashboard && currentVisualState == IslandState.TYPE_3_MAX) {
+            return userForceCollapsed
+        }
+
+        if (currentMedia != null && isMediaEnabled) {
+            _activeModel.value = currentMedia
+            _splitModel.value = null
+            if (currentVisualState == IslandState.TYPE_3_MAX && !userForceCollapsed) {
+                _islandState.value = IslandState.TYPE_3_MAX
+            } else if (currentMedia.isPlaying && !userForceCollapsed) {
+                _islandState.value = IslandState.TYPE_1_MINI
             } else {
-                _splitModel.value = null
-                
-                // Protect User's Expanded Pill (Mid/Max)
-                val isSameBaseModel = currentActiveModel?.javaClass == dominantModel.javaClass
-                val isExpanded = currentVisualState == IslandState.TYPE_2_MID || currentVisualState == IslandState.TYPE_3_MAX
-                
-                if (isSameBaseModel && isExpanded && !userForceCollapsed) {
-                    // Do nothing! Respect the user's manual expansion.
-                } else {
-                    // Route to correct default visual state
-                    _islandState.value = when {
-                        userForceCollapsed -> IslandState.TYPE_0_RING
-                        dominantModel is LiveActivityModel.SystemAlert || dominantModel is LiveActivityModel.Charging || dominantModel is LiveActivityModel.AppTimerWarning -> IslandState.TYPE_2_MID
-                        dominantModel is LiveActivityModel.Call && dominantModel.state == "RINGING" -> IslandState.TYPE_1_MINI
-                        dominantModel is LiveActivityModel.Call && dominantModel.state == "ONGOING" -> IslandState.TYPE_1_MINI 
-                        dominantModel is LiveActivityModel.Music -> IslandState.TYPE_1_MINI
-                        else -> IslandState.TYPE_1_MINI
-                    }
-                }
-            }
-        } else {
-            // Nothing active
-            if (currentActiveModel !is LiveActivityModel.Dashboard) {
-                _activeModel.value = null
-                _splitModel.value = null
                 _islandState.value = IslandState.TYPE_0_RING
             }
+            return userForceCollapsed
         }
-        return newUserForceCollapsed
+
+        if (currentHardware?.isGamingModeOn == true) {
+            _activeModel.value = currentHardware
+            _islandState.value = IslandState.TYPE_1_MINI
+            _splitModel.value = null
+            return false
+        }
+
+        _activeModel.value = null
+        _splitModel.value = null
+        _islandState.value = IslandState.TYPE_0_RING
+        return true
     }
 }
