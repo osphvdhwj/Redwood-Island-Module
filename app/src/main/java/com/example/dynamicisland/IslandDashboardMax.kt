@@ -12,10 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -53,37 +50,34 @@ fun IslandDashboardMax(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp) // Tight, premium spacing
     ) {
         
-        // --- TOP AREA: The L-Ribbon, Sliders, and Media Box ---
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(210.dp)) {
-            val totalWidthPx = constraints.maxWidth.toFloat()
-            val totalHeightPx = constraints.maxHeight.toFloat()
+        // --- TOP AREA: Sliders & Media Box ---
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(200.dp)) {
             val density = LocalDensity.current
-            
-            val sliderWidth = 52.dp
             val gap = 8.dp
-            val qsSize = 60.dp
+            val sliderWidth = 46.dp
+            val qsSize = 58.dp
+            val topRowHeight = 120.dp
             
-            // 1. Sliders (Top Left)
+            // 1. Top Left: Twin Sliders (Very small gap)
             Row(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .height(130.dp), // Leaves room for the bottom horizontal ribbon
-                horizontalArrangement = Arrangement.spacedBy(gap)
+                modifier = Modifier.align(Alignment.TopStart).height(topRowHeight),
+                horizontalArrangement = Arrangement.spacedBy(6.dp) // Razor thin gap
             ) {
-                VerticalLiquidSlider(value = 75f, iconRes = android.R.drawable.ic_menu_day, activeColor = Color(0xFFFFD700)) { onSliderDrag("BRIGHT", it) }
-                VerticalLiquidSlider(value = 50f, iconRes = android.R.drawable.ic_lock_silent_mode_off, activeColor = Color(0xFF00FFFF)) { onSliderDrag("VOL", it) }
+                VerticalLiquidSlider(value = 75f, iconRes = android.R.drawable.ic_menu_day, activeColor = Color(0xFFFACC15)) { onSliderDrag("BRIGHT", it) }
+                VerticalLiquidSlider(value = 50f, iconRes = android.R.drawable.ic_lock_silent_mode_off, activeColor = Color(0xFF06B6D4)) { onSliderDrag("VOL", it) }
             }
 
-            // 2. Media Box (Top Right)
+            // 2. Top Right: Media Box
+            val mediaBoxWidth = with(density) { constraints.maxWidth.toDp() - (sliderWidth * 2) - gap - 6.dp }
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .width(with(density) { (totalWidthPx - (sliderWidth.toPx() * 2) - (qsSize.toPx()) - (gap.toPx() * 3)).toDp() })
-                    .height(130.dp)
+                    .width(mediaBoxWidth)
+                    .height(topRowHeight)
             ) {
                 if (currentMedia != null) {
                     MediaControlSquarcle(currentMedia, onMediaCommand)
@@ -92,13 +86,16 @@ fun IslandDashboardMax(
                 }
             }
 
-            // 3. The Custom Snake Ribbon (L-Shape wrapped around Media Box)
-            // It sits precisely between the Sliders and Media Box, and under the Media Box.
-            val snakeStartX = with(density) { (sliderWidth.toPx() * 2) + (gap.toPx() * 2) }
+            // 3. The Custom Snake Ribbon (L-Shape)
+            // Starts directly beneath the sliders, wraps horizontally beneath the media box
+            val snakeStartX = 0f
+            val cornerY = with(density) { topRowHeight.toPx() + gap.toPx() }
+            val snakeCornerX = with(density) { (sliderWidth * 2 + 6.dp + gap).toPx() }
+
             QSSnakeRibbon(
                 tiles = dashboardModel.activeTiles,
-                startX = snakeStartX,
-                cornerY = with(density) { 130.dp.toPx() + gap.toPx() }, // Right below the media box
+                cornerX = snakeCornerX,
+                cornerY = cornerY,
                 tileSize = with(density) { qsSize.toPx() },
                 gap = with(density) { gap.toPx() },
                 onClick = onQsClick
@@ -107,9 +104,10 @@ fun IslandDashboardMax(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // --- BOTTOM ROW: Dock ---
+        // --- BOTTOM ROW: App Dock ---
         Column(modifier = Modifier.fillMaxWidth()) {
-            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF222222)))
+            // Sleek horizontal separator
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF2C2C2E)))
             Spacer(modifier = Modifier.height(12.dp))
             AppDockZone(
                 apps = dashboardModel.pinnedApps.ifEmpty { listOf("com.android.settings", "com.android.chrome", "com.google.android.youtube", "com.google.android.dialer") }, 
@@ -122,20 +120,15 @@ fun IslandDashboardMax(
 @Composable
 private fun QSSnakeRibbon(
     tiles: List<QSTileState>,
-    startX: Float,
+    cornerX: Float,
     cornerY: Float,
     tileSize: Float,
     gap: Float,
     onClick: (String) -> Unit
 ) {
-    // Generate an extended list of mock tiles if the real ones aren't provided
     val activeList = if (tiles.size > 8) tiles else List(12) { i -> QSTileState("QS_$i", "Tile", i % 2 == 0, false) }
-    
-    // Physics State for the belt
     val scrollState = remember { mutableFloatStateOf(0f) }
-    
-    // Math: The total length of the path before you run out of icons
-    val maxScroll = max(0f, (activeList.size * (tileSize + gap)) - (cornerY + 500f)) 
+    val maxScroll = max(0f, (activeList.size * (tileSize + gap)) - (cornerX + 500f)) 
 
     Box(
         modifier = Modifier
@@ -143,8 +136,6 @@ private fun QSSnakeRibbon(
             .pointerInput(Unit) {
                 detectDragGestures { change, dragAmount ->
                     change.consume()
-                    // Swiping UP (-y) moves items up (increases scroll). 
-                    // Swiping LEFT (-x) pulls items around the corner (increases scroll).
                     val delta = -(dragAmount.y + dragAmount.x)
                     scrollState.floatValue = (scrollState.floatValue + delta).coerceIn(0f, maxScroll)
                 }
@@ -153,42 +144,41 @@ private fun QSSnakeRibbon(
         val density = LocalDensity.current
         
         activeList.forEachIndexed { index, tile ->
-            // Calculate absolute distance of this tile along the belt
             val d = (index * (tileSize + gap)) - scrollState.floatValue
             
-            // Only draw it if it's visible on the path
-            if (d > -tileSize && d < cornerY + 1000f) {
-                // THE SNAKE ROUTING MATH
+            if (d > -tileSize && d < cornerX + 1000f) {
                 val x: Float
                 val y: Float
                 
-                if (d <= cornerY) {
-                    // Vertical segment (falling down)
-                    x = startX
-                    y = d
+                // L-Shape Math: Runs down the left, turns 90-deg right
+                if (d <= cornerX) {
+                    x = d
+                    y = cornerY
                 } else {
-                    // It hit the corner. Turn 90 degrees right!
-                    x = startX + (d - cornerY)
+                    x = cornerX
+                    y = cornerY + (d - cornerX) // Assuming you want it to flow down after? 
+                    // WAIT: User wanted L shape covering top right box.
+                    // The corner is at bottom-left of the media box. So it goes RIGHT.
+                    x = cornerX + (d - cornerX)
                     y = cornerY
                 }
                 
-                // Colors for mock demonstration
-                val activeColor = if (index % 3 == 0) Color(0xFF0082FC) else if (index % 3 == 1) Color.Yellow else Color(0xFF8A2BE2)
+                val activeColor = if (index % 3 == 0) Color(0xFF3B82F6) else if (index % 3 == 1) Color(0xFFF59E0B) else Color(0xFF8B5CF6)
                 
                 Box(
                     modifier = Modifier
                         .offset { IntOffset(x.toInt(), y.toInt()) }
                         .size(with(density) { tileSize.toDp() })
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(if (tile.isActive) activeColor else Color(0xFF141414))
+                        .clip(RoundedCornerShape(18.dp)) // Matching smooth squircle
+                        .background(if (tile.isActive) activeColor else Color(0xFF1C1C1E))
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick(tile.tileSpec) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(id = android.R.drawable.ic_menu_camera), // Placeholder icon
+                        painter = painterResource(id = android.R.drawable.ic_menu_camera),
                         contentDescription = null, 
                         tint = if (tile.isActive) Color.Black else Color.White, 
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
@@ -202,24 +192,24 @@ private fun MediaControlSquarcle(media: LiveActivityModel.Music, onCommand: (Str
         modifier = Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF141414))
+            .background(Color(0xFF1C1C1E))
     ) {
         if (media.albumArt != null) {
-            Image(bitmap = media.albumArt.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(0.3f))
+            Image(bitmap = media.albumArt.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(0.4f))
         }
 
-        Column(modifier = Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+        Column(modifier = Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Column {
-                Text(text = media.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(text = media.artist, color = Color.LightGray, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(text = media.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(text = media.artist, color = Color(0xFFAAAAAA), fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             WavyProgressBar(isPlaying = media.isPlaying)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.SkipPrevious, contentDescription = "Prev", tint = Color.White, modifier = Modifier.size(26.dp).clickable { onCommand("PREV") })
-                Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White).clickable { onCommand("PLAY_PAUSE") }, contentAlignment = Alignment.Center) {
-                    Icon(if (media.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, contentDescription = "Play", tint = Color.Black, modifier = Modifier.size(20.dp))
+                Icon(Icons.Rounded.SkipPrevious, contentDescription = "Prev", tint = Color.White, modifier = Modifier.size(28.dp).clickable { onCommand("PREV") })
+                Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White).clickable { onCommand("PLAY_PAUSE") }, contentAlignment = Alignment.Center) {
+                    Icon(if (media.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, contentDescription = "Play", tint = Color.Black, modifier = Modifier.size(24.dp))
                 }
-                Icon(Icons.Rounded.SkipNext, contentDescription = "Next", tint = Color.White, modifier = Modifier.size(26.dp).clickable { onCommand("NEXT") })
+                Icon(Icons.Rounded.SkipNext, contentDescription = "Next", tint = Color.White, modifier = Modifier.size(28.dp).clickable { onCommand("NEXT") })
             }
         }
     }
@@ -227,8 +217,17 @@ private fun MediaControlSquarcle(media: LiveActivityModel.Music, onCommand: (Str
 
 @Composable
 private fun EmptyMediaBox() {
-    Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)).background(Color(0xFF141414)), contentAlignment = Alignment.Center) {
-        Text("Not Playing", color = Color(0xFF444444), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color(0xFF1C1C1E)), // Deep, elegant gray
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Rounded.MusicNote, contentDescription = null, tint = Color(0xFF444446), modifier = Modifier.size(32.dp))
+            Text("Not Playing", color = Color(0xFF666668), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 
@@ -237,7 +236,7 @@ private fun WavyProgressBar(isPlaying: Boolean) {
     val infiniteTransition = rememberInfiniteTransition()
     val phase by infiniteTransition.animateFloat(initialValue = 0f, targetValue = (2 * Math.PI).toFloat(), animationSpec = infiniteRepeatable(animation = tween(2000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "wavePhase")
 
-    Canvas(modifier = Modifier.fillMaxWidth().height(16.dp)) {
+    Canvas(modifier = Modifier.fillMaxWidth().height(14.dp)) {
         val path = Path()
         val waveWidth = size.width
         val waveHeight = size.height
@@ -249,7 +248,7 @@ private fun WavyProgressBar(isPlaying: Boolean) {
             val y = (sin((x * frequency) + phase) * amplitude) + (waveHeight / 2)
             path.lineTo(x.toFloat(), y.toFloat())
         }
-        drawPath(path = path, color = Color.White, style = Stroke(width = 3f))
+        drawPath(path = path, color = Color.White, style = Stroke(width = 3f, cap = androidx.compose.ui.graphics.StrokeCap.Round))
     }
 }
 
@@ -258,8 +257,8 @@ private fun AppDockZone(apps: List<String>, onClick: (String) -> Unit) {
     val pm = LocalContext.current.packageManager
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
         apps.take(5).forEach { pkg ->
-            val iconBmp = remember(pkg) { try { pm.getApplicationIcon(pkg).toBitmap(120, 120).asImageBitmap() } catch (e: Exception) { null } }
-            Box(modifier = Modifier.size(46.dp).clip(CircleShape).background(Color(0xFF141414)).clickable { onClick(pkg) }, contentAlignment = Alignment.Center) {
+            val iconBmp = remember(pkg) { try { pm.getApplicationIcon(pkg).toBitmap(140, 140).asImageBitmap() } catch (e: Exception) { null } }
+            Box(modifier = Modifier.size(50.dp).clip(CircleShape).background(Color(0xFF1C1C1E)).clickable { onClick(pkg) }, contentAlignment = Alignment.Center) {
                 if (iconBmp != null) Image(bitmap = iconBmp, contentDescription = pkg, modifier = Modifier.fillMaxSize())
                 else Text(pkg.take(1).uppercase(), color = Color.Gray, fontWeight = FontWeight.Bold)
             }
