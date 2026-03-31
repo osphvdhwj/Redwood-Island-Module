@@ -76,13 +76,14 @@ object IslandPriorityEngine {
             if (currentVisualState == IslandState.TYPE_3_MAX && !userForceCollapsed) {
                 _islandState.value = IslandState.TYPE_3_MAX
             } else if (currentMedia.isPlaying && !userForceCollapsed) {
-                _islandState.value = IslandState.TYPE_1_MINI
+                // 🚀 FIXED: Now uses the MID state for active music!
+                _islandState.value = IslandState.TYPE_2_MID 
             } else {
                 _islandState.value = IslandState.TYPE_0_RING
             }
             return userForceCollapsed
         }
-
+        
         // 8. 📱 GAMING (Portrait) 
         // If they are gaming in portrait mode, hide the idle ring so it's not distracting
         if (isGaming) {
