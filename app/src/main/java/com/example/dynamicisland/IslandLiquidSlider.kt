@@ -1,5 +1,6 @@
 package com.example.dynamicisland
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -7,6 +8,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,7 +19,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun VerticalLiquidSlider(
@@ -29,27 +33,25 @@ fun VerticalLiquidSlider(
     val haptic = LocalHapticFeedback.current
     var isDragging by remember { mutableStateOf(false) }
     
-    // Scale down the whole slider slightly when pressed (Physical squish effect)
     val pressScale by animateFloatAsState(
-        targetValue = if (isDragging) 0.92f else 1f, 
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+        targetValue = if (isDragging) 0.94f else 1f, 
+        animationSpec = spring(dampingRatio = 0.5f, stiffness = 500f),
         label = "pressScale"
     )
 
-    // Smooth fill animation
     val animatedFill by animateFloatAsState(
         targetValue = value / 100f,
-        animationSpec = spring(dampingRatio = 0.9f, stiffness = 400f),
+        animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
         label = "fill"
     )
 
     Box(
         modifier = Modifier
             .fillMaxHeight()
-            .width(64.dp) // Thick, chunky iOS style
+            .width(52.dp) // Sleek, slightly narrower
             .scale(pressScale)
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xFF1A1A1A)) // Dark void background
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF141414)) // Deep void
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown()
@@ -59,7 +61,6 @@ fun VerticalLiquidSlider(
                     val sliderHeight = size.height.toFloat()
                     var touchY = down.position.y
                     
-                    // Invert Y: 0 is top (100%), height is bottom (0%)
                     val newPct = (1f - (touchY / sliderHeight)).coerceIn(0f, 1f)
                     onValueChange(newPct * 100f)
 
@@ -80,7 +81,7 @@ fun VerticalLiquidSlider(
             },
         contentAlignment = Alignment.BottomCenter
     ) {
-        // The expanding liquid fill
+        // Liquid Fill
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -88,14 +89,24 @@ fun VerticalLiquidSlider(
                 .background(activeColor)
         )
         
-        // The hardware icon (always at the bottom)
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            tint = if (animatedFill > 0.15f) Color.Black else Color.Gray,
-            modifier = Modifier
-                .padding(bottom = 16.dp)
-                .size(24.dp)
-        )
+        // Smart Overlay: Crossfades Icon <-> Number
+        Box(modifier = Modifier.padding(bottom = 12.dp)) {
+            Crossfade(targetState = isDragging, animationSpec = tween(150), label = "slider_overlay") { dragging ->
+                if (dragging) {
+                    Text(
+                        text = "${value.toInt()}", 
+                        color = if (animatedFill > 0.15f) Color.Black else Color.White,
+                        fontSize = 14.sp, fontWeight = FontWeight.Bold
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = null,
+                        tint = if (animatedFill > 0.15f) Color.Black else Color.Gray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
     }
 }
