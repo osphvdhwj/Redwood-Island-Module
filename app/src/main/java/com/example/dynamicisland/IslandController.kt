@@ -389,16 +389,26 @@ class IslandController(private val context: Context) {
                         userForceCollapsed = false
                         when (_islandState.value) {
                             IslandState.TYPE_0_RING -> { 
-                                if (currentMedia != null) _islandState.value = IslandState.TYPE_1_MINI 
-                                else { _activeModel.value = LiveActivityModel.Dashboard(); _islandState.value = IslandState.TYPE_3_MAX }
+                                // 🚀 FIXED: Ring expands to MusicMid (if playing) or DashboardMax
+                                if (currentMedia != null) {
+                                    _islandState.value = IslandState.TYPE_2_MID 
+                                } else { 
+                                    _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
+                                    _islandState.value = IslandState.TYPE_3_MAX 
+                                }
                             }
                             IslandState.TYPE_1_MINI -> {
-                                if (currentMedia?.isPlaying == false) { _activeModel.value = LiveActivityModel.Dashboard(); _islandState.value = IslandState.TYPE_3_MAX } 
-                                else { _islandState.value = IslandState.TYPE_2_MID }
+                                _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
+                                _islandState.value = IslandState.TYPE_3_MAX
                             }
-                            IslandState.TYPE_2_MID, IslandState.TYPE_SPLIT -> _islandState.value = IslandState.TYPE_3_MAX
+                            IslandState.TYPE_2_MID, IslandState.TYPE_SPLIT -> {
+                                // 🚀 FIXED: Tapping MusicMid instantly opens DashboardMax!
+                                _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
+                                _islandState.value = IslandState.TYPE_3_MAX
+                            }
                             else -> {}
                         }
+                        evaluatePriority()
                     }
                     "VOLUME_UP" -> audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
                     "VOLUME_DOWN" -> audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
