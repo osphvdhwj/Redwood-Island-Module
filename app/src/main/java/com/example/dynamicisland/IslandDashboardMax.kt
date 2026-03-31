@@ -150,17 +150,13 @@ private fun QSSnakeRibbon(
                 val x: Float
                 val y: Float
                 
-                // L-Shape Math: Runs down the left, turns 90-deg right
+                // 🚀 FIXED: Clean L-Shape Math without double-assignments
                 if (d <= cornerX) {
                     x = d
                     y = cornerY
                 } else {
                     x = cornerX
-                    y = cornerY + (d - cornerX) // Assuming you want it to flow down after? 
-                    // WAIT: User wanted L shape covering top right box.
-                    // The corner is at bottom-left of the media box. So it goes RIGHT.
-                    x = cornerX + (d - cornerX)
-                    y = cornerY
+                    y = cornerY - (d - cornerX) // Flows UP the right side of the media box
                 }
                 
                 val activeColor = if (index % 3 == 0) Color(0xFF3B82F6) else if (index % 3 == 1) Color(0xFFF59E0B) else Color(0xFF8B5CF6)
@@ -169,7 +165,7 @@ private fun QSSnakeRibbon(
                     modifier = Modifier
                         .offset { IntOffset(x.toInt(), y.toInt()) }
                         .size(with(density) { tileSize.toDp() })
-                        .clip(RoundedCornerShape(18.dp)) // Matching smooth squircle
+                        .clip(RoundedCornerShape(18.dp)) 
                         .background(if (tile.isActive) activeColor else Color(0xFF1C1C1E))
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick(tile.tileSpec) },
                     contentAlignment = Alignment.Center
