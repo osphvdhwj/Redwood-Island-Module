@@ -34,24 +34,24 @@ fun VerticalLiquidSlider(
     var isDragging by remember { mutableStateOf(false) }
     
     val pressScale by animateFloatAsState(
-        targetValue = if (isDragging) 0.94f else 1f, 
-        animationSpec = spring(dampingRatio = 0.5f, stiffness = 500f),
+        targetValue = if (isDragging) 0.95f else 1f, 
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
         label = "pressScale"
     )
 
     val animatedFill by animateFloatAsState(
         targetValue = value / 100f,
-        animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
+        animationSpec = spring(dampingRatio = 0.9f, stiffness = 500f),
         label = "fill"
     )
 
     Box(
         modifier = Modifier
             .fillMaxHeight()
-            .width(52.dp) // Sleek, slightly narrower
+            .width(46.dp) // Sleeker, narrower profile
             .scale(pressScale)
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color(0xFF141414)) // Deep void
+            .clip(RoundedCornerShape(16.dp)) // Tighter Apple-style squircle
+            .background(Color(0xFF1C1C1E)) // Premium dark mode surface
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown()
@@ -81,28 +81,28 @@ fun VerticalLiquidSlider(
             },
         contentAlignment = Alignment.BottomCenter
     ) {
-        // Liquid Fill
+        // The liquid rising fill
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(animatedFill)
+                .fillMaxHeight(animatedFill.coerceAtLeast(0.01f))
                 .background(activeColor)
         )
         
-        // Smart Overlay: Crossfades Icon <-> Number
+        // Icon / Number Crossfade
         Box(modifier = Modifier.padding(bottom = 12.dp)) {
-            Crossfade(targetState = isDragging, animationSpec = tween(150), label = "slider_overlay") { dragging ->
+            Crossfade(targetState = isDragging, animationSpec = tween(150), label = "overlay") { dragging ->
                 if (dragging) {
                     Text(
                         text = "${value.toInt()}", 
-                        color = if (animatedFill > 0.15f) Color.Black else Color.White,
-                        fontSize = 14.sp, fontWeight = FontWeight.Bold
+                        color = if (animatedFill > 0.2f) Color.Black else Color.White,
+                        fontSize = 13.sp, fontWeight = FontWeight.ExtraBold
                     )
                 } else {
                     Icon(
                         painter = painterResource(id = iconRes),
                         contentDescription = null,
-                        tint = if (animatedFill > 0.15f) Color.Black else Color.Gray,
+                        tint = if (animatedFill > 0.2f) Color.Black else Color.Gray,
                         modifier = Modifier.size(20.dp)
                     )
                 }
