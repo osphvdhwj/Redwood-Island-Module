@@ -8,6 +8,16 @@ import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XC_MethodReplacement
+package com.example.dynamicisland
+
+import android.app.Application
+import android.content.Context
+import android.view.WindowManager
+import android.os.UserHandle
+import de.robv.android.xposed.IXposedHookLoadPackage
+import de.robv.android.xposed.IXposedHookZygoteInit
+import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XC_MethodReplacement
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
@@ -30,13 +40,11 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
-        // 🚀 BACKEND: SYSTEM FRAMEWORK
         if (lpparam.packageName == "android") {
             SystemEventsHook.apply(lpparam, USER_ALL)
             FrameworkTelecomHook.apply(lpparam, USER_ALL)
             FrameworkHardwareHook.apply(lpparam, USER_ALL)
 
-            // 🔗 UNIVERSAL MEDIA LINK SWITCHER
             try {
                 IslandHookEngine.hookMethodSafe(
                     "android.app.Instrumentation", lpparam.classLoader, "execStartActivity",
@@ -64,7 +72,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             } catch (e: Throwable) {}
         }
 
-        // 🚀 SHARE SHEET ASSASSIN & REDIRECTOR (Android 10 through 14+)
         if (lpparam.packageName == "android" || lpparam.packageName == "com.android.intentresolver") {
             try {
                 val chooserClass = XposedHelpers.findClassIfExists("com.android.intentresolver.ChooserActivity", lpparam.classLoader)
@@ -93,11 +100,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             } catch (e: Throwable) {}
         }
 
-        // 🎨 FRONTEND: SYSTEM UI
         if (lpparam.packageName == "com.android.systemui") {
             SystemUIHardwareHook.apply(lpparam)
             
-            // 🔪 ASSASSINATE THE NATIVE CLIPBOARD OVERLAY
             try {
                 val clipboardListenerClass = XposedHelpers.findClassIfExists("com.android.systemui.clipboardoverlay.ClipboardListener", lpparam.classLoader)
                 if (clipboardListenerClass != null) {
@@ -110,7 +115,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 }
             } catch (e: Throwable) {}
 
-            // 📸 THE SCREENSHOT ASSASSIN
             try {
                 val screenshotControllerClass = XposedHelpers.findClassIfExists("com.android.systemui.screenshot.ScreenshotController", lpparam.classLoader)
                 if (screenshotControllerClass != null) {
@@ -155,14 +159,16 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             try {
                 val displayManager = systemUiContext.getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
                 val display = displayManager.getDisplay(android.view.Display.DEFAULT_DISPLAY)
-                val windowContext = systemUiContext.createWindowContext(display, 2024, null)
+                val windowContext = systemUiContext.createWindowContext(display, 2015, null)
                 val windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
                 
+                // 🚀 FIXED: 2015 (TYPE_STATUS_BAR_PANEL) & LAYOUT_INSET_DECOR guarantees overlap with the actual Status Bar space.
                 val layoutParams = WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, 2024,
+                    WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, 2015,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or 
+                    WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR,
                     android.graphics.PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
