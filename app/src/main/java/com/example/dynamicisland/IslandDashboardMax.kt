@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -51,33 +52,54 @@ fun IslandDashboardMax(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp) // Tight, premium spacing
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
         
-        // --- TOP AREA: Sliders & Media Box ---
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(200.dp)) {
+        // --- TOP AREA: Sliders, Media, and L-Ribbon ---
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(bottom = 16.dp)
+        ) {
             val density = LocalDensity.current
-            val gap = 8.dp
-            val sliderWidth = 46.dp
-            val qsSize = 58.dp
-            val topRowHeight = 120.dp
+            val maxWidthPx = with(density) { constraints.maxWidth.toFloat() }
             
-            // 1. Top Left: Twin Sliders (Very small gap)
-            Row(
-                modifier = Modifier.align(Alignment.TopStart).height(topRowHeight),
-                horizontalArrangement = Arrangement.spacedBy(6.dp) // Razor thin gap
+            val gap = 12.dp
+            val qsSize = 58.dp
+            
+            val mediaBoxWidth = 180.dp
+            val mediaBoxHeight = 140.dp
+            
+            val sliderBoxWidth = with(density) { (constraints.maxWidth.toDp() - mediaBoxWidth - gap - qsSize) }
+
+            // PART 2: Top Left - Sliders (Column)
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .width(sliderBoxWidth)
+                    .height(mediaBoxHeight),
+                verticalArrangement = Arrangement.spacedBy(gap)
             ) {
-                VerticalLiquidSlider(value = 75f, iconRes = android.R.drawable.ic_menu_day, activeColor = Color(0xFFFACC15)) { onSliderDrag("BRIGHT", it) }
-                VerticalLiquidSlider(value = 50f, iconRes = android.R.drawable.ic_lock_silent_mode_off, activeColor = Color(0xFF06B6D4)) { onSliderDrag("VOL", it) }
+                HorizontalLiquidSlider(
+                    value = 75f, 
+                    icon = Icons.Rounded.BrightnessMedium, 
+                    activeColor = Color(0xFFFACC15)
+                ) { onSliderDrag("BRIGHT", it) }
+                
+                HorizontalLiquidSlider(
+                    value = 50f, 
+                    icon = Icons.Rounded.VolumeUp, 
+                    activeColor = Color(0xFF06B6D4)
+                ) { onSliderDrag("VOL", it) }
             }
 
-            // 2. Top Right: Media Box
-            val mediaBoxWidth = with(density) { constraints.maxWidth.toDp() - (sliderWidth * 2) - gap - 6.dp }
+            // PART 4: Top Right - Media Box 
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .width(mediaBoxWidth)
-                    .height(topRowHeight)
+                    .height(mediaBoxHeight)
             ) {
                 if (currentMedia != null) {
                     MediaControlSquarcle(currentMedia, onMediaCommand)
@@ -86,15 +108,14 @@ fun IslandDashboardMax(
                 }
             }
 
-            // 3. The Custom Snake Ribbon (L-Shape)
-            // Starts directly beneath the sliders, wraps horizontally beneath the media box
-            val snakeStartX = 0f
-            val cornerY = with(density) { topRowHeight.toPx() + gap.toPx() }
-            val snakeCornerX = with(density) { (sliderWidth * 2 + 6.dp + gap).toPx() }
+            // PART 3: The Custom L-Shaped QS Ribbon
+            // Calculates path to flow underneath sliders & media, and then up the left side of the media box
+            val cornerX = maxWidthPx - with(density) { mediaBoxWidth.toPx() } - with(density) { qsSize.toPx() } - with(density) { gap.toPx() }
+            val cornerY = with(density) { mediaBoxHeight.toPx() } + with(density) { gap.toPx() }
 
             QSSnakeRibbon(
                 tiles = dashboardModel.activeTiles,
-                cornerX = snakeCornerX,
+                cornerX = cornerX,
                 cornerY = cornerY,
                 tileSize = with(density) { qsSize.toPx() },
                 gap = with(density) { gap.toPx() },
@@ -102,12 +123,12 @@ fun IslandDashboardMax(
             )
         }
 
-        Spacer(modifier = Modifier.weight(1f))
-
-        // --- BOTTOM ROW: App Dock ---
-        Column(modifier = Modifier.fillMaxWidth()) {
-            // Sleek horizontal separator
-            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF2C2C2E)))
+        // --- PART 1: BOTTOM ROW: App Dock ---
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.Bottom
+        ) {
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF2C2C2E))) // Divider
             Spacer(modifier = Modifier.height(12.dp))
             AppDockZone(
                 apps = dashboardModel.pinnedApps.ifEmpty { listOf("com.android.settings", "com.android.chrome", "com.google.android.youtube", "com.google.android.dialer") }, 
@@ -126,7 +147,12 @@ private fun QSSnakeRibbon(
     gap: Float,
     onClick: (String) -> Unit
 ) {
-    val activeList = if (tiles.size > 8) tiles else List(12) { i -> QSTileState("QS_$i", "Tile", i % 2 == 0, false) }
+    // Generate fallback tiles if not enough are active to demonstrate the ribbon effect
+    val activeList = if (tiles.isNotEmpty()) tiles else List(12) { i -> 
+        val specs = listOf("wifi", "bt", "dnd", "flashlight", "airplane", "location", "battery", "hotspot")
+        QSTileState(specs[i % specs.size], "Tile", i % 2 == 0, false) 
+    }
+    
     val scrollState = remember { mutableFloatStateOf(0f) }
     val maxScroll = max(0f, (activeList.size * (tileSize + gap)) - (cornerX + 500f)) 
 
@@ -136,6 +162,7 @@ private fun QSSnakeRibbon(
             .pointerInput(Unit) {
                 detectDragGestures { change, dragAmount ->
                     change.consume()
+                    // Both X and Y dragging apply to the shared ribbon pull effect
                     val delta = -(dragAmount.y + dragAmount.x)
                     scrollState.floatValue = (scrollState.floatValue + delta).coerceIn(0f, maxScroll)
                 }
@@ -144,19 +171,23 @@ private fun QSSnakeRibbon(
         val density = LocalDensity.current
         
         activeList.forEachIndexed { index, tile ->
+            // Current position of this specific tile along the unbent ribbon
             val d = (index * (tileSize + gap)) - scrollState.floatValue
             
+            // Only draw if within bounds
             if (d > -tileSize && d < cornerX + 1000f) {
                 val x: Float
                 val y: Float
                 
-                // 🚀 FIXED: Clean L-Shape Math without double-assignments
+                // Determine layout on the L-Shape
                 if (d <= cornerX) {
+                    // Segment 1: Horizontal part (Moves left to right)
                     x = d
                     y = cornerY
                 } else {
+                    // Segment 2: Vertical part (Hits the corner and moves UP)
                     x = cornerX
-                    y = cornerY - (d - cornerX) // Flows UP the right side of the media box
+                    y = cornerY - (d - cornerX) 
                 }
                 
                 val activeColor = if (index % 3 == 0) Color(0xFF3B82F6) else if (index % 3 == 1) Color(0xFFF59E0B) else Color(0xFF8B5CF6)
@@ -170,15 +201,77 @@ private fun QSSnakeRibbon(
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick(tile.tileSpec) },
                     contentAlignment = Alignment.Center
                 ) {
+                    // Dynamic Icons for "All Icons" requirement
                     Icon(
-                        painter = painterResource(id = android.R.drawable.ic_menu_camera),
-                        contentDescription = null, 
+                        imageVector = getQSIcon(tile.tileSpec),
+                        contentDescription = tile.label, 
                         tint = if (tile.isActive) Color.Black else Color.White, 
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
         }
+    }
+}
+
+// Maps System Tile Specs to actual Icons rather than just repeating one stock icon
+@Composable
+private fun getQSIcon(spec: String): ImageVector {
+    return when (spec.lowercase()) {
+        "wifi" -> Icons.Rounded.Wifi
+        "bt", "bluetooth" -> Icons.Rounded.Bluetooth
+        "cell", "mobile" -> Icons.Rounded.Phone
+        "dnd" -> Icons.Rounded.DoNotDisturbOn
+        "flashlight", "torch" -> Icons.Rounded.FlashlightOn
+        "airplane" -> Icons.Rounded.AirplanemodeActive
+        "location" -> Icons.Rounded.LocationOn
+        "battery" -> Icons.Rounded.BatteryFull
+        "rotation" -> Icons.Rounded.ScreenRotation
+        "hotspot" -> Icons.Rounded.WifiTethering
+        else -> Icons.Rounded.Settings
+    }
+}
+
+@Composable
+private fun HorizontalLiquidSlider(
+    value: Float,
+    icon: ImageVector,
+    activeColor: Color,
+    onDrag: (Float) -> Unit
+) {
+    var sliderValue by remember { mutableFloatStateOf(value) }
+    
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(58.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color(0xFF1C1C1E))
+            .pointerInput(Unit) {
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+                    val width = size.width.toFloat()
+                    val delta = (dragAmount.x / width) * 100f
+                    sliderValue = (sliderValue + delta).coerceIn(0f, 100f)
+                    onDrag(sliderValue)
+                }
+            },
+        contentAlignment = Alignment.CenterStart
+    ) {
+        // Active Fill Bar
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(sliderValue / 100f)
+                .background(activeColor)
+        )
+        // Leading Icon
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (sliderValue > 15f) Color.Black else Color.White,
+            modifier = Modifier.padding(start = 16.dp).size(24.dp)
+        )
     }
 }
 
@@ -217,7 +310,7 @@ private fun EmptyMediaBox() {
         modifier = Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF1C1C1E)), // Deep, elegant gray
+            .background(Color(0xFF1C1C1E)),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
