@@ -8,16 +8,6 @@ import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XC_MethodReplacement
-package com.example.dynamicisland
-
-import android.app.Application
-import android.content.Context
-import android.view.WindowManager
-import android.os.UserHandle
-import de.robv.android.xposed.IXposedHookLoadPackage
-import de.robv.android.xposed.IXposedHookZygoteInit
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XC_MethodReplacement
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
@@ -162,7 +152,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 val windowContext = systemUiContext.createWindowContext(display, 2015, null)
                 val windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
                 
-                // 🚀 FIXED: 2015 (TYPE_STATUS_BAR_PANEL) & LAYOUT_INSET_DECOR guarantees overlap with the actual Status Bar space.
+                // 2015 (TYPE_STATUS_BAR_PANEL) & LAYOUT_INSET_DECOR guarantees overlap with the actual Status Bar space.
                 val layoutParams = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, 2015,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
