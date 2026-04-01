@@ -50,7 +50,6 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
          val progressColor = baseColor.copy(alpha = pulseAlpha)
 
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            // Remove `.align(Alignment.Center)` from the Canvas modifier
             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp)) {
                 val strokeW = ringThickness.value.dp.toPx() 
                 val inset = strokeW / 2
@@ -67,14 +66,17 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
                 val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
                 val radius = (size.width - strokeW) / 2
             
-                drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(center.x, center.y - radius - markerLength/2), end = androidx.compose.ui.geometry.Offset(center.x, center.y - radius + markerLength/2), strokeWidth = 4f)
+                // 🚀 FIXED: Dynamic stroke thickness (2.5 DP -> PX) so it survives DPI manipulation smoothly
+                val markerStrokeThickness = 2.5.dp.toPx()
+                
+                drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(center.x, center.y - radius - markerLength/2), end = androidx.compose.ui.geometry.Offset(center.x, center.y - radius + markerLength/2), strokeWidth = markerStrokeThickness)
              
                 val angleRad = Math.toRadians((-90f + 360f * progressPercent).toDouble())
                 val mStartX = center.x + (radius - markerLength/2) * Math.cos(angleRad).toFloat()
                 val mStartY = center.y + (radius - markerLength/2) * Math.sin(angleRad).toFloat()
                 val mEndX = center.x + (radius + markerLength/2) * Math.cos(angleRad).toFloat()
                 val mEndY = center.y + (radius + markerLength/2) * Math.sin(angleRad).toFloat()
-                drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(mStartX, mStartY), end = androidx.compose.ui.geometry.Offset(mEndX, mEndY), strokeWidth = 4f)
+                drawLine(color = Color.White, start = androidx.compose.ui.geometry.Offset(mStartX, mStartY), end = androidx.compose.ui.geometry.Offset(mEndX, mEndY), strokeWidth = markerStrokeThickness)
             }
         }
     }
