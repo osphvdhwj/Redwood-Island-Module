@@ -201,7 +201,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         
-        // 🧹 Trigger the kill switch safely via the direct reference
         controller?.destroy()
         
         lifecycleRegistry.currentState = androidx.lifecycle.Lifecycle.State.DESTROYED
@@ -224,15 +223,15 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         BatteryPlugin.stop(context)
         context.sendBroadcast(android.content.Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui"))
     }
+
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration?) {
         super.onConfigurationChanged(newConfig)
         
-        // 🚀 FIXED: Ensure Cutouts & Scale remeasure properly when you toggle DPI in Developer Settings
+        // Ensure Cutouts & Scale remeasure properly when you toggle DPI in Developer Settings
         val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { 
             windowManager?.currentWindowMetrics?.windowInsets?.displayCutout 
         } else null
         
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
     }
-}
 }
