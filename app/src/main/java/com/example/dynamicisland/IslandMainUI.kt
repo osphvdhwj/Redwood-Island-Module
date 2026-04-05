@@ -149,30 +149,45 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                     awaitEachGesture { awaitFirstDown(pass = PointerEventPass.Initial); isSquished = true; waitForUpOrCancellation(pass = PointerEventPass.Initial); isSquished = false }
                 }
                 .pointerInput(state) {
-                    detectTapGestures(
-                        onTap = { 
-                            if (state != IslandState.TYPE_3_MAX) { 
+                    // 🚀 FIX: Do not steal taps if the Dashboard is open!
+                    if (state != IslandState.TYPE_3_MAX) {
+                        detectTapGestures(
+                            onTap = { 
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) ?: run { onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) }
-                            } 
-                        },
-                        onDoubleTap = { if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) } },
-                        onLongPress = { if (state != IslandState.TYPE_3_MAX) { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onGestureEvent?.invoke(IslandGesture.LONG_PRESS) } }
-                    )
+                                onGestureEvent?.invoke(IslandGesture.SINGLE_TAP)
+                            },
+                            onDoubleTap = { 
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) 
+                            },
+                            onLongPress = { 
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onGestureEvent?.invoke(IslandGesture.LONG_PRESS) 
+                            }
+                        )
+                    }
                 }
                 .pointerInput(state) {
-                    var dragOffsetX = 0f; var dragOffsetY = 0f 
-                    detectDragGestures(
-                        onDragEnd = {
-                            if (abs(dragOffsetX) > abs(dragOffsetY)) {
-                                if (dragOffsetX > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT) else if (dragOffsetX < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
-                            } else {
-                                if (dragOffsetY > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN) else if (dragOffsetY < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
+                    // 🚀 FIX: Do not steal drags/swipes if the Dashboard is open!
+                    if (state != IslandState.TYPE_3_MAX) {
+                        var dragOffsetX = 0f; var dragOffsetY = 0f 
+                        detectDragGestures(
+                            onDragEnd = {
+                                if (abs(dragOffsetX) > abs(dragOffsetY)) {
+                                    if (dragOffsetX > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT) 
+                                    else if (dragOffsetX < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
+                                } else {
+                                    if (dragOffsetY > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN) 
+                                    else if (dragOffsetY < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
+                                }
+                                dragOffsetX = 0f; dragOffsetY = 0f
+                            },
+                            onDrag = { change, dragAmount -> 
+                                if (abs(dragAmount.x) > 5f || abs(dragAmount.y) > 5f) { change.consume() }
+                                dragOffsetX += dragAmount.x; dragOffsetY += dragAmount.y 
                             }
-                            dragOffsetX = 0f; dragOffsetY = 0f
-                        },
-                        onDrag = { change, dragAmount -> if (abs(dragAmount.x) > 5f || abs(dragAmount.y) > 5f) { change.consume() }; dragOffsetX += dragAmount.x; dragOffsetY += dragAmount.y }
-                    )
+                        )
+                    }
                 },
             contentAlignment = boxAlignment
         ) {
