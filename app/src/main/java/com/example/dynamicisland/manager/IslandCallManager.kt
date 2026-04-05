@@ -1,12 +1,12 @@
 package com.example.dynamicisland.manager
-import com.example.dynamicisland.model.*
-import com.example.dynamicisland.ui.DynamicIslandView
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
+import com.example.dynamicisland.model.*
+import com.example.dynamicisland.ui.DynamicIslandView
 
 class IslandCallManager(
     private val context: Context,
@@ -57,11 +57,13 @@ class IslandCallManager(
         try {
             val tm = context.getSystemService(Context.TELECOM_SERVICE) as android.telecom.TelecomManager
             tm.showInCallScreen(false) 
-            islandView?.setState(IslandState.TYPE_1_MINI
+            // 🚀 FIX: Correct syntax for Compose state variables
+            islandView?.islandState?.value = IslandState.TYPE_1_MINI
         } catch (e: Exception) {
             val intent = Intent(Intent.ACTION_DIAL).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
             context.startActivity(intent)
-            islandView?.setState(IslandState.TYPE_1_MINI
+            // 🚀 FIX: Correct syntax for Compose state variables
+            islandView?.islandState?.value = IslandState.TYPE_1_MINI
         }
     }
 

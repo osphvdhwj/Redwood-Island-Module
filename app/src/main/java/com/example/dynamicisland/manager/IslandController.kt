@@ -21,8 +21,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 import android.util.LruCache
-import com.example.dynamicisland.ui.DynamicIslandView
-import com.example.dynamicisland.model.*
+import com.example.dynamicisland.manager.IslandPriorityEngine
+import com.example.dynamicisland.manager.IslandNotificationManager
+import com.example.dynamicisland.manager.IslandConnectivityManager
+import com.example.dynamicisland.manager.IslandStorageManager
+import com.example.dynamicisland.manager.IslandClipboardManager
 
 class IslandController(private val context: Context) {
 
@@ -73,7 +76,7 @@ class IslandController(private val context: Context) {
             }
 
             _activeModel.value = progressModel
-            if (_islandState.value == IslandState.TYPE_0_RING _islandState.value = IslandState.TYPE_1_MINI
+            if (_islandState.value == IslandState.TYPE_0_RING) _islandState.value = IslandState.TYPE_1_MINI
             evaluatePriority()
         },
         onNavigationCaught = { navModel ->
@@ -116,7 +119,7 @@ class IslandController(private val context: Context) {
     private var windowManager: WindowManager? = null
     private var islandView: DynamicIslandView? = null
 
-    private val _islandState = MutableStateFlow(IslandState.TYPE_0_RING
+    private val _islandState = MutableStateFlow(IslandState.TYPE_0_RING)
     val islandState = _islandState.asStateFlow()
     private val _activeModel = MutableStateFlow<LiveActivityModel?>(null)
     val activeModel = _activeModel.asStateFlow()
@@ -402,14 +405,14 @@ class IslandController(private val context: Context) {
 
         scope.launch { 
             islandState.collect { state -> 
-                view.islandState.value = state) 
+                view.islandState.value = state
                 val isVisible = state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING
                 mediaManager.isIslandVisible = isVisible
-                hardwareMonitor.isDashboardOpen = state == IslandState.TYPE_3_MAX 
+                hardwareMonitor.isDashboardOpen = (state == IslandState.TYPE_3_MAX)
             } 
         }
-        scope.launch { activeModel.collect { model -> view.activeModel.value = model) } }
-        scope.launch { splitModel.collect { model -> view.splitModel.value = model) } }
+        scope.launch { activeModel.collect { model -> view.activeModel.value = model } }
+        scope.launch { splitModel.collect { model -> view.splitModel.value = model } }
         return view
     }
 
