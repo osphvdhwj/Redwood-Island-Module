@@ -51,14 +51,17 @@ fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.c
                 modifier = Modifier 
                     .size(animatedHeight) 
                     .onGloballyPositioned { coordinates ->
-                    val bounds = coordinates.boundsInWindow()
-                    splitCubeRect.set(
-                        bounds.left.toInt(),
-                        bounds.top.toInt(),
-                        bounds.right.toInt(),
-                        bounds.bottom.toInt()
-                    )
-                    insetsUpdateFlow.tryEmit(Unit)
+                        val bounds = coordinates.boundsInWindow()
+                        val newLeft = bounds.left.toInt()
+                        val newTop = bounds.top.toInt()
+                        val newRight = bounds.right.toInt()
+                        val newBottom = bounds.bottom.toInt()
+                    
+                        // 🧠 THE LOOP BREAKER: Protect the Split Cube
+                        if (splitCubeRect.left != newLeft || splitCubeRect.top != newTop || splitCubeRect.right != newRight || splitCubeRect.bottom != newBottom) {
+                            splitCubeRect.set(newLeft, newTop, newRight, newBottom)
+                            insetsUpdateFlow.tryEmit(Unit)
+                        }
                     }
                     .clip(CircleShape)
                     .background(splitBg)
