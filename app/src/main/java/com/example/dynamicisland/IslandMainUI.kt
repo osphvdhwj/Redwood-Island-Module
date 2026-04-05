@@ -57,7 +57,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     val touchScale by animateFloatAsState(targetValue = if (isSquished) 0.96f else 1f, animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "squish")
     
     val minSafeWidth = displayCutoutWidth.floatValue + 4f
-    
     val screenWidthDp = configuration.screenWidthDp.toFloat()
     val maxSafeWidth = (screenWidthDp - 16f).coerceAtLeast(minSafeWidth)
 
@@ -127,7 +126,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
             modifier = Modifier
                 .width(animatedWidth) 
                 .height(animatedHeight)
-                // 🚀 FIX: graphicsLayer comes BEFORE onGloballyPositioned so bounds match the scale!
+                // 🚀 FIX: graphicsLayer MUST be before onGloballyPositioned so touches map correctly!
                 .graphicsLayer { scaleX = touchScale * islandScale; scaleY = touchScale * islandScale; alpha = islandAlpha; transformOrigin = TransformOrigin(0.5f, 0.5f) }
                 .onGloballyPositioned { coordinates ->
                     val bounds = coordinates.boundsInWindow()
@@ -136,7 +135,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                     val newRight = bounds.right.toInt()
                     val newBottom = bounds.bottom.toInt()
                     
-                    // 🧠 THE LOOP BREAKER: Only update the system if the pixels physically changed!
+                    // 🧠 THE LOOP BREAKER: Only emit an update if the pixel boundary actually changed
                     if (mainPillRect.left != newLeft || mainPillRect.top != newTop || mainPillRect.right != newRight || mainPillRect.bottom != newBottom) {
                         mainPillRect.set(newLeft, newTop, newRight, newBottom)
                         insetsUpdateFlow.tryEmit(Unit)
