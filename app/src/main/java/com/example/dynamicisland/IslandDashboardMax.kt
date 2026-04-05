@@ -95,8 +95,8 @@ fun DynamicIslandView.IslandDashboardMax(
                 // The Elastic Pull Gesture
                 detectVerticalDragGestures(
                     onDragEnd = { overscrollDelta = 0f },
-                    onDrag = { _, dragAmount -> 
-                        if (dragAmount > 0) overscrollDelta += dragAmount 
+                    onVerticalDrag = { change, dragAmount -> 
+                        if (dragAmount > 0f) overscrollDelta += dragAmount 
                     }
                 )
             }
@@ -310,7 +310,7 @@ fun LiquidSlider(icon: ImageVector, value: Float, color: Color, onValueChange: (
                 .fillMaxSize()
                 .pointerInput(Unit) {
                     // Friction Sensing UX Logic
-                    detectVerticalDragGestures { _, dragAmount ->
+                    detectVerticalDragGestures { change, dragAmount ->
                         val isFast = abs(dragAmount) > 15f
                         val multiplier = if (isFast) 10f else 1f // Fast flick vs Precision drag
                         val delta = (dragAmount * multiplier * -0.1f) // Negative because up is negative Y
