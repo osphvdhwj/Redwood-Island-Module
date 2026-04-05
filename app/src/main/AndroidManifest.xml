@@ -46,7 +46,7 @@
             android:resource="@array/xposed_scope" />
 
         <activity
-            android:name=".ConfigActivity"
+            android:name=".ui.ConfigActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

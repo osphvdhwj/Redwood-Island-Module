@@ -20,6 +20,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
+import com.example.dynamicisland.manager.*
+import com.example.dynamicisland.model.*
+import com.example.dynamicisland.util.*
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @SuppressLint("ViewConstructor")
