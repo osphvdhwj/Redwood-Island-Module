@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -88,6 +89,68 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
             val icon = if (model.isPluggedIn) Icons.Default.Add else if (isLow) Icons.Default.Warning else Icons.Default.BatteryFull
             Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
             Text(text = "${model.level}%", color = color, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+        }
+    }
+}
+
+// 🚀 NEW: The Massive iOS-Style Charging Expansion
+@Composable
+fun DynamicIslandView.ChargingMax(charging: LiveActivityModel.Charging) {
+    val batteryColor = Color(0xFF00FF55)
+    val scaleAnim = remember { Animatable(0.5f) }
+    val alphaAnim = remember { Animatable(0f) }
+
+    LaunchedEffect(Unit) {
+        launch { scaleAnim.animateTo(1f, animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f)) }
+        launch { alphaAnim.animateTo(1f, animationSpec = tween(300)) }
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(30.dp)
+                .background(Brush.radialGradient(listOf(batteryColor.copy(alpha = 0.2f), Color.Transparent)))
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth().scale(scaleAnim.value),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.size(48.dp).background(batteryColor.copy(alpha = 0.2f), CircleShape).blur(12.dp))
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = "Charging",
+                    tint = batteryColor,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "${charging.level}%",
+                    color = Color.White,
+                    fontSize = 48.sp, 
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.graphicsLayer { alpha = alphaAnim.value }
+                )
+                Text(
+                    text = "Charging",
+                    color = batteryColor,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 1.sp
+                )
+            }
+
+            Box(modifier = Modifier.scale(1.3f)) { 
+                LiquidBatteryCanvas(level = charging.level, color = batteryColor, isCharging = true)
+            }
         }
     }
 }
