@@ -234,6 +234,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         try {
             if (insetsListenerProxy != null) {
                 val aliveObserver = if (viewTreeObserver.isAlive) viewTreeObserver else this.viewTreeObserver
+                // This is the line that was missing:
                 val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
                 aliveObserver.javaClass.getMethod("removeOnComputeInternalInsetsListener", listenerClass).invoke(aliveObserver, insetsListenerProxy)
             }
