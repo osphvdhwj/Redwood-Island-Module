@@ -1,4 +1,5 @@
 package com.example.dynamicisland.hook
+import com.example.dynamicisland.model.*
 
 import android.app.Notification
 import android.graphics.Color

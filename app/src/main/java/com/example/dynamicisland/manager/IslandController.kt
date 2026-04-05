@@ -1,4 +1,6 @@
 @file:Suppress("DEPRECATION")
+import com.example.dynamicisland.model.*
+import com.example.dynamicisland.ui.DynamicIslandView
 package com.example.dynamicisland.manager
 
 import android.content.BroadcastReceiver

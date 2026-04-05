@@ -1,4 +1,5 @@
 package com.example.dynamicisland.hook
+import com.example.dynamicisland.model.*
 
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge

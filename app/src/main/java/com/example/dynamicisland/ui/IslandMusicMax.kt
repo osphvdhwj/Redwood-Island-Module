@@ -1,4 +1,6 @@
 package com.example.dynamicisland.ui
+import com.example.dynamicisland.model.*
+import com.example.dynamicisland.manager.*
 
 import android.content.Context
 import androidx.compose.foundation.Image
