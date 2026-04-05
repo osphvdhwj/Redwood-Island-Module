@@ -18,7 +18,7 @@ import androidx.savedstate.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
@@ -127,26 +127,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         savedStateRegistryController.performRestore(Bundle())
         lifecycleRegistry.currentState = Lifecycle.State.RESUMED
 
-        // 🚀 RESTORED & SAFE: Android automatically handles lifecycle merging for observers attached in init.
-        try {
-            val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
-            insetsListenerProxy = java.lang.reflect.Proxy.newProxyInstance(listenerClass.classLoader, arrayOf(listenerClass)) { _, method, args ->
-                if (method.name == "onComputeInternalInsets") {
-                    val info = args[0]
-                    val touchableInsetsRegion = info.javaClass.getField("TOUCHABLE_INSETS_REGION").getInt(null)
-                    info.javaClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType).invoke(info, touchableInsetsRegion)
-                    val region = info.javaClass.getField("touchableRegion").get(info) as android.graphics.Region
-                    region.setEmpty()
-                    if (islandState.value != IslandState.HIDDEN) {
-                        if (!mainPillRect.isEmpty) region.op(mainPillRect, android.graphics.Region.Op.UNION)
-                        if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) region.op(splitCubeRect, android.graphics.Region.Op.UNION)
-                    }
-                }
-                null
-            }
-            viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListenerProxy)
-        } catch (e: Exception) {}
-
         composeView.setViewTreeLifecycleOwner(this@DynamicIslandView)
         composeView.setViewTreeViewModelStoreOwner(this@DynamicIslandView)
         composeView.setViewTreeSavedStateRegistryOwner(this@DynamicIslandView)
@@ -179,7 +159,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         
-        // 🚀 THE FIX: listenerClass is now properly scoped outside the 'if' block!
         try {
             val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
             
@@ -205,10 +184,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { windowManager?.currentWindowMetrics?.windowInsets?.displayCutout } else null
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
 
-        // 🚀 Zero-lag touch tracking. Safe to use because the Infinite Loop is broken!
+        // 🚀 Safe WindowManager update because the Infinite Loop is broken!
         flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
-            insetsUpdateFlow.collect { 
-                this@DynamicIslandView.requestLayout() 
+            insetsUpdateFlow.conflate().collect { 
+                windowParams?.let { wp ->
+                    try { windowManager?.updateViewLayout(this@DynamicIslandView, wp) } catch(e: Exception) {}
+                }
             }
         }
 
@@ -229,13 +210,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         super.onDetachedFromWindow()
         
         controller?.destroy()
-        
         lifecycleRegistry.currentState = androidx.lifecycle.Lifecycle.State.DESTROYED
         
         try {
             if (insetsListenerProxy != null) {
                 val aliveObserver = if (viewTreeObserver.isAlive) viewTreeObserver else this.viewTreeObserver
-                // This is the line that was missing:
                 val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
                 aliveObserver.javaClass.getMethod("removeOnComputeInternalInsetsListener", listenerClass).invoke(aliveObserver, insetsListenerProxy)
             }
@@ -254,11 +233,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration?) {
         super.onConfigurationChanged(newConfig)
-        
         val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { 
             windowManager?.currentWindowMetrics?.windowInsets?.displayCutout 
         } else null
-        
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
     }
 }
