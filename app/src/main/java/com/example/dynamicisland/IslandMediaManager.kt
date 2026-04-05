@@ -181,7 +181,8 @@ class IslandMediaManager(
                 tickerJob = scope.launch(Dispatchers.Main) { 
                     while (isActive) { 
                         activeMediaController?.playbackState?.let { state ->
-                            val timeDelta = System.currentTimeMillis() - state.lastPositionUpdateTime
+                            // 🚀 FIX: Use elapsedRealtime to match Android's Media framework!
+                            val timeDelta = android.os.SystemClock.elapsedRealtime() - state.lastPositionUpdateTime
                             val currentPos = (state.position + (timeDelta * state.playbackSpeed)).toLong()
                             onMediaTick(currentPos)
                         }
@@ -191,7 +192,7 @@ class IslandMediaManager(
             }
         } else stopTicker()
     }
-
+    
     private fun getScaledBitmap(bitmap: Bitmap?, maxDim: Int): Bitmap? {
         if (bitmap == null) return null
         val ratio = Math.min(maxDim.toFloat() / bitmap.width, maxDim.toFloat() / bitmap.height)
