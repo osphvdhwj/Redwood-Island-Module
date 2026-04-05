@@ -178,15 +178,36 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        
+        // 🚀 THE FIX: Attach to the REAL WindowManager observer, not the dummy one from init!
+        try {
+            if (insetsListenerProxy == null) {
+                val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
+                insetsListenerProxy = java.lang.reflect.Proxy.newProxyInstance(context.classLoader, arrayOf(listenerClass)) { _, method, args ->
+                    if (method.name == "onComputeInternalInsets") {
+                        val info = args[0]
+                        val touchableInsetsRegion = info.javaClass.getField("TOUCHABLE_INSETS_REGION").getInt(null)
+                        info.javaClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType).invoke(info, touchableInsetsRegion)
+                        val region = info.javaClass.getField("touchableRegion").get(info) as android.graphics.Region
+                        region.setEmpty()
+                        if (islandState.value != IslandState.HIDDEN) {
+                            if (!mainPillRect.isEmpty) region.op(mainPillRect, android.graphics.Region.Op.UNION)
+                            if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) region.op(splitCubeRect, android.graphics.Region.Op.UNION)
+                        }
+                    }
+                    null
+                }
+            }
+            viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListenerProxy)
+        } catch (e: Exception) {}
+
         val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { windowManager?.currentWindowMetrics?.windowInsets?.displayCutout } else null
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
 
-        // 🚀 THE FIX: A 50ms debounce prevents WindowManager crashes while guaranteeing the touch region applies perfectly!
+        // 🚀 THE FIX: Zero-lag touch tracking. Safe to use because the Infinite Loop is broken!
         flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
-            insetsUpdateFlow.debounce(50).collect { 
-                windowParams?.let { wp ->
-                    try { windowManager?.updateViewLayout(this@DynamicIslandView, wp) } catch(e: Exception) {}
-                }
+            insetsUpdateFlow.collect { 
+                this@DynamicIslandView.requestLayout() 
             }
         }
 
