@@ -1,8 +1,5 @@
 package com.example.dynamicisland.manager
-import com.example.dynamicisland.model.*
-import com.example.dynamicisland.ui.DynamicIslandView
 
-import android.content.Context
 import android.view.WindowManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import com.example.dynamicisland.model.*

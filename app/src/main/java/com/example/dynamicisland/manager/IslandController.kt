@@ -1,8 +1,5 @@
 package com.example.dynamicisland.manager
 
-import com.example.dynamicisland.model.*
-import com.example.dynamicisland.ui.DynamicIslandView
-import com.example.dynamicisland.hook.*
 
 import android.content.BroadcastReceiver
 import android.content.ComponentName
