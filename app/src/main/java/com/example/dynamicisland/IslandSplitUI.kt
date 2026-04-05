@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
+import androidx.compose.ui.layout.boundsInWindow
 
 @Composable
 fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.compose.ui.unit.Dp, borderColor: Color) {
@@ -50,19 +51,14 @@ fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.c
                 modifier = Modifier 
                     .size(animatedHeight) 
                     .onGloballyPositioned { coordinates ->
-                        // 🚀 THE FIX: Use Compose's native window bounds directly!
-                        val bounds = coordinates.boundsInWindow()
-        
-                        val globalLeft = bounds.left.toInt()
-                        val globalTop = bounds.top.toInt()
-                        val globalRight = bounds.right.toInt()
-                        val globalBottom = bounds.bottom.toInt()
-        
-                        // Retain your optimization threshold
-                        if (kotlin.math.abs(splitCubeRect.left - globalLeft) > 5 || splitCubeRect.isEmpty) {
-                            splitCubeRect.set(globalLeft, globalTop, globalRight, globalBottom)
-                            insetsUpdateFlow.tryEmit(Unit)
-                        }
+                    val bounds = coordinates.boundsInWindow()
+                    splitCubeRect.set(
+                        bounds.left.toInt(),
+                        bounds.top.toInt(),
+                        bounds.right.toInt(),
+                        bounds.bottom.toInt()
+                    )
+                    insetsUpdateFlow.tryEmit(Unit)
                     }
                     .clip(CircleShape)
                     .background(splitBg)
