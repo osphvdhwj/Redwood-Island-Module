@@ -1,6 +1,4 @@
 package com.example.dynamicisland.manager
-import com.example.dynamicisland.model.*
-import com.example.dynamicisland.ui.DynamicIslandView
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -8,13 +6,16 @@ import android.content.Intent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.robv.android.xposed.XSharedPreferences
+import com.example.dynamicisland.model.*
+import com.example.dynamicisland.ui.DynamicIslandView
 
 object IslandPreferencesManager {
 
     fun load(view: DynamicIslandView) {
         try {
             val pref = XSharedPreferences("com.example.dynamicisland", "island_prefs")
-            pref.makeWorldReadable(); pref.reload()
+            pref.makeWorldReadable()
+            pref.reload()
             
             // Layout Dimensions
             view.ringW.value = pref.getFloat("ring_w", 45f); view.ringH.value = pref.getFloat("ring_h", 45f); view.ringX.value = pref.getFloat("ring_x", 0f); view.ringY.value = pref.getFloat("ring_y", 48f)
@@ -28,7 +29,6 @@ object IslandPreferencesManager {
             view.expandUpwards.value = pref.getBoolean("expand_upwards", false)
             view.isCubeRotationEnabled.value = pref.getBoolean("rotate_cube", true)
 
-            // 🎛️ FIXED: Now actively loads ALL "Just for Show" Theme Settings on boot
             view.activeTheme.value = IslandTheme(
                 buttonSize = pref.getFloat("theme_button_size", 48f).dp,
                 buttonSpacing = pref.getFloat("theme_button_spacing", 16f).dp,
@@ -63,6 +63,13 @@ object IslandPreferencesManager {
         return object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
                 if (intent.action == "com.example.dynamicisland.RELOAD_PREFS") {
+                    
+                    // 🚀 FIX: Check if this intent actually carries live data. If not, it's just a file-reload ping.
+                    if (!intent.hasExtra("theme_button_size") && !intent.hasExtra("prefix")) {
+                        load(view)
+                        return
+                    }
+
                     val prefix = intent.getStringExtra("prefix")
                     if (prefix != null) {
                         val w = intent.getFloatExtra("w", 0f); val h = intent.getFloatExtra("h", 0f); val x = intent.getFloatExtra("x", 0f); val y = intent.getFloatExtra("y", 0f)
@@ -74,36 +81,39 @@ object IslandPreferencesManager {
                         for (i in 0..6) { val qs = intent.getStringExtra("qs_tile_$i"); if (qs != null) view.qsTiles[i] = qs } 
                     } 
 
-                    view.activeTheme.value = IslandTheme(
-                        buttonSize = intent.getFloatExtra("theme_button_size", 48f).dp,
-                        buttonSpacing = intent.getFloatExtra("theme_button_spacing", 16f).dp,
-                        buttonCornerRadius = intent.getFloatExtra("theme_button_radius", 50f).dp,
-                        actionAnimType = intent.getStringExtra("theme_anim_type") ?: "BOUNCE",
-                        cornerRadius = intent.getFloatExtra("theme_corner_radius", 50f).dp,
-                        textPrimary = intent.getFloatExtra("theme_text_primary", 16f).sp,
-                        textSecondary = intent.getFloatExtra("theme_text_secondary", 14f).sp,
-                        progressThick = intent.getFloatExtra("theme_progress_thick", 4f).dp,
-                        ringThick = intent.getFloatExtra("theme_ring_thick", 12f).dp,
-                        elementGap = intent.getFloatExtra("theme_element_gap", 8f).dp,
-                        musicTitleSize = intent.getFloatExtra("theme_music_title", 16f).sp,
-                        musicArtistSize = intent.getFloatExtra("theme_music_artist", 14f).sp,
-                        musicSeekerThick = intent.getFloatExtra("theme_music_seeker", 4f).dp,
-                        batTextSize = intent.getFloatExtra("theme_bat_text", 16f).sp,
-                        batIconSize = intent.getFloatExtra("theme_bat_icon", 36f).dp,
-                        batRingThick = intent.getFloatExtra("theme_bat_ring", 12f).dp,
-                        alertTitleSize = intent.getFloatExtra("theme_alert_title", 16f).sp,
-                        alertMsgSize = intent.getFloatExtra("theme_alert_msg", 14f).sp,
-                        hapticStrength = intent.getIntExtra("haptic_strength", 1),
-                        chargingStyle = intent.getStringExtra("charging_style") ?: "CUBE",
-                        blurIntensity = intent.getFloatExtra("blur_intensity", 16f).dp,
-                        hideOnLandscape = intent.getBooleanExtra("hide_landscape", false),
-                        isGlassmorphism = intent.getBooleanExtra("glass_mode", true),
-                        springDamping = intent.getFloatExtra("spring_damping", 0.85f),
-                        springStiffness = intent.getFloatExtra("spring_stiffness", 400f)
-                    )
+                    // Ensure we don't accidentally overwrite the active theme with zeros if intent is malformed
+                    if (intent.hasExtra("theme_button_size")) {
+                        view.activeTheme.value = IslandTheme(
+                            buttonSize = intent.getFloatExtra("theme_button_size", 48f).dp,
+                            buttonSpacing = intent.getFloatExtra("theme_button_spacing", 16f).dp,
+                            buttonCornerRadius = intent.getFloatExtra("theme_button_radius", 50f).dp,
+                            actionAnimType = intent.getStringExtra("theme_anim_type") ?: "BOUNCE",
+                            cornerRadius = intent.getFloatExtra("theme_corner_radius", 50f).dp,
+                            textPrimary = intent.getFloatExtra("theme_text_primary", 16f).sp,
+                            textSecondary = intent.getFloatExtra("theme_text_secondary", 14f).sp,
+                            progressThick = intent.getFloatExtra("theme_progress_thick", 4f).dp,
+                            ringThick = intent.getFloatExtra("theme_ring_thick", 12f).dp,
+                            elementGap = intent.getFloatExtra("theme_element_gap", 8f).dp,
+                            musicTitleSize = intent.getFloatExtra("theme_music_title", 16f).sp,
+                            musicArtistSize = intent.getFloatExtra("theme_music_artist", 14f).sp,
+                            musicSeekerThick = intent.getFloatExtra("theme_music_seeker", 4f).dp,
+                            batTextSize = intent.getFloatExtra("theme_bat_text", 16f).sp,
+                            batIconSize = intent.getFloatExtra("theme_bat_icon", 36f).dp,
+                            batRingThick = intent.getFloatExtra("theme_bat_ring", 12f).dp,
+                            alertTitleSize = intent.getFloatExtra("theme_alert_title", 16f).sp,
+                            alertMsgSize = intent.getFloatExtra("theme_alert_msg", 14f).sp,
+                            hapticStrength = intent.getIntExtra("haptic_strength", 1),
+                            chargingStyle = intent.getStringExtra("charging_style") ?: "CUBE",
+                            blurIntensity = intent.getFloatExtra("blur_intensity", 16f).dp,
+                            hideOnLandscape = intent.getBooleanExtra("hide_landscape", false),
+                            isGlassmorphism = intent.getBooleanExtra("glass_mode", true),
+                            springDamping = intent.getFloatExtra("spring_damping", 0.85f),
+                            springStiffness = intent.getFloatExtra("spring_stiffness", 400f)
+                        )
+                    }
 
                     val payload = intent.getStringExtra("gesture_payload")
-                    if (payload != null) view.onGestureSettingsUpdated?.invoke(payload) else load(view)
+                    if (payload != null) view.onGestureSettingsUpdated?.invoke(payload)
                 }
             }
         }
