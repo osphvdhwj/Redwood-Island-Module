@@ -8,8 +8,15 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import android.os.Handler
+import android.os.Looper
+import android.renderscript.Allocation
+import android.renderscript.Element
+import android.renderscript.RenderScript
+import android.renderscript.ScriptIntrinsicBlur
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
+import kotlin.math.max
 
 class IslandMediaManager(
     private val context: Context,
@@ -21,7 +28,7 @@ class IslandMediaManager(
     private val onUncollapseRequested: () -> Unit
 ) {
     var isMediaEnabled = true
-        set(value) { field = value; if (!value) { currentMedia = null; stopMediaTicker(); onMediaChanged(null) } else { updateActiveMediaController(getBestMediaController(mediaSessionManager.getActiveSessions(null))) } }
+        set(value) { field = value; if (!value) { currentMedia = null; stopTicker(); onMediaChanged(null) } else updateActiveSession() }
         
     var isScreenOn = true
         set(value) { field = value; evaluateTicker() }
@@ -29,46 +36,54 @@ class IslandMediaManager(
     var isIslandVisible = false
         set(value) { field = value; evaluateTicker() }
 
-    private val mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
+    private val sessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
     var activeMediaController: MediaController? = null
         private set
     var currentMedia: LiveActivityModel.Music? = null
         private set
 
-    private var mediaProcessJob: Job? = null
-    private var mediaTickerJob: Job? = null
+    private var processJob: Job? = null
+    private var tickerJob: Job? = null
     private var lastTrackTitle = ""
 
-    private val sessionListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers -> updateActiveMediaController(getBestMediaController(controllers)) }
+    // 🚀 OPTIMIZATION: Reuse RenderScript context to prevent memory leaks and GC jank
+    private val rs: RenderScript by lazy { RenderScript.create(context) }
+    private val blurScript: ScriptIntrinsicBlur by lazy { ScriptIntrinsicBlur.create(rs, Element.U8_4(rs)) }
+
+    private val sessionListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers -> updateActiveSession(controllers) }
 
     private val mediaCallback = object : MediaController.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackState?) { extractMediaData(activeMediaController) }
         override fun onMetadataChanged(metadata: MediaMetadata?) { extractMediaData(activeMediaController) }
+        override fun onSessionDestroyed() { updateActiveSession() }
     }
 
     fun start() {
         try {
-            mediaSessionManager.addOnActiveSessionsChangedListener(sessionListener, null)
-            updateActiveMediaController(getBestMediaController(mediaSessionManager.getActiveSessions(null)))
+            sessionManager.addOnActiveSessionsChangedListener(sessionListener, null, Handler(Looper.getMainLooper()))
+            updateActiveSession(sessionManager.getActiveSessions(null))
         } catch (e: Exception) {}
     }
 
-    private fun getBestMediaController(controllers: List<MediaController>?): MediaController? {
-        if (!isMediaEnabled || controllers.isNullOrEmpty()) return null
-        return controllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING } ?: controllers.firstOrNull()
-    }
+    private fun updateActiveSession(controllers: List<MediaController>? = null) {
+        if (!isMediaEnabled) return
+        val activeControllers = try { controllers ?: sessionManager.getActiveSessions(null) } catch (e: Exception) { emptyList() }
+        
+        val bestController = activeControllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING } ?: activeControllers.firstOrNull()
 
-    private fun updateActiveMediaController(controller: MediaController?) {
-        activeMediaController?.unregisterCallback(mediaCallback)
-        activeMediaController = controller
-        if (controller == null || !isMediaEnabled) { currentMedia = null; stopMediaTicker(); onMediaChanged(null); return }
-        controller.registerCallback(mediaCallback); extractMediaData(controller)
+        if (activeMediaController != bestController) {
+            activeMediaController?.unregisterCallback(mediaCallback)
+            activeMediaController = bestController
+            if (bestController == null) { currentMedia = null; stopTicker(); onMediaChanged(null); return }
+            bestController.registerCallback(mediaCallback)
+            extractMediaData(bestController)
+        }
     }
 
     private fun extractMediaData(controller: MediaController?) {
         if (controller == null || !isMediaEnabled) return
 
-        mediaProcessJob?.cancel()
+        processJob?.cancel()
         val metadata = controller.metadata
         val pbState = controller.playbackState ?: return
 
@@ -78,7 +93,7 @@ class IslandMediaManager(
 
         val duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
         val rawAlbumArt = try { metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART) } catch (e: Exception) { null }
-        val albumArtBitmap = getScaledBitmap(rawAlbumArt)
+        val albumArtBitmap = getScaledBitmap(rawAlbumArt, 400)
         
         val newTitle = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown"
         val artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown Artist"
@@ -88,21 +103,13 @@ class IslandMediaManager(
 
         // 🎬 THE VIDEO CLASSIFIER HEURISTIC
         val pkg = controller.packageName ?: ""
-        val knownVideoApps = listOf(
-            "com.netflix.mediaclient", "org.videolan.vlc", "com.mxtech.videoplayer.ad",
-            "com.mxtech.videoplayer.pro", "com.amazon.avod.thirdpartyclient", 
-            "com.plexapp.android", "tv.twitch.android", "com.google.android.youtube"
-        )
+        val knownVideoApps = listOf("com.netflix.mediaclient", "org.videolan.vlc", "com.mxtech.videoplayer.ad", "com.mxtech.videoplayer.pro", "com.google.android.youtube")
         val isVideoPackage = knownVideoApps.contains(pkg)
 
-        var isWideThumbnail = false
-        if (albumArtBitmap != null) {
-            val ratio = albumArtBitmap.width.toFloat() / albumArtBitmap.height.toFloat()
-            if (ratio > 1.3f) isWideThumbnail = true 
-        }
+        val isWideThumbnail = albumArtBitmap?.let { (it.width.toFloat() / it.height.toFloat()) > 1.3f } ?: false
         val isVideoContent = isVideoPackage || isWideThumbnail
 
-        // 🎧 Check for Hi-Fi audio
+        // 🎧 Check for Hi-Fi audio routing
         var isHiFi = false
         var codecName = "Standard"
         try {
@@ -113,26 +120,30 @@ class IslandMediaManager(
 
         val artistString = if (isHiFi && !isVideoContent) "$artist • $codecName" else artist
 
-        if (isNewTrack && isPlaying) { onPeekRequested() }
+        if (isNewTrack && isPlaying) onPeekRequested()
 
-        // 🚀 Move all heavy image processing and list building to a background thread
-        mediaProcessJob = scope.launch(Dispatchers.IO) {
+        // 🚀 Move all heavy image processing to IO Thread
+        processJob = scope.launch(Dispatchers.IO) {
             val appIconBmp = getAppIcon(pkg)
             var blurredArtBitmap: Bitmap? = null
             var bgColor: Int? = null
             var txtColor = android.graphics.Color.WHITE
 
             if (albumArtBitmap != null) {
-                blurredArtBitmap = blurBitmap(albumArtBitmap)
+                // Optimized Blur using cached RenderScript
+                blurredArtBitmap = blurBitmapOptimized(albumArtBitmap)
+                
                 val palette = Palette.from(albumArtBitmap).generate()
                 val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
                 if (swatch != null) {
                     var rgb = swatch.rgb; val hsl = FloatArray(3); androidx.core.graphics.ColorUtils.colorToHSL(rgb, hsl)
                     if (hsl[2] < 0.35f) { hsl[2] = 0.35f; rgb = androidx.core.graphics.ColorUtils.HSLToColor(hsl) }
-                    bgColor = rgb; txtColor = if (androidx.core.graphics.ColorUtils.calculateLuminance(bgColor) > 0.5) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+                    bgColor = rgb
+                    txtColor = if (androidx.core.graphics.ColorUtils.calculateLuminance(bgColor) > 0.5) android.graphics.Color.BLACK else android.graphics.Color.WHITE
                 }
             }
 
+            // Extract Custom Actions
             val extractedActions = pbState.customActions?.map { CustomMediaAction(it.action, null, null, true) } ?: emptyList()
             var systemLiked = false; var systemShuffle = false; var systemRepeat = 0
             
@@ -148,30 +159,17 @@ class IslandMediaManager(
             }
 
             withContext(Dispatchers.Main) {
-                // Instantiating the model AFTER everything is computed
                 currentMedia = LiveActivityModel.Music(
-                    id = "media_main", 
-                    type = ActivityType.MESSAGE, 
-                    title = newTitle, 
-                    artist = artistString, 
-                    albumArt = albumArtBitmap, 
-                    blurredAlbumArt = blurredArtBitmap, 
-                    appIcon = appIconBmp, 
-                    dominantColor = bgColor, 
-                    titleTextColor = txtColor, 
-                    isPlaying = isPlaying, 
-                    durationMs = duration, 
-                    positionMs = pbState.position, 
-                    appPackageName = pkg, 
-                    customActions = extractedActions, 
-                    isShuffled = systemShuffle, 
-                    repeatMode = systemRepeat, 
-                    isLiked = systemLiked,
-                    isVideo = isVideoContent
+                    id = "media_main", type = ActivityType.MESSAGE, title = newTitle, artist = artistString, 
+                    albumArt = albumArtBitmap, blurredAlbumArt = blurredArtBitmap, appIcon = appIconBmp, 
+                    dominantColor = bgColor, titleTextColor = txtColor, isPlaying = isPlaying, 
+                    durationMs = duration, positionMs = pbState.position, appPackageName = pkg, 
+                    customActions = extractedActions, isShuffled = systemShuffle, repeatMode = systemRepeat, 
+                    isLiked = systemLiked, isVideo = isVideoContent
                 )
 
-                if (isPlaying && !wasPlaying) { onUncollapseRequested() }
-                if (isPlaying) { evaluateTicker() } else { stopMediaTicker(); if (wasPlaying) onPauseFadeRequested() }
+                if (isPlaying && !wasPlaying) onUncollapseRequested()
+                if (isPlaying) evaluateTicker() else { stopTicker(); if (wasPlaying) onPauseFadeRequested() }
                 onMediaChanged(currentMedia)
             }
         }
@@ -179,53 +177,44 @@ class IslandMediaManager(
 
     private fun evaluateTicker() {
         if (isScreenOn && isIslandVisible && currentMedia?.isPlaying == true && isMediaEnabled) {
-            if (mediaTickerJob == null || mediaTickerJob?.isActive != true) {
-                mediaTickerJob = scope.launch { 
+            if (tickerJob == null || tickerJob?.isActive != true) {
+                tickerJob = scope.launch(Dispatchers.Main) { 
                     while (isActive) { 
-                        activeMediaController?.playbackState?.position?.let { pos -> onMediaTick(pos) }
+                        activeMediaController?.playbackState?.let { state ->
+                            val timeDelta = System.currentTimeMillis() - state.lastPositionUpdateTime
+                            val currentPos = (state.position + (timeDelta * state.playbackSpeed)).toLong()
+                            onMediaTick(currentPos)
+                        }
                         delay(1000) 
                     } 
                 }
             }
-        } else {
-            stopMediaTicker()
-        }
+        } else stopTicker()
     }
 
-    private fun getScaledBitmap(bitmap: Bitmap?, maxDim: Int = 400): Bitmap? {
+    private fun getScaledBitmap(bitmap: Bitmap?, maxDim: Int): Bitmap? {
         if (bitmap == null) return null
         val ratio = Math.min(maxDim.toFloat() / bitmap.width, maxDim.toFloat() / bitmap.height)
         if (ratio >= 1.0f) return bitmap
         return Bitmap.createScaledBitmap(bitmap, (bitmap.width * ratio).toInt(), (bitmap.height * ratio).toInt(), true)
     }
 
-    private fun blurBitmap(bitmap: Bitmap): Bitmap? {
-        var rs: android.renderscript.RenderScript? = null
-        var input: android.renderscript.Allocation? = null
-        var output: android.renderscript.Allocation? = null
-        var script: android.renderscript.ScriptIntrinsicBlur? = null
+    private fun blurBitmapOptimized(bitmap: Bitmap): Bitmap {
+        // Downscale before blurring to save massive amounts of GPU time
+        val small = getScaledBitmap(bitmap, 100) ?: bitmap
+        val blurred = Bitmap.createBitmap(small.width, small.height, small.config ?: Bitmap.Config.ARGB_8888)
         
-        return try {
-            rs = android.renderscript.RenderScript.create(context)
-            input = android.renderscript.Allocation.createFromBitmap(rs, bitmap)
-            output = android.renderscript.Allocation.createTyped(rs, input.type)
-            script = android.renderscript.ScriptIntrinsicBlur.create(rs, android.renderscript.Element.U8_4(rs))
-            
-            script.setRadius(24f)
-            script.setInput(input)
-            script.forEach(output)
-            
-            val blurred = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config ?: Bitmap.Config.ARGB_8888)
-            output.copyTo(blurred)
-            blurred
-        } catch (e: Exception) { 
-            bitmap 
-        } finally {
-            input?.destroy()
-            output?.destroy()
-            script?.destroy()
-            rs?.destroy()
-        }
+        val input = Allocation.createFromBitmap(rs, small)
+        val output = Allocation.createTyped(rs, input.type)
+        
+        blurScript.setRadius(24f)
+        blurScript.setInput(input)
+        blurScript.forEach(output)
+        output.copyTo(blurred)
+        
+        input.destroy()
+        output.destroy()
+        return blurred
     }
 
     private fun getAppIcon(pkg: String): Bitmap? {
@@ -238,7 +227,7 @@ class IslandMediaManager(
         } catch(e: Exception) { null }
     }
     
-    private fun stopMediaTicker() { mediaTickerJob?.cancel(); mediaTickerJob = null }
+    private fun stopTicker() { tickerJob?.cancel(); tickerJob = null }
 
     fun sendMediaCommand(command: String) {
         val controls = activeMediaController?.transportControls ?: return
@@ -247,9 +236,10 @@ class IslandMediaManager(
     
     fun destroy() {
         try {
-            mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener)
+            sessionManager.removeOnActiveSessionsChangedListener(sessionListener)
             activeMediaController?.unregisterCallback(mediaCallback)
-            stopMediaTicker()
+            stopTicker()
+            rs.destroy() // Clean up hardware resources
         } catch (e: Exception) {}
     }
 }
