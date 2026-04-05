@@ -2,6 +2,7 @@ package com.example.dynamicisland
 
 import android.content.Context
 import android.content.Intent
+import android.view.View
 import de.robv.android.xposed.XposedHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -14,34 +15,41 @@ class IslandActionManager(
     fun handleQSTileClick(gestureName: String, onTilesUpdated: (List<QSTileState>) -> Unit) {
         val targetSpec = gestureName.removePrefix("QS_CLICK_")
         val host = SystemUIContextKeeper.qsTileHost ?: return
-        val tilesCollection = XposedHelpers.callMethod(host, "getTiles") as Collection<*>
-        val targetTile = tilesCollection.firstOrNull { 
-            XposedHelpers.callMethod(it, "getTileSpec") == targetSpec 
-        }
+        
+        try {
+            val tilesCollection = XposedHelpers.callMethod(host, "getTiles") as Collection<*>
+            val targetTile = tilesCollection.firstOrNull { 
+                XposedHelpers.callMethod(it, "getTileSpec") == targetSpec 
+            }
 
-        if (targetTile != null) {
-            XposedHelpers.callMethod(targetTile, "click", null) 
-            scope.launch { delay(300); syncQSTiles(onTilesUpdated) }
-        }
+            if (targetTile != null) {
+                // 🚀 FIX: Explicitly tell Xposed we are calling the method that takes a View, but passing null
+                XposedHelpers.callMethod(targetTile, "click", arrayOf(View::class.java), null) 
+                
+                // Give the system time to toggle the hardware before syncing the UI
+                scope.launch { delay(300); syncQSTiles(listOf(targetSpec), onTilesUpdated) }
+            }
+        } catch (e: Exception) {}
     }
 
-    fun syncQSTiles(onTilesUpdated: (List<QSTileState>) -> Unit) {
+    // 🚀 FIX: Pass the actual requested tiles dynamically instead of hardcoding
+    fun syncQSTiles(activeTileSpecs: List<String>, onTilesUpdated: (List<QSTileState>) -> Unit) {
         val host = SystemUIContextKeeper.qsTileHost ?: return
         try {
             val tilesCollection = XposedHelpers.callMethod(host, "getTiles") as Collection<*>
-            val userSelectedSpecs = listOf("wifi", "bt", "flashlight", "custom(com.example.vpn/...)")
             val newTileStates = mutableListOf<QSTileState>()
 
             for (tileObj in tilesCollection) {
                 if (tileObj == null) continue
                 val tileSpec = XposedHelpers.callMethod(tileObj, "getTileSpec") as String
             
-                if (userSelectedSpecs.contains(tileSpec)) {
+                if (activeTileSpecs.contains(tileSpec)) {
                     val stateObj = XposedHelpers.callMethod(tileObj, "getState")
                     val label = XposedHelpers.getObjectField(stateObj, "label") as? CharSequence ?: ""
                     val stateInt = XposedHelpers.getIntField(stateObj, "state")
                 
-                    newTileStates.add(QSTileState(tileSpec, label.toString(), stateInt == 2, stateInt == 0))
+                    // AOSP States: 0 = Unavailable, 1 = Inactive, 2 = Active
+                    newTileStates.add(QSTileState(tileSpec, label.toString(), isActive = stateInt == 2, isUnavailable = stateInt == 0))
                 }
             }
             onTilesUpdated(newTileStates)
