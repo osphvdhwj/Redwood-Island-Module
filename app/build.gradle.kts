@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.example.dynamicisland"
-    compileSdk = 35 // ⬆️ Upgraded to Android 15
+    compileSdk = 36 // ⬆️ Upgraded to Android 16 (Baklava)
 
     defaultConfig {
         applicationId = "com.example.dynamicisland"
         minSdk = 33
-        targetSdk = 35 // ⬆️ Upgraded to Android 15
+        targetSdk = 36 // ⬆️ Upgraded to Android 16 (Baklava)
         versionCode = 1
         versionName = "1.0"
     }
@@ -31,18 +31,18 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17 // ⬆️ Upgraded for Android 15 ART
-        targetCompatibility = JavaVersion.VERSION_17 // ⬆️ Upgraded for Android 15 ART
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "17" // ⬆️ Upgraded for Android 15 ART
+        jvmTarget = "17"
     }
     buildFeatures {
         viewBinding = true
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14" // ⬆️ Bumped for newer Compose
+        kotlinCompilerExtensionVersion = "1.5.14" 
     }
 }
 
@@ -57,7 +57,7 @@ dependencies {
     implementation("androidx.palette:palette-ktx:1.0.0")
 
     // Jetpack Compose Integration
-    val composeBom = platform("androidx.compose:compose-bom:2024.09.00") // ⬆️ Latest Stable BOM
+    val composeBom = platform("androidx.compose:compose-bom:2024.09.00")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
