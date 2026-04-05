@@ -47,18 +47,19 @@ fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.c
         Row {
             Spacer(modifier = Modifier.width(8.dp))
             Box(
-                modifier = Modifier
+                modifier = Modifier 
                     .size(animatedHeight) 
                     .onGloballyPositioned { coordinates ->
-                        val location = IntArray(2)
-                        view.getLocationOnScreen(location)
-                        val bounds = coordinates.boundsInRoot()
-                        val globalLeft = location[0] + bounds.left.toInt()
-                        val globalTop = location[1] + bounds.top.toInt()
-                        val globalRight = location[0] + bounds.right.toInt()
-                        val globalBottom = location[1] + bounds.bottom.toInt()
-                        
-                        if (abs(splitCubeRect.left - globalLeft) > 5 || splitCubeRect.isEmpty) {
+                        // 🚀 THE FIX: Use Compose's native window bounds directly!
+                        val bounds = coordinates.boundsInWindow()
+        
+                        val globalLeft = bounds.left.toInt()
+                        val globalTop = bounds.top.toInt()
+                        val globalRight = bounds.right.toInt()
+                        val globalBottom = bounds.bottom.toInt()
+        
+                        // Retain your optimization threshold
+                        if (kotlin.math.abs(splitCubeRect.left - globalLeft) > 5 || splitCubeRect.isEmpty) {
                             splitCubeRect.set(globalLeft, globalTop, globalRight, globalBottom)
                             insetsUpdateFlow.tryEmit(Unit)
                         }
