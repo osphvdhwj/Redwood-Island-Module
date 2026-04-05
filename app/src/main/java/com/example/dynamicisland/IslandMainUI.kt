@@ -200,7 +200,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                         ) { s ->
                             when (s) {
                                 IslandState.TYPE_3_MAX -> { 
-                                    // 🚀 FIXED COMPILATION ERROR: Passed required variables to IslandDashboardMax
                                     when (model) { 
                                         is LiveActivityModel.Dashboard -> IslandDashboardMax(
                                             dashboardModel = model,
@@ -211,6 +210,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                             onQsClick = { tileSpec -> onQsTileClick?.invoke(tileSpec) }
                                         )
                                         is LiveActivityModel.Music -> MusicMax(model) 
+                                        is LiveActivityModel.Charging -> ChargingMax(model) // 🚀 ADDED ROUTE HERE
                                         else -> {} 
                                     } 
                                 }
