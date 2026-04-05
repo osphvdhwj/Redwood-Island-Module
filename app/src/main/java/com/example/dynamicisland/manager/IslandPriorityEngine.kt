@@ -1,5 +1,6 @@
 package com.example.dynamicisland.manager
 
+import android.content.Context
 import android.view.WindowManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import com.example.dynamicisland.model.*
