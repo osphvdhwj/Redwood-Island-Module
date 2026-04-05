@@ -402,12 +402,62 @@ fun FeaturesScreen(prefs: SharedPreferences) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GesturesScreen(prefs: SharedPreferences) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+        
+        // 🚀 ADDED: Smart Gesture Fallbacks Section
+        Text(text = "Smart Gesture Fallbacks", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
+        Text(text = "When no media is playing or active.", fontSize = 14.sp, color = Color.Gray)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Idle Swipe Action Dropdown
+        var swipeExpanded by remember { mutableStateOf(false) }
+        var selectedSwipe by remember { mutableStateOf(prefs.getString("idle_swipe_action", "BRIGHTNESS") ?: "BRIGHTNESS") }
+        ExposedDropdownMenuBox(expanded = swipeExpanded, onExpandedChange = { swipeExpanded = !swipeExpanded }) {
+            OutlinedTextField(
+                value = selectedSwipe, onValueChange = {}, readOnly = true, 
+                label = { Text("Idle Horizontal Swipe") }, 
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = swipeExpanded) }, 
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 8.dp)
+            )
+            ExposedDropdownMenu(expanded = swipeExpanded, onDismissRequest = { swipeExpanded = false }) {
+                listOf("BRIGHTNESS", "VOLUME", "PREV_APP", "NONE").forEach { opt ->
+                    DropdownMenuItem(text = { Text(opt) }, onClick = {
+                        selectedSwipe = opt; swipeExpanded = false
+                        ConfigManager.commitAndBroadcast(prefs, scope, context, { putString("idle_swipe_action", opt) }) { ConfigManager.sendGestureUpdate(context, prefs) }
+                    })
+                }
+            }
+        }
+
+        // Long Press Action Dropdown
+        var lpExpanded by remember { mutableStateOf(false) }
+        var selectedLp by remember { mutableStateOf(prefs.getString("long_press_action", "SCREENSHOT") ?: "SCREENSHOT") }
+        ExposedDropdownMenuBox(expanded = lpExpanded, onExpandedChange = { lpExpanded = !lpExpanded }) {
+            OutlinedTextField(
+                value = selectedLp, onValueChange = {}, readOnly = true, 
+                label = { Text("Default Long Press") }, 
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = lpExpanded) }, 
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth().padding(vertical = 8.dp)
+            )
+            ExposedDropdownMenu(expanded = lpExpanded, onDismissRequest = { lpExpanded = false }) {
+                listOf("SCREENSHOT", "OPEN_QUICK_TOGGLES", "LAUNCH_CAMERA").forEach { opt ->
+                    DropdownMenuItem(text = { Text(opt) }, onClick = {
+                        selectedLp = opt; lpExpanded = false
+                        ConfigManager.commitAndBroadcast(prefs, scope, context, { putString("long_press_action", opt) }) { ConfigManager.sendGestureUpdate(context, prefs) }
+                    })
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Existing Action Matrix
         Text(text = "Action Matrix", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
         
