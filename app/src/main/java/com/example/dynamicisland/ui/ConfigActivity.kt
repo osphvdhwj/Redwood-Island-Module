@@ -2,7 +2,6 @@ package com.example.dynamicisland.ui
 import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*
-import com.example.dynamicisland.manager.*
 
 import android.content.Context
 import android.os.Bundle
