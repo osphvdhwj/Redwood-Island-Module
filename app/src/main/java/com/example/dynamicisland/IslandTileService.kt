@@ -1,4 +1,5 @@
 package com.example.dynamicisland
+import com.example.dynamicisland.ui.ConfigActivity
 
 import android.content.Intent
 import android.service.quicksettings.Tile

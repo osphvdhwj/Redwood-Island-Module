@@ -1,4 +1,5 @@
 package com.example.dynamicisland
+import com.example.dynamicisland.manager.ConfigManager
 
 import android.content.BroadcastReceiver
 import android.content.Context

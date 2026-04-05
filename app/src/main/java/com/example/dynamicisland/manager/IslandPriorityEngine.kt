@@ -68,7 +68,7 @@ object IslandPriorityEngine {
         }
 
         // 6. 🎛️ DASHBOARD
-        if (currentActiveModel is LiveActivityModel.Dashboard && currentVisualState == IslandState.TYPE_3_MAX) {
+        if (currentActiveModel is LiveActivityModel.Dashboard && currentVisualState == IslandState.TYPE_3_MAX {
             return userForceCollapsed
         }
 

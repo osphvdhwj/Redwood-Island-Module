@@ -57,11 +57,11 @@ class IslandCallManager(
         try {
             val tm = context.getSystemService(Context.TELECOM_SERVICE) as android.telecom.TelecomManager
             tm.showInCallScreen(false) 
-            islandView?.setState(IslandState.TYPE_1_MINI)
+            islandView?.setState(IslandState.TYPE_1_MINI
         } catch (e: Exception) {
             val intent = Intent(Intent.ACTION_DIAL).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
             context.startActivity(intent)
-            islandView?.setState(IslandState.TYPE_1_MINI)
+            islandView?.setState(IslandState.TYPE_1_MINI
         }
     }
 

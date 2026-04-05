@@ -1,7 +1,8 @@
-@file:Suppress("DEPRECATION")
+package com.example.dynamicisland.manager
+
 import com.example.dynamicisland.model.*
 import com.example.dynamicisland.ui.DynamicIslandView
-package com.example.dynamicisland.manager
+import com.example.dynamicisland.hook.*
 
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -72,7 +73,7 @@ class IslandController(private val context: Context) {
             }
 
             _activeModel.value = progressModel
-            if (_islandState.value == IslandState.TYPE_0_RING) _islandState.value = IslandState.TYPE_1_MINI
+            if (_islandState.value == IslandState.TYPE_0_RING _islandState.value = IslandState.TYPE_1_MINI
             evaluatePriority()
         },
         onNavigationCaught = { navModel ->
@@ -115,7 +116,7 @@ class IslandController(private val context: Context) {
     private var windowManager: WindowManager? = null
     private var islandView: DynamicIslandView? = null
 
-    private val _islandState = MutableStateFlow(IslandState.TYPE_0_RING)
+    private val _islandState = MutableStateFlow(IslandState.TYPE_0_RING
     val islandState = _islandState.asStateFlow()
     private val _activeModel = MutableStateFlow<LiveActivityModel?>(null)
     val activeModel = _activeModel.asStateFlow()
@@ -401,14 +402,14 @@ class IslandController(private val context: Context) {
 
         scope.launch { 
             islandState.collect { state -> 
-                view.setState(state) 
+                view.islandState.value = state) 
                 val isVisible = state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING
                 mediaManager.isIslandVisible = isVisible
                 hardwareMonitor.isDashboardOpen = state == IslandState.TYPE_3_MAX 
             } 
         }
-        scope.launch { activeModel.collect { model -> view.setModel(model) } }
-        scope.launch { splitModel.collect { model -> view.setSplitModel(model) } }
+        scope.launch { activeModel.collect { model -> view.activeModel.value = model) } }
+        scope.launch { splitModel.collect { model -> view.splitModel.value = model) } }
         return view
     }
 

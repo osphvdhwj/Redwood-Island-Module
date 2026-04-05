@@ -1,7 +1,8 @@
-@file:Suppress("DEPRECATION")
+package com.example.dynamicisland.manager
+
 import com.example.dynamicisland.model.*
 import com.example.dynamicisland.ui.DynamicIslandView
-package com.example.dynamicisland.manager
+import com.example.dynamicisland.hook.*
 
 import android.content.Context
 import android.graphics.Bitmap
