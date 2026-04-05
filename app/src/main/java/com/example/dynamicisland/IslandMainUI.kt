@@ -58,12 +58,10 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     
     val minSafeWidth = displayCutoutWidth.floatValue + 4f
     
-    // 🚀 DPI FIX: Ensure the Island NEVER bleeds off the screen horizontally on any DPI
     val screenWidthDp = configuration.screenWidthDp.toFloat()
-    val maxSafeWidth = (screenWidthDp - 16f).coerceAtLeast(minSafeWidth) // 8dp margin on both sides
+    val maxSafeWidth = (screenWidthDp - 16f).coerceAtLeast(minSafeWidth)
 
     val rawTargetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
-    // Lock the width within safe physical boundaries
     val targetWidth = rawTargetWidth.coerceIn(minSafeWidth, maxSafeWidth)
     
     val model = activeModel.value
@@ -129,8 +127,9 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
             modifier = Modifier
                 .width(animatedWidth) 
                 .height(animatedHeight)
+                // 🚀 FIX 3: graphicsLayer comes BEFORE onGloballyPositioned so bounds match the scale!
+                .graphicsLayer { scaleX = touchScale * islandScale; scaleY = touchScale * islandScale; alpha = islandAlpha; transformOrigin = TransformOrigin(0.5f, 0.5f) }
                 .onGloballyPositioned { coordinates ->
-                    // 🚀 TOUCH FIX: Perfectly map the invisible touch region to the physical pixels on screen every frame!
                     val bounds = coordinates.boundsInWindow()
                     mainPillRect.set(
                         bounds.left.toInt(),
@@ -140,7 +139,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                     )
                     insetsUpdateFlow.tryEmit(Unit)
                 }
-                .graphicsLayer { scaleX = touchScale * islandScale; scaleY = touchScale * islandScale; alpha = islandAlpha; transformOrigin = TransformOrigin(0.5f, 0.5f) }
                 .shadow(elevation = if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp, shape = RoundedCornerShape(animatedRadius), spotColor = Color.Black)
                 .clip(RoundedCornerShape(animatedRadius))
                 .background(bgColor)
