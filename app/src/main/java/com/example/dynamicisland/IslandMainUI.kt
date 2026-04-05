@@ -127,17 +127,20 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
             modifier = Modifier
                 .width(animatedWidth) 
                 .height(animatedHeight)
-                // 🚀 FIX 3: graphicsLayer comes BEFORE onGloballyPositioned so bounds match the scale!
+                // 🚀 FIX: graphicsLayer comes BEFORE onGloballyPositioned so bounds match the scale!
                 .graphicsLayer { scaleX = touchScale * islandScale; scaleY = touchScale * islandScale; alpha = islandAlpha; transformOrigin = TransformOrigin(0.5f, 0.5f) }
                 .onGloballyPositioned { coordinates ->
                     val bounds = coordinates.boundsInWindow()
-                    mainPillRect.set(
-                        bounds.left.toInt(),
-                        bounds.top.toInt(),
-                        bounds.right.toInt(),
-                        bounds.bottom.toInt()
-                    )
-                    insetsUpdateFlow.tryEmit(Unit)
+                    val newLeft = bounds.left.toInt()
+                    val newTop = bounds.top.toInt()
+                    val newRight = bounds.right.toInt()
+                    val newBottom = bounds.bottom.toInt()
+                    
+                    // 🧠 THE LOOP BREAKER: Only update the system if the pixels physically changed!
+                    if (mainPillRect.left != newLeft || mainPillRect.top != newTop || mainPillRect.right != newRight || mainPillRect.bottom != newBottom) {
+                        mainPillRect.set(newLeft, newTop, newRight, newBottom)
+                        insetsUpdateFlow.tryEmit(Unit)
+                    }
                 }
                 .shadow(elevation = if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp, shape = RoundedCornerShape(animatedRadius), spotColor = Color.Black)
                 .clip(RoundedCornerShape(animatedRadius))
