@@ -21,7 +21,6 @@ import android.util.LruCache
 
 class IslandController(private val context: Context) {
 
-    // 🚀 MOVED UP: Initialized first!
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     private val storageManager = IslandStorageManager(context)
@@ -134,9 +133,13 @@ class IslandController(private val context: Context) {
     private var isPeeking = false
     private var isPanelExpanded = false 
 
+    // 🚀 NEW: Smart Configuration States
     private var isChargingEnabled = true
     private var isAlertsEnabled = true
     private var isTimersEnabled = true
+    private var hideInLandscape = false
+    private var idleSwipeAction = "BRIGHTNESS"
+    private var longPressAction = "SCREENSHOT"
     private val gestureMatrix = mutableMapOf<String, IslandAction>()
 
     private val brightnessObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -335,6 +338,11 @@ class IslandController(private val context: Context) {
                 isAlertsEnabled = prefs.getBoolean("enable_alerts", true)
                 isTimersEnabled = prefs.getBoolean("enable_timers", true)
                 
+                // 🚀 NEW: Load Smart Routing Configs
+                hideInLandscape = prefs.getBoolean("hide_landscape", false)
+                idleSwipeAction = prefs.getString("idle_swipe_action", "BRIGHTNESS") ?: "BRIGHTNESS"
+                longPressAction = prefs.getString("long_press_action", "SCREENSHOT") ?: "SCREENSHOT"
+                
                 if (payload != null && payload.length < 5000) {
                     val json = JSONObject(payload)
                     gestureMatrix.clear()
@@ -346,8 +354,27 @@ class IslandController(private val context: Context) {
         view.onGestureEvent = { gesture ->
             val currentState = _islandState.value.name
             
-            // 🚀 THE FIX: Check the matrix, but fallback to EXPAND for single taps!
+            // 🧠 SMART ROUTING ENGINE
             var actionName = gestureMatrix["${currentState}_${gesture.name}"]?.name
+
+            // 1. Intercept Horizontal Swipes (Media vs Idle Logic)
+            if (gesture.name == "SWIPE_LEFT" || gesture.name == "SWIPE_RIGHT") {
+                if (currentMedia != null && currentMedia?.isPlaying == true) {
+                    actionName = if (gesture.name == "SWIPE_RIGHT") "NEXT_TRACK" else "PREV_TRACK"
+                } else {
+                    // Idle State - Use user's configured fallback
+                    actionName = idleSwipeAction
+                }
+            }
+
+            // 2. Intercept Long Press (Configurable, defaults to Screenshot)
+            if (gesture.name == "LONG_PRESS") {
+                actionName = longPressAction
+                // Visual feedback for long press (imitate Android screenshot flash)
+                if (actionName == "SCREENSHOT") triggerVisualScreenshotFlash()
+            }
+
+            // Fallback for missing configurations
             if (actionName == null) {
                 actionName = if (gesture.name == "SINGLE_TAP") "EXPAND" else "NONE"
             }
@@ -357,72 +384,7 @@ class IslandController(private val context: Context) {
                     if (_activeModel.value is LiveActivityModel.Dashboard) _activeModel.value = LiveActivityModel.Dashboard(activeTiles = newTiles)
                 }
             } else {
-                when (actionName) {
-                    "PLAY_PAUSE" -> { if (currentMedia?.isPlaying == true) mediaManager.sendMediaCommand("PAUSE") else mediaManager.sendMediaCommand("PLAY") }
-                    "NEXT_TRACK" -> mediaManager.sendMediaCommand("NEXT")
-                    "PREV_TRACK" -> mediaManager.sendMediaCommand("PREV")
-                    "OPEN_DASHBOARD" -> {
-                        if (_activeModel.value == null) _activeModel.value = LiveActivityModel.Dashboard()
-                        _islandState.value = IslandState.TYPE_3_MAX
-                    }
-                    "OPEN_QUICK_TOGGLES" -> {
-                        if (_activeModel.value == null || _activeModel.value is LiveActivityModel.Dashboard) {
-                            _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
-                            _islandState.value = IslandState.TYPE_2_MID
-                        }
-                    }
-                    "COLLAPSE" -> {
-                        if (_activeModel.value is LiveActivityModel.Dashboard) {
-                            if (currentMedia != null) {
-                                if (currentMedia?.isPlaying == true) { _islandState.value = IslandState.TYPE_1_MINI; userForceCollapsed = false } 
-                                else { _islandState.value = IslandState.TYPE_0_RING; userForceCollapsed = true }
-                                _activeModel.value = currentMedia
-                            } else {
-                                _activeModel.value = null; _islandState.value = IslandState.TYPE_0_RING
-                            }
-                        } else {
-                            userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING
-                        }
-                        evaluatePriority()
-                    }
-                    "EXPAND" -> {
-                        userForceCollapsed = false
-                        when (_islandState.value) {
-                            IslandState.TYPE_0_RING -> { 
-                                // 🚀 FIXED: Ring expands to MusicMid (if playing) or DashboardMax
-                                if (currentMedia != null) {
-                                    _islandState.value = IslandState.TYPE_2_MID 
-                                } else { 
-                                    _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
-                                    _islandState.value = IslandState.TYPE_3_MAX 
-                                }
-                            }
-                            IslandState.TYPE_1_MINI -> {
-                                _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
-                                _islandState.value = IslandState.TYPE_3_MAX
-                            }
-                            IslandState.TYPE_2_MID, IslandState.TYPE_SPLIT -> {
-                                // 🚀 FIXED: Tapping MusicMid instantly opens DashboardMax!
-                                _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
-                                _islandState.value = IslandState.TYPE_3_MAX
-                            }
-                            else -> {}
-                        }
-                        evaluatePriority()
-                    }
-                    "VOLUME_UP" -> audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
-                    "VOLUME_DOWN" -> audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
-                    "MUTE_TOGGLE" -> {
-                        val isMuted = audioManager.isStreamMute(AudioManager.STREAM_MUSIC)
-                        audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, if (isMuted) AudioManager.ADJUST_UNMUTE else AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
-                    }
-                    "LAUNCH_SETTINGS" -> actionManager.launchAppIntent("com.android.settings") { userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING; evaluatePriority() }
-                    "LAUNCH_CAMERA" -> {
-                        val cameraIntent = Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                        try { context.startActivity(cameraIntent) } catch (e: Exception) {}
-                    }
-                    else -> { if (actionName.startsWith("LAUNCH_APP_")) actionManager.launchAppIntent(actionName.removePrefix("LAUNCH_APP_")) { userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING; evaluatePriority() } }
-                }
+                executeSmartAction(actionName)
             }
         }
         
@@ -444,6 +406,87 @@ class IslandController(private val context: Context) {
         scope.launch { activeModel.collect { model -> view.setModel(model) } }
         scope.launch { splitModel.collect { model -> view.setSplitModel(model) } }
         return view
+    }
+
+    private fun executeSmartAction(actionName: String) {
+        when (actionName) {
+            "PLAY_PAUSE" -> { if (currentMedia?.isPlaying == true) mediaManager.sendMediaCommand("PAUSE") else mediaManager.sendMediaCommand("PLAY") }
+            "NEXT_TRACK" -> mediaManager.sendMediaCommand("NEXT")
+            "PREV_TRACK" -> mediaManager.sendMediaCommand("PREV")
+            "VOLUME" -> { /* Handled natively by dragging, but if mapped to swipe, open volume panel */ 
+                audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_SAME, AudioManager.FLAG_SHOW_UI)
+            }
+            "BRIGHTNESS" -> { /* Mapped to swipe -> do nothing here, let the drag handler in view catch it */ }
+            "PREV_APP" -> { 
+                // Sends intent to be caught by a system hook or accessibility service
+                context.sendBroadcast(Intent("com.example.dynamicisland.GLOBAL_ACTION").putExtra("action", "PREV_APP")) 
+            }
+            "SCREENSHOT" -> {
+                val intent = Intent("com.example.dynamicisland.TRIGGER_SCREENSHOT")
+                context.sendBroadcast(intent)
+            }
+            "OPEN_DASHBOARD" -> {
+                if (_activeModel.value == null) _activeModel.value = LiveActivityModel.Dashboard()
+                _islandState.value = IslandState.TYPE_3_MAX
+            }
+            "OPEN_QUICK_TOGGLES" -> {
+                if (_activeModel.value == null || _activeModel.value is LiveActivityModel.Dashboard) {
+                    _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
+                    _islandState.value = IslandState.TYPE_2_MID
+                }
+            }
+            "COLLAPSE" -> {
+                if (_activeModel.value is LiveActivityModel.Dashboard) {
+                    if (currentMedia != null) {
+                        if (currentMedia?.isPlaying == true) { _islandState.value = IslandState.TYPE_1_MINI; userForceCollapsed = false } 
+                        else { _islandState.value = IslandState.TYPE_0_RING; userForceCollapsed = true }
+                        _activeModel.value = currentMedia
+                    } else {
+                        _activeModel.value = null; _islandState.value = IslandState.TYPE_0_RING
+                    }
+                } else {
+                    userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING
+                }
+                evaluatePriority()
+            }
+            "EXPAND" -> {
+                userForceCollapsed = false
+                when (_islandState.value) {
+                    IslandState.TYPE_0_RING -> { 
+                        if (currentMedia != null) { _islandState.value = IslandState.TYPE_2_MID } 
+                        else { _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache); _islandState.value = IslandState.TYPE_3_MAX }
+                    }
+                    IslandState.TYPE_1_MINI -> {
+                        _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
+                        _islandState.value = IslandState.TYPE_3_MAX
+                    }
+                    IslandState.TYPE_2_MID, IslandState.TYPE_SPLIT -> {
+                        _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
+                        _islandState.value = IslandState.TYPE_3_MAX
+                    }
+                    else -> {}
+                }
+                evaluatePriority()
+            }
+            "VOLUME_UP" -> audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
+            "VOLUME_DOWN" -> audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+            "MUTE_TOGGLE" -> {
+                val isMuted = audioManager.isStreamMute(AudioManager.STREAM_MUSIC)
+                audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, if (isMuted) AudioManager.ADJUST_UNMUTE else AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
+            }
+            "LAUNCH_SETTINGS" -> actionManager.launchAppIntent("com.android.settings") { userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING; evaluatePriority() }
+            "LAUNCH_CAMERA" -> {
+                val cameraIntent = Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                try { context.startActivity(cameraIntent) } catch (e: Exception) {}
+            }
+            else -> { if (actionName.startsWith("LAUNCH_APP_")) actionManager.launchAppIntent(actionName.removePrefix("LAUNCH_APP_")) { userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING; evaluatePriority() } }
+        }
+    }
+
+    private fun triggerVisualScreenshotFlash() {
+        val current = _islandState.value
+        _islandState.value = IslandState.HIDDEN
+        scope.launch { delay(50); _islandState.value = current }
     }
 
     private fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
@@ -537,7 +580,18 @@ class IslandController(private val context: Context) {
         BatteryPlugin.onBatteryChanged = { level, isCharging, color, wattage ->
              if (isChargingEnabled) {
                  if (isCharging && !wasCharging) {
-                     postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true), 4000L)
+                     // 🚀 MASSIVE CHARGING EXPANSION LOGIC
+                     val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                     if (hideInLandscape && isLandscape) {
+                         postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true), 4000L)
+                     } else {
+                         // Full Massive Expansion
+                         _islandState.value = IslandState.TYPE_3_MAX
+                         _activeModel.value = LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true, isCritical = false)
+                         
+                         // Auto-collapse after 3 seconds
+                         scope.launch { delay(3000); evaluatePriority() }
+                     }
                  } else if (!isCharging) {
                      if (lastReportedBattery != -1 && level < lastReportedBattery) {
                          if (level == 20 || level == 10 || level == 5) {
