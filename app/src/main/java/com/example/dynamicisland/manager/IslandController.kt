@@ -1,4 +1,4 @@
-ppackage com.example.dynamicisland.manager
+package com.example.dynamicisland.manager
 
 import android.content.*
 import android.database.ContentObserver
