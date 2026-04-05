@@ -181,8 +181,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { windowManager?.currentWindowMetrics?.windowInsets?.displayCutout } else null
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
 
+        // 🚀 FIX: Swap debounce for conflate. This guarantees the touch rect tracks the UI perfectly without lag.
         flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
-            insetsUpdateFlow.debounce(50).collect { this@DynamicIslandView.requestLayout() }
+            insetsUpdateFlow.conflate().collect { this@DynamicIslandView.requestLayout() }
         }
 
         val securePermission = "com.redwood.permission.SECURE_IPC"
