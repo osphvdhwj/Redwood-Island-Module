@@ -188,13 +188,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
             insetsUpdateFlow.conflate().collect { 
-                // 🚀 FIX 2: Force WindowManager to physically update the hit-box, bypassing ignored layout requests
-                windowParams?.let { wp ->
-                    try { windowManager?.updateViewLayout(this@DynamicIslandView, wp) } catch(e: Exception) {}
-                }
+                this@DynamicIslandView.requestLayout() 
             }
         }
-
+        
         val securePermission = "com.redwood.permission.SECURE_IPC"
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(prefsReceiver, IntentFilter("com.example.dynamicisland.RELOAD_PREFS"), securePermission, null, Context.RECEIVER_EXPORTED)
