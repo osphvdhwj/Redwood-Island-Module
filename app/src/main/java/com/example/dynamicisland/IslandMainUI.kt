@@ -29,7 +29,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -57,10 +57,15 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     val touchScale by animateFloatAsState(targetValue = if (isSquished) 0.96f else 1f, animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "squish")
     
     val minSafeWidth = displayCutoutWidth.floatValue + 4f
-    val rawTargetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
-    val targetWidth = rawTargetWidth.coerceAtLeast(minSafeWidth)
     
-    // We get both the active model and the split model to pass to the Dashboard
+    // 🚀 DPI FIX: Ensure the Island NEVER bleeds off the screen horizontally on any DPI
+    val screenWidthDp = configuration.screenWidthDp.toFloat()
+    val maxSafeWidth = (screenWidthDp - 16f).coerceAtLeast(minSafeWidth) // 8dp margin on both sides
+
+    val rawTargetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
+    // Lock the width within safe physical boundaries
+    val targetWidth = rawTargetWidth.coerceIn(minSafeWidth, maxSafeWidth)
+    
     val model = activeModel.value
     val splitModelValue = splitModel.value
     val activeMedia = (splitModelValue as? LiveActivityModel.Music) ?: (model as? LiveActivityModel.Music)
@@ -84,20 +89,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     }
     val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
     val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
-
-    val densityPx = LocalDensity.current.density
-    var anchorLeft by remember { mutableIntStateOf(0) }
-    var anchorTop by remember { mutableIntStateOf(0) }
-    var anchorWidth by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(targetWidth, targetHeight, anchorLeft, anchorTop, anchorWidth) {
-        if (anchorWidth == 0) return@LaunchedEffect
-        val wPx = (targetWidth * densityPx).toInt()
-        val hPx = (targetHeight * densityPx).toInt()
-        val centerX = anchorLeft + (anchorWidth / 2)
-        mainPillRect.set(centerX - (wPx / 2), anchorTop, centerX + (wPx / 2), anchorTop + hPx)
-        insetsUpdateFlow.tryEmit(Unit)
-    }
     
     LaunchedEffect(state, model, isLandscape) {
         if (!isAttachedToWindow) return@LaunchedEffect
@@ -139,12 +130,15 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                 .width(animatedWidth) 
                 .height(animatedHeight)
                 .onGloballyPositioned { coordinates ->
-                    val location = IntArray(2)
-                    view.getLocationOnScreen(location)
-                    val bounds = coordinates.boundsInRoot()
-                    anchorLeft = location[0] + bounds.left.toInt()
-                    anchorTop = location[1] + bounds.top.toInt()
-                    anchorWidth = bounds.width.toInt()
+                    // 🚀 TOUCH FIX: Perfectly map the invisible touch region to the physical pixels on screen every frame!
+                    val bounds = coordinates.boundsInWindow()
+                    mainPillRect.set(
+                        bounds.left.toInt(),
+                        bounds.top.toInt(),
+                        bounds.right.toInt(),
+                        bounds.bottom.toInt()
+                    )
+                    insetsUpdateFlow.tryEmit(Unit)
                 }
                 .graphicsLayer { scaleX = touchScale * islandScale; scaleY = touchScale * islandScale; alpha = islandAlpha; transformOrigin = TransformOrigin(0.5f, 0.5f) }
                 .shadow(elevation = if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp, shape = RoundedCornerShape(animatedRadius), spotColor = Color.Black)
@@ -159,7 +153,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                         onTap = { 
                             if (state != IslandState.TYPE_3_MAX) { 
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                // 🚀 HARCODED FALLBACK: If gesture matrix is missing, default to EXPAND
                                 onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) ?: run { onGestureEvent?.invoke(IslandGesture.SINGLE_TAP) }
                             } 
                         },
@@ -210,7 +203,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                             onQsClick = { tileSpec -> onQsTileClick?.invoke(tileSpec) }
                                         )
                                         is LiveActivityModel.Music -> MusicMax(model) 
-                                        is LiveActivityModel.Charging -> ChargingMax(model) // 🚀 ADDED ROUTE HERE
+                                        is LiveActivityModel.Charging -> ChargingMax(model)
                                         else -> {} 
                                     } 
                                 }
