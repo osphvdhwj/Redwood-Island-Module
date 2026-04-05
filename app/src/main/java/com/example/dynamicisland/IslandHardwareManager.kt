@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.example.dynamicisland
 
 import android.content.Context
@@ -10,7 +11,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
-@Suppress("DEPRECATION")
 class IslandHardwareManager(
     private val context: Context,
     private val audioManager: AudioManager,
@@ -59,7 +59,7 @@ class IslandHardwareManager(
             // Fetch true hardware ceiling (e.g. 4095 on Poco), fallback to 255
             val maxHardware = try { Settings.System.getInt(resolver, "screen_brightness_maximum") } catch (e: Throwable) { 255 }
             
-            // 🚀 FIXED: Gamma Curve (Slider to Hardware)
+            // 🚀 Perceptual Gamma Curve (Slider to Hardware)
             val normalizedSlider = percent.toFloat() / 100f
             val targetBrightness = (normalizedSlider.pow(2.2f) * maxHardware).roundToInt().coerceIn(0, maxHardware)
             
@@ -76,7 +76,7 @@ class IslandHardwareManager(
             
             isAutoBrightnessEnabled = Settings.System.getInt(resolver, Settings.System.SCREEN_BRIGHTNESS_MODE, 0) == 1
             
-            // 🚀 FIXED: Inverse Gamma Curve (Hardware to Slider)
+            // 🚀 Inverse Gamma Curve (Hardware to Slider)
             val normalizedHardware = hardwareBrt.toFloat() / maxHardware.toFloat()
             val percent = (normalizedHardware.pow(1f / 2.2f) * 100f).roundToInt().coerceIn(0, 100)
             
