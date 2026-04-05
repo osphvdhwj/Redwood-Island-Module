@@ -179,10 +179,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         
-        // 🚀 THE FIX: Attach to the REAL WindowManager observer, not the dummy one from init!
+        // 🚀 THE FIX: listenerClass is now properly scoped outside the 'if' block!
         try {
+            val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
+            
             if (insetsListenerProxy == null) {
-                val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
                 insetsListenerProxy = java.lang.reflect.Proxy.newProxyInstance(context.classLoader, arrayOf(listenerClass)) { _, method, args ->
                     if (method.name == "onComputeInternalInsets") {
                         val info = args[0]
@@ -204,7 +205,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) { windowManager?.currentWindowMetrics?.windowInsets?.displayCutout } else null
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
 
-        // 🚀 THE FIX: Zero-lag touch tracking. Safe to use because the Infinite Loop is broken!
+        // 🚀 Zero-lag touch tracking. Safe to use because the Infinite Loop is broken!
         flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
             insetsUpdateFlow.collect { 
                 this@DynamicIslandView.requestLayout() 
