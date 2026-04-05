@@ -57,7 +57,7 @@ fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.c
                         val newRight = bounds.right.toInt()
                         val newBottom = bounds.bottom.toInt()
                     
-                        // 🧠 THE LOOP BREAKER: Protect the Split Cube
+                        // 🧠 THE LOOP BREAKER
                         if (splitCubeRect.left != newLeft || splitCubeRect.top != newTop || splitCubeRect.right != newRight || splitCubeRect.bottom != newBottom) {
                             splitCubeRect.set(newLeft, newTop, newRight, newBottom)
                             insetsUpdateFlow.tryEmit(Unit)
