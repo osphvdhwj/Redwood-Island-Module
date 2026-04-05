@@ -149,12 +149,13 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             try {
                 val displayManager = systemUiContext.getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
                 val display = displayManager.getDisplay(android.view.Display.DEFAULT_DISPLAY)
-                val windowContext = systemUiContext.createWindowContext(display, 2015, null)
+                
+                // 🚀 FIX: Changed to 2024 (TYPE_NAVIGATION_BAR_PANEL) to bypass Android 14+ Status Bar touch protections
+                val windowContext = systemUiContext.createWindowContext(display, 2024, null)
                 val windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
                 
-                // 2015 (TYPE_STATUS_BAR_PANEL) & LAYOUT_INSET_DECOR guarantees overlap with the actual Status Bar space.
                 val layoutParams = WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, 2015,
+                    WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, 2024,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or 
