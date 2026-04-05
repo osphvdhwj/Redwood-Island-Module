@@ -1,30 +1,21 @@
-package com.example.dynamicisland.manager
+ppackage com.example.dynamicisland.manager
 
-
-import android.content.BroadcastReceiver
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.database.ContentObserver
 import android.graphics.Bitmap
 import android.media.AudioManager
-import android.os.Handler
-import android.os.Looper
+import android.os.*
 import android.provider.Settings
 import android.view.WindowManager
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import org.json.JSONObject
 import android.util.LruCache
-import com.example.dynamicisland.manager.IslandPriorityEngine
-import com.example.dynamicisland.manager.IslandNotificationManager
-import com.example.dynamicisland.manager.IslandConnectivityManager
-import com.example.dynamicisland.manager.IslandStorageManager
-import com.example.dynamicisland.manager.IslandClipboardManager
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
+import org.json.JSONObject
 
-class IslandController(private val context: Context) {
+// 🚀 THESE ARE THE MISSING IMPORTS CAUSING THE CRASH:
+import com.example.dynamicisland.model.*
+import com.example.dynamicisland.ui.DynamicIslandView
+import com.example.dynamicisland.hook.*
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
