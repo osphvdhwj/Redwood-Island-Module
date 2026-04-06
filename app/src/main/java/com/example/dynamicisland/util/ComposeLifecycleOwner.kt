@@ -23,7 +23,8 @@ class ComposeLifecycleOwner : SavedStateRegistryOwner, ViewModelStoreOwner {
     override val viewModelStore: ViewModelStore get() = mViewModelStore
 
     fun onCreate() {
-        mSavedStateRegistryController.performRestore(Bundle())
+        // 🚀 CHANGE THIS to pass null instead of Bundle()
+        mSavedStateRegistryController.performRestore(null)
         mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
     }
 
