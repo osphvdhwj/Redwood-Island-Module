@@ -13,8 +13,7 @@ import de.robv.android.xposed.XC_MethodHook.MethodHookParam
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
-import com.example.dynamicisland.manager.IslandController
-import com.example.dynamicisland.ui.DynamicIslandView
+import com.example.dynamicisland.ui.DynamicIslandView'
 
 object SystemUIContextKeeper {
     var qsTileHost: Any? = null
@@ -153,7 +152,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 val displayManager = systemUiContext.getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
                 val display = displayManager.getDisplay(android.view.Display.DEFAULT_DISPLAY)
                 
-                // 🚀 FIX: Changed to 2024 (TYPE_NAVIGATION_BAR_PANEL) to bypass Android 14+ Status Bar touch protections
+                // FiIX: Changed to 2024 (TYPE_NAVIGATION_BAR_PANEL) to bypass Android 14+ Status Bar touch protections
                 val windowContext = systemUiContext.createWindowContext(display, 2024, null)
                 val windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
                 
