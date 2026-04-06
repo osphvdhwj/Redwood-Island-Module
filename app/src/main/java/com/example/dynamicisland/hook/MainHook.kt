@@ -13,7 +13,7 @@ import de.robv.android.xposed.XC_MethodHook.MethodHookParam
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
-import com.example.dynamicisland.ui.DynamicIslandView'
+import com.example.dynamicisland.ui.DynamicIslandView
 
 object SystemUIContextKeeper {
     var qsTileHost: Any? = null
