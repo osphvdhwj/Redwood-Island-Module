@@ -15,6 +15,7 @@ import org.json.JSONObject
 import com.example.dynamicisland.model.*
 import com.example.dynamicisland.ui.DynamicIslandView
 import com.example.dynamicisland.hook.*
+import com.example.dynamicisland.util.ComposeLifecycleOwner
 
 class IslandController(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -292,6 +293,11 @@ class IslandController(private val context: Context) {
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
         val view = DynamicIslandView(context, moduleContext)
+        val lifecycleOwner = ComposeLifecycleOwner()
+        lifecycleOwner.onCreate()
+        lifecycleOwner.attachToView(view)
+        lifecycleOwner.onStart()
+        lifecycleOwner.onResume()
         this.islandView = view 
         this.windowManager = wm 
 
