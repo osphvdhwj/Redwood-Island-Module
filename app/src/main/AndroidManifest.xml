@@ -73,14 +73,39 @@
             </intent-filter>
         </service>
 
+        <!-- ============================================================
+             BATCH 4: AndroidManifest.xml additions
+             ============================================================ -->
+
+        <!-- Required for DeepTelecomHook contact photo loading in SystemUI -->
+        <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+        <!-- Required for IslandAccessibilityService -->
+        <service
+            android:name=".accessibility.IslandAccessibilityService"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
     </application>
+
+    <!-- Required so SystemUI can resolve contact photo URIs -->
+    <queries>
+        <provider android:authorities="com.android.contacts" />
+        <provider android:authorities="contacts" />
+    </queries>
 
     <!-- ============================================================
          BATCH 1: AndroidManifest.xml additions
-         Add these entries inside your existing <application> tag
          ============================================================ -->
 
-    <!-- 1. ContentProvider — the new secure IPC backbone -->
     <provider
         android:name=".ipc.IslandContentProvider"
         android:authorities="com.example.dynamicisland.provider"
@@ -90,7 +115,6 @@
         android:multiprocess="false"
         android:syncable="false" />
 
-    <!-- 2. StateService — the Binder service for live state sync -->
     <service
         android:name=".ipc.IslandStateService"
         android:exported="true"
