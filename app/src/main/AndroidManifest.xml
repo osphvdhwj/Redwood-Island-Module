@@ -61,6 +61,7 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
         <service
             android:name=".IslandTileService"
             android:label="Island Config"
@@ -71,6 +72,32 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+
     </application>
+
+    <!-- ============================================================
+         BATCH 1: AndroidManifest.xml additions
+         Add these entries inside your existing <application> tag
+         ============================================================ -->
+
+    <!-- 1. ContentProvider — the new secure IPC backbone -->
+    <provider
+        android:name=".ipc.IslandContentProvider"
+        android:authorities="com.example.dynamicisland.provider"
+        android:exported="true"
+        android:readPermission="com.redwood.permission.SECURE_IPC"
+        android:writePermission="com.redwood.permission.SECURE_IPC"
+        android:multiprocess="false"
+        android:syncable="false" />
+
+    <!-- 2. StateService — the Binder service for live state sync -->
+    <service
+        android:name=".ipc.IslandStateService"
+        android:exported="true"
+        android:permission="com.redwood.permission.SECURE_IPC">
+        <intent-filter>
+            <action android:name="com.example.dynamicisland.STATE_SERVICE" />
+        </intent-filter>
+    </service>
 
 </manifest>
