@@ -275,7 +275,7 @@ class IslandController(private val context: Context) {
                     evaluatePriority()
                 }
 
-               " CrDroidAPIHook.ACTION_THERMAL_PROFILE" -> {
+               "CrDroidAPIHook.ACTION_THERMAL_PROFILE" -> {
                     if (!isAlertsEnabled) return
                     val level   = intent.getIntExtra("level", 0)
                     val profile = intent.getStringExtra("profile") ?: "UNKNOWN"

@@ -217,5 +217,5 @@ object IslandPreferencesManagerV2 {
 }
 
 // Extension to filter non-null from StateFlow
-private fun <T> kotlinx.coroutines.flow.Flow<T?>.filterNotNull(): kotlinx.coroutines.flow.Flow<T> =
-    kotlinx.coroutines.flow.transform { value -> if (value != null) emit(value) }
+// private fun <T> kotlinx.coroutines.flow.Flow<T?>.filterNotNull(): kotlinx.coroutines.flow.Flow<T> =
+//    kotlinx.coroutines.flow.transform { value -> if (value != null) emit(value) }

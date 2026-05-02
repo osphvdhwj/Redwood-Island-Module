@@ -1,5 +1,6 @@
 package com.example.dynamicisland.ui
 
+import androidx.compose.ui.draw.scale
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
