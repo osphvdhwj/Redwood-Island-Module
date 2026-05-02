@@ -260,6 +260,104 @@ class IslandController(private val context: Context) {
                         } catch (e: Throwable) {}
                     }
                 }
+                
+                // ── BATCH 6 receivers ────────────────────────────────────────────────────
+                
+                "CrDroidAPIHook.ACTION_GAME_MODE_CHANGED" -> {
+                    val isActive = intent.getBooleanExtra("isActive", false)
+                    val pkg      = intent.getStringExtra("pkg") ?: ""
+                    currentHardware = if (isActive) {
+                        LiveActivityModel.HardwareMonitor(
+                            id = "hw_monitor", type = ActivityType.HARDWARE,
+                            cpuTempCelsius = 0f, cpuFreqMhz = 0, isGamingModeOn = true
+                        )
+                    } else null
+                    evaluatePriority()
+                }
+
+               " CrDroidAPIHook.ACTION_THERMAL_PROFILE" -> {
+                    if (!isAlertsEnabled) return
+                    val level   = intent.getIntExtra("level", 0)
+                    val profile = intent.getStringExtra("profile") ?: "UNKNOWN"
+                    if (level >= 3) {
+                        postTransientNotification(
+                            LiveActivityModel.SystemAlert(
+                                id         = "sys_thermal_crdroid",
+                                alertType  = "THERMAL",
+                                title      = "Thermal Throttling",
+                                message    = "Performance reduced — $profile",
+                                alertColor = android.graphics.Color.RED,
+                                isCritical = level >= 4
+                            ),
+                            if (level >= 4) 8000L else 5000L
+                        )
+                    }
+                }
+
+                "CrDroidAPIHook.ACTION_DISPLAY_MODE" -> {
+                    if (!isAlertsEnabled) return
+                    val hz = intent.getIntExtra("refreshRate", 0)
+                    if (hz > 0) {
+                        postTransientNotification(
+                            LiveActivityModel.General(
+                                id          = "sys_display_mode",
+                                type        = ActivityType.HARDWARE,
+                                title       = "Display Mode",
+                                dataText    = "${hz}Hz",
+                                accentColor = android.graphics.Color.parseColor("#80DEEA")
+                            ),
+                            2500L
+                        )
+                    }
+                }
+
+                "CrDroidAPIHook.ACTION_SMART_CHARGE" -> {
+                    if (!isAlertsEnabled || !isChargingEnabled) return
+                    val limit  = intent.getIntExtra("limit", 100)
+                    val active = intent.getBooleanExtra("active", false)
+                    if (active) {
+                        postTransientNotification(
+                            LiveActivityModel.General(
+                                id          = "sys_smart_charge",
+                                type        = ActivityType.CHARGING,
+                                title       = "Smart Charge Active",
+                                dataText    = "Charge limited to $limit%",
+                                accentColor = android.graphics.Color.parseColor("#66BB6A")
+                            ),
+                            4000L
+                        )
+                    }
+                }
+
+                "SurfaceFlingerHook.ACTION_FRAME_STATS" -> {
+                    val fps        = intent.getFloatExtra("fps", 0f)
+                    val frameMs    = intent.getFloatExtra("frameMs", 0f)
+                    val jankPct    = intent.getFloatExtra("jankPct", 0f)
+                    val currentHw  = currentHardware
+                    if (currentHw?.isGamingModeOn == true) {
+                        currentHardware = currentHw.copy(
+                            cpuFreqMhz = fps.toInt()   // Reuse field to carry FPS
+                        )
+                        // Store in a dedicated field on the view for the HUD
+                        islandView?.updateGamingStats(fps, frameMs, jankPct)
+                    }
+                }
+                "com.example.dynamicisland.hook.ContinuityCameraScanner.ACTION_BARCODE" -> {
+                if (!isAlertsEnabled) return
+                val raw     = intent.getStringExtra("raw")     ?: return
+                val display = intent.getStringExtra("display") ?: raw
+                val action  = intent.getStringExtra("action")  ?: "Copy"
+                postTransientNotification(
+                    LiveActivityModel.General(
+                        id          = "sys_barcode",
+                        type        = ActivityType.MESSAGE,
+                        title       = action,
+                        dataText    = display,
+                        accentColor = android.graphics.Color.parseColor("#4FC3F7"),
+                        isCritical  = false
+                    ),
+                    10_000L
+                )
             }
         }
     }
@@ -570,6 +668,12 @@ class IslandController(private val context: Context) {
             addAction("com.example.dynamicisland.HARDWARE_TOGGLE")
             addAction("com.example.dynamicisland.PANEL_STATE_CHANGED") 
             addAction("com.example.dynamicisland.ALARM_SET") 
+            addAction("com.example.dynamicisland.hook.ContinuityCameraScanner.ACTION_BARCODE")
+            addAction("SurfaceFlingerHook.ACTION_FRAME_STATS")
+            addAction("CrDroidAPIHook.ACTION_GAME_MODE_CHANGED")
+            addAction("CrDroidAPIHook.ACTION_THERMAL_PROFILE")
+            addAction("CrDroidAPIHook.ACTION_DISPLAY_MODE")
+            addAction("CrDroidAPIHook.ACTION_SMART_CHARGE")
         }
 
         val securePermission = "com.redwood.permission.SECURE_IPC"
@@ -611,6 +715,33 @@ class IslandController(private val context: Context) {
         BatteryPlugin.start(context)
         mediaManager.start()
         clipboardManager.startListening()
+        connectivityManager.startListening()
+        // ── BATCH 6: Translation engine wired to clipboard ────────────────────────
+        val translationEngine = com.example.dynamicisland.intelligence.IslandTranslationEngine.get(context)
+        scope.launch {
+            translationEngine.result.collect { result ->
+                if (result != null) {
+                    postTransientNotification(
+                        com.example.dynamicisland.model.LiveActivityModel.General(
+                            id          = "sys_translation",
+                            type        = ActivityType.MESSAGE,
+                            title       = result.translatedText.ifEmpty { "Translating…" },
+                            dataText    = result.originalText,
+                            accentColor = android.graphics.Color.parseColor("#4FC3F7")
+                        ),
+                        12_000L
+                    )
+                }
+            }
+        }
+
+        // ── BATCH 6: Barcode scanner wired ────────────────────────────────────────
+        val barcodeScanner = com.example.dynamicisland.hook.ContinuityCameraScanner(context)
+        val prefs = context.getSharedPreferences("dynamic_island_prefs", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("enable_continuity_camera", false)) {
+            barcodeScanner.start()
+        }
+        
         connectivityManager.startListening()
     }
 }

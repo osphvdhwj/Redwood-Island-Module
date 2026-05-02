@@ -401,7 +401,40 @@ fun FeaturesScreen(prefs: SharedPreferences) {
         FeatureSwitch("Enable System Alerts (Battery/Temp)", "enable_alerts", true, prefs, scope, context)
         FeatureSwitch("Enable App Timers (Wellbeing)", "enable_timers", true, prefs, scope, context)
         FeatureSwitch("Spin Album Art in Mini Pill", "rotate_cube", true, prefs, scope, context)
-        
+
+        // New toggles and button
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Batch 6 — Defining Features", fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold, color = Color(0xFFFFD54F))
+
+        FeatureSwitch("On-Device Translation Overlay",
+            "enable_translation", true, prefs, scope, context)
+
+        FeatureSwitch("Continuity Camera (QR / Barcode)",
+            "enable_continuity_camera", false, prefs, scope, context)
+
+        FeatureSwitch("Gaming HUD (FPS · Temp · Freq)",
+            "enable_gaming_hud", true, prefs, scope, context)
+
+        // Button to open Accessibility Settings
+        Button(
+            onClick = {
+                context.startActivity(
+                    android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            },
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.White.copy(alpha = 0.10f)
+            )
+        ) {
+            Icon(Icons.Default.Accessibility, null,
+                modifier = Modifier.size(16.dp), tint = Color.White)
+            Spacer(Modifier.width(8.dp))
+            Text("Open Accessibility Settings", color = Color.White)
+        }
+
         Spacer(modifier = Modifier.height(80.dp))
     }
 }

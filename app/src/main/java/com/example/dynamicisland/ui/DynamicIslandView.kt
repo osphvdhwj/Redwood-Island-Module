@@ -104,6 +104,17 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     fun updateHardwareBrightness(bright: Int) { hardwareBrightness.intValue = bright }
     fun updateTicker(pos: Long) { currentMediaPos.longValue = pos }
     fun updateBattery(level: Int, isCharging: Boolean) { globalBatteryLevel.intValue = level; globalIsCharging.value = isCharging }
+    
+    // ── BATCH 6: Gaming HUD stats ─────────────────────────────────────────────
+    
+    var gamingFps     = mutableFloatStateOf(0f)
+    var gamingFrameMs = mutableFloatStateOf(0f)
+    var gamingJankPct = mutableFloatStateOf(0f)
+    fun updateGamingStats(fps: Float, frameMs: Float, jankPct: Float) {
+        gamingFps.floatValue     = fps
+        gamingFrameMs.floatValue = frameMs
+        gamingJankPct.floatValue = jankPct
+    }
 
     // Private Subsystems
     private var flowJob: Job? = null

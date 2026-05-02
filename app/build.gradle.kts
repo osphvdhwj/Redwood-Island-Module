@@ -67,4 +67,19 @@ dependencies {
 
     // Wavy Slider
     implementation("ir.mahozad.multiplatform:wavy-slider:1.0.0")
+
+    // ── BATCH 6 additions ──────────────────────────────────────────────────────
+
+    // MLKit on-device translation (no network required after model download)
+    implementation("com.google.mlkit:translate:17.0.3")
+
+    // MLKit barcode scanning (for Continuity Camera)
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
+    // CameraX (for Continuity Camera viewfinder)
+    val cameraXVersion = "1.3.4"
+    implementation("androidx.camera:camera-core:$cameraXVersion")
+    implementation("androidx.camera:camera-camera2:$cameraXVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraXVersion")
+    implementation("androidx.camera:camera-view:$cameraXVersion")
 }

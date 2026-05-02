@@ -33,6 +33,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         
         if (lpparam.packageName == "android") {
+        // ── BATCH 6: SurfaceFlinger frame stats + crDroid APIs ───────────────────
+            SurfaceFlingerHook.apply(lpparam, USER_ALL)
+            CrDroidAPIHook.apply(lpparam, USER_ALL)
             SystemEventsHook.apply(lpparam, USER_ALL)
             FrameworkTelecomHook.apply(lpparam, USER_ALL)
             FrameworkHardwareHook.apply(lpparam, USER_ALL)

@@ -227,7 +227,27 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                     } 
                                 }
                                 IslandState.TYPE_2_MID -> { when (model) { is LiveActivityModel.Dashboard -> DashboardMid(model); is LiveActivityModel.Call -> CallMid(model); is LiveActivityModel.Music -> MusicMid(model); is LiveActivityModel.General -> GeneralMid(model); is LiveActivityModel.Charging -> ChargingMid(model); is LiveActivityModel.SystemAlert -> SystemAlertMid(model); is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model); is LiveActivityModel.OngoingTask -> OngoingTaskMid(model); else -> {} } }
-                                IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { when (model) { is LiveActivityModel.Call -> CallMini(model); is LiveActivityModel.Music -> MusicMini(model); is LiveActivityModel.General -> GeneralMini(model); is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model); is LiveActivityModel.RealityPill -> RealityPillMini(model); else -> {} } }
+                                IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { 
+                                    // Gaming HUD takes priority in mini when gaming mode is active
+                                    if (currentHardware?.isGamingModeOn == true && model !is LiveActivityModel.Call) {
+                                        GamingHUDMini(
+                                            fps        = gamingFps.floatValue,
+                                            frameMs    = gamingFrameMs.floatValue,
+                                            jankPct    = gamingJankPct.floatValue,
+                                            cpuTemp    = currentHardware?.cpuTempCelsius ?: 0f,
+                                            cpuFreqMhz = currentHardware?.cpuFreqMhz    ?: 0
+                                        )
+                                    } else {
+                                        when (model) { 
+                                            is LiveActivityModel.Call -> CallMini(model)
+                                            is LiveActivityModel.Music -> MusicMini(model)
+                                            is LiveActivityModel.General -> GeneralMini(model)
+                                            is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model)
+                                            is LiveActivityModel.RealityPill -> RealityPillMini(model)
+                                            else -> {} 
+                                        } 
+                                    }
+                                }
                                 IslandState.TYPE_CUBE -> { if (model is LiveActivityModel.Charging) ChargingCube(model) }
                                 else -> {} 
                             }
