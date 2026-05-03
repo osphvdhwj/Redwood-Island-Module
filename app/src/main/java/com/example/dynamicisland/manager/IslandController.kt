@@ -261,7 +261,38 @@ class IslandController(private val context: Context) {
                     }
                 }
                 
+
+                "com.example.dynamicisland.EXTERNAL_ACTIVITY_UPDATED" -> {
+                    val activityId = intent.getStringExtra("activity_id") ?: return
+                    val pkg = intent.getStringExtra("package_name") ?: ""
+                    val layoutType = intent.getStringExtra("layout_type") ?: ""
+                    val state = intent.getBundleExtra("state") ?: android.os.Bundle()
+
+                    val info = com.example.dynamicisland.ipc.LiveActivityInfo(activityId, pkg, layoutType, state)
+                    val model = LiveActivityModel.ExternalActivity(
+                        id = activityId,
+                        info = info,
+                        state = state,
+                        isTransient = false,
+                        isCritical = false
+                    )
+                    activeExternalActivities[activityId] = model
+
+                    _activeModel.value = model
+                    _islandState.value = IslandState.TYPE_2_MID
+                    evaluatePriority()
+                }
+
+                "com.example.dynamicisland.EXTERNAL_ACTIVITY_ENDED" -> {
+                    val activityId = intent.getStringExtra("activity_id") ?: return
+                    activeExternalActivities.remove(activityId)
+                    if (_activeModel.value?.id == activityId) {
+                        evaluatePriority()
+                    }
+                }
+
                 // ── BATCH 6 receivers ────────────────────────────────────────────────────
+
                 
                 "CrDroidAPIHook.ACTION_GAME_MODE_CHANGED" -> {
                     val isActive = intent.getBooleanExtra("isActive", false)
@@ -370,11 +401,22 @@ class IslandController(private val context: Context) {
 
     private fun evaluatePriority() {
         userForceCollapsed = IslandPriorityEngine.evaluatePriority(
-            context = context, windowManager = windowManager, topAppPackage = topAppPackage,
-            isPanelExpanded = isPanelExpanded, currentCall = currentCall, transientModel = transientModel,
-            currentMedia = currentMedia, currentHardware = currentHardware, isMediaEnabled = mediaManager.isMediaEnabled,
-            userForceCollapsed = userForceCollapsed, currentActiveModel = _activeModel.value,
-            currentVisualState = _islandState.value, _activeModel = _activeModel, _splitModel = _splitModel, _islandState = _islandState
+            context = context,
+            windowManager = windowManager,
+            topAppPackage = topAppPackage,
+            isPanelExpanded = isPanelExpanded,
+            currentCall = currentCall,
+            transientModel = transientModel,
+            activeExternalActivity = activeExternalActivities.values.firstOrNull(),
+            currentMedia = currentMedia,
+            currentHardware = currentHardware,
+            isMediaEnabled = isMediaEnabled,
+            userForceCollapsed = userForceCollapsed,
+            currentActiveModel = _activeModel.value,
+            currentVisualState = _islandState.value,
+            _activeModel = _activeModel,
+            _splitModel = _splitModel,
+            _islandState = _islandState
         )
         
         // 🧠 FEATURE: Smart Focus Mode
@@ -672,8 +714,10 @@ class IslandController(private val context: Context) {
             addAction("SurfaceFlingerHook.ACTION_FRAME_STATS")
             addAction("CrDroidAPIHook.ACTION_GAME_MODE_CHANGED")
             addAction("CrDroidAPIHook.ACTION_THERMAL_PROFILE")
-            addAction("CrDroidAPIHook.ACTION_DISPLAY_MODE")
+addAction("CrDroidAPIHook.ACTION_DISPLAY_MODE")
             addAction("CrDroidAPIHook.ACTION_SMART_CHARGE")
+            addAction("com.example.dynamicisland.EXTERNAL_ACTIVITY_UPDATED")
+            addAction("com.example.dynamicisland.EXTERNAL_ACTIVITY_ENDED")
         }
 
         val securePermission = "com.redwood.permission.SECURE_IPC"

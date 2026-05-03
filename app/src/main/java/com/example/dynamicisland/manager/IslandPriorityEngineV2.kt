@@ -408,7 +408,17 @@ object IslandPriorityEngineV2 {
             when (transientModel) {
                 is LiveActivityModel.SystemAlert  -> post(buildAlertEvent(transientModel))
                 is LiveActivityModel.OngoingTask  -> post(buildDownloadEvent(transientModel))
-                is LiveActivityModel.General      -> post(buildHardwareToggleEvent(transientModel))
+is LiveActivityModel.General      -> post(buildHardwareToggleEvent(transientModel))
+                is LiveActivityModel.ExternalActivity -> post(
+                    IslandEvent(
+                        id = transientModel.id,
+                        model = transientModel,
+                        baseScore = SCORE_CRITICAL_ALERT,
+                        ttlMs = 15_000L,
+                        isSticky = false,
+                        targetState = IslandState.TYPE_2_MID
+                    )
+                )
                 is LiveActivityModel.Charging     -> post(buildChargingEvent(transientModel))
                 else -> { /* generic transient */ }
             }
