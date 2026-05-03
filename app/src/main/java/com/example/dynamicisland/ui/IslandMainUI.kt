@@ -226,7 +226,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                         else -> {} 
                                     } 
                                 }
-                                IslandState.TYPE_2_MID -> { when (model) { is LiveActivityModel.Dashboard -> DashboardMid(model); is LiveActivityModel.Call -> CallMid(model); is LiveActivityModel.Music -> MusicMid(model); is LiveActivityModel.General -> GeneralMid(model); is LiveActivityModel.Charging -> ChargingMid(model); is LiveActivityModel.SystemAlert -> SystemAlertMid(model); is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model); is LiveActivityModel.OngoingTask -> OngoingTaskMid(model); else -> {} } }
+                                IslandState.TYPE_2_MID -> { when (model) { is LiveActivityModel.Dashboard -> DashboardMid(model); is LiveActivityModel.Call -> CallMid(model); is LiveActivityModel.Music -> MusicMid(model); is LiveActivityModel.General -> GeneralMid(model); is LiveActivityModel.Charging -> ChargingMid(model); is LiveActivityModel.SystemAlert -> SystemAlertMid(model); is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model); is LiveActivityModel.OngoingTask -> OngoingTaskMid(model); is LiveActivityModel.ExternalActivity -> ExternalActivityMid(model); else -> {} } }
                                 IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { 
                                     // Gaming HUD takes priority in mini when gaming mode is active
                                     if (currentHardware?.isGamingModeOn == true && model !is LiveActivityModel.Call) {

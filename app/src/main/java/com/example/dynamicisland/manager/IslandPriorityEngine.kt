@@ -13,6 +13,7 @@ object IslandPriorityEngine {
         isPanelExpanded: Boolean,
         currentCall: LiveActivityModel.Call?,
         transientModel: LiveActivityModel?,
+        activeExternalActivity: LiveActivityModel.ExternalActivity? = null,
         currentMedia: LiveActivityModel.Music?,
         currentHardware: LiveActivityModel.HardwareMonitor?,
         isMediaEnabled: Boolean,
@@ -85,6 +86,13 @@ object IslandPriorityEngine {
             return userForceCollapsed
         }
         
+        // 7.5 EXTERNAL ACTIVITIES (via SDK)
+        if (activeExternalActivity != null) {
+            _activeModel.value = activeExternalActivity
+            _islandState.value = IslandState.TYPE_2_MID
+            return userForceCollapsed
+        }
+
         // 8. 📱 GAMING (Portrait) 
         // If they are gaming in portrait mode, hide the idle ring so it's not distracting
         if (isGaming) {
