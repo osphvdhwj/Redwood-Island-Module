@@ -88,7 +88,12 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         val baseAlpha = if (theme.isGlassmorphism) 0.65f else 1.0f
         if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) { Color(model.dominantColor).copy(alpha = baseAlpha) } else if (state == IslandState.TYPE_3_MAX) { Color(0xFF080808).copy(alpha = baseAlpha) } else { Color.Black.copy(alpha = baseAlpha) }
     }
-    val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(600), label = "bgColor")
+    val bgSpec = when {
+    state == IslandState.TYPE_3_MAX -> tween<androidx.compose.ui.graphics.Color>(400, easing = FastOutSlowInEasing)
+    state == IslandState.TYPE_0_RING -> tween<androidx.compose.ui.graphics.Color>(250, easing = LinearOutSlowInEasing)
+    else -> spring<androidx.compose.ui.graphics.Color>(dampingRatio = 0.85f, stiffness = 300f)
+}
+val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = bgSpec, label = "bgColor")
     val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
     
     LaunchedEffect(state, model, isLandscape) {
@@ -126,12 +131,20 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         horizontalArrangement = Arrangement.Center, 
         verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
     ) {
-        Box(
+        val shadowElevation by animateDpAsState(
+        targetValue = if (isSquished) 4.dp else (if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp),
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 600f)
+    )
+    val shadowElevation by animateDpAsState(
+        targetValue = if (isSquished) 4.dp else (if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp),
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 600f)
+    )
+    Box(
             modifier = Modifier
                 .width(animatedWidth) 
                 .height(animatedHeight)
                 // 🚀 FIX: graphicsLayer MUST be before onGloballyPositioned so touches map correctly!
-                .graphicsLayer { scaleX = touchScale * islandScale; scaleY = touchScale * islandScale; alpha = islandAlpha; transformOrigin = TransformOrigin(0.5f, 0.5f) }
+                .graphicsLayer { scaleX = islandScale; scaleY = islandScale; alpha = islandAlpha; transformOrigin = TransformOrigin(0.5f, 0.5f) }
                 .onGloballyPositioned { coordinates ->
                     val bounds = coordinates.boundsInWindow()
                     val newLeft = bounds.left.toInt()
@@ -145,7 +158,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                         insetsUpdateFlow.tryEmit(Unit)
                     }
                 }
-                .shadow(elevation = if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp, shape = RoundedCornerShape(animatedRadius), spotColor = Color.Black)
+                .shadow(elevation = shadowElevation, shape = RoundedCornerShape(animatedRadius), spotColor = Color.Black)
                 .clip(RoundedCornerShape(animatedRadius))
                 .background(bgColor)
                 .border(0.5.dp, borderColor, RoundedCornerShape(animatedRadius))
@@ -207,7 +220,20 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                     Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
                         AnimatedContent(
                             targetState = state,
-                            transitionSpec = { (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90))) togetherWith fadeOut(animationSpec = tween(90)) },
+                            transitionSpec = {
+                            val expanding = targetState.ordinal > initialState.ordinal
+                            if (expanding) {
+                                (fadeIn(animationSpec = tween(300, delayMillis = 60)) + scaleIn(
+                                    initialScale = 0.88f,
+                                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f)
+                                )) togetherWith fadeOut(animationSpec = tween(80))
+                            } else {
+                                (fadeIn(animationSpec = tween(200)) + scaleIn(
+                                    initialScale = 1.04f,
+                                    animationSpec = spring(dampingRatio = 0.8f, stiffness = 500f)
+                                )) togetherWith (fadeOut(animationSpec = tween(120)) + scaleOut(targetScale = 0.96f))
+                            }
+                        },
                             label = "UI Transition"
                         ) { s ->
                             when (s) {
