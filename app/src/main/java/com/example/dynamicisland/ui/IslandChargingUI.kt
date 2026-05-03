@@ -5,6 +5,12 @@ import com.example.dynamicisland.model.*
 import com.example.dynamicisland.manager.*
 
 import androidx.compose.animation.core.*
+import kotlin.math.pow
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.drawscope.clipPath
+import kotlin.math.pow
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -106,8 +112,26 @@ fun DynamicIslandView.ChargingMax(charging: LiveActivityModel.Charging) {
     val alphaAnim = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
-        launch { scaleAnim.animateTo(1f, animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f)) }
-        launch { alphaAnim.animateTo(1f, animationSpec = tween(300)) }
+        launch {
+            alphaAnim.animateTo(1f, animationSpec = tween(200))
+            scaleAnim.animateTo(1f, animationSpec = spring(dampingRatio = 0.55f, stiffness = 350f))
+        }
+    }
+
+    var displayedLevel by remember { mutableIntStateOf(0) }
+    LaunchedEffect(charging.level) {
+        kotlinx.coroutines.delay(200)
+        val target = charging.level
+        val duration = 800L
+        val startTime = System.currentTimeMillis()
+        while (displayedLevel < target) {
+            val elapsed = System.currentTimeMillis() - startTime
+            val progress = (elapsed.toFloat() / duration).coerceIn(0f, 1f)
+            val eased = 1f - (1f - progress).pow(3)
+            displayedLevel = (eased * target).toInt()
+            kotlinx.coroutines.delay(16)
+        }
+        displayedLevel = target
     }
 
     Box(
@@ -138,11 +162,11 @@ fun DynamicIslandView.ChargingMax(charging: LiveActivityModel.Charging) {
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "${charging.level}%",
+                    text = "${displayedLevel}%",
                     color = Color.White,
                     fontSize = 48.sp, 
                     fontWeight = FontWeight.Black,
-                    modifier = Modifier.graphicsLayer { alpha = alphaAnim.value }
+                    modifier = Modifier.alpha(alphaAnim.value)
                 )
                 Text(
                     text = "Charging",
@@ -168,9 +192,9 @@ fun LiquidBatteryCanvas(level: Int, color: Color, isCharging: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.width(46.dp).height(24.dp).border(2.dp, Color.White.copy(alpha=0.3f), RoundedCornerShape(6.dp)).padding(3.dp)) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val clipPath = Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(rect = androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height), cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx()))) }
+                val clipPath = androidx.compose.ui.graphics.Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(rect = androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height), cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx(), 3.dp.toPx()))) }
                 clipPath(clipPath) {
-                    drawRect(color = color, topLeft = Offset.Zero, size = Size(size.width * animatedFill, size.height))
+                    drawRect(color = color, topLeft = androidx.compose.ui.geometry.Offset.Zero, size = androidx.compose.ui.geometry.Size(size.width * animatedFill, size.height))
                 }
             }
             if (isCharging) {
