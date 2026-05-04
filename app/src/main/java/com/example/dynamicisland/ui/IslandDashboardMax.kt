@@ -22,6 +22,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
@@ -140,12 +144,14 @@ fun DynamicIslandView.IslandDashboardMax(
                             icon = Icons.Default.VolumeUp,
                             value = localVol,
                             color = Color.White,
+                            label = "VOL",
                             onValueChange = { localVol = it; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
                         )
                         LiquidSlider(
                             icon = Icons.Default.LightMode,
                             value = localBrt,
                             color = Color(0xFFFFD700),
+                            label = "BRT",
                             onValueChange = { localBrt = it; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
                         )
                     }
@@ -300,8 +306,9 @@ fun MediaHeroSquarcle(media: LiveActivityModel.Music?) {
 }
 
 @Composable
-fun LiquidSlider(icon: ImageVector, value: Float, color: Color, onValueChange: (Float) -> Unit) {
-    // Spring physics for fill level
+fun LiquidSlider(icon: ImageVector, value: Float, color: Color, label: String, onValueChange: (Float) -> Unit) {
+    var isDragging by remember { mutableStateOf(false) }
+
     val animatedFill by animateFloatAsState(
         targetValue = value / 100f, 
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
@@ -313,30 +320,61 @@ fun LiquidSlider(icon: ImageVector, value: Float, color: Color, onValueChange: (
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
-                    // Friction Sensing UX Logic
-                    detectVerticalDragGestures { change, dragAmount ->
-                        val isFast = abs(dragAmount) > 15f
-                        val multiplier = if (isFast) 10f else 1f // Fast flick vs Precision drag
-                        val delta = (dragAmount * multiplier * -0.1f) // Negative because up is negative Y
-                        onValueChange((value + delta).coerceIn(0f, 100f))
-                    }
+                    detectVerticalDragGestures(
+                        onDragStart = { isDragging = true },
+                        onDragEnd = { isDragging = false },
+                        onDragCancel = { isDragging = false },
+                        onVerticalDrag = { change, dragAmount ->
+                            val isFast = kotlin.math.abs(dragAmount) > 15f
+                            val multiplier = if (isFast) 10f else 1f
+                            val delta = (dragAmount * multiplier * -0.1f)
+                            onValueChange((value + delta).coerceIn(0f, 100f))
+                        }
+                    )
                 }
         ) {
-            // The Liquid Fill
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .fillMaxHeight(animatedFill)
-                    .background(color)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(color.copy(alpha = 0.7f), color)
+                        )
+                    )
             )
-            // Icon
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (animatedFill > 0.1f) Color.Black else Color.White,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp).size(24.dp)
-            )
+
+            AnimatedContent(
+                targetState = isDragging,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 12.dp),
+                label = "slider_label"
+            ) { dragging ->
+                if (dragging) {
+                    Text(
+                        "${value.toInt()}%",
+                        color = if (animatedFill > 0.4f) Color.Black else Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = if (animatedFill > 0.4f) Color.Black else Color.White.copy(0.7f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            label,
+                            color = if (animatedFill > 0.4f) Color.Black.copy(0.6f) else Color.White.copy(0.4f),
+                            fontSize = 8.sp
+                        )
+                    }
+                }
+            }
         }
     }
 }

@@ -15,6 +15,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
+    <!-- Required for DeepTelecomHook contact photo loading in SystemUI -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
 
     <application
         android:allowBackup="true"
@@ -23,7 +25,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.DynamicIsland">
         
-        <service android:name=".util.DummyListener"
+        <service android:name=".utilcom.example.dynamicisland.util.DummyListener"
                  android:label="Dynamic Island Media Listener"
                  android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
                  android:exported="true">
@@ -73,12 +75,12 @@
             </intent-filter>
         </service>
 
+
+
+
         <!-- ============================================================
              BATCH 4: AndroidManifest.xml additions
              ============================================================ -->
-
-        <!-- Required for DeepTelecomHook contact photo loading in SystemUI -->
-        <uses-permission android:name="android.permission.READ_CONTACTS" />
 
         <!-- Required for IslandAccessibilityService -->
         <service
@@ -94,6 +96,36 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <!-- ============================================================
+             BATCH 1: AndroidManifest.xml additions
+             ============================================================ -->
+
+        <provider
+            android:name=".ipc.IslandContentProvider"
+            android:authorities="com.example.dynamicisland.provider"
+            android:exported="true"
+            android:readPermission="com.redwood.permission.SECURE_IPC"
+            android:writePermission="com.redwood.permission.SECURE_IPC"
+            android:multiprocess="false"
+            android:syncable="false" />
+
+        <service
+            android:name=".ipc.LiveActivityManagerService"
+            android:exported="true"
+            android:permission="com.redwood.permission.SECURE_IPC">
+            <intent-filter>
+                <action android:name="com.example.dynamicisland.LIVE_ACTIVITY_MANAGER" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".ipc.IslandStateService"
+            android:exported="true"
+            android:permission="com.redwood.permission.SECURE_IPC">
+            <intent-filter>
+                <action android:name="com.example.dynamicisland.STATE_SERVICE" />
+            </intent-filter>
+        </service>
     </application>
 
     <!-- Required so SystemUI can resolve contact photo URIs -->
@@ -101,27 +133,5 @@
         <provider android:authorities="com.android.contacts" />
         <provider android:authorities="contacts" />
     </queries>
-
-    <!-- ============================================================
-         BATCH 1: AndroidManifest.xml additions
-         ============================================================ -->
-
-    <provider
-        android:name=".ipc.IslandContentProvider"
-        android:authorities="com.example.dynamicisland.provider"
-        android:exported="true"
-        android:readPermission="com.redwood.permission.SECURE_IPC"
-        android:writePermission="com.redwood.permission.SECURE_IPC"
-        android:multiprocess="false"
-        android:syncable="false" />
-
-    <service
-        android:name=".ipc.IslandStateService"
-        android:exported="true"
-        android:permission="com.redwood.permission.SECURE_IPC">
-        <intent-filter>
-            <action android:name="com.example.dynamicisland.STATE_SERVICE" />
-        </intent-filter>
-    </service>
 
 </manifest>

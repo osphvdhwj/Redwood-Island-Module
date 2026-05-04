@@ -1,6 +1,8 @@
 package com.example.dynamicisland.model
 
 import android.graphics.Bitmap
+import android.os.Bundle
+import com.example.dynamicisland.ipc.LiveActivityInfo
 
 data class CustomMediaAction(
     val actionName: String, 

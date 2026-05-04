@@ -32,38 +32,90 @@ import androidx.compose.ui.unit.sp
 fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
     val haptic = LocalHapticFeedback.current
     val isRinging = model.state == "RINGING"
-    val ringPulse by rememberInfiniteTransition(label="ring").animateFloat(initialValue = 0.4f, targetValue = 1f, animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse), label="alpha")
-    val pillAlpha = if (isRinging) ringPulse else 1f
+
+    val rippleScale by rememberInfiniteTransition(label="ringRipple").animateFloat(
+        initialValue = 1f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            tween(400, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse
+        ), label = "ripple"
+    )
+
+    val bgColor = if (isRinging) {
+        androidx.compose.ui.graphics.Brush.horizontalGradient(
+            listOf(Color(0xFF00C853), Color(0xFF1DE9B6))
+        )
+    } else {
+        androidx.compose.ui.graphics.Brush.horizontalGradient(
+            listOf(Color(0xFF00897B), Color(0xFF00C853))
+        )
+    }
 
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF00C853).copy(alpha = pillAlpha), RoundedCornerShape(50))
+            .graphicsLayer {
+                scaleX = if (isRinging) rippleScale else 1f
+                scaleY = if (isRinging) rippleScale else 1f
+            }
+            .background(bgColor, RoundedCornerShape(50))
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onTap = { 
+                    onTap = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        if (isRinging) onOpenCallUI?.invoke() else setState(IslandState.TYPE_2_MID) 
+                        if (isRinging) onOpenCallUI?.invoke() else setState(IslandState.TYPE_2_MID)
                     },
-                    onLongPress = { 
+                    onLongPress = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onOpenCallUI?.invoke() 
+                        onOpenCallUI?.invoke()
                     }
                 )
             }
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-        Spacer(modifier = Modifier.width(6.dp))
+        val phoneRotation by rememberInfiniteTransition(label="phoneRot").animateFloat(
+            initialValue = -15f,
+            targetValue = 15f,
+            animationSpec = infiniteRepeatable(
+                tween(150, easing = LinearEasing),
+                RepeatMode.Reverse
+            ), label = "rotation"
+        )
+
+        Icon(
+            Icons.Default.Phone,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier
+                .size(14.dp)
+                .graphicsLayer {
+                    rotationZ = if (isRinging) phoneRotation else 0f
+                }
+        )
+
         if (isRinging) {
-            Text(text = "Incoming", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = model.callerName.ifEmpty { "Incoming Call" },
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                modifier = Modifier.weight(1f)
+            )
         } else {
-            IsolatedTimerText(startTime = model.startTime, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            IsolatedTimerText(
+                startTime = model.startTime,
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
+
 
 @Composable
 fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {

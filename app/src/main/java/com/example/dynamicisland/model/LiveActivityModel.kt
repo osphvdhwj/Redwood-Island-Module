@@ -1,6 +1,8 @@
 package com.example.dynamicisland.model
 
 import android.graphics.Bitmap
+import android.os.Bundle
+import com.example.dynamicisland.ipc.LiveActivityInfo
 
 sealed class LiveActivityModel {
     abstract val id: String
@@ -146,6 +148,17 @@ sealed class LiveActivityModel {
         val networkSpeed: String? = null, 
         override val isTransient: Boolean = true, 
         override val isCritical: Boolean = false, 
+        override val isSensitive: Boolean = false
+    ) : LiveActivityModel()
+
+
+    data class ExternalActivity(
+        override val id: String,
+        override val type: ActivityType = ActivityType.ONGOING_TASK,
+        val info: LiveActivityInfo,
+        val state: Bundle,
+        override val isTransient: Boolean = false,
+        override val isCritical: Boolean = false,
         override val isSensitive: Boolean = false
     ) : LiveActivityModel()
 }
