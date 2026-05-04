@@ -255,13 +255,13 @@ val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = 
                                 IslandState.TYPE_2_MID -> { when (model) { is LiveActivityModel.Dashboard -> DashboardMid(model); is LiveActivityModel.Call -> CallMid(model); is LiveActivityModel.Music -> MusicMid(model); is LiveActivityModel.General -> GeneralMid(model); is LiveActivityModel.Charging -> ChargingMid(model); is LiveActivityModel.SystemAlert -> SystemAlertMid(model); is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model); is LiveActivityModel.OngoingTask -> OngoingTaskMid(model); is LiveActivityModel.ExternalActivity -> ExternalActivityMid(model); else -> {} } }
                                 IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { 
                                     // Gaming HUD takes priority in mini when gaming mode is active
-                                    if (currentHardware?.isGamingModeOn == true && model !is LiveActivityModel.Call) {
+                                    if (view.controller?.view.controller?.controller?.controller?.currentHardware?.isGamingModeOn == true && model !is LiveActivityModel.Call) {
                                         GamingHUDMini(
                                             fps        = gamingFps.floatValue,
                                             frameMs    = gamingFrameMs.floatValue,
                                             jankPct    = gamingJankPct.floatValue,
-                                            cpuTemp    = currentHardware?.cpuTempCelsius ?: 0f,
-                                            cpuFreqMhz = currentHardware?.cpuFreqMhz    ?: 0
+                                            cpuTemp    = view.controller?.view.controller?.controller?.controller?.currentHardware?.cpuTempCelsius ?: 0f,
+                                            cpuFreqMhz = view.controller?.view.controller?.controller?.controller?.currentHardware?.cpuFreqMhz    ?: 0
                                         )
                                     } else {
                                         when (model) { 

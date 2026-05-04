@@ -117,7 +117,7 @@ class IslandController(private val context: Context) {
 
     private var currentCall: LiveActivityModel.Call? = null
     private var currentMedia: LiveActivityModel.Music? = null
-    private var currentHardware: LiveActivityModel.HardwareMonitor? = null
+    var currentHardware: LiveActivityModel.HardwareMonitor? = null
     private var transientModel: LiveActivityModel? = null
     
     private var transientJob: Job? = null
@@ -294,7 +294,7 @@ class IslandController(private val context: Context) {
                 // ── BATCH 6 receivers ────────────────────────────────────────────────────
 
                 
-                "CrDroidAPIHook.ACTION_GAME_MODE_CHANGED" -> {
+                CrDroidAPIHook.ACTION_GAME_MODE_CHANGED -> {
                     val isActive = intent.getBooleanExtra("isActive", false)
                     val pkg      = intent.getStringExtra("pkg") ?: ""
                     currentHardware = if (isActive) {
@@ -306,7 +306,7 @@ class IslandController(private val context: Context) {
                     evaluatePriority()
                 }
 
-               "CrDroidAPIHook.ACTION_THERMAL_PROFILE" -> {
+               CrDroidAPIHook.ACTION_THERMAL_PROFILE -> {
                     if (!isAlertsEnabled) return
                     val level   = intent.getIntExtra("level", 0)
                     val profile = intent.getStringExtra("profile") ?: "UNKNOWN"
@@ -325,7 +325,7 @@ class IslandController(private val context: Context) {
                     }
                 }
 
-                "CrDroidAPIHook.ACTION_DISPLAY_MODE" -> {
+                CrDroidAPIHook.ACTION_DISPLAY_MODE -> {
                     if (!isAlertsEnabled) return
                     val hz = intent.getIntExtra("refreshRate", 0)
                     if (hz > 0) {
@@ -342,7 +342,7 @@ class IslandController(private val context: Context) {
                     }
                 }
 
-                "CrDroidAPIHook.ACTION_SMART_CHARGE" -> {
+                CrDroidAPIHook.ACTION_SMART_CHARGE -> {
                     if (!isAlertsEnabled || !isChargingEnabled) return
                     val limit  = intent.getIntExtra("limit", 100)
                     val active = intent.getBooleanExtra("active", false)
@@ -702,7 +702,10 @@ class IslandController(private val context: Context) {
         context.registerReceiver(hardwareSyncReceiver, volFilter)
         context.contentResolver.registerContentObserver(Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS), true, brightnessObserver)
 
-        val ecoFilter = IntentFilter().apply {
+        val ecoFilter = IntentFilter()
+        ecoFilter.addAction("com.example.dynamicisland.SYNC_CONFIG")
+        ecoFilter.addAction("com.example.dynamicisland.SYNC_CONFIG").apply { addAction("com.example.dynamicisland.SYNC_CONFIG") }
+        ecoFilter.addAction("com.example.dynamicisland.SYNC_CONFIG").apply {
             addAction("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE"); addAction("com.crdroid.batterywellbeing.SYSTEM_ALERT")
             addAction("com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING"); addAction("com.crdroid.batterywellbeing.REALITY_PILL_TICK")
             addAction("com.crdroid.batterywellbeing.SYNC_CONFIG"); addAction("com.example.dynamicisland.APP_CHANGED")
@@ -714,7 +717,7 @@ class IslandController(private val context: Context) {
             addAction("SurfaceFlingerHook.ACTION_FRAME_STATS")
             addAction("CrDroidAPIHook.ACTION_GAME_MODE_CHANGED")
             addAction("CrDroidAPIHook.ACTION_THERMAL_PROFILE")
-addAction("CrDroidAPIHook.ACTION_DISPLAY_MODE")
+            addAction("CrDroidAPIHook.ACTION_DISPLAY_MODE")
             addAction("CrDroidAPIHook.ACTION_SMART_CHARGE")
             addAction("com.example.dynamicisland.EXTERNAL_ACTIVITY_UPDATED")
             addAction("com.example.dynamicisland.EXTERNAL_ACTIVITY_ENDED")

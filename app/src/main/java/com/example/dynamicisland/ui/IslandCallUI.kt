@@ -126,13 +126,13 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
             .background(bgColor, RoundedCornerShape(50))
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onTap = { 
+                    onTap = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        if (isRinging) onOpenCallUI?.invoke() else setState(IslandState.TYPE_2_MID) 
+                        if (isRinging) onOpenCallUI?.invoke() else setState(IslandState.TYPE_2_MID)
                     },
-                    onLongPress = { 
+                    onLongPress = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onOpenCallUI?.invoke() 
+                        onOpenCallUI?.invoke()
                     }
                 )
             }
@@ -179,6 +179,7 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
         }
     }
 }
+
 
 @Composable
 fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {

@@ -25,7 +25,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.DynamicIsland">
         
-        <service android:name=".util.DummyListener"
+        <service android:name=".utilcom.example.dynamicisland.util.DummyListener"
                  android:label="Dynamic Island Media Listener"
                  android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
                  android:exported="true">

@@ -448,4 +448,24 @@ class MLGestureClassifier(private val context: Context) {
             means[0]  = 120f; variances[0]  = 2000f
             means[3]  = 270f; variances[3]  = 400f
             means[5]  = 180f; variances[5]  = 3600f
-            
+                        sampleCount = 20
+        }
+    }
+
+    private fun persistModel() {}
+    private fun loadPersistedModel() {}
+}
+
+
+fun android.view.MotionEvent.toTouchPoint(): TouchPoint = TouchPoint(this.x, this.y, this.eventTime)
+fun angularDifference(a: Float, b: Float): Float = Math.abs((a - b + 180) % 360 - 180)
+            sampleCount = 20
+        }
+    }
+
+    private fun persistModel() {}
+    private fun loadPersistedModel() {}
+}
+
+fun android.view.MotionEvent.toTouchPoint() = MLGestureClassifier.TouchPoint(this.x, this.y, this.eventTime)
+fun angularDifference(a: Float, b: Float): Float = Math.abs((a - b + 180) % 360 - 180)

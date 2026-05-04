@@ -217,7 +217,7 @@ object PerAppProfileManager {
         prefs?.all
             ?.filter { it.key.startsWith("app_profile_") }
             ?.mapNotNull { (_, v) ->
-                runCatching { IslandBehaviorProfile.fromJson(JSONObject(v as String)) }.getOrNull()
+                runCatching { IslandBehaviorProfile.fromJson(JSONObject(v.toString())) }.getOrNull()
             } ?: emptyList()
 
     /**
