@@ -116,6 +116,70 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
     }
 }
 
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                scaleX = if (isRinging) rippleScale else 1f
+                scaleY = if (isRinging) rippleScale else 1f
+            }
+            .background(bgColor, RoundedCornerShape(50))
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (isRinging) onOpenCallUI?.invoke() else setState(IslandState.TYPE_2_MID)
+                    },
+                    onLongPress = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onOpenCallUI?.invoke()
+                    }
+                )
+            }
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        val phoneRotation by rememberInfiniteTransition(label="phoneRot").animateFloat(
+            initialValue = -15f,
+            targetValue = 15f,
+            animationSpec = infiniteRepeatable(
+                tween(150, easing = LinearEasing),
+                RepeatMode.Reverse
+            ), label = "rotation"
+        )
+
+        Icon(
+            Icons.Default.Phone,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier
+                .size(14.dp)
+                .graphicsLayer {
+                    rotationZ = if (isRinging) phoneRotation else 0f
+                }
+        )
+
+        if (isRinging) {
+            Text(
+                text = model.callerName.ifEmpty { "Incoming Call" },
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                modifier = Modifier.weight(1f)
+            )
+        } else {
+            IsolatedTimerText(
+                startTime = model.startTime,
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
 
 @Composable
 fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {
