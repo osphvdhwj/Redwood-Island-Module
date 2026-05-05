@@ -228,7 +228,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         
-        controller?.destroy()
+        // controller?.destroy()
         lifecycleRegistry.currentState = androidx.lifecycle.Lifecycle.State.DESTROYED
         
         try {

@@ -47,7 +47,7 @@ class LiveActivityManagerService : Service() {
         }
 
         override fun getActiveActivities(): List<com.example.dynamicisland.ipc.LiveActivityInfo> {
-            return activeActivities.values.map { it.info as com.example.dynamicisland.ipc.LiveActivityInfo }.toList()
+            return activeActivities.values.map { it.info }.toList()
         }
     }
 

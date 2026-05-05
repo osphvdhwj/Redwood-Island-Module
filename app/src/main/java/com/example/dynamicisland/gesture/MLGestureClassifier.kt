@@ -467,5 +467,5 @@ fun angularDifference(a: Float, b: Float): Float = Math.abs((a - b + 180) % 360 
     private fun loadPersistedModel() {}
 }
 
-fun android.view.MotionEvent.toTouchPoint() = MLGestureClassifier.TouchPoint(this.x, this.y, this.eventTime)
+fun android.view.MotionEvent.toTouchPoint() = MLGestureClassifier.TouchPoint(this.x, this.y, this.pressure, this.size, this.eventTime)
 fun angularDifference(a: Float, b: Float): Float = Math.abs((a - b + 180) % 360 - 180)
