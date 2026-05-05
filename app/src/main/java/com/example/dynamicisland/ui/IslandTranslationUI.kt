@@ -1,7 +1,7 @@
 package com.example.dynamicisland.ui
 
 import androidx.compose.runtime.collectAsState
-
+import com.example.dynamicisland.model.LocalIslandTheme
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -162,13 +163,12 @@ fun DynamicIslandView.TranslationMid(result: IslandTranslationEngine.Translation
                     tint = if (copyDone) Color(0xFF4CAF50) else Color.White,
                     modifier = Modifier
                         .size(16.dp)
-                        .scale(copyScale)
+                        .graphicsLayer {
+                            scaleX = copyScale
+                            scaleY = copyScale
+                        }
                 )
             }
         }
     }
 }
-
-// Tiny inline helper to avoid importing graphicsLayer in every call
-private fun Modifier.scale(scale: Float) =
-    this.then(androidx.compose.ui.draw.scale(scale))

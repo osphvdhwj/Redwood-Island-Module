@@ -19,6 +19,7 @@ import com.example.dynamicisland.util.ComposeLifecycleOwner
 
 class IslandController(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val activeExternalActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
 
     private val storageManager = IslandStorageManager(context)
     private val clipboardManager = IslandClipboardManager(context, scope) { copiedText ->
@@ -410,7 +411,7 @@ class IslandController(private val context: Context) {
             activeExternalActivity = activeExternalActivities.values.firstOrNull(),
             currentMedia = currentMedia,
             currentHardware = currentHardware,
-            isMediaEnabled = isMediaEnabled,
+            isMediaEnabled = mediaManager.isMediaEnabled,
             userForceCollapsed = userForceCollapsed,
             currentActiveModel = _activeModel.value,
             currentVisualState = _islandState.value,
@@ -702,17 +703,18 @@ class IslandController(private val context: Context) {
         context.registerReceiver(hardwareSyncReceiver, volFilter)
         context.contentResolver.registerContentObserver(Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS), true, brightnessObserver)
 
-        val ecoFilter = IntentFilter()
-        ecoFilter.addAction("com.example.dynamicisland.SYNC_CONFIG")
-        ecoFilter.addAction("com.example.dynamicisland.SYNC_CONFIG").apply { addAction("com.example.dynamicisland.SYNC_CONFIG") }
-        ecoFilter.addAction("com.example.dynamicisland.SYNC_CONFIG").apply {
-            addAction("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE"); addAction("com.crdroid.batterywellbeing.SYSTEM_ALERT")
-            addAction("com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING"); addAction("com.crdroid.batterywellbeing.REALITY_PILL_TICK")
-            addAction("com.crdroid.batterywellbeing.SYNC_CONFIG"); addAction("com.example.dynamicisland.APP_CHANGED")
+        val ecoFilter = IntentFilter().apply {
+            addAction("com.example.dynamicisland.SYNC_CONFIG")
+            addAction("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE")
+            addAction("com.crdroid.batterywellbeing.SYSTEM_ALERT")
+            addAction("com.crdroid.batterywellbeing.WARNING_1_MINUTE_REMAINING")
+            addAction("com.crdroid.batterywellbeing.REALITY_PILL_TICK")
+            addAction("com.crdroid.batterywellbeing.SYNC_CONFIG")
+            addAction("com.example.dynamicisland.APP_CHANGED")
             addAction("com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT")
             addAction("com.example.dynamicisland.HARDWARE_TOGGLE")
-            addAction("com.example.dynamicisland.PANEL_STATE_CHANGED") 
-            addAction("com.example.dynamicisland.ALARM_SET") 
+            addAction("com.example.dynamicisland.PANEL_STATE_CHANGED")
+            addAction("com.example.dynamicisland.ALARM_SET")
             addAction("com.example.dynamicisland.hook.ContinuityCameraScanner.ACTION_BARCODE")
             addAction("SurfaceFlingerHook.ACTION_FRAME_STATS")
             addAction("CrDroidAPIHook.ACTION_GAME_MODE_CHANGED")
@@ -721,6 +723,7 @@ class IslandController(private val context: Context) {
             addAction("CrDroidAPIHook.ACTION_SMART_CHARGE")
             addAction("com.example.dynamicisland.EXTERNAL_ACTIVITY_UPDATED")
             addAction("com.example.dynamicisland.EXTERNAL_ACTIVITY_ENDED")
+            addAction("com.example.dynamicisland.SCREENSHOT_CAUGHT")
         }
 
         val securePermission = "com.redwood.permission.SECURE_IPC"

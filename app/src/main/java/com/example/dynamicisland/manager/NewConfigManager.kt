@@ -242,7 +242,9 @@ object NewConfigManager {
     ): Map<String, Any> {
         val captured = mutableMapOf<String, Any>()
         val capturingEditor = object : SharedPreferences.Editor {
-            override fun putString(key: String, value: String?)   = apply { value?.let { captured[key] = it } }
+            override fun putString(key: String, value: String?): SharedPreferences.Editor = apply {
+                if (value != null) captured[key] = value
+            }
             override fun putStringSet(key: String, values: MutableSet<String>?) = this
             override fun putInt(key: String, value: Int)          = apply { captured[key] = value }
             override fun putLong(key: String, value: Long)        = apply { captured[key] = value }

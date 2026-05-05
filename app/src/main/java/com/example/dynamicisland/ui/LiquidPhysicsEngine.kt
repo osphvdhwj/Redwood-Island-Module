@@ -1,5 +1,6 @@
 package com.example.dynamicisland.ui
 
+import androidx.compose.ui.geometry.RoundRect
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent

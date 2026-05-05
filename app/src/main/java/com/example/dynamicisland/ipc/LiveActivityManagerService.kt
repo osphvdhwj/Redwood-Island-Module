@@ -1,5 +1,7 @@
 package com.example.dynamicisland.ipc
 
+import com.example.dynamicisland.model.LiveActivityModel
+import com.example.dynamicisland.model.ActivityType
 import android.app.Service
 import android.content.Intent
 import android.os.Bundle
@@ -45,11 +47,10 @@ class LiveActivityManagerService : Service() {
                 broadcastActivityEnd(token)
             }
         }
-
-        override fun getActiveActivities(): List<com.example.dynamicisland.ipc.LiveActivityInfo> {
-            return activeActivities.values.map { it.info }.toList()
+        
+        override fun getActiveActivities(): List<LiveActivityInfo> {
+            return activeActivities.values.map { it.info }
         }
-    }
 
     private fun broadcastActivityUpdate(model: LiveActivityModel.ExternalActivity) {
         val intent = Intent("com.example.dynamicisland.EXTERNAL_ACTIVITY_UPDATED")
