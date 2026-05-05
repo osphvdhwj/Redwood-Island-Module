@@ -429,7 +429,7 @@ fun FeaturesScreen(prefs: SharedPreferences) {
                 containerColor = Color.White.copy(alpha = 0.10f)
             )
         ) {
-            Icon(Icons.Default.AccessibilityNew, null, modifier = Modifier.size(16.dp), tint = Color.White)
+            Icon(Icons.Default.Person, null, modifier = Modifier.size(16.dp), tint = Color.White)
             Spacer(Modifier.width(8.dp))
             Text("Open Accessibility Settings", color = Color.White)
         }

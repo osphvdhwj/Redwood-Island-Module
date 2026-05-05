@@ -1,5 +1,6 @@
 package com.example.dynamicisland.ui
 
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background

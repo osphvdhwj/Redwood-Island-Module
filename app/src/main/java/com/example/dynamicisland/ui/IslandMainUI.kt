@@ -2,7 +2,6 @@ package com.example.dynamicisland.ui
 import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*
-import com.example.dynamicisland.manager.*
 
 import android.view.WindowManager
 import androidx.compose.animation.*
@@ -132,14 +131,11 @@ val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = 
         verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
     ) {
         val shadowElevation by animateDpAsState(
-        targetValue = if (isSquished) 4.dp else (if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp),
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 600f)
-    )
-    val shadowElevation by animateDpAsState(
-        targetValue = if (isSquished) 4.dp else (if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp),
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 600f)
-    )
-    Box(
+            targetValue = if (isSquished) 4.dp else (if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp),
+            animationSpec = spring(dampingRatio = 0.6f, stiffness = 600f)
+        )
+        
+        Box(
             modifier = Modifier
                 .width(animatedWidth) 
                 .height(animatedHeight)
@@ -255,13 +251,13 @@ val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = 
                                 IslandState.TYPE_2_MID -> { when (model) { is LiveActivityModel.Dashboard -> DashboardMid(model); is LiveActivityModel.Call -> CallMid(model); is LiveActivityModel.Music -> MusicMid(model); is LiveActivityModel.General -> GeneralMid(model); is LiveActivityModel.Charging -> ChargingMid(model); is LiveActivityModel.SystemAlert -> SystemAlertMid(model); is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model); is LiveActivityModel.OngoingTask -> OngoingTaskMid(model); is LiveActivityModel.ExternalActivity -> ExternalActivityMid(model); else -> {} } }
                                 IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { 
                                     // Gaming HUD takes priority in mini when gaming mode is active
-                                    if (view.controller?.view.controller?.controller?.controller?.currentHardware?.isGamingModeOn == true && model !is LiveActivityModel.Call) {
+                                    if (view.controller?.currentHardware?.isGamingModeOn == true && model !is LiveActivityModel.Call) {
                                         GamingHUDMini(
                                             fps        = gamingFps.floatValue,
                                             frameMs    = gamingFrameMs.floatValue,
                                             jankPct    = gamingJankPct.floatValue,
-                                            cpuTemp    = view.controller?.view.controller?.controller?.controller?.currentHardware?.cpuTempCelsius ?: 0f,
-                                            cpuFreqMhz = view.controller?.view.controller?.controller?.controller?.currentHardware?.cpuFreqMhz    ?: 0
+                                            cpuTemp    = view.controller?.currentHardware?.cpuTempCelsius ?: 0f,
+                                            cpuFreqMhz = view.controller?.currentHardware?.cpuFreqMhz    ?: 0
                                         )
                                     } else {
                                         when (model) { 
@@ -289,4 +285,10 @@ val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = 
         }
         SplitCubeUI(state, animatedHeight, borderColor)
     }
+}
+
+// Fallback stub for MusicMid to ensure compilation if the actual component is missing
+@Composable
+fun DynamicIslandView.MusicMid(model: LiveActivityModel.Music) {
+    MusicMini(model) 
 }
