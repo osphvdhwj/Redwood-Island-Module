@@ -1,14 +1,13 @@
 package com.example.dynamicisland.ipc
 
-import com.example.dynamicisland.model.LiveActivityModel
-import com.example.dynamicisland.model.ActivityType
 import android.app.Service
 import android.content.Intent
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
-import com.example.dynamicisland.model.LiveActivityModel
 import java.util.concurrent.ConcurrentHashMap
+import com.example.dynamicisland.model.ActivityType
+import com.example.dynamicisland.model.LiveActivityModel
 
 class LiveActivityManagerService : Service() {
 
@@ -24,10 +23,12 @@ class LiveActivityManagerService : Service() {
             val model = LiveActivityModel.ExternalActivity(
                 id = token,
                 info = info,
-                state = info.initialState
+                state = info.initialState,
+                isTransient = false,
+                isCritical = false
             )
             activeActivities[token] = model
-            Log.d("LiveActivityService", "Started activity: \$token")
+            Log.d("LiveActivityService", "Started activity: $token")
             broadcastActivityUpdate(model)
             return token
         }
@@ -36,14 +37,14 @@ class LiveActivityManagerService : Service() {
             activeActivities[token]?.let { model ->
                 val updatedModel = model.copy(state = state)
                 activeActivities[token] = updatedModel
-                Log.d("LiveActivityService", "Updated activity: \$token")
+                Log.d("LiveActivityService", "Updated activity: $token")
                 broadcastActivityUpdate(updatedModel)
             }
         }
 
         override fun endActivity(token: String) {
             activeActivities.remove(token)?.let {
-                Log.d("LiveActivityService", "Ended activity: \$token")
+                Log.d("LiveActivityService", "Ended activity: $token")
                 broadcastActivityEnd(token)
             }
         }
@@ -51,6 +52,7 @@ class LiveActivityManagerService : Service() {
         override fun getActiveActivities(): List<LiveActivityInfo> {
             return activeActivities.values.map { it.info }
         }
+    } // <--- This missing bracket caused most of the errors!
 
     private fun broadcastActivityUpdate(model: LiveActivityModel.ExternalActivity) {
         val intent = Intent("com.example.dynamicisland.EXTERNAL_ACTIVITY_UPDATED")

@@ -375,24 +375,25 @@ class IslandController(private val context: Context) {
                     }
                 }
                 "com.example.dynamicisland.hook.ContinuityCameraScanner.ACTION_BARCODE" -> {
-                if (!isAlertsEnabled) return
-                val raw     = intent.getStringExtra("raw")     ?: return
-                val display = intent.getStringExtra("display") ?: raw
-                val action  = intent.getStringExtra("action")  ?: "Copy"
-                postTransientNotification(
-                    LiveActivityModel.General(
-                        id          = "sys_barcode",
-                        type        = ActivityType.MESSAGE,
-                        title       = action,
-                        dataText    = display,
-                        accentColor = android.graphics.Color.parseColor("#4FC3F7"),
-                        isCritical  = false
-                    ),
-                    10_000L
-                )
-            }
-        }
-    }
+                    if (!isAlertsEnabled) return
+                    val raw     = intent.getStringExtra("raw")     ?: return
+                    val display = intent.getStringExtra("display") ?: raw
+                    val action  = intent.getStringExtra("action")  ?: "Copy"
+                    postTransientNotification(
+                        LiveActivityModel.General(
+                            id          = "sys_barcode",
+                            type        = ActivityType.MESSAGE,
+                            title       = action,
+                            dataText    = display,
+                            accentColor = android.graphics.Color.parseColor("#4FC3F7"),
+                            isCritical  = false
+                        ),
+                        10_000L
+                    )
+                } // closes ACTION_BARCODE ->
+            } // closes when (intent.action)
+        } // closes override fun onReceive
+    } // <--- THIS WAS THE MISSING BRACKET! Closes object : BroadcastReceiver()
 
     private val componentCallbacks = object : android.content.ComponentCallbacks2 {
         override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { evaluatePriority() }
