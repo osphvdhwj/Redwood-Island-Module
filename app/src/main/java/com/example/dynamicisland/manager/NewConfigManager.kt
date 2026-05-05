@@ -4,27 +4,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.example.dynamicisland.ipc.IslandContentProvider
 import com.example.dynamicisland.ipc.IslandIPCClient
-import com.example.dynamicisland.ipc.StatePublisher
-import com.example.dynamicisland.model.*
 import kotlinx.coroutines.*
-import org.json.JSONObject
 
-/**
- * BATCH 1: Drop-in replacement for ConfigManager.
- *
- * ALL writes now go through IslandIPCClient → ContentProvider.
- * Eliminates every makePrefsWorldReadable() call.
- * Eliminates every explicit broadcast to RELOAD_PREFS.
- * SystemUI is notified automatically via ContentObserver.
- *
- * Naming kept identical to the original ConfigManager so call sites
- * need zero changes other than the import line.
- */
 object NewConfigManager {
-
-    // -------------------------------------------------------------------------
-    // Core write operations
-    // -------------------------------------------------------------------------
 
     fun commitAndBroadcast(
         prefs: SharedPreferences,
@@ -36,12 +18,10 @@ object NewConfigManager {
         scope.launch(Dispatchers.IO) {
             val client = IslandIPCClient.get(context)
 
-            // Write to legacy SharedPreferences during migration period
             val editor = prefs.edit()
             editor.editBlock()
             editor.commit()
 
-            // Extract what was written and mirror to ContentProvider
             val changedKeys = extractChangedKeys(prefs, editBlock)
             if (changedKeys.isNotEmpty()) {
                 client.bulkPut(changedKeys)
@@ -202,33 +182,27 @@ object NewConfigManager {
     ): Map<String, Any> {
         val captured = mutableMapOf<String, Any>()
         val capturingEditor = object : SharedPreferences.Editor {
-            override fun putString(key: String?, value: String?): SharedPreferences.Editor {
-                if (key != null && value != null) captured[key] = value as Any
-                return this
+            override fun putString(key: String?, value: String?) = apply {
+                if (key != null && value != null) captured.put(key, value)
             }
-            override fun putStringSet(key: String?, values: MutableSet<String>?): SharedPreferences.Editor {
-                if (key != null && values != null) captured[key] = values as Any
-                return this
+            override fun putStringSet(key: String?, values: MutableSet<String>?) = apply {
+                if (key != null && values != null) captured.put(key, values)
             }
-            override fun putInt(key: String?, value: Int): SharedPreferences.Editor {
-                if (key != null) captured[key] = value as Any
-                return this
+            override fun putInt(key: String?, value: Int) = apply {
+                if (key != null) captured.put(key, value)
             }
-            override fun putLong(key: String?, value: Long): SharedPreferences.Editor {
-                if (key != null) captured[key] = value as Any
-                return this
+            override fun putLong(key: String?, value: Long) = apply {
+                if (key != null) captured.put(key, value)
             }
-            override fun putFloat(key: String?, value: Float): SharedPreferences.Editor {
-                if (key != null) captured[key] = value as Any
-                return this
+            override fun putFloat(key: String?, value: Float) = apply {
+                if (key != null) captured.put(key, value)
             }
-            override fun putBoolean(key: String?, value: Boolean): SharedPreferences.Editor {
-                if (key != null) captured[key] = value as Any
-                return this
+            override fun putBoolean(key: String?, value: Boolean) = apply {
+                if (key != null) captured.put(key, value)
             }
-            override fun remove(key: String?): SharedPreferences.Editor = this
-            override fun clear(): SharedPreferences.Editor = this
-            override fun commit(): Boolean = true
+            override fun remove(key: String?) = this
+            override fun clear() = this
+            override fun commit() = true
             override fun apply() = Unit
         }
         capturingEditor.editBlock()

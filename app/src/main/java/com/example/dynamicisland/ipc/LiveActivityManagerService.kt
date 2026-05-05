@@ -5,13 +5,12 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
-import java.util.concurrent.ConcurrentHashMap
 import com.example.dynamicisland.model.ActivityType
 import com.example.dynamicisland.model.LiveActivityModel
 
 class LiveActivityManagerService : Service() {
 
-    private val activeActivities = ConcurrentHashMap<String, LiveActivityModel.ExternalActivity>()
+    private val activeActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
 
     override fun onBind(intent: Intent?): IBinder {
         return binder
@@ -27,23 +26,31 @@ class LiveActivityManagerService : Service() {
                 isTransient = false,
                 isCritical = false
             )
-            activeActivities[token] = model
+            activeActivities.put(token, model)
             Log.d("LiveActivityService", "Started activity: $token")
             broadcastActivityUpdate(model)
             return token
         }
 
         override fun updateActivity(token: String, state: Bundle) {
-            activeActivities[token]?.let { model ->
-                val updatedModel = model.copy(state = state)
-                activeActivities[token] = updatedModel
+            val existing = activeActivities.get(token)
+            if (existing != null) {
+                val updatedModel = LiveActivityModel.ExternalActivity(
+                    id = existing.id,
+                    info = existing.info,
+                    state = state,
+                    isTransient = existing.isTransient,
+                    isCritical = existing.isCritical
+                )
+                activeActivities.put(token, updatedModel)
                 Log.d("LiveActivityService", "Updated activity: $token")
                 broadcastActivityUpdate(updatedModel)
             }
         }
 
         override fun endActivity(token: String) {
-            activeActivities.remove(token)?.let {
+            val removed = activeActivities.remove(token)
+            if (removed != null) {
                 Log.d("LiveActivityService", "Ended activity: $token")
                 broadcastActivityEnd(token)
             }
@@ -52,7 +59,7 @@ class LiveActivityManagerService : Service() {
         override fun getActiveActivities(): List<LiveActivityInfo> {
             return activeActivities.values.map { it.info }
         }
-    } // <--- This missing bracket caused most of the errors!
+    }
 
     private fun broadcastActivityUpdate(model: LiveActivityModel.ExternalActivity) {
         val intent = Intent("com.example.dynamicisland.EXTERNAL_ACTIVITY_UPDATED")
