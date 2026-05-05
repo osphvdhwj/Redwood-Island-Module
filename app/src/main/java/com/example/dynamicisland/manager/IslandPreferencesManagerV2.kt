@@ -7,6 +7,7 @@ import com.example.dynamicisland.ipc.IslandIPCClient
 import com.example.dynamicisland.model.*
 import com.example.dynamicisland.ui.DynamicIslandView
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.filterNotNull
 
 /**
  * BATCH 1: Replaces IslandPreferencesManager (which used XSharedPreferences).

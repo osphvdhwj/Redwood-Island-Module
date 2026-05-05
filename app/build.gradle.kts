@@ -73,6 +73,8 @@ dependencies {
 
     // MLKit on-device translation (no network required after model download)
     implementation("com.google.mlkit:translate:17.0.3")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("com.google.mlkit:language-id:17.0.6")
 
     // MLKit barcode scanning (for Continuity Camera)
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
