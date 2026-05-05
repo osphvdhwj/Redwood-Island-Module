@@ -6,12 +6,11 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import java.util.concurrent.ConcurrentHashMap
-import com.example.dynamicisland.model.LiveActivityModel
 
 class LiveActivityManagerService : Service() {
 
-    // Violently explicit map declaration
-    private val activeActivities: ConcurrentHashMap<String, LiveActivityModel.ExternalActivity> = ConcurrentHashMap<String, LiveActivityModel.ExternalActivity>()
+    // Fully qualified type so the compiler cannot possibly lose track of it
+    private val activeActivities = ConcurrentHashMap<String, com.example.dynamicisland.model.LiveActivityModel.ExternalActivity>()
 
     override fun onBind(intent: Intent?): IBinder {
         return binder
@@ -20,30 +19,30 @@ class LiveActivityManagerService : Service() {
     private val binder = object : com.example.dynamicisland.ipc.ILiveActivityManager.Stub() {
         override fun startActivity(info: com.example.dynamicisland.ipc.LiveActivityInfo): String {
             val token = info.activityId
-            val model = LiveActivityModel.ExternalActivity(
+            val model = com.example.dynamicisland.model.LiveActivityModel.ExternalActivity(
                 id = token,
                 info = info,
                 state = info.initialState,
                 isTransient = false,
                 isCritical = false
             )
-            activeActivities.put(token, model)
+            activeActivities[token] = model
             Log.d("LiveActivityService", "Started activity: $token")
             broadcastActivityUpdate(model)
             return token
         }
 
         override fun updateActivity(token: String, state: Bundle) {
-            val existing = activeActivities.get(token)
+            val existing = activeActivities[token]
             if (existing != null) {
-                val updatedModel = LiveActivityModel.ExternalActivity(
+                val updatedModel = com.example.dynamicisland.model.LiveActivityModel.ExternalActivity(
                     id = existing.id,
                     info = existing.info,
                     state = state,
                     isTransient = existing.isTransient,
                     isCritical = existing.isCritical
                 )
-                activeActivities.put(token, updatedModel)
+                activeActivities[token] = updatedModel
                 Log.d("LiveActivityService", "Updated activity: $token")
                 broadcastActivityUpdate(updatedModel)
             }
@@ -57,12 +56,12 @@ class LiveActivityManagerService : Service() {
             }
         }
         
-        override fun getActiveActivities(): List<LiveActivityInfo> {
+        override fun getActiveActivities(): List<com.example.dynamicisland.ipc.LiveActivityInfo> {
             return activeActivities.values.map { it.info }
         }
     }
 
-    private fun broadcastActivityUpdate(model: LiveActivityModel.ExternalActivity) {
+    private fun broadcastActivityUpdate(model: com.example.dynamicisland.model.LiveActivityModel.ExternalActivity) {
         val intent = Intent("com.example.dynamicisland.EXTERNAL_ACTIVITY_UPDATED")
         intent.setPackage("com.android.systemui")
         intent.putExtra("activity_id", model.id)
