@@ -1,4 +1,5 @@
 package com.example.dynamicisland.ui
+import androidx.compose.material.icons.filled.Settings
 import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*

@@ -183,22 +183,40 @@ object NewConfigManager {
         val captured = mutableMapOf<String, Any>()
         val capturingEditor = object : SharedPreferences.Editor {
             override fun putString(key: String?, value: String?) = apply {
-                if (key != null && value != null) captured.put(key, value)
+                if (key != null && value != null) {
+                    val v: Any = value
+                    captured[key] = v
+                }
             }
             override fun putStringSet(key: String?, values: MutableSet<String>?) = apply {
-                if (key != null && values != null) captured.put(key, values)
+                if (key != null && values != null) {
+                    val v: Any = values
+                    captured[key] = v
+                }
             }
             override fun putInt(key: String?, value: Int) = apply {
-                if (key != null) captured.put(key, value)
+                if (key != null) {
+                    val v: Any = value
+                    captured[key] = v
+                }
             }
             override fun putLong(key: String?, value: Long) = apply {
-                if (key != null) captured.put(key, value)
+                if (key != null) {
+                    val v: Any = value
+                    captured[key] = v
+                }
             }
             override fun putFloat(key: String?, value: Float) = apply {
-                if (key != null) captured.put(key, value)
+                if (key != null) {
+                    val v: Any = value
+                    captured[key] = v
+                }
             }
             override fun putBoolean(key: String?, value: Boolean) = apply {
-                if (key != null) captured.put(key, value)
+                if (key != null) {
+                    val v: Any = value
+                    captured[key] = v
+                }
             }
             override fun remove(key: String?) = this
             override fun clear() = this
