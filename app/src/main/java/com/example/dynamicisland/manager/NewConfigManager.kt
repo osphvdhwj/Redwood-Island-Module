@@ -26,18 +26,12 @@ object NewConfigManager {
     // Core write operations
     // -------------------------------------------------------------------------
 
-    /**
-     * Equivalent to the old commitAndBroadcast() but:
-     *   - Writes atomically through the ContentProvider
-     *   - No file permission manipulation
-     *   - No explicit broadcast needed — ContentObserver fires automatically
-     */
     fun commitAndBroadcast(
-        prefs: SharedPreferences,  // kept for migration — writes to both until fully migrated
+        prefs: SharedPreferences,
         scope: CoroutineScope,
         context: Context,
         editBlock: SharedPreferences.Editor.() -> Unit,
-        broadcastBlock: () -> Unit = {}  // now a no-op but kept for call-site compatibility
+        broadcastBlock: () -> Unit = {}
     ) {
         scope.launch(Dispatchers.IO) {
             val client = IslandIPCClient.get(context)
@@ -53,17 +47,12 @@ object NewConfigManager {
                 client.bulkPut(changedKeys)
             }
 
-            // broadcastBlock is now vestigial — ContentObserver handles notification
             withContext(Dispatchers.Main) {
                 try { broadcastBlock() } catch (e: Exception) { /* isolated */ }
             }
         }
     }
 
-    /**
-     * Saves layout dimensions and notifies SystemUI.
-     * Direct replacement for ConfigManager.saveAndBroadcast().
-     */
     fun saveAndBroadcast(
         prefs: SharedPreferences,
         scope: CoroutineScope,
@@ -76,7 +65,6 @@ object NewConfigManager {
         scope.launch(Dispatchers.IO) {
             val client = IslandIPCClient.get(context)
 
-            // Build the atomic payload
             val payload = mapOf<String, Any>(
                 "${prefix}_w" to w,
                 "${prefix}_h" to h,
@@ -86,7 +74,6 @@ object NewConfigManager {
                 "expand_upwards" to expandUp
             )
 
-            // Mirror to legacy prefs
             prefs.edit().apply {
                 putFloat("${prefix}_w", w)
                 putFloat("${prefix}_h", h)
@@ -96,15 +83,10 @@ object NewConfigManager {
                 putBoolean("expand_upwards", expandUp)
             }.commit()
 
-            // Single atomic write to ContentProvider — SystemUI gets notified once
             client.bulkPut(payload)
         }
     }
 
-    /**
-     * Sends a full theme/gesture/feature config update.
-     * Replaces ConfigManager.sendGestureUpdate().
-     */
     fun sendGestureUpdate(context: Context, prefs: SharedPreferences) {
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         scope.launch {
@@ -112,21 +94,16 @@ object NewConfigManager {
             val payload = buildThemePayload(prefs)
             client.bulkPut(payload)
 
-            // Also write gesture matrix entries
             val gesturePayload = buildGesturePayload(prefs)
             if (gesturePayload.isNotEmpty()) {
                 client.bulkPut(gesturePayload)
             }
 
-            // Dashboard config
             val dashPayload = buildDashboardPayload(prefs)
             client.bulkPut(dashPayload)
         }
     }
 
-    /**
-     * Dashboard-only update. Replaces ConfigManager.broadcastUpdateSingle().
-     */
     fun broadcastUpdateSingle(context: Context, prefs: SharedPreferences, prefix: String) {
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         scope.launch {
@@ -138,10 +115,6 @@ object NewConfigManager {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Default dimension helpers (kept identical to original)
-    // -------------------------------------------------------------------------
-
     fun getDefaultWidth(prefix: String): Float = when (prefix) {
         "ring" -> 45f; "mini" -> 180f; "mid" -> 320f; "max" -> 360f; "cube" -> 85f; else -> 0f
     }
@@ -149,11 +122,6 @@ object NewConfigManager {
     fun getDefaultHeight(prefix: String): Float = when (prefix) {
         "ring" -> 45f; "mini" -> 36f; "mid" -> 80f; "max" -> 220f; "cube" -> 85f; else -> 0f
     }
-
-    // -------------------------------------------------------------------------
-    // Migration helper — call once on app start to move legacy prefs
-    // to ContentProvider, then stop using SharedPreferences for IPC
-    // -------------------------------------------------------------------------
 
     fun migrateFromSharedPreferences(context: Context) {
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -167,10 +135,6 @@ object NewConfigManager {
             }
         }
     }
-
-    // -------------------------------------------------------------------------
-    // Private payload builders
-    // -------------------------------------------------------------------------
 
     private fun buildThemePayload(prefs: SharedPreferences): Map<String, Any> {
         return mapOf(
@@ -232,43 +196,37 @@ object NewConfigManager {
         return map
     }
 
-    /**
-     * Hacky but necessary during migration: re-run the editBlock against a
-     * temporary in-memory SharedPreferences to extract what keys changed.
-     */
     private fun extractChangedKeys(
         realPrefs: SharedPreferences,
         editBlock: SharedPreferences.Editor.() -> Unit
     ): Map<String, Any> {
         val captured = mutableMapOf<String, Any>()
         val capturingEditor = object : SharedPreferences.Editor {
-            override fun putString(key: String, value: String?): SharedPreferences.Editor {
-                if (value != null) {
-                    captured[key] = value
-                }
+            override fun putString(key: String?, value: String?): SharedPreferences.Editor {
+                if (key != null && value != null) captured[key] = value as Any
                 return this
             }
-            override fun putStringSet(key: String, values: MutableSet<String>?): SharedPreferences.Editor {
-                if (values != null) captured[key] = values
+            override fun putStringSet(key: String?, values: MutableSet<String>?): SharedPreferences.Editor {
+                if (key != null && values != null) captured[key] = values as Any
                 return this
             }
-            override fun putInt(key: String, value: Int): SharedPreferences.Editor {
-                captured[key] = value
+            override fun putInt(key: String?, value: Int): SharedPreferences.Editor {
+                if (key != null) captured[key] = value as Any
                 return this
             }
-            override fun putLong(key: String, value: Long): SharedPreferences.Editor {
-                captured[key] = value
+            override fun putLong(key: String?, value: Long): SharedPreferences.Editor {
+                if (key != null) captured[key] = value as Any
                 return this
             }
-            override fun putFloat(key: String, value: Float): SharedPreferences.Editor {
-                captured[key] = value
+            override fun putFloat(key: String?, value: Float): SharedPreferences.Editor {
+                if (key != null) captured[key] = value as Any
                 return this
             }
-            override fun putBoolean(key: String, value: Boolean): SharedPreferences.Editor {
-                captured[key] = value
+            override fun putBoolean(key: String?, value: Boolean): SharedPreferences.Editor {
+                if (key != null) captured[key] = value as Any
                 return this
             }
-            override fun remove(key: String): SharedPreferences.Editor = this
+            override fun remove(key: String?): SharedPreferences.Editor = this
             override fun clear(): SharedPreferences.Editor = this
             override fun commit(): Boolean = true
             override fun apply() = Unit
