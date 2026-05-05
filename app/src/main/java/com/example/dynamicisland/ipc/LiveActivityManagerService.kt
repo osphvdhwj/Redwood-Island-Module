@@ -6,11 +6,12 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import java.util.concurrent.ConcurrentHashMap
-import com.example.dynamicisland.model.*
+import com.example.dynamicisland.model.LiveActivityModel
 
 class LiveActivityManagerService : Service() {
 
-    private val activeActivities = ConcurrentHashMap<String, LiveActivityModel.ExternalActivity>()
+    // Violently explicit map declaration
+    private val activeActivities: ConcurrentHashMap<String, LiveActivityModel.ExternalActivity> = ConcurrentHashMap<String, LiveActivityModel.ExternalActivity>()
 
     override fun onBind(intent: Intent?): IBinder {
         return binder
@@ -26,14 +27,14 @@ class LiveActivityManagerService : Service() {
                 isTransient = false,
                 isCritical = false
             )
-            activeActivities[token] = model
+            activeActivities.put(token, model)
             Log.d("LiveActivityService", "Started activity: $token")
             broadcastActivityUpdate(model)
             return token
         }
 
         override fun updateActivity(token: String, state: Bundle) {
-            val existing = activeActivities[token]
+            val existing = activeActivities.get(token)
             if (existing != null) {
                 val updatedModel = LiveActivityModel.ExternalActivity(
                     id = existing.id,
@@ -42,7 +43,7 @@ class LiveActivityManagerService : Service() {
                     isTransient = existing.isTransient,
                     isCritical = existing.isCritical
                 )
-                activeActivities[token] = updatedModel
+                activeActivities.put(token, updatedModel)
                 Log.d("LiveActivityService", "Updated activity: $token")
                 broadcastActivityUpdate(updatedModel)
             }

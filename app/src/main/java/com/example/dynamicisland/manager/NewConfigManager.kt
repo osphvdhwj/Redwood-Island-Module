@@ -180,47 +180,35 @@ object NewConfigManager {
         realPrefs: SharedPreferences,
         editBlock: SharedPreferences.Editor.() -> Unit
     ): Map<String, Any> {
-        val captured = mutableMapOf<String, Any>()
+        val captured = java.util.HashMap<String, Any>()
         val capturingEditor = object : SharedPreferences.Editor {
-            override fun putString(key: String?, value: String?) = apply {
-                if (key != null && value != null) {
-                    val v: Any = value
-                    captured[key] = v
-                }
+            override fun putString(key: String?, value: String?): SharedPreferences.Editor {
+                if (key != null && value != null) captured.put(key, value)
+                return this
             }
-            override fun putStringSet(key: String?, values: MutableSet<String>?) = apply {
-                if (key != null && values != null) {
-                    val v: Any = values
-                    captured[key] = v
-                }
+            override fun putStringSet(key: String?, values: MutableSet<String>?): SharedPreferences.Editor {
+                if (key != null && values != null) captured.put(key, values)
+                return this
             }
-            override fun putInt(key: String?, value: Int) = apply {
-                if (key != null) {
-                    val v: Any = value
-                    captured[key] = v
-                }
+            override fun putInt(key: String?, value: Int): SharedPreferences.Editor {
+                if (key != null) captured.put(key, value)
+                return this
             }
-            override fun putLong(key: String?, value: Long) = apply {
-                if (key != null) {
-                    val v: Any = value
-                    captured[key] = v
-                }
+            override fun putLong(key: String?, value: Long): SharedPreferences.Editor {
+                if (key != null) captured.put(key, value)
+                return this
             }
-            override fun putFloat(key: String?, value: Float) = apply {
-                if (key != null) {
-                    val v: Any = value
-                    captured[key] = v
-                }
+            override fun putFloat(key: String?, value: Float): SharedPreferences.Editor {
+                if (key != null) captured.put(key, value)
+                return this
             }
-            override fun putBoolean(key: String?, value: Boolean) = apply {
-                if (key != null) {
-                    val v: Any = value
-                    captured[key] = v
-                }
+            override fun putBoolean(key: String?, value: Boolean): SharedPreferences.Editor {
+                if (key != null) captured.put(key, value)
+                return this
             }
-            override fun remove(key: String?) = this
-            override fun clear() = this
-            override fun commit() = true
+            override fun remove(key: String?): SharedPreferences.Editor = this
+            override fun clear(): SharedPreferences.Editor = this
+            override fun commit(): Boolean = true
             override fun apply() = Unit
         }
         capturingEditor.editBlock()
