@@ -17,7 +17,11 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://api.xposed.info/") }
+
+        // Alibaba's permanent archives of the dead JCenter/Xposed repos
+        maven { url = uri("https://maven.aliyun.com/repository/public/") }
+        maven { url = uri("https://maven.aliyun.com/repository/jcenter") }
+
         maven { url = uri("https://jitpack.io") }
     }
 }

@@ -28,7 +28,10 @@ object NewConfigManager {
             }
 
             withContext(Dispatchers.Main) {
-                try { broadcastBlock() } catch (e: Exception) { /* isolated */ }
+                try {
+                    broadcastBlock()
+                } catch (e: Exception) { /* isolated */
+                }
             }
         }
     }
@@ -90,7 +93,7 @@ object NewConfigManager {
             val client = IslandIPCClient.get(context)
             when (prefix) {
                 "dashboard" -> client.bulkPut(buildDashboardPayload(prefs))
-                else        -> client.bulkPut(buildThemePayload(prefs))
+                else -> client.bulkPut(buildThemePayload(prefs))
             }
         }
     }
@@ -118,40 +121,42 @@ object NewConfigManager {
 
     private fun buildThemePayload(prefs: SharedPreferences): Map<String, Any> {
         return mapOf(
-            "tweak_offset_y"       to prefs.getFloat("tweak_offset_y", 0f),
-            "tweak_base_width"     to prefs.getFloat("tweak_base_width", 100f),
-            "theme_button_size"    to prefs.getFloat("theme_button_size", 48f),
+            "tweak_offset_y" to prefs.getFloat("tweak_offset_y", 0f),
+            "tweak_base_width" to prefs.getFloat("tweak_base_width", 100f),
+            "theme_button_size" to prefs.getFloat("theme_button_size", 48f),
             "theme_button_spacing" to prefs.getFloat("theme_button_spacing", 16f),
-            "theme_button_radius"  to prefs.getFloat("theme_button_radius", 50f),
-            "theme_anim_type"      to (prefs.getString("theme_anim_type", "BOUNCE") ?: "BOUNCE"),
-            "theme_corner_radius"  to prefs.getFloat("theme_corner_radius", 50f),
-            "theme_text_primary"   to prefs.getFloat("theme_text_primary", 16f),
+            "theme_button_radius" to prefs.getFloat("theme_button_radius", 50f),
+            "theme_anim_type" to (prefs.getString("theme_anim_type", "BOUNCE") ?: "BOUNCE"),
+            "theme_corner_radius" to prefs.getFloat("theme_corner_radius", 50f),
+            "theme_text_primary" to prefs.getFloat("theme_text_primary", 16f),
             "theme_text_secondary" to prefs.getFloat("theme_text_secondary", 14f),
             "theme_progress_thick" to prefs.getFloat("theme_progress_thick", 4f),
-            "theme_ring_thick"     to prefs.getFloat("theme_ring_thick", 12f),
-            "theme_element_gap"    to prefs.getFloat("theme_element_gap", 8f),
-            "theme_music_title"    to prefs.getFloat("theme_music_title", 16f),
-            "theme_music_artist"   to prefs.getFloat("theme_music_artist", 14f),
-            "theme_music_seeker"   to prefs.getFloat("theme_music_seeker", 4f),
-            "theme_bat_text"       to prefs.getFloat("theme_bat_text", 16f),
-            "theme_bat_icon"       to prefs.getFloat("theme_bat_icon", 36f),
-            "theme_bat_ring"       to prefs.getFloat("theme_bat_ring", 12f),
-            "theme_alert_title"    to prefs.getFloat("theme_alert_title", 16f),
-            "theme_alert_msg"      to prefs.getFloat("theme_alert_msg", 14f),
-            "haptic_strength"      to prefs.getFloat("haptic_strength", 1f).toInt(),
-            "charging_style"       to (prefs.getString("charging_style", "CUBE") ?: "CUBE"),
-            "blur_intensity"       to prefs.getFloat("blur_intensity", 16f),
-            "hide_landscape"       to prefs.getBoolean("hide_landscape", false),
-            "enable_media"         to prefs.getBoolean("enable_media", true),
-            "enable_charging"      to prefs.getBoolean("enable_charging", true),
-            "enable_alerts"        to prefs.getBoolean("enable_alerts", true),
-            "enable_timers"        to prefs.getBoolean("enable_timers", true),
-            "rotate_cube"          to prefs.getBoolean("rotate_cube", true),
-            "glass_mode"           to prefs.getBoolean("glass_mode", true),
-            "spring_damping"       to prefs.getFloat("spring_damping", 0.85f),
-            "spring_stiffness"     to prefs.getFloat("spring_stiffness", 400f),
-            "idle_swipe_action"    to (prefs.getString("idle_swipe_action", "BRIGHTNESS") ?: "BRIGHTNESS"),
-            "long_press_action"    to (prefs.getString("long_press_action", "SCREENSHOT") ?: "SCREENSHOT")
+            "theme_ring_thick" to prefs.getFloat("theme_ring_thick", 12f),
+            "theme_element_gap" to prefs.getFloat("theme_element_gap", 8f),
+            "theme_music_title" to prefs.getFloat("theme_music_title", 16f),
+            "theme_music_artist" to prefs.getFloat("theme_music_artist", 14f),
+            "theme_music_seeker" to prefs.getFloat("theme_music_seeker", 4f),
+            "theme_bat_text" to prefs.getFloat("theme_bat_text", 16f),
+            "theme_bat_icon" to prefs.getFloat("theme_bat_icon", 36f),
+            "theme_bat_ring" to prefs.getFloat("theme_bat_ring", 12f),
+            "theme_alert_title" to prefs.getFloat("theme_alert_title", 16f),
+            "theme_alert_msg" to prefs.getFloat("theme_alert_msg", 14f),
+            "haptic_strength" to prefs.getFloat("haptic_strength", 1f).toInt(),
+            "charging_style" to (prefs.getString("charging_style", "CUBE") ?: "CUBE"),
+            "blur_intensity" to prefs.getFloat("blur_intensity", 16f),
+            "hide_landscape" to prefs.getBoolean("hide_landscape", false),
+            "enable_media" to prefs.getBoolean("enable_media", true),
+            "enable_charging" to prefs.getBoolean("enable_charging", true),
+            "enable_alerts" to prefs.getBoolean("enable_alerts", true),
+            "enable_timers" to prefs.getBoolean("enable_timers", true),
+            "rotate_cube" to prefs.getBoolean("rotate_cube", true),
+            "glass_mode" to prefs.getBoolean("glass_mode", true),
+            "spring_damping" to prefs.getFloat("spring_damping", 0.85f),
+            "spring_stiffness" to prefs.getFloat("spring_stiffness", 400f),
+            "idle_swipe_action" to (prefs.getString("idle_swipe_action", "BRIGHTNESS")
+                ?: "BRIGHTNESS"),
+            "long_press_action" to (prefs.getString("long_press_action", "SCREENSHOT")
+                ?: "SCREENSHOT")
         )
     }
 
@@ -167,11 +172,13 @@ object NewConfigManager {
 
     private fun buildDashboardPayload(prefs: SharedPreferences): Map<String, Any> {
         val map = mutableMapOf<String, Any>()
-        val defaultQS = listOf("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
+        val defaultQS =
+            listOf("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
         for (i in 0..7) map["pinned_app_$i"] = prefs.getString("pinned_app_$i", "") ?: ""
         for (i in 0..6) {
-            map["qs_tile_spec_$i"]  = prefs.getString("qs_tile_spec_$i",  "") ?: ""
-            map["qs_tile_label_$i"] = prefs.getString("qs_tile_label_$i", defaultQS.getOrElse(i) { "" })
+            map["qs_tile_spec_$i"] = prefs.getString("qs_tile_spec_$i", "") ?: ""
+            map["qs_tile_label_$i"] =
+                prefs.getString("qs_tile_label_$i", defaultQS.getOrElse(i) { "" })!!
         }
         return map
     }
@@ -184,50 +191,44 @@ object NewConfigManager {
         val capturingEditor = object : SharedPreferences.Editor {
             override fun putString(key: String?, value: String?): SharedPreferences.Editor {
                 if (key != null && value != null) {
-                    captured.put(key, value as Any)
+                    captured[key] = value as Any
                 }
                 return this
             }
             override fun putStringSet(key: String?, values: MutableSet<String>?): SharedPreferences.Editor {
                 if (key != null && values != null) {
-                    captured.put(key, values as Any)
+                    captured[key] = values as Any
                 }
                 return this
             }
             override fun putInt(key: String?, value: Int): SharedPreferences.Editor {
                 if (key != null) {
-                    captured.put(key, value as Any)
+                    captured[key] = value as Any
                 }
                 return this
             }
             override fun putLong(key: String?, value: Long): SharedPreferences.Editor {
                 if (key != null) {
-                    captured.put(key, value as Any)
+                    captured[key] = value as Any
                 }
                 return this
             }
             override fun putFloat(key: String?, value: Float): SharedPreferences.Editor {
                 if (key != null) {
-                    captured.put(key, value as Any)
+                    captured[key] = value as Any
                 }
                 return this
             }
             override fun putBoolean(key: String?, value: Boolean): SharedPreferences.Editor {
                 if (key != null) {
-                    captured.put(key, value as Any)
+                    captured[key] = value as Any
                 }
                 return this
             }
-            override fun remove(key: String?): SharedPreferences.Editor {
-                return this
-            }
-            override fun clear(): SharedPreferences.Editor {
-                return this
-            }
-            override fun commit(): Boolean {
-                return true
-            }
-            override fun apply() {}
+            override fun remove(key: String?): SharedPreferences.Editor = this
+            override fun clear(): SharedPreferences.Editor = this
+            override fun commit(): Boolean = true
+            override fun apply() = Unit
         }
         capturingEditor.editBlock()
         return captured
