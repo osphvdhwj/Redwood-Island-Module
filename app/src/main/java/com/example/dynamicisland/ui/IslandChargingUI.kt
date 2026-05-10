@@ -46,13 +46,14 @@ fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) {
     val batteryColor = if (charging.isPluggedIn) Color(0xFF00FF55) else if (isLow) Color(0xFFFF0033) else Color.White
     
     val infiniteTransition = rememberInfiniteTransition(label = "charging_glow")
-    val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.3f, targetValue = 0.8f, animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "alpha")
+    val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.3f, targetValue = 0.8f, animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "glow")
 
     AlertMidSlot(
         islandState = islandState.value,
         iconContent = {
-            Box(modifier = Modifier.fillMaxSize().background(batteryColor.copy(alpha = if (charging.isPluggedIn || isLow) glowAlpha else 0.1f), CircleShape).blur(if (charging.isPluggedIn || isLow) 12.dp else 0.dp))
-            Icon(imageVector = if (charging.isPluggedIn) Icons.Default.Add else if (isLow) Icons.Default.Warning else Icons.Default.BatteryFull, contentDescription = null, tint = batteryColor, modifier = Modifier.size(theme.batIconSize * 0.65f))
+            Box(modifier = Modifier.fillMaxSize().background(batteryColor.copy(alpha = if (charging.isPluggedIn || isLow) glowAlpha else 0.1f), CircleShape).blur(if (charging.isPluggedIn || isLow) 8.dp else 0.dp), contentAlignment = Alignment.Center) {
+                Icon(imageVector = if (charging.isPluggedIn) Icons.Default.Add else if (isLow) Icons.Default.Warning else Icons.Default.BatteryFull, contentDescription = null, tint = batteryColor, modifier = Modifier.size(20.dp))
+            }
         },
         title = if (charging.isPluggedIn) "Charging" else if (isLow) "Low Battery" else "Battery",
         titleColor = if (isLow) batteryColor else Color.White,
@@ -107,6 +108,7 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
 // 🚀 NEW: The Massive iOS-Style Charging Expansion
 @Composable
 fun DynamicIslandView.ChargingMax(charging: LiveActivityModel.Charging) {
+    val theme = LocalIslandTheme.current
     val batteryColor = Color(0xFF00FF55)
     val scaleAnim = remember { Animatable(0.5f) }
     val alphaAnim = remember { Animatable(0f) }
@@ -114,24 +116,19 @@ fun DynamicIslandView.ChargingMax(charging: LiveActivityModel.Charging) {
     LaunchedEffect(Unit) {
         launch {
             alphaAnim.animateTo(1f, animationSpec = tween(200))
-            scaleAnim.animateTo(1f, animationSpec = spring(dampingRatio = 0.55f, stiffness = 350f))
+            scaleAnim.animateTo(1f, animationSpec = spring(dampingRatio = theme.springDamping, stiffness = theme.springStiffness))
         }
     }
 
-    var displayedLevel by remember { mutableIntStateOf(0) }
-    LaunchedEffect(charging.level) {
-        kotlinx.coroutines.delay(200)
-        val target = charging.level
-        val duration = 800L
-        val startTime = System.currentTimeMillis()
-        while (displayedLevel < target) {
-            val elapsed = System.currentTimeMillis() - startTime
-            val progress = (elapsed.toFloat() / duration).coerceIn(0f, 1f)
-            val eased = 1f - (1f - progress).pow(3)
-            displayedLevel = (eased * target).toInt()
-            kotlinx.coroutines.delay(16)
-        }
-        displayedLevel = target
+    // Use an animateIntAsState for the displayed percentage (frame-synced, cancels cleanly)
+    val displayedLevel by animateIntAsState(
+        targetValue = charging.level,
+        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+        label = "charging_display_level"
+    )
+
+    val bgBrush = remember(batteryColor) {
+        Brush.radialGradient(listOf(batteryColor.copy(alpha = 0.2f), Color.Transparent))
     }
 
     Box(
@@ -142,7 +139,7 @@ fun DynamicIslandView.ChargingMax(charging: LiveActivityModel.Charging) {
             modifier = Modifier
                 .fillMaxSize()
                 .blur(30.dp)
-                .background(Brush.radialGradient(listOf(batteryColor.copy(alpha = 0.2f), Color.Transparent)))
+                .background(bgBrush)
         )
 
         Row(
@@ -192,7 +189,7 @@ fun LiquidBatteryCanvas(level: Int, color: Color, isCharging: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.width(46.dp).height(24.dp).border(2.dp, Color.White.copy(alpha=0.3f), RoundedCornerShape(6.dp)).padding(3.dp)) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val clipPath = androidx.compose.ui.graphics.Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(rect = androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height), cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx(), 3.dp.toPx()))) }
+                val clipPath = androidx.compose.ui.graphics.Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(rect = androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height), cornerRadius = CornerRadius(6f, 6f))) }
                 clipPath(clipPath) {
                     drawRect(color = color, topLeft = androidx.compose.ui.geometry.Offset.Zero, size = androidx.compose.ui.geometry.Size(size.width * animatedFill, size.height))
                 }
