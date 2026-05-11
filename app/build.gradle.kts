@@ -1,6 +1,8 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    // ⬆️ Added: Kotlin 2.0+ Compose Plugin
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.0" 
 }
 
 android {
@@ -13,6 +15,9 @@ android {
         targetSdk = 36 // ⬆️ Upgraded to Android 16 (Baklava)
         versionCode = 1
         versionName = "1.0"
+
+        // ⬆️ Fixed: Kotlin DSL syntax for manifest placeholders
+        manifestPlaceholders["appAuthRedirectScheme"] = "com.example.dynamicisland"
     }
 
     lint {
@@ -42,15 +47,15 @@ android {
         compose = true
         aidl = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14" 
-    }
+    // 🗑️ Removed: composeOptions block (now handled by the Kotlin plugin above)
 }
 
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
+    
+    // Xposed/LSPosed API (Must remain compileOnly)
     compileOnly("de.robv.android.xposed:api:82")
 
     // Animations & Palette

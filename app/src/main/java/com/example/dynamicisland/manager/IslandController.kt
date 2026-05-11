@@ -768,31 +768,44 @@ class IslandController(private val context: Context) {
         clipboardManager.startListening()
         connectivityManager.startListening()
         // ── BATCH 6: Translation engine wired to clipboard ────────────────────────
-        val translationEngine = com.example.dynamicisland.intelligence.IslandTranslationEngine.get(context)
-        scope.launch {
-            translationEngine.result.collect { result ->
-                if (result != null) {
-                    postTransientNotification(
-                        com.example.dynamicisland.model.LiveActivityModel.General(
-                            id          = "sys_translation",
-                            type        = ActivityType.MESSAGE,
-                            title       = result.translatedText.ifEmpty { "Translating…" },
-                            dataText    = result.originalText,
-                            accentColor = android.graphics.Color.parseColor("#4FC3F7")
-                        ),
-                        12_000L
-                    )
+        // Translation engine — deferred to avoid MLKit init crash in SystemUI
+        if (com.example.dynamicisland.util.IslandProcessUtils.isOwnProcess(context)) {
+            try {
+                val translationEngine = com.example.dynamicisland.intelligence
+                    .IslandTranslationEngine.get(context)
+                scope.launch {
+                    translationEngine.result.collect { result ->
+                        if (result != null) {
+                            postTransientNotification(
+                                LiveActivityModel.General(
+                                    id          = "sys_translation",
+                                    type        = ActivityType.MESSAGE,
+                                    title       = result.translatedText.ifEmpty { "Translating…" },
+                                    dataText    = result.originalText,
+                                    accentColor = android.graphics.Color.parseColor("#4FC3F7")
+                                ),
+                                12_000L
+                            )
+                        }
+                    }
                 }
+            } catch (e: Throwable) {
+                logWarn("Translation engine init skipped: ${e.message}")
             }
-        }
 
-        // ── BATCH 6: Barcode scanner wired ────────────────────────────────────────
-        val barcodeScanner = com.example.dynamicisland.hook.ContinuityCameraScanner(context)
-        val prefs = context.getSharedPreferences("dynamic_island_prefs", Context.MODE_PRIVATE)
-        if (prefs.getBoolean("enable_continuity_camera", false)) {
-            barcodeScanner.start()
-        }
-        
+            // Barcode scanner — deferred
+            try {
+                val prefs = context.getSharedPreferences(
+                    "dynamic_island_prefs", Context.MODE_PRIVATE
+                )
+                if (prefs.getBoolean("enable_continuity_camera", false)) {
+                    val barcodeScanner = com.example.dynamicisland.hook
+                        .ContinuityCameraScanner(context)
+                    barcodeScanner.start()
+                }
+            } catch (e: Throwable) {
+                logWarn("Barcode scanner init skipped: ${e.message}")
+            }        
         connectivityManager.startListening()
     }
 }
