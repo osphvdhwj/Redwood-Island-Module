@@ -19,22 +19,24 @@ object SystemEventsHook {
     }
 
     // ── 1. App transitions ────────────────────────────────────────────────────
+    //
+    // ROM compatibility:
+    //   CrDroid / Infinity X → setResumedActivityUncheckLocked in ATMS
+    //   Evolution X Android 15 → onTaskMovedToFront in TaskStackChangeListener
+    //
+    // We hook BOTH. Whichever fires on the ROM, we catch it.
 
     private fun hookAppTransitions(
         lpparam: XC_LoadPackage.LoadPackageParam,
         userAll: UserHandle
     ) {
-        // Ordered list of (class, method) candidates across AOSP 12–15 + OEM ROMs
-        val candidates = listOf(
-            "com.android.server.wm.ActivityTaskManagerService" to "setResumedActivityUncheckLocked",
-            "com.android.server.am.ActivityManagerService"     to "setResumedActivityUncheckLocked",
-            "com.android.server.wm.ActivityRecord"             to "onResumeActivityItem",  // fallback
-        )
+        var hooked = false
 
-        val callback = object : XC_MethodHook() {
+        // ── Strategy A: ATMS setResumedActivityUncheckLocked ─────────────────
+        // Works on CrDroid / Infinity X
+        val atmsCallback = object : XC_MethodHook() {
             override fun afterHookedMethod(param: MethodHookParam) {
                 try {
-                    // First arg is the ActivityRecord on ATMS variants
                     val record = param.args.firstOrNull() ?: return
                     val pkg = try {
                         XposedHelpers.getObjectField(record, "packageName") as? String
@@ -45,85 +47,143 @@ object SystemEventsHook {
                     } ?: return
 
                     val ctx = getContext(param) ?: return
-                    ctx.sendBroadcastAsUser(
-                        Intent("com.example.dynamicisland.APP_CHANGED").apply {
-                            setPackage("com.android.systemui")
-                            putExtra("pkg", pkg)
-                        },
-                        userAll
-                    )
+                    broadcastAppChange(ctx, pkg, userAll)
                 } catch (_: Throwable) {}
             }
         }
 
-        var hooked = false
-        for ((cls, method) in candidates) {
+        val atmsCandidates = listOf(
+            "com.android.server.wm.ActivityTaskManagerService" to "setResumedActivityUncheckLocked",
+            "com.android.server.am.ActivityManagerService"     to "setResumedActivityUncheckLocked",
+            "com.android.server.wm.ActivityRecord"             to "onResumeActivityItem",
+        )
+
+        for ((cls, method) in atmsCandidates) {
             val clazz = XposedHelpers.findClassIfExists(cls, lpparam.classLoader) ?: continue
             try {
-                // Hook all overloads — the signature differs between Android versions
-                val unhooks = XposedBridge.hookAllMethods(clazz, method, callback)
+                val unhooks = XposedBridge.hookAllMethods(clazz, method, atmsCallback)
                 if (unhooks.isNotEmpty()) {
                     XposedBridge.log("$TAG ✅: App transitions hooked via $cls.$method")
                     hooked = true
                     break
                 }
             } catch (e: Throwable) {
-                XposedBridge.log("$TAG ⚠️: App transition $cls.$method — ${e.message}")
+                XposedBridge.log("$TAG ⚠️: $cls.$method — ${e.message}")
             }
         }
 
+        // ── Strategy B: TaskStackChangeListener.onTaskMovedToFront ───────────
+        // Confirmed on Evolution X Android 15 from TaskStackChangeListener.smali
+        // onTaskMovedToFront(RunningTaskInfo) → extracts packageName from topActivity
+        val taskStackCandidates = listOf(
+            "com.android.systemui.shared.system.TaskStackChangeListener",
+            "com.android.server.wm.TaskChangeNotificationController",
+            "android.app.ITaskStackListener",
+        )
+
+        val taskStackCallback = object : XC_MethodHook() {
+            override fun afterHookedMethod(param: MethodHookParam) {
+                try {
+                    val taskInfo = param.args.firstOrNull() ?: return
+
+                    // Extract package from RunningTaskInfo.topActivity (ComponentName)
+                    val pkg = try {
+                        val topActivity = XposedHelpers.getObjectField(taskInfo, "topActivity")
+                        XposedHelpers.callMethod(topActivity, "getPackageName") as? String
+                    } catch (_: Throwable) {
+                        // Fallback: try baseActivity
+                        try {
+                            val baseActivity = XposedHelpers.getObjectField(taskInfo, "baseActivity")
+                            XposedHelpers.callMethod(baseActivity, "getPackageName") as? String
+                        } catch (_: Throwable) { null }
+                    } ?: return
+
+                    val ctx = try {
+                        android.app.AndroidAppHelper.currentApplication()
+                    } catch (_: Throwable) { null } ?: return
+
+                    broadcastAppChange(ctx, pkg, userAll)
+                } catch (_: Throwable) {}
+            }
+        }
+
+        for (cls in taskStackCandidates) {
+            val clazz = XposedHelpers.findClassIfExists(cls, lpparam.classLoader) ?: continue
+            try {
+                // Hook the RunningTaskInfo overload confirmed in smali line 146
+                val unhooks = XposedBridge.hookAllMethods(
+                    clazz, "onTaskMovedToFront", taskStackCallback
+                )
+                if (unhooks.isNotEmpty()) {
+                    XposedBridge.log("$TAG ✅: App transitions hooked via $cls.onTaskMovedToFront")
+                    hooked = true
+                    break
+                }
+            } catch (e: Throwable) {
+                XposedBridge.log("$TAG ⚠️: $cls.onTaskMovedToFront — ${e.message}")
+            }
+        }
+
+        // ── Strategy C: scan fallback ─────────────────────────────────────────
         if (!hooked) {
-            // Last resort: scan ActivityTaskManagerService for any "setResumed" method
+            XposedBridge.log("$TAG ⚠️: All app transition strategies failed — scanning ATMS")
             IslandHookEngine.scanAndHook(
                 "com.android.server.wm.ActivityTaskManagerService",
                 lpparam.classLoader,
                 "setResumed",
-                callback
+                atmsCallback
             )
         }
     }
 
-    // ── 2. Notifications (OTP + live activities) ──────────────────────────────
+    private fun broadcastAppChange(ctx: Context, pkg: String, userAll: UserHandle) {
+        ctx.sendBroadcastAsUser(
+            Intent("com.example.dynamicisland.APP_CHANGED").apply {
+                setPackage("com.android.systemui")
+                putExtra("pkg", pkg)
+            },
+            userAll
+        )
+    }
+
+    // ── 2. Notifications ──────────────────────────────────────────────────────
+    //
+    // Evolution X Android 15 confirmed overloads from NotificationManagerService.smali:
+    //
+    //   Overload 1 (line 8747): enqueueNotificationInternal(String,String,I,I,String,I,Notification,I,Z,Z)V
+    //   Overload 2 (line 8780): enqueueNotificationInternal(String,String,I,I,String,I,Notification,I,Z,Z,Z)V  ← main
+    //   Overload 3 (line 8837): enqueueNotificationInternal(String,String,I,I,String,I,Notification,I,Z,PostNotificationTracker,Z,Z)Z
+    //
+    // We use hookAllMethodsByName to hook ALL overloads regardless of signature.
+    // This makes it work on CrDroid, Infinity X, and Evolution X simultaneously.
 
     private fun hookNotifications(
         lpparam: XC_LoadPackage.LoadPackageParam,
         userAll: UserHandle
     ) {
-        val nmsClass = XposedHelpers.findClassIfExists(
-            "com.android.server.notification.NotificationManagerService",
-            lpparam.classLoader
-        ) ?: run {
-            XposedBridge.log("$TAG ⚠️: NotificationManagerService not found")
-            return
+        val notifCallback = object : XC_MethodHook() {
+            override fun afterHookedMethod(param: MethodHookParam) {
+                try {
+                    processNotificationParams(param, userAll)
+                } catch (_: Throwable) {}
+            }
         }
 
-        // Hook ALL overloads of enqueueNotificationInternal — signature changes every major version
+        // Hook ALL overloads — confirmed 3 overloads on Evolution X
         val count = IslandHookEngine.hookAllMethodsByName(
             "com.android.server.notification.NotificationManagerService",
             lpparam.classLoader,
             "enqueueNotificationInternal",
-            object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
-                    try {
-                        processNotificationParams(param, userAll)
-                    } catch (_: Throwable) {}
-                }
-            }
+            notifCallback
         )
 
-        // Fallback: also hook enqueueNotification (older AOSP name)
+        // Fallback for older ROMs that used different method name
         if (count == 0) {
             IslandHookEngine.hookAllMethodsByName(
                 "com.android.server.notification.NotificationManagerService",
                 lpparam.classLoader,
                 "enqueueNotification",
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        try {
-                            processNotificationParams(param, userAll)
-                        } catch (_: Throwable) {}
-                    }
-                }
+                notifCallback
             )
         }
     }
@@ -132,7 +192,8 @@ object SystemEventsHook {
         param: XC_MethodHook.MethodHookParam,
         userAll: UserHandle
     ) {
-        // Robustly extract fields by type scanning — not by index
+        // Robustly extract fields by type — not by index
+        // Works across all 3 overloads confirmed in Evolution X smali
         val pkgName = param.args
             .filterIsInstance<String>()
             .firstOrNull()
@@ -152,7 +213,7 @@ object SystemEventsHook {
 
         // ── Live activity (ongoing notification with progress) ────────────────
         if (isOngoing && pkgName != "com.android.systemui" && pkgName != "android") {
-            val now = System.currentTimeMillis()
+            val now  = System.currentTimeMillis()
             val last = lastBroadcastMap[pkgName]
             if (title != (last?.second ?: "") || now - (last?.first ?: 0L) > 1000) {
                 lastBroadcastMap[pkgName] = Pair(now, title)
@@ -176,9 +237,9 @@ object SystemEventsHook {
 
         // ── OTP extraction ────────────────────────────────────────────────────
         val combined = "$title $text"
-        if (combined.contains("OTP", true) ||
-            combined.contains("code", true) ||
-            combined.contains("verification", true) ||
+        if (combined.contains("OTP", true)          ||
+            combined.contains("code", true)          ||
+            combined.contains("verification", true)  ||
             combined.contains("one time", true)) {
 
             val match = Regex("\\b\\d{4,8}\\b").find(combined)
