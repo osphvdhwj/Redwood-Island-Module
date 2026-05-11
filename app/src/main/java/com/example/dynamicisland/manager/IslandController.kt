@@ -790,7 +790,7 @@ class IslandController(private val context: Context) {
                     }
                 }
             } catch (e: Throwable) {
-                logWarn("Translation engine init skipped: ${e.message}")
+                android.util.Log.w("IslandController", "Translation engine init skipped: ${e.message}")
             }
 
             // Barcode scanner — deferred
@@ -804,8 +804,8 @@ class IslandController(private val context: Context) {
                     barcodeScanner.start()
                 }
             } catch (e: Throwable) {
-                logWarn("Barcode scanner init skipped: ${e.message}")
-            }        
-        connectivityManager.startListening()
-    }
-}
+                android.util.Log.w("IslandController", "Barcode scanner init skipped: ${e.message}")
+            }
+        }  // closes isOwnProcess if-block
+    }  // closes init block
+}  // closes class IslandController
