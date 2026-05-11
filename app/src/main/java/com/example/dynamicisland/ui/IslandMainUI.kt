@@ -248,7 +248,38 @@ val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = 
                                         else -> {} 
                                     } 
                                 }
-                                IslandState.TYPE_2_MID -> { when (model) { is LiveActivityModel.Dashboard -> DashboardMid(model); is LiveActivityModel.Call -> CallMid(model); is LiveActivityModel.Music -> MusicMid(model); is LiveActivityModel.General -> GeneralMid(model); is LiveActivityModel.Charging -> ChargingMid(model); is LiveActivityModel.SystemAlert -> SystemAlertMid(model); is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model); is LiveActivityModel.OngoingTask -> OngoingTaskMid(model); is LiveActivityModel.ExternalActivity -> ExternalActivityMid(model); else -> {} } }
+                                IslandState.TYPE_2_MID -> {
+                                when (model) {
+                                is LiveActivityModel.Dashboard       -> DashboardMid(model)
+                                is LiveActivityModel.Call            -> CallMid(model)
+                                is LiveActivityModel.Music           -> MusicMid(model)
+                                is LiveActivityModel.Charging        -> ChargingMid(model)
+                                is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model)
+                                is LiveActivityModel.OngoingTask     -> OngoingTaskMid(model)
+                                is LiveActivityModel.ExternalActivity -> ExternalActivityMid(model)
+                                is LiveActivityModel.LinkIntercept   -> LinkInterceptMid(model)
+                                is LiveActivityModel.SystemAlert     -> {
+                                    // OTP gets its own bespoke view; everything else uses the generic alert
+                                    if (model.alertType == "OTP_CATCHER") OtpMid(model)
+                                    else SystemAlertMid(model)
+                                }
+                                is LiveActivityModel.General         -> {
+                                    // Translation and Barcode results arrive as General models with a
+                                    // special id prefix so they can be routed to their own composables.
+                                    when {
+                                        model.id == "sys_translation" -> {
+                                            // Reconstruct a minimal TranslationResult for display.
+                                            // The actual TranslationEngine result is the source of truth;
+                                            // here we just render the text stored in title/dataText.
+                                            TranslationGeneralMid(model)
+                                        }
+                                        model.id == "sys_barcode"     -> BarcodeGeneralMid(model)
+                                        else                          -> GeneralMid(model)
+                                    }
+                                }
+                                else -> {}
+                            }
+                        }
                                 IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { 
                                     // Gaming HUD takes priority in mini when gaming mode is active
                                     if (view.controller?.currentHardware?.isGamingModeOn == true && model !is LiveActivityModel.Call) {
@@ -285,10 +316,4 @@ val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = 
         }
         SplitCubeUI(state, animatedHeight, borderColor)
     }
-}
-
-// Fallback stub for MusicMid to ensure compilation if the actual component is missing
-@Composable
-fun DynamicIslandView.MusicMid(model: LiveActivityModel.Music) {
-    MusicMini(model) 
 }

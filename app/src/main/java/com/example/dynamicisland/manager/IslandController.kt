@@ -224,6 +224,23 @@ class IslandController(private val context: Context) {
                         postTransientNotification(LiveActivityModel.OngoingTask(pkgName = intent.getStringExtra("pkg") ?: "", title = intent.getStringExtra("title") ?: "", text = intent.getStringExtra("text") ?: "", progress = progress, progressMax = progressMax), 4000L)
                     }
                 }
+                "com.example.dynamicisland.OTP_CAUGHT" -> {
+                    if (!isAlertsEnabled) return
+                    val otp = intent.getStringExtra("otp") ?: return
+                    @Suppress("UNUSED_VARIABLE")
+                    val pkg = intent.getStringExtra("pkg") ?: ""
+                    postTransientNotification(
+                        LiveActivityModel.SystemAlert(
+                            id         = "sys_otp",
+                            alertType  = "OTP_CATCHER",
+                            title      = "Verification Code",
+                            message    = otp,
+                            alertColor = android.graphics.Color.parseColor("#4285F4"),
+                            isCritical = true
+                        ),
+                        30_000L   // OTPs stay visible for 30 s so the user can copy
+                    )
+                }
                 "com.crdroid.batterywellbeing.SYSTEM_OVERRIDE" -> {
                     if (!isAlertsEnabled) return
                     when (intent.getStringExtra("action")) {
@@ -361,7 +378,7 @@ class IslandController(private val context: Context) {
                     }
                 }
 
-                "SurfaceFlingerHook.ACTION_FRAME_STATS" -> {
+                SurfaceFlingerHook.ACTION_FRAME_STATS -> {
                     val fps        = intent.getFloatExtra("fps", 0f)
                     val frameMs    = intent.getFloatExtra("frameMs", 0f)
                     val jankPct    = intent.getFloatExtra("jankPct", 0f)
@@ -441,8 +458,9 @@ class IslandController(private val context: Context) {
         lifecycleOwner.attachToView(view)
         lifecycleOwner.onStart()
         lifecycleOwner.onResume()
-        this.islandView = view 
-        this.windowManager = wm 
+        this.islandView = view
+        this.windowManager = wm
+        view.controller = this          // FIX: lets IslandMainUI reach currentHardware
 
         scope.launch {
             delay(500) 
@@ -717,14 +735,15 @@ class IslandController(private val context: Context) {
             addAction("com.example.dynamicisland.PANEL_STATE_CHANGED")
             addAction("com.example.dynamicisland.ALARM_SET")
             addAction("com.example.dynamicisland.hook.ContinuityCameraScanner.ACTION_BARCODE")
-            addAction("SurfaceFlingerHook.ACTION_FRAME_STATS")
-            addAction("CrDroidAPIHook.ACTION_GAME_MODE_CHANGED")
-            addAction("CrDroidAPIHook.ACTION_THERMAL_PROFILE")
-            addAction("CrDroidAPIHook.ACTION_DISPLAY_MODE")
-            addAction("CrDroidAPIHook.ACTION_SMART_CHARGE")
             addAction("com.example.dynamicisland.EXTERNAL_ACTIVITY_UPDATED")
             addAction("com.example.dynamicisland.EXTERNAL_ACTIVITY_ENDED")
             addAction("com.example.dynamicisland.SCREENSHOT_CAUGHT")
+            addAction("com.example.dynamicisland.OTP_CAUGHT")          // FIX: wire OTP receiver
+            addAction(SurfaceFlingerHook.ACTION_FRAME_STATS)           // FIX: was a string literal
+            addAction(CrDroidAPIHook.ACTION_GAME_MODE_CHANGED)         // FIX: was a string literal
+            addAction(CrDroidAPIHook.ACTION_THERMAL_PROFILE)           // FIX: was a string literal
+            addAction(CrDroidAPIHook.ACTION_DISPLAY_MODE)              // FIX: was a string literal
+            addAction(CrDroidAPIHook.ACTION_SMART_CHARGE)              // FIX: was a string literal
         }
 
         val securePermission = "com.redwood.permission.SECURE_IPC"
