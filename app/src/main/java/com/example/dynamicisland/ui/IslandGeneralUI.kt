@@ -88,8 +88,11 @@ fun Modifier.safeMarquee(state: IslandState): Modifier {
 }
 
 @Suppress("DEPRECATION")
-fun performCustomHaptic(context: Context, strength: Int) {
+fun performCustomHaptic(context: Context, strength: Int, forPackage: String = "") {
     if (strength == 0) return
+    if (forPackage.isNotEmpty() &&
+        com.example.dynamicisland.manager.PerAppProfileManager
+            .getProfile(forPackage).hapticSuppression) return
     try {
         val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {

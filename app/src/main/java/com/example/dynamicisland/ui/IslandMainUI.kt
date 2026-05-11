@@ -264,17 +264,15 @@ val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = 
                                     else SystemAlertMid(model)
                                 }
                                 is LiveActivityModel.General         -> {
-                                    // Translation and Barcode results arrive as General models with a
-                                    // special id prefix so they can be routed to their own composables.
                                     when {
-                                        model.id == "sys_translation" -> {
-                                            // Reconstruct a minimal TranslationResult for display.
-                                            // The actual TranslationEngine result is the source of truth;
-                                            // here we just render the text stored in title/dataText.
-                                            TranslationGeneralMid(model)
-                                        }
-                                        model.id == "sys_barcode"     -> BarcodeGeneralMid(model)
-                                        else                          -> GeneralMid(model)
+                                        model.id == "sys_translation"  -> TranslationGeneralMid(model)
+                                        model.id == "sys_barcode"      -> BarcodeGeneralMid(model)
+                                        // Navigation: identified either by id or by the Maps accent green
+                                        model.id == "sys_navigation"
+                                        || model.type == com.example.dynamicisland.model.ActivityType.MESSAGE
+                                            && model.accentColor == android.graphics.Color.parseColor("#34A853")
+                                                               -> NavigationMid(model)
+                                        else                           -> GeneralMid(model)
                                     }
                                 }
                                 else -> {}

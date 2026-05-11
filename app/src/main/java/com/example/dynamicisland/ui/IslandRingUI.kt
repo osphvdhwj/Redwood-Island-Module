@@ -42,6 +42,22 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
                 else -> Color(0xFF006400) 
             }
         }
+        
+        val ringColor = when {
+            hasUnseenNotif.value && !isMedia && !globalIsCharging.value ->
+                Color(pendingNotifColor.intValue)
+            else -> baseColor
+        }
+
+        // Pulse animation for unseen notification
+        val notifPulse by rememberInfiniteTransition(label = "notif_pulse").animateFloat(
+            initialValue  = if (hasUnseenNotif.value) 0.4f else 1f,
+            targetValue   = 1f,
+            animationSpec = if (hasUnseenNotif.value)
+                infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse)
+            else tween(0),
+            label = "notif_alpha"
+        )
 
         val infiniteTransition = rememberInfiniteTransition(label = "ring_breath")
         val breathScale by infiniteTransition.animateFloat(

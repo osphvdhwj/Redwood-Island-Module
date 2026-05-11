@@ -235,26 +235,25 @@ object SystemEventsHook {
             }
         }
 
-        // ── OTP extraction ────────────────────────────────────────────────────
-        val combined = "$title $text"
-        if (combined.contains("OTP", true)          ||
-            combined.contains("code", true)          ||
-            combined.contains("verification", true)  ||
-            combined.contains("one time", true)) {
-
-            val match = Regex("\\b\\d{4,8}\\b").find(combined)
-            if (match != null) {
+        // ── OTP extraction (multilingual, context-aware) ──────────────────
+        val otpText = "$title $text"
+        if (com.example.dynamicisland.intelligence.OtpTokenizer.looksLikeOtpMessage(otpText)) {
+            val result = com.example.dynamicisland.intelligence.OtpTokenizer
+                .extract(otpText, pkgName)
+            if (result != null && result.isHighConfidence) {
                 ctx.sendBroadcastAsUser(
                     Intent("com.example.dynamicisland.OTP_CAUGHT").apply {
                         setPackage("com.android.systemui")
-                        putExtra("otp", match.value)
+                        putExtra("otp", result.code)
                         putExtra("pkg", pkgName)
+                        putExtra("confidence", result.confidence)
+                        putExtra("language", result.language.name)
                     },
                     userAll
                 )
             }
         }
-    }
+        }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

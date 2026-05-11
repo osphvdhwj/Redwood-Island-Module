@@ -48,6 +48,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     var onAppPinnedClick: ((String) -> Unit)? = null
     var onQsTileClick: ((String) -> Unit)? = null
+    
+    var pendingNotifColor = mutableIntStateOf(android.graphics.Color.WHITE)
+    var hasUnseenNotif    = mutableStateOf(false)
 
     // State Variables
     var ringW = mutableStateOf(45f); var ringH = mutableStateOf(45f); var ringX = mutableStateOf(0f); var ringY = mutableStateOf(48f)

@@ -20,6 +20,30 @@ import com.example.dynamicisland.util.ComposeLifecycleOwner
 class IslandController(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val activeExternalActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
+    
+    private var pendingNotificationColor: Int = android.graphics.Color.WHITE
+    private var hasUnseenNotification = false
+
+    private var lastHapticState: IslandState = IslandState.HIDDEN
+
+    private fun triggerTransitionHaptic(newState: IslandState) {
+        if (newState == lastHapticState) return
+        val prev = lastHapticState
+        lastHapticState = newState
+
+        val strength = when {
+            // Expanding to MAX: heavy
+            newState == IslandState.TYPE_3_MAX -> 3
+            // Incoming call ring pulse is handled by CallMini's animation; just a click here
+            newState == IslandState.TYPE_2_MID && currentCall?.state == "RINGING" -> 2
+            // Collapsing back to ring: subtle tick
+            newState == IslandState.TYPE_0_RING && prev != IslandState.HIDDEN -> 1
+            // Any other expansion: standard click
+            newState.ordinal > prev.ordinal -> 2
+            else -> 0
+        }
+        if (strength > 0) performCustomHaptic(context, strength, topAppPackage)
+    }
 
     private val storageManager = IslandStorageManager(context)
     private val clipboardManager = IslandClipboardManager(context, scope) { copiedText ->
@@ -165,6 +189,20 @@ class IslandController(private val context: Context) {
             }
         }
     }
+    
+    // Inside postTransientNotification, after evaluatePriority():
+// (add this line)
+                if (!model.isCritical) {
+                    hasUnseenNotification = true
+                    pendingNotificationColor = when (model) {
+                        is LiveActivityModel.General -> model.accentColor
+                        is LiveActivityModel.SystemAlert -> model.alertColor
+                        else -> android.graphics.Color.WHITE
+                    }
+                }
+// And clear it when the island expands (user saw it):
+// In evaluatePriority, when state moves away from TYPE_0_RING:
+                if (_islandState.value != IslandState.TYPE_0_RING) hasUnseenNotification = false
 
     private val iconCache = object : LruCache<String, Bitmap>(10 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
@@ -652,7 +690,29 @@ class IslandController(private val context: Context) {
         scope.launch { delay(50); _islandState.value = current }
     }
 
-    private fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
+   private fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
+        // Respect per-app event masks — critical events (calls, OTP) always break through
+        if (!model.isCritical && topAppPackage.isNotEmpty()) {
+            val profile = com.example.dynamicisland.manager.PerAppProfileManager
+                .getProfile(topAppPackage)
+            val eventFlag = when (model.type) {
+                com.example.dynamicisland.model.ActivityType.CALL           ->
+                    com.example.dynamicisland.manager.PerAppProfileManager.Events.CALLS
+                com.example.dynamicisland.model.ActivityType.CHARGING,
+                com.example.dynamicisland.model.ActivityType.BATTERY_LOW    ->
+                    com.example.dynamicisland.manager.PerAppProfileManager.Events.CHARGING
+                com.example.dynamicisland.model.ActivityType.BLUETOOTH,
+                com.example.dynamicisland.model.ActivityType.WIFI           ->
+                    com.example.dynamicisland.manager.PerAppProfileManager.Events.CONNECTIVITY
+                com.example.dynamicisland.model.ActivityType.NAVIGATION     ->
+                    com.example.dynamicisland.manager.PerAppProfileManager.Events.NAVIGATION
+                else ->
+                    com.example.dynamicisland.manager.PerAppProfileManager.Events.ALERTS
+            }
+            if (!profile.allowsEvent(eventFlag)) return  // silently dropped
+        }
+        triggerTransitionHaptic(_islandState.value)
+        // 🧠 FEATURE: Smart Focus Mode
         transientJob?.cancel(); transientModel = model; evaluatePriority()
         transientJob = scope.launch { delay(durationMs); transientModel = null; evaluatePriority() }
     }
@@ -754,13 +814,37 @@ class IslandController(private val context: Context) {
             context.registerReceiver(ecosystemReceiver, ecoFilter, securePermission, null)
         }
 
+        com.example.dynamicisland.manager.PerAppProfileManager.init(context)
+        
         BatteryPlugin.onBatteryChanged = { level, isCharging, color, wattage ->
              if (isChargingEnabled) {
                  if (isCharging && !wasCharging) {
                      // 🚀 MASSIVE CHARGING EXPANSION LOGIC
                      val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
                      if (hideInLandscape && isLandscape) {
-                         postTransientNotification(LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true), 4000L)
+                         private fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
+                         if (!model.isCritical && topAppPackage.isNotEmpty()) {
+                             val profile = com.example.dynamicisland.manager.PerAppProfileManager
+                                 .getProfile(topAppPackage)
+                             val eventFlag = when (model.type) {
+                                 com.example.dynamicisland.model.ActivityType.CALL           ->
+                                     com.example.dynamicisland.manager.PerAppProfileManager.Events.CALLS
+                                 com.example.dynamicisland.model.ActivityType.CHARGING,
+                                 com.example.dynamicisland.model.ActivityType.BATTERY_LOW    ->
+                                     com.example.dynamicisland.manager.PerAppProfileManager.Events.CHARGING
+                                 com.example.dynamicisland.model.ActivityType.BLUETOOTH,
+                                 com.example.dynamicisland.model.ActivityType.WIFI           ->
+                                     com.example.dynamicisland.manager.PerAppProfileManager.Events.CONNECTIVITY
+                                 com.example.dynamicisland.model.ActivityType.NAVIGATION     ->
+                                     com.example.dynamicisland.manager.PerAppProfileManager.Events.NAVIGATION
+                                 else ->
+                                     com.example.dynamicisland.manager.PerAppProfileManager.Events.ALERTS
+                             }
+                             if (!profile.allowsEvent(eventFlag)) return
+                         }
+                         transientJob?.cancel(); transientModel = model; evaluatePriority()
+                         transientJob = scope.launch { delay(durationMs); transientModel = null; evaluatePriority() }
+                     }
                      } else {
                          // Full Massive Expansion
                          _islandState.value = IslandState.TYPE_3_MAX
@@ -768,6 +852,7 @@ class IslandController(private val context: Context) {
                          
                          // Auto-collapse after 3 seconds
                          scope.launch { delay(3000); evaluatePriority() }
+                         performCustomHaptic(context, 2, topAppPackage)
                      }
                  } else if (!isCharging) {
                      if (lastReportedBattery != -1 && level < lastReportedBattery) {
@@ -780,6 +865,8 @@ class IslandController(private val context: Context) {
              wasCharging = isCharging
              lastReportedBattery = level
              islandView?.updateBattery(level, isCharging)
+             islandView?.pendingNotifColor?.intValue = pendingNotificationColor
+             islandView?.hasUnseenNotif?.value       = hasUnseenNotification
         }
         
         BatteryPlugin.start(context)
