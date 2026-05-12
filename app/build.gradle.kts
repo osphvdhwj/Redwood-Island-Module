@@ -55,4 +55,6 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
     compileOnly("de.robv.android.xposed:api:82")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("com.google.mlkit:translate:17.0.3")
 }

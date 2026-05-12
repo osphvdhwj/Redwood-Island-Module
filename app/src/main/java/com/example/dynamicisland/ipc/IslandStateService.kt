@@ -1,5 +1,6 @@
 package com.example.dynamicisland.ipc
 
+import com.example.dynamicisland.model.LiveActivityModel
 import android.app.Service
 import android.content.ComponentName
 import android.content.Context
