@@ -1,5 +1,5 @@
 // File: app/src/main/java/com/dynamicisland/model/LiveActivityModel.kt
-package com.dynamicisland.model
+package com.example.dynamicisland.model
 
 import android.graphics.Bitmap
 import android.os.Bundle
