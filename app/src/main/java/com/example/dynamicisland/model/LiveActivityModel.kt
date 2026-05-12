@@ -371,9 +371,10 @@ enum class ActivityType {
 /**
  * Minimal IPC wrapper (original `LiveActivityInfo` from your hook layer).
  * Keep this in sync with your actual IPC model.
- */
+ 
 data class LiveActivityInfo(
     val packageName: String = "",
     val action: String = "",
     val extras: Bundle = Bundle.EMPTY
 )
+*/
