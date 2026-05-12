@@ -57,4 +57,5 @@ dependencies {
     compileOnly("de.robv.android.xposed:api:82")
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("com.google.mlkit:translate:17.0.3")
+    implementation("com.google.mlkit:language-id:17.0.0")
 }
