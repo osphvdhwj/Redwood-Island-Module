@@ -25,9 +25,9 @@ class AudioBeatDetector {
             while (isActive && isRunning) {
                 val time = System.currentTimeMillis() * 0.001
                 bpmFlow.value = (80 + sin(time * 0.5) * 40).toFloat()
-                energyFlow.value = (0.3f + abs(sin(time * 2.0)) * 0.7f).coerceIn(0f, 1f)
+                energyFlow.value = (0.3f + abs(sin(time * 2.0)).toFloat() * 0.7f).coerceIn(0f, 1f)
                 waveformData.value = List(64) { i ->
-                    (sin(time * 10 + i * 0.2) * energyFlow.value * 0.5f + 0.5f)
+                    (sin(time * 10 + i * 0.2).toFloat() * energyFlow.value * 0.5f + 0.5f)
                 }
                 delay(50)
             }

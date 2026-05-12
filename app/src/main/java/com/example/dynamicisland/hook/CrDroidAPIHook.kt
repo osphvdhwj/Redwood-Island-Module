@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.UserHandle
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
+import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
@@ -81,12 +82,12 @@ object CrDroidAPIHook {
                 if (name.contains("setgamemode") || name.contains("entergame") ||
                     name.contains("startgame")   || name.contains("ongamemodechanged")) {
                     try {
-                        de.robv.android.xposed.XposedBridge.hookMethod(method, object : XC_MethodHook() {
+                        XposedBridge.hookMethod(method, object : XC_MethodHook() {
                             override fun afterHookedMethod(param: MethodHookParam) {
                                 try {
                                     // Try to extract package name and mode from args
-                                    val pkg       = param.args?.filterIsInstance<String>()?.firstOrNull() ?: ""
-                                    val modeInt   = param.args?.filterIsInstance<Int>()?.firstOrNull() ?: 0
+                                    val pkg       = (param.args as Array<Any?>).filterIsInstance<String>().firstOrNull() ?: ""
+                                    val modeInt   = (param.args as Array<Any?>).filterIsInstance<Int>().firstOrNull() ?: 0
                                     val isEntering = modeInt != 0 || name.contains("enter")
 
                                     val context = getContextFromParam(param) ?: return
@@ -102,7 +103,7 @@ object CrDroidAPIHook {
                                 } catch (_: Throwable) {}
                             }
                         })
-                        de.robv.android.xposed.XposedBridge.log("DynamicIsland: Hooked GameMode via $className.${method.name}")
+                        XposedBridge.log("DynamicIsland: Hooked GameMode via $className.${method.name}")
                     } catch (_: Throwable) {}
                 }
             }
@@ -123,9 +124,9 @@ object CrDroidAPIHook {
                 if (name.contains("setpowersavinglevel") || name.contains("setthermalprofile") ||
                     name.contains("notifythrottling")    || name.contains("throttle")) {
                     try {
-                        de.robv.android.xposed.XposedBridge.hookMethod(method, object : XC_MethodHook() {
+                        XposedBridge.hookMethod(method, object : XC_MethodHook() {
                             override fun afterHookedMethod(param: MethodHookParam) {
-                                val level     = param.args?.filterIsInstance<Int>()?.firstOrNull() ?: -1
+                                val level     = (param.args as Array<Any?>).filterIsInstance<Int>().firstOrNull() ?: -1
                                 val context   = getContextFromParam(param) ?: return
                                 val profileName = when (level) {
                                     0    -> "NONE"
@@ -167,10 +168,10 @@ object CrDroidAPIHook {
                 if (name.contains("setrefreshrate") || name.contains("updatedisplaymode") ||
                     name.contains("setdcdimming")   || name.contains("setmodebyowner")) {
                     try {
-                        de.robv.android.xposed.XposedBridge.hookMethod(method, object : XC_MethodHook() {
+                        XposedBridge.hookMethod(method, object : XC_MethodHook() {
                             override fun afterHookedMethod(param: MethodHookParam) {
-                                val refreshRate = param.args?.filterIsInstance<Float>()?.firstOrNull()
-                                val modeId      = param.args?.filterIsInstance<Int>()?.firstOrNull()
+                                val refreshRate = (param.args as Array<Any?>).filterIsInstance<Float>().firstOrNull()
+                                val modeId      = (param.args as Array<Any?>).filterIsInstance<Int>().firstOrNull()
                                 val context     = getContextFromParam(param) ?: return
 
                                 context.sendBroadcastAsUser(
@@ -200,7 +201,7 @@ object CrDroidAPIHook {
             IslandHookEngine.hookAfter(className, lpparam.classLoader, "setChargeLimit",
                 Int::class.javaPrimitiveType ?: Int::class.java
             ) { param ->
-                val limit   = param.args[0] as Int
+                val limit   = (param.args as Array<Any?>)[0] as Int
                 val context = getContextFromParam(param) ?: return@hookAfter
                 context.sendBroadcastAsUser(
                     Intent(ACTION_SMART_CHARGE).apply {
@@ -227,10 +228,10 @@ object CrDroidAPIHook {
                 if (name.contains("startonehandedmode") || name.contains("stoponehandedmode") ||
                     name.contains("setonehandedmode")) {
                     try {
-                        de.robv.android.xposed.XposedBridge.hookMethod(method, object : XC_MethodHook() {
+                        XposedBridge.hookMethod(method, object : XC_MethodHook() {
                             override fun afterHookedMethod(param: MethodHookParam) {
                                 val isActive = name.contains("start") ||
-                                    (param.args?.filterIsInstance<Boolean>()?.firstOrNull() == true)
+                                    ((param.args as Array<Any?>).filterIsInstance<Boolean>().firstOrNull() == true)
                                 val context  = getContextFromParam(param) ?: return
                                 context.sendBroadcastAsUser(
                                     Intent(ACTION_ONE_HANDED).apply {
