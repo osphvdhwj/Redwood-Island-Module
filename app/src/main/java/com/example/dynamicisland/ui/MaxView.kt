@@ -1,0 +1,202 @@
+package com.example.dynamicisland.ui
+
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.example.dynamicisland.manager.IslandMediaManager
+import com.example.dynamicisland.model.LiveActivityModel
+import com.example.dynamicisland.performance.IslandShaderWaveform
+import com.example.dynamicisland.settings.SettingsState
+import com.example.dynamicisland.util.extractGradientColors   // If you don't have this, I'll provide it below
+
+/**
+ * MaxView – Full expanded island dashboard.
+ * Now correctly integrated into the existing project.
+ */
+@Composable
+fun MaxView(model: LiveActivityModel?, controller: IslandController) {   // Assume IslandController is in manager/
+    val settings = controller.settingsState
+
+    // Use the existing pill shape helper if available, otherwise a default shape
+    val shape = remember(settings.pillShape, settings.pillCornerRadius) {
+        RoundedCornerShape(settings.pillCornerRadius.dp)   // simplified; adjust if you have a custom shape utility
+    }
+
+    when (model) {
+        is LiveActivityModel.Music -> MusicMax(model, controller.mediaManager, settings)
+        is LiveActivityModel.LiveActivity -> LiveActivityMax(model)
+        else -> GenericMax(model)
+    }
+}
+
+@Composable
+private fun MusicMax(
+    music: LiveActivityModel.Music,
+    mediaManager: IslandMediaManager,
+    settings: SettingsState
+) {
+    var gradientColors by remember { mutableStateOf(listOf(Color.DarkGray, Color.Black)) }
+
+    val backgroundBrush = if (settings.dynamicGradient && gradientColors.size >= 2) {
+        Brush.verticalGradient(gradientColors)
+    } else {
+        Brush.verticalGradient(listOf(Color(0xFF1A1A1A), Color.Black))
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(220.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(backgroundBrush)
+    ) {
+        if (music.albumArtUri != null) {
+            AsyncImage(
+                model = music.albumArtUri,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(20.dp)
+                    .clip(RoundedCornerShape(24.dp)),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "Now Playing",
+                color = Color.White.copy(alpha = 0.8f),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                AsyncImage(
+                    model = music.albumArtUri,
+                    contentDescription = "Album art",
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(RoundedCornerShape(16.dp)),
+                    contentScale = ContentScale.Crop,
+                    onSuccess = { state ->
+                        val bitmap = state.result.image.bitmap
+                        if (settings.dynamicGradient && bitmap != null) {
+                            gradientColors = extractGradientColors(bitmap)
+                        }
+                    }
+                )
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        music.title,
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        music.artist,
+                        color = Color.White.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            IslandShaderWaveform(
+                progress = music.progress,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+            )
+
+            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { mediaManager.skipToPrevious() }) {
+                    Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White)
+                }
+                IconButton(onClick = { mediaManager.playPause() }) {
+                    Icon(
+                        if (music.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        "Play/Pause",
+                        tint = Color.White,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+                IconButton(onClick = { mediaManager.skipToNext() }) {
+                    Icon(Icons.Default.SkipNext, "Next", tint = Color.White)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LiveActivityMax(activity: LiveActivityModel.LiveActivity) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(160.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color.White.copy(alpha = 0.15f))
+            .padding(16.dp)
+    ) {
+        Column {
+            Text(activity.title, color = Color.White, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(4.dp))
+            Text(activity.subtitle, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+            activity.progress?.let {
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = it,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color.White,
+                    trackColor = Color.White.copy(alpha = 0.2f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenericMax(model: LiveActivityModel?) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color.DarkGray.copy(alpha = 0.8f))
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(model?.toString() ?: "No content", color = Color.White)
+    }
+}

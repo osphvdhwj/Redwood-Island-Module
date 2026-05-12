@@ -1,7 +1,10 @@
 package com.example.dynamicisland.manager
 
-import android.content.Context
 import android.content.*
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.database.ContentObserver
 import android.graphics.Bitmap
 import android.media.AudioManager
@@ -16,11 +19,19 @@ import com.example.dynamicisland.model.*
 import com.example.dynamicisland.ui.DynamicIslandView
 import com.example.dynamicisland.hook.*
 import com.example.dynamicisland.util.ComposeLifecycleOwner
+import com.example.dynamicisland.audio.AudioBeatDetector
+import com.example.dynamicisland.achievements.AchievementManager
+import com.example.dynamicisland.accessibility.IslandAccessibilityManager
+import com.example.dynamicisland.sensors.ProximityWakeManager
+import com.example.dynamicisland.privacy.ClipboardCleaner
+import com.example.dynamicisland.settings.SettingsManager
+import com.example.dynamicisland.settings.SettingsState
+import com.example.dynamicisland.settings.SettingsViewModel
 
 class IslandController(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val activeExternalActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
-    
+
     private var pendingNotificationColor: Int = android.graphics.Color.WHITE
     private var hasUnseenNotification = false
 
@@ -32,17 +43,26 @@ class IslandController(private val context: Context) {
         lastHapticState = newState
 
         val strength = when {
-            // Expanding to MAX: heavy
             newState == IslandState.TYPE_3_MAX -> 3
-            // Incoming call ring pulse is handled by CallMini's animation; just a click here
             newState == IslandState.TYPE_2_MID && currentCall?.state == "RINGING" -> 2
-            // Collapsing back to ring: subtle tick
             newState == IslandState.TYPE_0_RING && prev != IslandState.HIDDEN -> 1
-            // Any other expansion: standard click
             newState.ordinal > prev.ordinal -> 2
             else -> 0
         }
         if (strength > 0) performCustomHaptic(context, strength, topAppPackage)
+    }
+
+    private fun performCustomHaptic(context: Context, strength: Int, topAppPackage: String) {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            manager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+        val timing = longArrayOf(0, (30 * strength).toLong(), 50, (40 * strength).toLong())
+        val amplitudes = intArrayOf(0, (100 * strength).coerceAtMost(255), 0, (150 * strength).coerceAtMost(255))
+        vibrator.vibrate(VibrationEffect.createWaveform(timing, amplitudes, -1))
     }
 
     private val storageManager = IslandStorageManager(context)
@@ -56,11 +76,11 @@ class IslandController(private val context: Context) {
             )
         }
     }
-    
+
     private val connectivityManager = IslandConnectivityManager(context) { connModel ->
         if (isAlertsEnabled) postTransientNotification(connModel, 4000L)
     }
-    
+
     private var downloadSpeedJob: Job? = null
     private var lastRxBytes = 0L
 
@@ -74,7 +94,7 @@ class IslandController(private val context: Context) {
                         val currentRx = android.net.TrafficStats.getTotalRxBytes()
                         val bytesPerSec = currentRx - lastRxBytes
                         lastRxBytes = currentRx
-                        
+
                         val speedStr = if (bytesPerSec > 1048576) {
                             String.format("%.1f MB/s", bytesPerSec / 1048576f)
                         } else {
@@ -94,28 +114,28 @@ class IslandController(private val context: Context) {
             evaluatePriority()
         },
         onNavigationCaught = { navModel ->
-            postTransientNotification(navModel, 5000L) 
+            postTransientNotification(navModel, 5000L)
         }
     )
 
     private val audioManager by lazy { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
-    private var qsTilesCache = listOf<QSTileState>() 
+    private var qsTilesCache = listOf<QSTileState>()
     private var pinnedAppsCache = listOf<String>()
-    
+
     private val hardwareManager = IslandHardwareManager(context, audioManager, scope)
     private val actionManager = IslandActionManager(context, scope)
-    private val callManager = IslandCallManager(context, audioManager) { newCall -> 
+    private val callManager = IslandCallManager(context, audioManager) { newCall ->
         currentCall = newCall; evaluatePriority()
     }
-    
-    private val hardwareMonitor = IslandHardwareMonitor(scope) { newHw -> 
-        currentHardware = newHw; evaluatePriority() 
+
+    private val hardwareMonitor = IslandHardwareMonitor(scope) { newHw ->
+        currentHardware = newHw; evaluatePriority()
     }
-    
+
     private val mediaManager = IslandMediaManager(context, scope,
         onMediaChanged = { newMedia -> currentMedia = newMedia; evaluatePriority() },
         onMediaTick = { pos -> islandView?.updateTicker(pos) },
-        onPeekRequested = { 
+        onPeekRequested = {
             if (userForceCollapsed && !isPeeking) {
                 isPeeking = true; userForceCollapsed = false
                 scope.launch { delay(3000); userForceCollapsed = true; isPeeking = false; evaluatePriority() }
@@ -137,23 +157,23 @@ class IslandController(private val context: Context) {
     val islandState = _islandState.asStateFlow()
     private val _activeModel = MutableStateFlow<LiveActivityModel?>(null)
     val activeModel = _activeModel.asStateFlow()
-    private val _splitModel = MutableStateFlow<LiveActivityModel?>(null) 
+    private val _splitModel = MutableStateFlow<LiveActivityModel?>(null)
     val splitModel = _splitModel.asStateFlow()
 
     private var currentCall: LiveActivityModel.Call? = null
     private var currentMedia: LiveActivityModel.Music? = null
     var currentHardware: LiveActivityModel.HardwareMonitor? = null
     private var transientModel: LiveActivityModel? = null
-    
+
     private var transientJob: Job? = null
     private var pauseFadeJob: Job? = null
-    
-    private var userForceCollapsed = false 
+
+    private var userForceCollapsed = false
     private var lastReportedBattery = -1
-    private var wasCharging = false 
-    private var topAppPackage = "" 
+    private var wasCharging = false
+    private var topAppPackage = ""
     private var isPeeking = false
-    private var isPanelExpanded = false 
+    private var isPanelExpanded = false
 
     // 🚀 NEW: Smart Configuration States
     private var isChargingEnabled = true
@@ -177,32 +197,18 @@ class IslandController(private val context: Context) {
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                Intent.ACTION_SCREEN_OFF -> { 
+                Intent.ACTION_SCREEN_OFF -> {
                     mediaManager.isScreenOn = false
-                    hardwareMonitor.isScreenOn = false 
+                    hardwareMonitor.isScreenOn = false
                 }
-                Intent.ACTION_SCREEN_ON -> { 
+                Intent.ACTION_SCREEN_ON -> {
                     mediaManager.isScreenOn = true
-                    hardwareMonitor.isScreenOn = true 
-                    evaluatePriority() 
+                    hardwareMonitor.isScreenOn = true
+                    evaluatePriority()
                 }
             }
         }
     }
-    
-    // Inside postTransientNotification, after evaluatePriority():
-// (add this line)
-                if (!model.isCritical) {
-                    hasUnseenNotification = true
-                    pendingNotificationColor = when (model) {
-                        is LiveActivityModel.General -> model.accentColor
-                        is LiveActivityModel.SystemAlert -> model.alertColor
-                        else -> android.graphics.Color.WHITE
-                    }
-                }
-// And clear it when the island expands (user saw it):
-// In evaluatePriority, when state moves away from TYPE_0_RING:
-                if (_islandState.value != IslandState.TYPE_0_RING) hasUnseenNotification = false
 
     private val iconCache = object : LruCache<String, Bitmap>(10 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
@@ -215,7 +221,7 @@ class IslandController(private val context: Context) {
                     if (!isAlertsEnabled) return
                     val type = intent.getStringExtra("type") ?: return
                     val state = intent.getIntExtra("state", 0)
-                    
+
                     if (type == "RINGER") {
                         val (title, text, color) = when (state) {
                             0 -> Triple("Silent Mode", "Calls and notifications muted", android.graphics.Color.GRAY)
@@ -226,7 +232,7 @@ class IslandController(private val context: Context) {
                             id = "hw_ringer", type = ActivityType.HARDWARE,
                             title = title, dataText = text, accentColor = color
                         ), 3000L)
-                        
+
                     } else if (type == "TORCH") {
                         val title = if (state == 1) "Flashlight On" else "Flashlight Off"
                         val text = if (state == 1) "System torch active" else "Torch disabled"
@@ -265,8 +271,6 @@ class IslandController(private val context: Context) {
                 "com.example.dynamicisland.OTP_CAUGHT" -> {
                     if (!isAlertsEnabled) return
                     val otp = intent.getStringExtra("otp") ?: return
-                    @Suppress("UNUSED_VARIABLE")
-                    val pkg = intent.getStringExtra("pkg") ?: ""
                     postTransientNotification(
                         LiveActivityModel.SystemAlert(
                             id         = "sys_otp",
@@ -276,7 +280,7 @@ class IslandController(private val context: Context) {
                             alertColor = android.graphics.Color.parseColor("#4285F4"),
                             isCritical = true
                         ),
-                        30_000L   // OTPs stay visible for 30 s so the user can copy
+                        30_000L
                     )
                 }
                 "com.crdroid.batterywellbeing.SYSTEM_OVERRIDE" -> {
@@ -292,13 +296,13 @@ class IslandController(private val context: Context) {
                     if (type == "dashboard") {
                         val payload = intent.getStringExtra("payload") ?: return
                         try {
-                            val json = org.json.JSONObject(payload)
+                            val json = JSONObject(payload)
                             val appsArr = json.optJSONArray("pinned_apps")
                             val tilesArr = json.optJSONArray("qs_tiles")
-                            
+
                             val appsList = mutableListOf<String>()
                             if (appsArr != null) for (i in 0 until appsArr.length()) appsList.add(appsArr.getString(i))
-                            
+
                             val tilesList = mutableListOf<QSTileState>()
                             if (tilesArr != null) {
                                 for (i in 0 until tilesArr.length()) {
@@ -306,23 +310,21 @@ class IslandController(private val context: Context) {
                                     tilesList.add(QSTileState(tileSpec = obj.getString("spec"), label = obj.getString("label"), isActive = false, isUnavailable = false))
                                 }
                             }
-                            
+
                             pinnedAppsCache = appsList
                             qsTilesCache = tilesList
-                            
+
                             if (_activeModel.value is LiveActivityModel.Dashboard) {
                                 _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
                             }
                         } catch (e: Throwable) {}
                     }
                 }
-                
-
                 "com.example.dynamicisland.EXTERNAL_ACTIVITY_UPDATED" -> {
                     val activityId = intent.getStringExtra("activity_id") ?: return
                     val pkg = intent.getStringExtra("package_name") ?: ""
                     val layoutType = intent.getStringExtra("layout_type") ?: ""
-                    val state = intent.getBundleExtra("state") ?: android.os.Bundle()
+                    val state = intent.getBundleExtra("state") ?: Bundle()
 
                     val info = com.example.dynamicisland.ipc.LiveActivityInfo(activityId, pkg, layoutType, state)
                     val model = LiveActivityModel.ExternalActivity(
@@ -338,7 +340,6 @@ class IslandController(private val context: Context) {
                     _islandState.value = IslandState.TYPE_2_MID
                     evaluatePriority()
                 }
-
                 "com.example.dynamicisland.EXTERNAL_ACTIVITY_ENDED" -> {
                     val activityId = intent.getStringExtra("activity_id") ?: return
                     activeExternalActivities.remove(activityId)
@@ -346,13 +347,8 @@ class IslandController(private val context: Context) {
                         evaluatePriority()
                     }
                 }
-
-                // ── BATCH 6 receivers ────────────────────────────────────────────────────
-
-                
                 CrDroidAPIHook.ACTION_GAME_MODE_CHANGED -> {
                     val isActive = intent.getBooleanExtra("isActive", false)
-                    val pkg      = intent.getStringExtra("pkg") ?: ""
                     currentHardware = if (isActive) {
                         LiveActivityModel.HardwareMonitor(
                             id = "hw_monitor", type = ActivityType.HARDWARE,
@@ -361,8 +357,7 @@ class IslandController(private val context: Context) {
                     } else null
                     evaluatePriority()
                 }
-
-               CrDroidAPIHook.ACTION_THERMAL_PROFILE -> {
+                CrDroidAPIHook.ACTION_THERMAL_PROFILE -> {
                     if (!isAlertsEnabled) return
                     val level   = intent.getIntExtra("level", 0)
                     val profile = intent.getStringExtra("profile") ?: "UNKNOWN"
@@ -380,7 +375,6 @@ class IslandController(private val context: Context) {
                         )
                     }
                 }
-
                 CrDroidAPIHook.ACTION_DISPLAY_MODE -> {
                     if (!isAlertsEnabled) return
                     val hz = intent.getIntExtra("refreshRate", 0)
@@ -397,7 +391,6 @@ class IslandController(private val context: Context) {
                         )
                     }
                 }
-
                 CrDroidAPIHook.ACTION_SMART_CHARGE -> {
                     if (!isAlertsEnabled || !isChargingEnabled) return
                     val limit  = intent.getIntExtra("limit", 100)
@@ -415,7 +408,6 @@ class IslandController(private val context: Context) {
                         )
                     }
                 }
-
                 SurfaceFlingerHook.ACTION_FRAME_STATS -> {
                     val fps        = intent.getFloatExtra("fps", 0f)
                     val frameMs    = intent.getFloatExtra("frameMs", 0f)
@@ -423,9 +415,8 @@ class IslandController(private val context: Context) {
                     val currentHw  = currentHardware
                     if (currentHw?.isGamingModeOn == true) {
                         currentHardware = currentHw.copy(
-                            cpuFreqMhz = fps.toInt()   // Reuse field to carry FPS
+                            cpuFreqMhz = fps.toInt()
                         )
-                        // Store in a dedicated field on the view for the HUD
                         islandView?.updateGamingStats(fps, frameMs, jankPct)
                     }
                 }
@@ -445,10 +436,10 @@ class IslandController(private val context: Context) {
                         ),
                         10_000L
                     )
-                } // closes ACTION_BARCODE ->
-            } // closes when (intent.action)
-        } // closes override fun onReceive
-    } // <--- THIS WAS THE MISSING BRACKET! Closes object : BroadcastReceiver()
+                }
+            }
+        }
+    }
 
     private val componentCallbacks = object : android.content.ComponentCallbacks2 {
         override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { evaluatePriority() }
@@ -475,8 +466,7 @@ class IslandController(private val context: Context) {
             _splitModel = _splitModel,
             _islandState = _islandState
         )
-        
-        // 🧠 FEATURE: Smart Focus Mode
+
         val productivityApps = listOf("com.notion.id", "com.microsoft.teams", "com.google.android.apps.docs")
         if (productivityApps.contains(topAppPackage)) {
             if (_activeModel.value !is LiveActivityModel.RealityPill) {
@@ -498,12 +488,12 @@ class IslandController(private val context: Context) {
         lifecycleOwner.onResume()
         this.islandView = view
         this.windowManager = wm
-        view.controller = this          // FIX: lets IslandMainUI reach currentHardware
+        view.controller = this
 
         scope.launch {
-            delay(500) 
+            delay(500)
             val requestIntent = Intent("com.example.dynamicisland.REQUEST_PREFS")
-            requestIntent.setPackage("com.example.dynamicisland") 
+            requestIntent.setPackage("com.example.dynamicisland")
             context.sendBroadcast(requestIntent)
         }
 
@@ -517,16 +507,16 @@ class IslandController(private val context: Context) {
         view.onRingerToggle = { hardwareManager.toggleRingerMode(view) }
         view.onAppPinnedClick = { pkg -> actionManager.launchAppIntent(pkg) { userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING; evaluatePriority() } }
         view.onQsTileClick = { tileSpec -> actionManager.handleQSTileClick(tileSpec) { } }
-        view.onSplitPillClick = { 
-            if (_splitModel.value is LiveActivityModel.Charging) { 
+        view.onSplitPillClick = {
+            if (_splitModel.value is LiveActivityModel.Charging) {
                 try {
                     val intent = Intent().setComponent(ComponentName("com.crdroid.batterywellbeing", "com.crdroid.batterywellbeing.MainActivity"))
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                     context.startActivity(intent)
                 } catch(e: Throwable) { _islandState.value = IslandState.TYPE_CUBE }
-            } 
+            }
         }
-        
+
         view.windowManager = wm
         view.windowParams = params
         view.updateRingerState(audioManager.ringerMode)
@@ -538,12 +528,11 @@ class IslandController(private val context: Context) {
                 isChargingEnabled = prefs.getBoolean("enable_charging", true)
                 isAlertsEnabled = prefs.getBoolean("enable_alerts", true)
                 isTimersEnabled = prefs.getBoolean("enable_timers", true)
-                
-                // 🚀 NEW: Load Smart Routing Configs
+
                 hideInLandscape = prefs.getBoolean("hide_landscape", false)
                 idleSwipeAction = prefs.getString("idle_swipe_action", "BRIGHTNESS") ?: "BRIGHTNESS"
                 longPressAction = prefs.getString("long_press_action", "SCREENSHOT") ?: "SCREENSHOT"
-                
+
                 if (payload != null && payload.length < 5000) {
                     val json = JSONObject(payload)
                     gestureMatrix.clear()
@@ -554,28 +543,22 @@ class IslandController(private val context: Context) {
 
         view.onGestureEvent = { gesture ->
             val currentState = _islandState.value.name
-            
-            // 🧠 SMART ROUTING ENGINE
+
             var actionName = gestureMatrix["${currentState}_${gesture.name}"]?.name
 
-            // 1. Intercept Horizontal Swipes (Media vs Idle Logic)
             if (gesture.name == "SWIPE_LEFT" || gesture.name == "SWIPE_RIGHT") {
                 if (currentMedia != null && currentMedia?.isPlaying == true) {
                     actionName = if (gesture.name == "SWIPE_RIGHT") "NEXT_TRACK" else "PREV_TRACK"
                 } else {
-                    // Idle State - Use user's configured fallback
                     actionName = idleSwipeAction
                 }
             }
 
-            // 2. Intercept Long Press (Configurable, defaults to Screenshot)
             if (gesture.name == "LONG_PRESS") {
                 actionName = longPressAction
-                // Visual feedback for long press (imitate Android screenshot flash)
                 if (actionName == "SCREENSHOT") triggerVisualScreenshotFlash()
             }
 
-            // Fallback for missing configurations
             if (actionName == null) {
                 actionName = if (gesture.name == "SINGLE_TAP") "EXPAND" else "NONE"
             }
@@ -588,7 +571,7 @@ class IslandController(private val context: Context) {
                 executeSmartAction(actionName)
             }
         }
-        
+
         view.onAudioOutputClick = { actionManager.launchAudioOutputSwitcher(currentMedia?.appPackageName) }
         view.onPlayPauseClick = { if (currentMedia?.isPlaying == true) mediaManager.sendMediaCommand("PAUSE") else mediaManager.sendMediaCommand("PLAY") }
         view.onPrevClick = { mediaManager.sendMediaCommand("PREV") }
@@ -596,13 +579,13 @@ class IslandController(private val context: Context) {
         view.onSeekTo = { position -> mediaManager.activeMediaController?.transportControls?.seekTo(position) }
         view.onCustomMediaAction = { action -> mediaManager.activeMediaController?.transportControls?.sendCustomAction(action, null) }
 
-        scope.launch { 
-            islandState.collect { state -> 
+        scope.launch {
+            islandState.collect { state ->
                 view.islandState.value = state
                 val isVisible = state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING
                 mediaManager.isIslandVisible = isVisible
                 hardwareMonitor.isDashboardOpen = (state == IslandState.TYPE_3_MAX)
-            } 
+            }
         }
         scope.launch { activeModel.collect { model -> view.activeModel.value = model } }
         scope.launch { splitModel.collect { model -> view.splitModel.value = model } }
@@ -614,13 +597,12 @@ class IslandController(private val context: Context) {
             "PLAY_PAUSE" -> { if (currentMedia?.isPlaying == true) mediaManager.sendMediaCommand("PAUSE") else mediaManager.sendMediaCommand("PLAY") }
             "NEXT_TRACK" -> mediaManager.sendMediaCommand("NEXT")
             "PREV_TRACK" -> mediaManager.sendMediaCommand("PREV")
-            "VOLUME" -> { /* Handled natively by dragging, but if mapped to swipe, open volume panel */ 
+            "VOLUME" -> {
                 audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_SAME, AudioManager.FLAG_SHOW_UI)
             }
-            "BRIGHTNESS" -> { /* Mapped to swipe -> do nothing here, let the drag handler in view catch it */ }
-            "PREV_APP" -> { 
-                // Sends intent to be caught by a system hook or accessibility service
-                context.sendBroadcast(Intent("com.example.dynamicisland.GLOBAL_ACTION").putExtra("action", "PREV_APP")) 
+            "BRIGHTNESS" -> { }
+            "PREV_APP" -> {
+                context.sendBroadcast(Intent("com.example.dynamicisland.GLOBAL_ACTION").putExtra("action", "PREV_APP"))
             }
             "SCREENSHOT" -> {
                 val intent = Intent("com.example.dynamicisland.TRIGGER_SCREENSHOT")
@@ -639,7 +621,7 @@ class IslandController(private val context: Context) {
             "COLLAPSE" -> {
                 if (_activeModel.value is LiveActivityModel.Dashboard) {
                     if (currentMedia != null) {
-                        if (currentMedia?.isPlaying == true) { _islandState.value = IslandState.TYPE_1_MINI; userForceCollapsed = false } 
+                        if (currentMedia?.isPlaying == true) { _islandState.value = IslandState.TYPE_1_MINI; userForceCollapsed = false }
                         else { _islandState.value = IslandState.TYPE_0_RING; userForceCollapsed = true }
                         _activeModel.value = currentMedia
                     } else {
@@ -653,8 +635,8 @@ class IslandController(private val context: Context) {
             "EXPAND" -> {
                 userForceCollapsed = false
                 when (_islandState.value) {
-                    IslandState.TYPE_0_RING -> { 
-                        if (currentMedia != null) { _islandState.value = IslandState.TYPE_2_MID } 
+                    IslandState.TYPE_0_RING -> {
+                        if (currentMedia != null) { _islandState.value = IslandState.TYPE_2_MID }
                         else { _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache); _islandState.value = IslandState.TYPE_3_MAX }
                     }
                     IslandState.TYPE_1_MINI -> {
@@ -690,29 +672,22 @@ class IslandController(private val context: Context) {
         scope.launch { delay(50); _islandState.value = current }
     }
 
-   private fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
-        // Respect per-app event masks — critical events (calls, OTP) always break through
+    private fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
         if (!model.isCritical && topAppPackage.isNotEmpty()) {
-            val profile = com.example.dynamicisland.manager.PerAppProfileManager
+            val profile = PerAppProfileManager
                 .getProfile(topAppPackage)
             val eventFlag = when (model.type) {
-                com.example.dynamicisland.model.ActivityType.CALL           ->
-                    com.example.dynamicisland.manager.PerAppProfileManager.Events.CALLS
-                com.example.dynamicisland.model.ActivityType.CHARGING,
-                com.example.dynamicisland.model.ActivityType.BATTERY_LOW    ->
-                    com.example.dynamicisland.manager.PerAppProfileManager.Events.CHARGING
-                com.example.dynamicisland.model.ActivityType.BLUETOOTH,
-                com.example.dynamicisland.model.ActivityType.WIFI           ->
-                    com.example.dynamicisland.manager.PerAppProfileManager.Events.CONNECTIVITY
-                com.example.dynamicisland.model.ActivityType.NAVIGATION     ->
-                    com.example.dynamicisland.manager.PerAppProfileManager.Events.NAVIGATION
-                else ->
-                    com.example.dynamicisland.manager.PerAppProfileManager.Events.ALERTS
+                ActivityType.CALL           -> PerAppProfileManager.Events.CALLS
+                ActivityType.CHARGING,
+                ActivityType.BATTERY_LOW    -> PerAppProfileManager.Events.CHARGING
+                ActivityType.BLUETOOTH,
+                ActivityType.WIFI           -> PerAppProfileManager.Events.CONNECTIVITY
+                ActivityType.NAVIGATION     -> PerAppProfileManager.Events.NAVIGATION
+                else -> PerAppProfileManager.Events.ALERTS
             }
-            if (!profile.allowsEvent(eventFlag)) return  // silently dropped
+            if (!profile.allowsEvent(eventFlag)) return
         }
         triggerTransitionHaptic(_islandState.value)
-        // 🧠 FEATURE: Smart Focus Mode
         transientJob?.cancel(); transientModel = model; evaluatePriority()
         transientJob = scope.launch { delay(durationMs); transientModel = null; evaluatePriority() }
     }
@@ -723,17 +698,17 @@ class IslandController(private val context: Context) {
         clipboardManager.stopListening()
         connectivityManager.stopListening()
     }
-    
+
     init {
         hardwareManager.updateVolumeState(null)
         hardwareManager.updateBrightnessState(null)
 
-        val filter = IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) }
-        context.registerReceiver(screenStateReceiver, filter)
+        val screenFilter = IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) }
+        context.registerReceiver(screenStateReceiver, screenFilter)
         context.registerComponentCallbacks(componentCallbacks)
 
         var isTorchOn = false
-        val hardwareReceiver = object : android.content.BroadcastReceiver() {
+        val hardwareReceiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
                 when (intent.action) {
                     "com.example.dynamicisland.ACTION_LAUNCH_APP" -> {
@@ -744,16 +719,16 @@ class IslandController(private val context: Context) {
                         val tile = intent.getStringExtra("tile") ?: return
                         try {
                             val settingsIntent = when (tile) {
-                                "WiFi" -> Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)
-                                "Bluetooth" -> Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
-                                "Location" -> Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                                "Airplane" -> Intent(android.provider.Settings.ACTION_AIRPLANE_MODE_SETTINGS)
-                                "DND" -> Intent(android.provider.Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS)
-                                "Battery Saver" -> Intent(android.provider.Settings.ACTION_BATTERY_SAVER_SETTINGS)
-                                "Hotspot" -> Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS)
-                                "NFC" -> Intent(android.provider.Settings.ACTION_NFC_SETTINGS)
-                                "Cast" -> Intent(android.provider.Settings.ACTION_CAST_SETTINGS)
-                                "Settings" -> Intent(android.provider.Settings.ACTION_SETTINGS)
+                                "WiFi" -> Intent(Settings.ACTION_WIFI_SETTINGS)
+                                "Bluetooth" -> Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
+                                "Location" -> Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                                "Airplane" -> Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS)
+                                "DND" -> Intent(Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS)
+                                "Battery Saver" -> Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS)
+                                "Hotspot" -> Intent(Settings.ACTION_WIRELESS_SETTINGS)
+                                "NFC" -> Intent(Settings.ACTION_NFC_SETTINGS)
+                                "Cast" -> Intent(Settings.ACTION_CAST_SETTINGS)
+                                "Settings" -> Intent(Settings.ACTION_SETTINGS)
                                 "Torch" -> {
                                     val cameraManager = ctx.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
                                     val cameraId = cameraManager.cameraIdList[0]
@@ -761,7 +736,7 @@ class IslandController(private val context: Context) {
                                     cameraManager.setTorchMode(cameraId, isTorchOn)
                                     null
                                 }
-                                else -> Intent(android.provider.Settings.ACTION_SETTINGS)
+                                else -> Intent(Settings.ACTION_SETTINGS)
                             }
                             if (settingsIntent != null) {
                                 settingsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -772,12 +747,12 @@ class IslandController(private val context: Context) {
                 }
             }
         }
-        
-        val hardwareFilter = android.content.IntentFilter().apply { addAction("com.example.dynamicisland.ACTION_LAUNCH_APP"); addAction("com.example.dynamicisland.ACTION_QS") }
+
+        val hardwareFilter = IntentFilter().apply { addAction("com.example.dynamicisland.ACTION_LAUNCH_APP"); addAction("com.example.dynamicisland.ACTION_QS") }
         context.registerReceiver(hardwareReceiver, hardwareFilter, Context.RECEIVER_EXPORTED)
-        
+
         callManager.startMonitoring()
-        
+
         val volFilter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
         context.registerReceiver(hardwareSyncReceiver, volFilter)
         context.contentResolver.registerContentObserver(Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS), true, brightnessObserver)
@@ -798,83 +773,57 @@ class IslandController(private val context: Context) {
             addAction("com.example.dynamicisland.EXTERNAL_ACTIVITY_UPDATED")
             addAction("com.example.dynamicisland.EXTERNAL_ACTIVITY_ENDED")
             addAction("com.example.dynamicisland.SCREENSHOT_CAUGHT")
-            addAction("com.example.dynamicisland.OTP_CAUGHT")          // FIX: wire OTP receiver
-            addAction(SurfaceFlingerHook.ACTION_FRAME_STATS)           // FIX: was a string literal
-            addAction(CrDroidAPIHook.ACTION_GAME_MODE_CHANGED)         // FIX: was a string literal
-            addAction(CrDroidAPIHook.ACTION_THERMAL_PROFILE)           // FIX: was a string literal
-            addAction(CrDroidAPIHook.ACTION_DISPLAY_MODE)              // FIX: was a string literal
-            addAction(CrDroidAPIHook.ACTION_SMART_CHARGE)              // FIX: was a string literal
+            addAction("com.example.dynamicisland.OTP_CAUGHT")
+            addAction(SurfaceFlingerHook.ACTION_FRAME_STATS)
+            addAction(CrDroidAPIHook.ACTION_GAME_MODE_CHANGED)
+            addAction(CrDroidAPIHook.ACTION_THERMAL_PROFILE)
+            addAction(CrDroidAPIHook.ACTION_DISPLAY_MODE)
+            addAction(CrDroidAPIHook.ACTION_SMART_CHARGE)
         }
 
         val securePermission = "com.redwood.permission.SECURE_IPC"
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(ecosystemReceiver, ecoFilter, securePermission, null, Context.RECEIVER_EXPORTED)
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             context.registerReceiver(ecosystemReceiver, ecoFilter, securePermission, null)
         }
 
-        com.example.dynamicisland.manager.PerAppProfileManager.init(context)
-        
+        PerAppProfileManager.init(context)
+
         BatteryPlugin.onBatteryChanged = { level, isCharging, color, wattage ->
-             if (isChargingEnabled) {
-                 if (isCharging && !wasCharging) {
-                     // 🚀 MASSIVE CHARGING EXPANSION LOGIC
-                     val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-                     if (hideInLandscape && isLandscape) {
-                         private fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
-                         if (!model.isCritical && topAppPackage.isNotEmpty()) {
-                             val profile = com.example.dynamicisland.manager.PerAppProfileManager
-                                 .getProfile(topAppPackage)
-                             val eventFlag = when (model.type) {
-                                 com.example.dynamicisland.model.ActivityType.CALL           ->
-                                     com.example.dynamicisland.manager.PerAppProfileManager.Events.CALLS
-                                 com.example.dynamicisland.model.ActivityType.CHARGING,
-                                 com.example.dynamicisland.model.ActivityType.BATTERY_LOW    ->
-                                     com.example.dynamicisland.manager.PerAppProfileManager.Events.CHARGING
-                                 com.example.dynamicisland.model.ActivityType.BLUETOOTH,
-                                 com.example.dynamicisland.model.ActivityType.WIFI           ->
-                                     com.example.dynamicisland.manager.PerAppProfileManager.Events.CONNECTIVITY
-                                 com.example.dynamicisland.model.ActivityType.NAVIGATION     ->
-                                     com.example.dynamicisland.manager.PerAppProfileManager.Events.NAVIGATION
-                                 else ->
-                                     com.example.dynamicisland.manager.PerAppProfileManager.Events.ALERTS
-                             }
-                             if (!profile.allowsEvent(eventFlag)) return
-                         }
-                         transientJob?.cancel(); transientModel = model; evaluatePriority()
-                         transientJob = scope.launch { delay(durationMs); transientModel = null; evaluatePriority() }
-                     }
-                     } else {
-                         // Full Massive Expansion
-                         _islandState.value = IslandState.TYPE_3_MAX
-                         _activeModel.value = LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true, isCritical = false)
-                         
-                         // Auto-collapse after 3 seconds
-                         scope.launch { delay(3000); evaluatePriority() }
-                         performCustomHaptic(context, 2, topAppPackage)
-                     }
-                 } else if (!isCharging) {
-                     if (lastReportedBattery != -1 && level < lastReportedBattery) {
-                         if (level == 20 || level == 10 || level == 5) {
-                             postTransientNotification(LiveActivityModel.Charging(id = "sys_battery_low", level = level, isPluggedIn = false, isTransient = true, isCritical = true).copy(type = ActivityType.BATTERY_LOW), 6000L)
-                         }
-                     }
-                 }
-             }
-             wasCharging = isCharging
-             lastReportedBattery = level
-             islandView?.updateBattery(level, isCharging)
-             islandView?.pendingNotifColor?.intValue = pendingNotificationColor
-             islandView?.hasUnseenNotif?.value       = hasUnseenNotification
+            if (isChargingEnabled) {
+                if (isCharging && !wasCharging) {
+                    val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                    if (hideInLandscape && isLandscape) {
+                        postTransientNotification(LiveActivityModel.Charging("sys_battery", ActivityType.CHARGING, level, true, false), 5000L)
+                    } else {
+                        _islandState.value = IslandState.TYPE_3_MAX
+                        _activeModel.value = LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true, isCritical = false)
+
+                        scope.launch { delay(3000); evaluatePriority() }
+                        performCustomHaptic(context, 2, topAppPackage)
+                    }
+                } else if (!isCharging) {
+                    if (lastReportedBattery != -1 && level < lastReportedBattery) {
+                        if (level == 20 || level == 10 || level == 5) {
+                            postTransientNotification(LiveActivityModel.Charging(id = "sys_battery_low", level = level, isPluggedIn = false, isTransient = true, isCritical = true).copy(type = ActivityType.BATTERY_LOW), 6000L)
+                        }
+                    }
+                }
+            }
+            wasCharging = isCharging
+            lastReportedBattery = level
+            islandView?.updateBattery(level, isCharging)
+            islandView?.pendingNotifColor?.intValue = pendingNotificationColor
+            islandView?.hasUnseenNotif?.value = hasUnseenNotification
         }
-        
+
         BatteryPlugin.start(context)
         mediaManager.start()
         clipboardManager.startListening()
         connectivityManager.startListening()
-        // ── BATCH 6: Translation engine wired to clipboard ────────────────────────
-        // Translation engine — deferred to avoid MLKit init crash in SystemUI
+
         if (com.example.dynamicisland.util.IslandProcessUtils.isOwnProcess(context)) {
             try {
                 val translationEngine = com.example.dynamicisland.intelligence
@@ -899,7 +848,6 @@ class IslandController(private val context: Context) {
                 android.util.Log.w("IslandController", "Translation engine init skipped: ${e.message}")
             }
 
-            // Barcode scanner — deferred
             try {
                 val prefs = context.getSharedPreferences(
                     "dynamic_island_prefs", Context.MODE_PRIVATE
@@ -912,6 +860,6 @@ class IslandController(private val context: Context) {
             } catch (e: Throwable) {
                 android.util.Log.w("IslandController", "Barcode scanner init skipped: ${e.message}")
             }
-        }  // closes isOwnProcess if-block
-    }  // closes init block
-}  // closes class IslandController
+        }
+    }
+}

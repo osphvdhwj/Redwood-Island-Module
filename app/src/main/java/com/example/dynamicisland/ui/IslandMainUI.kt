@@ -24,6 +24,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
@@ -40,6 +42,9 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.random.Random
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -49,7 +54,11 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val isEffectivelyHidden = state == IslandState.HIDDEN || isLandscape
 
-    val islandScale by animateFloatAsState(targetValue = if (isEffectivelyHidden) 0f else 1f, animationSpec = if (isEffectivelyHidden) tween(350, easing = FastOutLinearInEasing) else spring(dampingRatio = 0.65f, stiffness = 300f), label = "blackhole_scale")
+    val islandScale by animateFloatAsState(
+        targetValue = if (isEffectivelyHidden) 0f else 1f,
+        animationSpec = if (isEffectivelyHidden) tween(350, easing = FastOutLinearInEasing) else spring(dampingRatio = 0.65f, stiffness = 300f),
+        label = "blackhole_scale"
+    )
 
     val theme = LocalIslandTheme.current
     val dpPhysicsSpec = spring<Dp>(dampingRatio = theme.springDamping, stiffness = theme.springStiffness)
@@ -57,51 +66,122 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     
     val haptic = LocalHapticFeedback.current
     var isSquished by remember { mutableStateOf(false) }
-    val touchScale by animateFloatAsState(targetValue = if (isSquished) 0.96f else 1f, animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f), label = "squish")
+    val touchScale by animateFloatAsState(
+        targetValue = if (isSquished) 0.96f else 1f, 
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+        label = "squish"
+    )
     
     val minSafeWidth = displayCutoutWidth.floatValue + 4f
     val screenWidthDp = configuration.screenWidthDp.toFloat()
     val maxSafeWidth = (screenWidthDp - 16f).coerceAtLeast(minSafeWidth)
 
-    val rawTargetWidth = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value; IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value; IslandState.TYPE_CUBE -> cubeW.value; else -> ringW.value }
+    val rawTargetWidth = when (state) { 
+        IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value
+        IslandState.TYPE_2_MID -> midW.value
+        IslandState.TYPE_3_MAX -> maxW.value
+        IslandState.TYPE_CUBE -> cubeW.value
+        else -> ringW.value 
+    }
     val targetWidth = rawTargetWidth.coerceIn(minSafeWidth, maxSafeWidth)
     
     val model = activeModel.value
     val splitModelValue = splitModel.value
     val activeMedia = (splitModelValue as? LiveActivityModel.Music) ?: (model as? LiveActivityModel.Music)
 
-    val targetHeight = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniH.value; IslandState.TYPE_2_MID -> midH.value; IslandState.TYPE_3_MAX -> if (model is LiveActivityModel.Music) (maxH.value * 0.70f) else maxH.value; IslandState.TYPE_CUBE -> cubeH.value; else -> ringH.value }
-    val targetX = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value; IslandState.TYPE_2_MID -> midX.value; IslandState.TYPE_3_MAX -> maxX.value; IslandState.TYPE_CUBE -> cubeX.value; else -> ringX.value }
-    val targetY = when (state) { IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value; IslandState.TYPE_2_MID -> midY.value; IslandState.TYPE_3_MAX -> maxY.value; IslandState.TYPE_CUBE -> cubeY.value; else -> ringY.value }
+    val targetHeight = when (state) { 
+        IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniH.value
+        IslandState.TYPE_2_MID -> midH.value
+        IslandState.TYPE_3_MAX -> if (model is LiveActivityModel.Music) (maxH.value * 0.70f) else maxH.value
+        IslandState.TYPE_CUBE -> cubeH.value
+        else -> ringH.value 
+    }
+    val targetX = when (state) { 
+        IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value
+        IslandState.TYPE_2_MID -> midX.value
+        IslandState.TYPE_3_MAX -> maxX.value
+        IslandState.TYPE_CUBE -> cubeX.value
+        else -> ringX.value 
+    }
+    val targetY = when (state) { 
+        IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value
+        IslandState.TYPE_2_MID -> midY.value
+        IslandState.TYPE_3_MAX -> maxY.value
+        IslandState.TYPE_CUBE -> cubeY.value
+        else -> ringY.value 
+    }
 
     val animatedWidth by animateDpAsState(targetWidth.dp, dpPhysicsSpec, label = "width")
     val animatedHeight by animateDpAsState(targetHeight.dp, dpPhysicsSpec, label = "height")
-    val radTarget = when (state) { IslandState.TYPE_3_MAX -> 42.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_CUBE -> 24.dp; else -> (targetHeight / 2).dp }
+    val radTarget = when (state) { 
+        IslandState.TYPE_3_MAX -> 42.dp
+        IslandState.TYPE_2_MID -> 16.dp
+        IslandState.TYPE_CUBE -> 24.dp
+        else -> (targetHeight / 2).dp 
+    }
     val animatedRadius by animateDpAsState(radTarget, dpPhysicsSpec, label = "rad")
     
     val offsetX by animateFloatAsState(targetX, floatPhysicsSpec, label = "x")
     val offsetY by animateFloatAsState(targetY, floatPhysicsSpec, label = "y")
-    val islandAlpha by animateFloatAsState(targetValue = if (isEffectivelyHidden) 0f else 1f, animationSpec = tween(300), label = "blackhole_alpha")
+    val islandAlpha by animateFloatAsState(
+        targetValue = if (isEffectivelyHidden) 0f else 1f,
+        animationSpec = tween(300),
+        label = "blackhole_alpha"
+    )
 
-    val targetBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else {
+    // Enhanced: dynamic background color with optional gradient for music Mid/Max
+    val baseBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else {
         val baseAlpha = if (theme.isGlassmorphism) 0.65f else 1.0f
-        if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) { Color(model.dominantColor).copy(alpha = baseAlpha) } else if (state == IslandState.TYPE_3_MAX) { Color(0xFF080808).copy(alpha = baseAlpha) } else { Color.Black.copy(alpha = baseAlpha) }
+        if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) {
+            Color(model.dominantColor).copy(alpha = baseAlpha)
+        } else if (state == IslandState.TYPE_3_MAX) {
+            Color(0xFF080808).copy(alpha = baseAlpha)
+        } else {
+            Color.Black.copy(alpha = baseAlpha)
+        }
     }
-    val bgSpec = when {
-    state == IslandState.TYPE_3_MAX -> tween<androidx.compose.ui.graphics.Color>(400, easing = FastOutSlowInEasing)
-    state == IslandState.TYPE_0_RING -> tween<androidx.compose.ui.graphics.Color>(250, easing = LinearOutSlowInEasing)
-    else -> spring<androidx.compose.ui.graphics.Color>(dampingRatio = 0.85f, stiffness = 300f)
-}
-val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = bgSpec, label = "bgColor")
-    val borderColor by animateColorAsState(targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f), animationSpec = tween(600), label = "borderColor")
+    val bgColor by animateColorAsState(
+        targetValue = baseBgColor,
+        animationSpec = when {
+            state == IslandState.TYPE_3_MAX -> tween(400, easing = FastOutSlowInEasing)
+            state == IslandState.TYPE_0_RING -> tween(250, easing = LinearOutSlowInEasing)
+            else -> spring(dampingRatio = 0.85f, stiffness = 300f)
+        },
+        label = "bgColor"
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f),
+        animationSpec = tween(600),
+        label = "borderColor"
+    )
+    
+    // Premium: particle burst trigger on state change
+    var particleTrigger by remember { mutableStateOf(0L) }
+    val particles = remember { mutableStateListOf<Particle>() }
+    
+    LaunchedEffect(state) {
+        if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING) {
+            particleTrigger = System.currentTimeMillis()
+            repeat(12) { index ->
+                val angle = Random.nextFloat() * 360f
+                val speed = Random.nextFloat() * 400f + 200f
+                particles.add(Particle(angle, speed, particleTrigger))
+            }
+            delay(1500)
+            particles.clear()
+        }
+    }
     
     LaunchedEffect(state, model, isLandscape) {
+        // ... (existing layout flag logic) ...
         if (!isAttachedToWindow) return@LaunchedEffect
         val wp = windowParams ?: return@LaunchedEffect
         val wm = windowManager ?: return@LaunchedEffect
 
-        if (model?.isSensitive == true) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE } else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv() }
-        if (state == IslandState.HIDDEN || isLandscape) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE } else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv() }
+        if (model?.isSensitive == true) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE } 
+        else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv() }
+        if (state == IslandState.HIDDEN || isLandscape) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE } 
+        else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv() }
 
         if (model?.isCritical == true) {
             wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
@@ -111,7 +191,8 @@ val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = 
                 privateFlagsField.setInt(wp, privateFlagsField.getInt(wp) or 0x00000040)
             } catch (e: Exception) {}
         }
-        wp.width = WindowManager.LayoutParams.MATCH_PARENT; wp.height = WindowManager.LayoutParams.MATCH_PARENT
+        wp.width = WindowManager.LayoutParams.MATCH_PARENT
+        wp.height = WindowManager.LayoutParams.MATCH_PARENT
         try { wm.updateViewLayout(view, wp) } catch (e: Exception) {}
     }
 
@@ -139,30 +220,44 @@ val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = 
             modifier = Modifier
                 .width(animatedWidth) 
                 .height(animatedHeight)
-                // 🚀 FIX: graphicsLayer MUST be before onGloballyPositioned so touches map correctly!
-                .graphicsLayer { scaleX = islandScale; scaleY = islandScale; alpha = islandAlpha; transformOrigin = TransformOrigin(0.5f, 0.5f) }
+                .graphicsLayer { 
+                    scaleX = islandScale; scaleY = islandScale; alpha = islandAlpha; 
+                    transformOrigin = TransformOrigin(0.5f, 0.5f) 
+                }
                 .onGloballyPositioned { coordinates ->
                     val bounds = coordinates.boundsInWindow()
                     val newLeft = bounds.left.toInt()
                     val newTop = bounds.top.toInt()
                     val newRight = bounds.right.toInt()
                     val newBottom = bounds.bottom.toInt()
-                    
-                    // 🧠 THE LOOP BREAKER: Only emit an update if the pixel boundary actually changed
-                    if (mainPillRect.left != newLeft || mainPillRect.top != newTop || mainPillRect.right != newRight || mainPillRect.bottom != newBottom) {
+                    if (mainPillRect.left != newLeft || mainPillRect.top != newTop || 
+                        mainPillRect.right != newRight || mainPillRect.bottom != newBottom) {
                         mainPillRect.set(newLeft, newTop, newRight, newBottom)
                         insetsUpdateFlow.tryEmit(Unit)
                     }
                 }
                 .shadow(elevation = shadowElevation, shape = RoundedCornerShape(animatedRadius), spotColor = Color.Black)
                 .clip(RoundedCornerShape(animatedRadius))
-                .background(bgColor)
+                .then(
+                    // Premium: dynamic gradient background for music mid/max
+                    if (state == IslandState.TYPE_2_MID && model is LiveActivityModel.Music && model.dominantColor != null) {
+                        Modifier.background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(model.dominantColor).copy(alpha = 0.85f),
+                                    Color(model.dominantColor).copy(alpha = 0.5f)
+                                )
+                            )
+                        )
+                    } else {
+                        Modifier.background(bgColor)
+                    }
+                )
                 .border(0.5.dp, borderColor, RoundedCornerShape(animatedRadius))
                 .pointerInput(Unit) {
                     awaitEachGesture { awaitFirstDown(pass = PointerEventPass.Initial); isSquished = true; waitForUpOrCancellation(pass = PointerEventPass.Initial); isSquished = false }
                 }
                 .pointerInput(state) {
-                    // 🚀 FIX: Do not steal taps if the Dashboard is open!
                     if (state != IslandState.TYPE_3_MAX) {
                         detectTapGestures(
                             onTap = { 
@@ -181,7 +276,6 @@ val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = 
                     }
                 }
                 .pointerInput(state) {
-                    // 🚀 FIX: Do not steal drags/swipes if the Dashboard is open!
                     if (state != IslandState.TYPE_3_MAX) {
                         var dragOffsetX = 0f; var dragOffsetY = 0f 
                         detectDragGestures(
@@ -207,29 +301,47 @@ val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = 
             Box(modifier = Modifier.fillMaxSize().padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp)) {
                 
                 if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
-                    val bgBitmap = if (theme.blurIntensity > 0.dp && model.blurredAlbumArt != null) { model.blurredAlbumArt.asImageBitmap() } else model.albumArt.asImageBitmap()
-                    Image(bitmap = bgBitmap, contentDescription = "Cinematic BG", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(if (state == IslandState.TYPE_3_MAX) 0.5f else 0.25f).blur(if (state == IslandState.TYPE_3_MAX) theme.blurIntensity else (theme.blurIntensity + 8.dp)))
+                    val bgBitmap = if (theme.blurIntensity > 0.dp && model.blurredAlbumArt != null) { 
+                        model.blurredAlbumArt.asImageBitmap() 
+                    } else model.albumArt.asImageBitmap()
+                    Image(
+                        bitmap = bgBitmap,
+                        contentDescription = "Cinematic BG",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .alpha(if (state == IslandState.TYPE_3_MAX) 0.5f else 0.25f)
+                            .blur(if (state == IslandState.TYPE_3_MAX) theme.blurIntensity else (theme.blurIntensity + 8.dp))
+                    )
                 }
 
                 if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING) {
-                    val bottomPadding by animateDpAsState(targetValue = when(state) { IslandState.TYPE_3_MAX -> 24.dp; IslandState.TYPE_2_MID -> 16.dp; IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> 12.dp; else -> 0.dp }, label = "bottomPadding")
+                    val bottomPadding by animateDpAsState(
+                        targetValue = when(state) { 
+                            IslandState.TYPE_3_MAX -> 24.dp
+                            IslandState.TYPE_2_MID -> 16.dp
+                            IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> 12.dp
+                            else -> 0.dp 
+                        },
+                        label = "bottomPadding"
+                    )
                     Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
                         AnimatedContent(
                             targetState = state,
                             transitionSpec = {
-                            val expanding = targetState.ordinal > initialState.ordinal
-                            if (expanding) {
-                                (fadeIn(animationSpec = tween(300, delayMillis = 60)) + scaleIn(
-                                    initialScale = 0.88f,
-                                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f)
-                                )) togetherWith fadeOut(animationSpec = tween(80))
-                            } else {
-                                (fadeIn(animationSpec = tween(200)) + scaleIn(
-                                    initialScale = 1.04f,
-                                    animationSpec = spring(dampingRatio = 0.8f, stiffness = 500f)
-                                )) togetherWith (fadeOut(animationSpec = tween(120)) + scaleOut(targetScale = 0.96f))
-                            }
-                        },
+                                val expanding = targetState.ordinal > initialState.ordinal
+                                if (expanding) {
+                                    (fadeIn(animationSpec = tween(300, delayMillis = 60)) + scaleIn(
+                                        initialScale = 0.88f,
+                                        animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f)
+                                    )) togetherWith fadeOut(animationSpec = tween(80))
+                                } else {
+                                    (fadeIn(animationSpec = tween(200)) + scaleIn(
+                                        initialScale = 1.04f,
+                                        animationSpec = spring(dampingRatio = 0.8f, stiffness = 500f)
+                                    )) togetherWith (fadeOut(animationSpec = tween(120)) + scaleOut(targetScale = 0.96f))
+                                }
+                            },
                             label = "UI Transition"
                         ) { s ->
                             when (s) {
@@ -249,37 +361,34 @@ val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = 
                                     } 
                                 }
                                 IslandState.TYPE_2_MID -> {
-                                when (model) {
-                                is LiveActivityModel.Dashboard       -> DashboardMid(model)
-                                is LiveActivityModel.Call            -> CallMid(model)
-                                is LiveActivityModel.Music           -> MusicMid(model)
-                                is LiveActivityModel.Charging        -> ChargingMid(model)
-                                is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model)
-                                is LiveActivityModel.OngoingTask     -> OngoingTaskMid(model)
-                                is LiveActivityModel.ExternalActivity -> ExternalActivityMid(model)
-                                is LiveActivityModel.LinkIntercept   -> LinkInterceptMid(model)
-                                is LiveActivityModel.SystemAlert     -> {
-                                    // OTP gets its own bespoke view; everything else uses the generic alert
-                                    if (model.alertType == "OTP_CATCHER") OtpMid(model)
-                                    else SystemAlertMid(model)
-                                }
-                                is LiveActivityModel.General         -> {
-                                    when {
-                                        model.id == "sys_translation"  -> TranslationGeneralMid(model)
-                                        model.id == "sys_barcode"      -> BarcodeGeneralMid(model)
-                                        // Navigation: identified either by id or by the Maps accent green
-                                        model.id == "sys_navigation"
-                                        || model.type == com.example.dynamicisland.model.ActivityType.MESSAGE
-                                            && model.accentColor == android.graphics.Color.parseColor("#34A853")
-                                                               -> NavigationMid(model)
-                                        else                           -> GeneralMid(model)
+                                    when (model) {
+                                        is LiveActivityModel.Dashboard       -> DashboardMid(model)
+                                        is LiveActivityModel.Call            -> CallMid(model)
+                                        is LiveActivityModel.Music           -> MusicMid(model)
+                                        is LiveActivityModel.Charging        -> ChargingMid(model)
+                                        is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model)
+                                        is LiveActivityModel.OngoingTask     -> OngoingTaskMid(model)
+                                        is LiveActivityModel.ExternalActivity -> ExternalActivityMid(model)
+                                        is LiveActivityModel.LinkIntercept   -> LinkInterceptMid(model)
+                                        is LiveActivityModel.SystemAlert     -> {
+                                            if (model.alertType == "OTP_CATCHER") OtpMid(model)
+                                            else SystemAlertMid(model)
+                                        }
+                                        is LiveActivityModel.General         -> {
+                                            when {
+                                                model.id == "sys_translation"  -> TranslationGeneralMid(model)
+                                                model.id == "sys_barcode"      -> BarcodeGeneralMid(model)
+                                                model.id == "sys_navigation"
+                                                    || model.type == com.example.dynamicisland.model.ActivityType.MESSAGE
+                                                        && model.accentColor == android.graphics.Color.parseColor("#34A853")
+                                                -> NavigationMid(model)
+                                                else                           -> GeneralMid(model)
+                                            }
+                                        }
+                                        else -> {}
                                     }
                                 }
-                                else -> {}
-                            }
-                        }
                                 IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { 
-                                    // Gaming HUD takes priority in mini when gaming mode is active
                                     if (view.controller?.currentHardware?.isGamingModeOn == true && model !is LiveActivityModel.Call) {
                                         GamingHUDMini(
                                             fps        = gamingFps.floatValue,
@@ -299,19 +408,59 @@ val bgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = 
                                         } 
                                     }
                                 }
-                                IslandState.TYPE_CUBE -> { if (model is LiveActivityModel.Charging) ChargingCube(model) }
+                                IslandState.TYPE_CUBE -> { 
+                                    if (model is LiveActivityModel.Charging) ChargingCube(model) 
+                                }
                                 else -> {} 
                             }
                         }
-                     }
+
+                        // Premium: draw particle burst overlay
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            if (particles.isNotEmpty()) {
+                                val now = System.currentTimeMillis()
+                                particles.forEach { p ->
+                                    val elapsed = now - p.birthTime
+                                    val progress = (elapsed / 1500f).coerceIn(0f, 1f)
+                                    val radius = progress * p.speed
+                                    val alpha = ((1f - progress) * 0.8f).coerceAtLeast(0f)
+                                    val offset = Offset(
+                                        center.x + radius * cos(Math.toRadians(p.angle.toDouble())).toFloat(),
+                                        center.y + radius * sin(Math.toRadians(p.angle.toDouble())).toFloat()
+                                    )
+                                    drawCircle(
+                                        color = Color.White.copy(alpha = alpha),
+                                        radius = 3f,
+                                        center = offset
+                                    )
+                                }
+                            }
+                        }
+                    }
 
                     if (state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) {
-                        Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(10.dp).padding(bottom = 4.dp), contentAlignment = Alignment.Center) { Box(modifier = Modifier.width(36.dp).height(4.dp).background(Color.White.copy(alpha=0.25f), CircleShape)) }
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .height(10.dp)
+                                .padding(bottom = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) { 
+                            Box(modifier = Modifier.width(36.dp).height(4.dp).background(Color.White.copy(alpha=0.25f), CircleShape)) 
+                        }
                     }
                 }
                 if (state == IslandState.TYPE_0_RING) { RingUI(model) }
-             }
+            }
         }
         SplitCubeUI(state, animatedHeight, borderColor)
     }
 }
+
+// Data class for particle effect
+private data class Particle(
+    val angle: Float,
+    val speed: Float,
+    val birthTime: Long
+)
