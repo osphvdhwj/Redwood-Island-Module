@@ -1,18 +1,5 @@
 package com.example.dynamicisland.ui
 
-/**
- * Adapter composables.
- *
- * Translation and Barcode results are broadcast as LiveActivityModel.General
- * (id = "sys_translation" / "sys_barcode") so the existing priority engine
- * can rank them. These thin adapters reconstruct the necessary data from the
- * title / dataText fields and delegate to the full composables.
- *
- * LinkInterceptMid shows a mid-state prompt when a URL has been intercepted.
- *
- * File: IslandAdapterMids.kt  (place in ui/ package)
- */
-
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,55 +22,51 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.model.LiveActivityModel
 
 // ── Translation adapter ───────────────────────────────────────────────────
 
-/**
- * Renders a simplified translation card from a General model.
- * title   = translated text
- * dataText = original text
- */
 @Composable
 fun DynamicIslandView.TranslationGeneralMid(model: LiveActivityModel.General) {
-    val theme  = LocalIslandTheme.current
+    val batIconSize = 36.dp
+    val alertTitleSize = 14.sp
+    val alertMsgSize = 12.sp
     val accent = Color(0xFF4FC3F7)
 
     Row(
-        modifier          = Modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(theme.batIconSize + 4.dp)
+                .size(batIconSize + 4.dp)
                 .background(accent.copy(alpha = 0.12f), CircleShape)
                 .border(1.dp, accent.copy(alpha = 0.30f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Text("🌐", fontSize = androidx.compose.ui.unit.TextUnit(18f, androidx.compose.ui.unit.TextUnitType.Sp))
+            Text("🌐", fontSize = 18.sp)
         }
 
         Spacer(Modifier.width(10.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            // Original (dimmed)
             Text(
-                text     = model.dataText,
-                color    = Color.White.copy(alpha = 0.50f),
-                fontSize = theme.alertMsgSize,
+                text = model.dataText,
+                color = Color.White.copy(alpha = 0.50f),
+                fontSize = alertMsgSize,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            // Translation (highlighted)
             Text(
-                text       = model.title,
-                color      = accent,
-                fontSize   = theme.alertTitleSize,
+                text = model.title,
+                color = accent,
+                fontSize = alertTitleSize,
                 fontWeight = FontWeight.Bold,
-                maxLines   = 1,
-                overflow   = TextOverflow.Ellipsis
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -91,25 +74,22 @@ fun DynamicIslandView.TranslationGeneralMid(model: LiveActivityModel.General) {
 
 // ── Barcode adapter ───────────────────────────────────────────────────────
 
-/**
- * Renders a simplified barcode card from a General model.
- * title    = actionLabel (e.g. "Open Link")
- * dataText = display text (URL, phone number, …)
- */
 @Composable
 fun DynamicIslandView.BarcodeGeneralMid(model: LiveActivityModel.General) {
-    val theme  = LocalIslandTheme.current
+    val batIconSize = 36.dp
+    val alertTitleSize = 14.sp
+    val alertMsgSize = 12.sp
     val accent = Color(model.accentColor)
 
     Row(
-        modifier          = Modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(theme.batIconSize + 4.dp)
+                .size(batIconSize + 4.dp)
                 .background(accent.copy(alpha = 0.15f), CircleShape)
                 .border(1.dp, accent.copy(alpha = 0.40f), CircleShape),
             contentAlignment = Alignment.Center
@@ -117,8 +97,8 @@ fun DynamicIslandView.BarcodeGeneralMid(model: LiveActivityModel.General) {
             Icon(
                 Icons.Default.QrCode,
                 contentDescription = null,
-                tint               = accent,
-                modifier           = Modifier.size(20.dp)
+                tint = accent,
+                modifier = Modifier.size(20.dp)
             )
         }
 
@@ -126,17 +106,17 @@ fun DynamicIslandView.BarcodeGeneralMid(model: LiveActivityModel.General) {
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text     = model.dataText,
-                color    = Color.White,
-                fontSize = theme.alertTitleSize,
+                text = model.dataText,
+                color = Color.White,
+                fontSize = alertTitleSize,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text     = model.title,
-                color    = accent.copy(alpha = 0.80f),
-                fontSize = theme.alertMsgSize,
+                text = model.title,
+                color = accent.copy(alpha = 0.80f),
+                fontSize = alertMsgSize,
                 maxLines = 1
             )
         }
@@ -145,42 +125,38 @@ fun DynamicIslandView.BarcodeGeneralMid(model: LiveActivityModel.General) {
 
 // ── LinkIntercept mid card ────────────────────────────────────────────────
 
-/**
- * Shown when a YouTube / Spotify URL has been intercepted.
- * Offers "Open in App" (proceeds with the original intent) and
- * "Dismiss" (reverts to previous island state).
- */
 @Composable
 fun DynamicIslandView.LinkInterceptMid(model: LiveActivityModel.LinkIntercept) {
     val haptic = LocalHapticFeedback.current
-    val theme  = LocalIslandTheme.current
+    val batIconSize = 36.dp
+    val alertTitleSize = 14.sp
+    val alertMsgSize = 12.sp
 
     Row(
-        modifier          = Modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // App icon
         Box(
             modifier = Modifier
-                .size(theme.batIconSize + 4.dp)
+                .size(batIconSize + 4.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(Color.White.copy(0.10f)),
             contentAlignment = Alignment.Center
         ) {
             if (model.targetAppIcon != null) {
                 Image(
-                    bitmap             = model.targetAppIcon.asImageBitmap(),
+                    bitmap = model.targetAppIcon.asImageBitmap(),
                     contentDescription = null,
-                    modifier           = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize()
                 )
             } else {
                 Icon(
                     Icons.Default.Link,
                     contentDescription = null,
-                    tint               = Color.White,
-                    modifier           = Modifier.size(22.dp)
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
@@ -189,16 +165,16 @@ fun DynamicIslandView.LinkInterceptMid(model: LiveActivityModel.LinkIntercept) {
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text       = model.targetAppName,
-                color      = Color.White,
-                fontSize   = theme.alertTitleSize,
+                text = model.targetAppName,
+                color = Color.White,
+                fontSize = alertTitleSize,
                 fontWeight = FontWeight.Bold,
-                maxLines   = 1
+                maxLines = 1
             )
             Text(
-                text     = model.urlHost,
-                color    = Color.White.copy(0.55f),
-                fontSize = theme.alertMsgSize,
+                text = model.urlHost,
+                color = Color.White.copy(0.55f),
+                fontSize = alertMsgSize,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -206,7 +182,6 @@ fun DynamicIslandView.LinkInterceptMid(model: LiveActivityModel.LinkIntercept) {
 
         Spacer(Modifier.width(8.dp))
 
-        // "Open" action
         Box(
             modifier = Modifier
                 .background(Color.White.copy(0.15f), RoundedCornerShape(10.dp))
@@ -221,9 +196,9 @@ fun DynamicIslandView.LinkInterceptMid(model: LiveActivityModel.LinkIntercept) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text       = "Open",
-                color      = Color.White,
-                fontSize   = theme.alertMsgSize,
+                text = "Open",
+                color = Color.White,
+                fontSize = alertMsgSize,
                 fontWeight = FontWeight.SemiBold
             )
         }

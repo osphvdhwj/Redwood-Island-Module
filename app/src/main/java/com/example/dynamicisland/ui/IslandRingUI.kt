@@ -6,6 +6,8 @@ import com.example.dynamicisland.model.*
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,12 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -83,7 +83,8 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
             targetValue   = 1f,
             animationSpec = if (hasUnseenNotif.value)
                 infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse)
-            else tween(0),
+            else
+                infiniteRepeatable(tween(1, easing = LinearEasing), RepeatMode.Restart),
             label = "notif_alpha"
         )
 

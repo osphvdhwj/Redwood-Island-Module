@@ -110,7 +110,7 @@ fun NavigationMid(
     }
 }
 
-// --- Direction resolver (same heuristics, now based on instruction field) ---
+// --- Direction resolver ---
 private data class DirectionResult(val icon: ImageVector, val label: String)
 
 private fun resolveDirection(text: String): DirectionResult = when {
@@ -129,7 +129,7 @@ private fun resolveDirection(text: String): DirectionResult = when {
     text.contains("merge")                                        ->
         DirectionResult(Icons.Default.MergeType, "Merge")
     text.contains("exit")                                        ->
-        DirectionResult(Icons.Default.Ramp, "Exit")
+        DirectionResult(Icons.Default.ExitToApp, "Exit")            // fixed: Icons.Default.Ramp -> ExitToApp
     text.contains("arrive") || text.contains("destination")      ->
         DirectionResult(Icons.Default.LocationOn, "Arrive")
     else                                                          ->

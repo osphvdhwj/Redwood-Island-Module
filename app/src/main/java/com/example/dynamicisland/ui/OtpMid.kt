@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,7 +33,7 @@ import com.example.dynamicisland.settings.SettingsState
 
 /**
  * Premium OTP MID view – shows verification code with copy button, haptic feedback,
- * and spring-scale animation.
+ * and spring-scale animation. Fully compatible with the new SettingsState theme.
  */
 @Composable
 fun OtpMid(
@@ -66,7 +67,7 @@ fun OtpMid(
         // Shield icon
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(40.dp)                     // fixed size, resolves any overload ambiguity
                 .background(Color(0xFF4285F4).copy(alpha = 0.15f), CircleShape)
                 .border(1.dp, Color(0xFF4285F4).copy(alpha = 0.4f), CircleShape),
             contentAlignment = Alignment.Center
@@ -92,7 +93,7 @@ fun OtpMid(
             Text(
                 text = displayCode,
                 color = Color.White,
-                fontSize = 22.sp,
+                fontSize = 22.sp,                // explicit .sp, no ambiguity
                 fontWeight = FontWeight.ExtraBold,
                 fontFamily = FontFamily.Monospace,
                 letterSpacing = 2.sp
@@ -104,7 +105,7 @@ fun OtpMid(
         // Copy button
         Box(
             modifier = Modifier
-                .size(38.dp)
+                .size(38.dp)                    // fixed size
                 .background(
                     color = if (copied) Color(0xFF4CAF50).copy(alpha = 0.25f)
                             else Color(0xFF4285F4).copy(alpha = 0.18f),
@@ -129,7 +130,7 @@ fun OtpMid(
                 contentDescription = "Copy OTP",
                 tint = if (copied) Color(0xFF4CAF50) else Color(0xFF4285F4),
                 modifier = Modifier
-                    .size(17.dp)
+                    .size(17.dp)                // fixed size
                     .graphicsLayer { scaleX = copyScale; scaleY = copyScale }
             )
         }

@@ -48,7 +48,11 @@ import com.example.dynamicisland.model.LiveActivityModel
 @Composable
 fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
     val haptic = LocalHapticFeedback.current
-    val theme  = LocalIslandTheme.current
+
+    // Hard-coded dimensions (previously from LocalIslandTheme)
+    val alertTitleSize = 14.sp
+    val alertMsgSize = 12.sp
+    val musicSeekerThick = 4.dp   // base thickness, multiplied later
 
     // Resolve text / accent colour from album art palette
     val accentColor = music.dominantColor?.let { Color(it) } ?: Color.White
@@ -112,7 +116,7 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
                 Text(
                     text       = music.title,
                     color      = textColor,
-                    fontSize   = theme.alertTitleSize,
+                    fontSize   = alertTitleSize,
                     fontWeight = FontWeight.Bold,
                     maxLines   = 1,
                     overflow   = TextOverflow.Ellipsis,
@@ -122,12 +126,12 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
                 Text(
                     text     = music.artist,
                     color    = textColor.copy(alpha = 0.65f),
-                    fontSize = theme.alertMsgSize,
+                    fontSize = alertMsgSize,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.safeMarquee(islandState.value)
                 )
-                // Seeker
+                // Seeker (3x base thickness)
                 InteractiveWavyMediaBar(
                     durationMs  = music.durationMs,
                     posProvider = { currentMediaPos.longValue },
@@ -135,7 +139,7 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
                     color       = accentColor,
                     trackColor  = accentColor.copy(alpha = 0.20f),
                     onSeek      = { onSeekTo?.invoke(it) },
-                    modifier    = Modifier.height(theme.musicSeekerThick * 3)
+                    modifier    = Modifier.height(musicSeekerThick * 3)
                 )
             }
 
