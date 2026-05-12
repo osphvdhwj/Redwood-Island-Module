@@ -52,4 +52,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("com.google.android.material:material:1.12.0")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+    compileOnly("de.robv.android.xposed:api:82")
 }
