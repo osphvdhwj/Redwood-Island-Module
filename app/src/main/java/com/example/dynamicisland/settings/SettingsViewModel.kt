@@ -2,6 +2,7 @@ package com.example.dynamicisland.settings
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
+import com.example.dynamicisland.settings.SettingsManager.SettingKey
 
 class SettingsViewModel(private val settingsManager: SettingsManager) {
     var state by mutableStateOf(SettingsState())

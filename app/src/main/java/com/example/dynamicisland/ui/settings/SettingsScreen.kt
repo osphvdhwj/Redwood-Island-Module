@@ -25,8 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dynamicisland.settings.*
-import com.dynamicisland.settings.SettingsManager.SettingKey
+import com.example.dynamicisland.settings.*
+import com.example.dynamicisland.settings.SettingsManager.SettingKey
 
 // ---------- Main entry point ----------
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)

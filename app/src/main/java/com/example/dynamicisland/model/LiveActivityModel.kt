@@ -1,6 +1,7 @@
 // File: app/src/main/java/com/dynamicisland/model/LiveActivityModel.kt
 package com.example.dynamicisland.model
 
+import com.example.dynamicisland.ipc.LiveActivityInfo
 import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.compose.ui.graphics.Color

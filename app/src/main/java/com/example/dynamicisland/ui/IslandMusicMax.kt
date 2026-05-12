@@ -143,8 +143,8 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                     )
                 }
 
-                music.customActions.find { it.actionName.contains("heart", true) || it.actionName.contains("like", true) }?.let { action ->
-                    InteractiveIconButton(icon = if (localIsLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, tint = if (localIsLiked) Color(0xFFFF2A5F) else Color.White.copy(0.8f), baseSize = 36.dp) { localIsLiked = !localIsLiked; onCustomMediaAction?.invoke(action.actionName) }
+                music.customActions.find { it.action.contains("heart", true) || it.action.contains("like", true) }?.let { action ->
+                    InteractiveIconButton(icon = if (localIsLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, tint = if (localIsLiked) Color(0xFFFF2A5F) else Color.White.copy(0.8f), baseSize = 36.dp) { localIsLiked = !localIsLiked; onCustomMediaAction?.invoke(action.action) }
                 }
             }
 
@@ -183,8 +183,8 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                music.customActions.find { it.actionName.contains("shuffle", true) }?.let { action ->
-                    InteractiveIconButton(icon = Icons.Default.Shuffle, tint = if (localIsShuffled) dynamicTextColor else Color.White.copy(0.5f), baseSize = 32.dp) { localIsShuffled = !localIsShuffled; onCustomMediaAction?.invoke(action.actionName) }
+                music.customActions.find { it.action.contains("shuffle", true) }?.let { action ->
+                    InteractiveIconButton(icon = Icons.Default.Shuffle, tint = if (localIsShuffled) dynamicTextColor else Color.White.copy(0.5f), baseSize = 32.dp) { localIsShuffled = !localIsShuffled; onCustomMediaAction?.invoke(action.action) }
                 } ?: Spacer(Modifier.width(32.dp))
 
                 InteractiveIconButton(
@@ -202,8 +202,8 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                     baseSize = 44.dp
                 ) { onNextClick?.invoke() }
 
-                music.customActions.find { it.actionName.contains("repeat", true) }?.let { action ->
-                    InteractiveIconButton(icon = if (localRepeatMode == 1) Icons.Default.RepeatOne else Icons.Default.Repeat, tint = if (localRepeatMode > 0) dynamicTextColor else Color.White.copy(0.5f), baseSize = 32.dp) { localRepeatMode = (localRepeatMode + 1) % 3; onCustomMediaAction?.invoke(action.actionName) }
+                music.customActions.find { it.action.contains("repeat", true) }?.let { action ->
+                    InteractiveIconButton(icon = if (localRepeatMode == 1) Icons.Default.RepeatOne else Icons.Default.Repeat, tint = if (localRepeatMode > 0) dynamicTextColor else Color.White.copy(0.5f), baseSize = 32.dp) { localRepeatMode = (localRepeatMode + 1) % 3; onCustomMediaAction?.invoke(action.action) }
                 } ?: Spacer(Modifier.width(32.dp))
             }
         }

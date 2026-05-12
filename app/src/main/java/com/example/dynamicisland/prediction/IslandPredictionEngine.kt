@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import com.dynamicisland.model.LiveActivityModel
-import com.dynamicisland.settings.SettingsState
+import com.example.dynamicisland.model.LiveActivityModel
+import com.example.dynamicisland.settings.SettingsState
 import androidx.compose.ui.graphics.Color
 
 /**

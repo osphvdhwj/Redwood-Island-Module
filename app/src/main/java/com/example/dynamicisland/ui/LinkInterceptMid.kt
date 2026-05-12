@@ -26,8 +26,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.dynamicisland.model.LiveActivityModel
-import com.dynamicisland.settings.SettingsState
+import com..example.dynamicisland.model.LiveActivityModel
+import com.example.dynamicisland.settings.SettingsState
 
 @Composable
 fun LinkInterceptMid(

@@ -184,7 +184,7 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
 
                 // Like (only if the session exposes a like action)
                 val hasLike = music.customActions.any {
-                    it.actionName.contains("heart", true) || it.actionName.contains("like", true)
+                    it.action.contains("heart", true) || it.action.contains("like", true)
                 }
                 if (hasLike) {
                     Spacer(Modifier.width(2.dp))
@@ -207,10 +207,10 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
                                 localIsLiked = !localIsLiked
                                 music.customActions
                                     .firstOrNull {
-                                        it.actionName.contains("heart", true) ||
-                                        it.actionName.contains("like", true)
+                                        it.action.contains("heart", true) ||
+                                        it.action.contains("like", true)
                                     }
-                                    ?.let { onCustomMediaAction?.invoke(it.actionName) }
+                                    ?.let { onCustomMediaAction?.invoke(it.action) }
                             }
                     )
                 }

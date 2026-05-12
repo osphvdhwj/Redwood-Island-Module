@@ -117,7 +117,7 @@ fun BarcodeMid(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = barcode.actionLabel,
+                text = barcode.label,
                 color = accentColor,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold

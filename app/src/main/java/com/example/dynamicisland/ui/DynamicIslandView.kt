@@ -163,13 +163,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         composeView.setContent {
             // Read settings directly from the controller (if available) or use defaults
-            val settings = controller?.settingsState ?: com.dynamicisland.settings.SettingsState()
+            val settings = controller?.settingsState ?: com.example.dynamicisland.settings.SettingsState()
             val shape = getPillShape(settings.pillShape, settings.pillCornerRadius)
 
             // Background: liquid glass, dynamic gradient, or solid dark
-            val backgroundModifier = if (settings.designLanguage == com.dynamicisland.settings.DesignLanguage.APPLE_LIQUID_GLASS) {
+            val backgroundModifier = if (settings.designLanguage == com.example.dynamicisland.settings.DesignLanguage.APPLE_LIQUID_GLASS) {
                 Modifier.glassBackground(blurRadius = settings.blurIntensity.dp)
-            } else if (settings.dynamicGradient && activeModel.value is LiveActivityModel.Music) {
+            } else if (settings.example.dynamicGradient && activeModel.value is LiveActivityModel.Music) {
                 Modifier.background(Brush.verticalGradient(controller.currentGradientColors))
             } else {
                 Modifier.background(Color.Black.copy(alpha = 0.85f))
