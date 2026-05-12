@@ -1,4 +1,4 @@
-package com.dynamicisland.settings
+package com.example.dynamicisland.settings
 
 import android.content.Context
 import android.content.SharedPreferences

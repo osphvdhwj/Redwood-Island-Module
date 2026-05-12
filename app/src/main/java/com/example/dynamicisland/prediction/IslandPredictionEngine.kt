@@ -1,4 +1,4 @@
-package com.dynamicisland.prediction
+package com.example.dynamicisland.prediction
 
 import android.content.Context
 import android.content.pm.PackageManager

@@ -1,4 +1,4 @@
-package com.dynamicisland.privacy
+package com.example.dynamicisland.privacy
 
 import android.content.ClipboardManager
 import android.content.Context

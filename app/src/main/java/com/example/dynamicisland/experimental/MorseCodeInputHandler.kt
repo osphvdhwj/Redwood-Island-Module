@@ -1,4 +1,4 @@
-package com.dynamicisland.experimental
+package com.example.dynamicisland.experimental
 
 class MorseCodeInputHandler {
     private val morseMap = mapOf(

@@ -5,7 +5,7 @@
 //   - com.dynamicisland.util.glassBackground
 //   - com.dynamicisland.ui.settings.AppSelectorDialog (already defined earlier)
 
-package com.dynamicisland.ui.settings
+package com.example.dynamicisland.ui.settings
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.*

@@ -1,4 +1,4 @@
-package com.dynamicisland.ui
+package com.example.dynamicisland.ui
 
 import android.content.ClipData
 import android.content.ClipboardManager

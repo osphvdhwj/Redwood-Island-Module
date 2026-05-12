@@ -1,4 +1,4 @@
-package com.dynamicisland.achievements
+package com.example.dynamicisland.achievements
 
 import android.content.Context
 import android.content.SharedPreferences

@@ -1,4 +1,4 @@
-package com.dynamicisland.util
+package com.example.dynamicisland.util
 
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.Color
