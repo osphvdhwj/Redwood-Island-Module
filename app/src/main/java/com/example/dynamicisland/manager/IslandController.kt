@@ -27,6 +27,7 @@ import com.example.dynamicisland.privacy.ClipboardCleaner
 import com.example.dynamicisland.settings.SettingsManager
 import com.example.dynamicisland.settings.SettingsState
 import com.example.dynamicisland.settings.SettingsViewModel
+import com.example.dynamicisland.ipc.IslandState
 
 class IslandController(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())

@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.settings.SettingsState
 import androidx.compose.ui.graphics.Color
+import com.example.dynamicisland.ipc.IslandState
 
 /**
  * IslandPredictionEngine — predicts what the island should show next

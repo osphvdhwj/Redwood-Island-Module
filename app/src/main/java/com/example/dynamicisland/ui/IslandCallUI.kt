@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dynamicisland.ipc.IslandState
 
 @Composable
 fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {

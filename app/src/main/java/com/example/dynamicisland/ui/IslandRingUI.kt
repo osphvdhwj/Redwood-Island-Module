@@ -102,7 +102,7 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
 
         // ── 🆕 BPM pulse (layered on top of breath) ──
         val bpmPulseScale = remember { Animatable(1f) }
-        val bpm = AudioReactiveAnalyzer.bpm.collectAsState().value
+        //val bpm = AudioReactiveAnalyzer.bpm.collectAsState().value
 
         LaunchedEffect(bpm, isMedia) {
             if (isMedia && bpm > 0f) {

@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.model.IslandState
+import com.example.dynamicisland.ipc.IslandState
 
 /**
  * BATCH 6: Gaming HUD

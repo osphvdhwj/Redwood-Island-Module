@@ -25,6 +25,7 @@ import com.example.dynamicisland.manager.IslandMediaManager
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.performance.IslandShaderWaveform
 import com.example.dynamicisland.settings.SettingsState
+import androidx.compose.foundation.text.BasicMarquee
 
 /**
  * MusicMid – Medium expanded music view.

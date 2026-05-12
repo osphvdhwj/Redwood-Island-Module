@@ -200,6 +200,7 @@ sealed class LiveActivityModel {
         override val type: ActivityType = ActivityType.MESSAGE,
         val content: String,
         val format: String,                         // "QR_CODE", "EAN_13", etc.
+        val label: String = "",                     // <-- ADD THIS LINE
         override val isTransient: Boolean = true,
         override val isCritical: Boolean = false,
         override val isSensitive: Boolean = false

@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import com.example.dynamicisland.model.IslandState
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
+import com.example.dynamicisland.ipc.IslandState
 
 /**
  * BATCH 4: Per-App Island Behaviour Profiles

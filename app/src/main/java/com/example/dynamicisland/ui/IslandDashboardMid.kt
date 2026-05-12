@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import com.example.dynamicisland.ipc.IslandState
 
 @Composable
 fun DynamicIslandView.DashboardMid(model: LiveActivityModel.Dashboard) {
