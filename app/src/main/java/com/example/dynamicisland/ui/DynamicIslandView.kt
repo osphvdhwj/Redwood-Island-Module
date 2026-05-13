@@ -141,8 +141,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     }
 
     val elasticScale = Animatable(1f)
-
-    // ✅ REMOVED: private var pullOffset = 0f — using local composable state instead
+    // No class-level pullOffset field – using local composable state instead
 
     private var flowJob: Job? = null
     val mainPillRect = android.graphics.Rect()
@@ -179,7 +178,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             composeView.setViewTreeSavedStateRegistryOwner(this@DynamicIslandView)
         }
 
-        // Capture 'this' for use inside setContent lambda
         val dynamicIslandView = this@DynamicIslandView
 
         composeView.setContent {
@@ -205,7 +203,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     androidx.compose.ui.platform.LocalContext provides moduleContext
                 ) {
                     val scope = rememberCoroutineScope()
-                    val pullOffsetState = remember { mutableFloatStateOf(0f) }
+                    var localPullOffset by remember { mutableFloatStateOf(0f) }
+
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -221,13 +220,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 detectVerticalDragGestures(
                                     onDragEnd = {
                                         scope.launch { elasticScale.animateTo(1f, spring()) }
-                                        pullOffsetState.floatValue = 0f
+                                        localPullOffset = 0f
                                     },
                                     onDragCancel = { scope.launch { elasticScale.snapTo(1f) } }
                                 ) { _, dragAmount ->
-                                    pullOffsetState.floatValue =
-                                        (pullOffsetState.floatValue + dragAmount).coerceIn(-50f, 100f)
-                                    elasticScale.value = 1f + pullOffsetState.floatValue * 0.002f
+                                    localPullOffset = (localPullOffset + dragAmount).coerceIn(-50f, 100f)
+                                    elasticScale.value = 1f + localPullOffset * 0.002f
                                 }
                             }
                     ) {
