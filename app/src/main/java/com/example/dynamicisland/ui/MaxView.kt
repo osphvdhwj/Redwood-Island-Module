@@ -27,8 +27,6 @@ import com.example.dynamicisland.manager.IslandMediaManager
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.performance.IslandShaderWaveform
 import com.example.dynamicisland.settings.SettingsState
-
-// Import the shared extractGradientColors from MusicMid.kt
 import com.example.dynamicisland.ui.extractGradientColors
 
 @Composable
@@ -126,10 +124,9 @@ private fun MusicMax(
                 }
             }
 
-            // Correct IslandShaderWaveform call
             IslandShaderWaveform(
                 durationMs = music.durationMs,
-                posProvider = { music.positionMs }             // ✅ Long,
+                posProvider = { music.positionMs },
                 isPlaying = music.isPlaying,
                 color = Color.White,
                 trackColor = Color.Gray,

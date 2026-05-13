@@ -224,7 +224,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                     onDragCancel = { scope.launch { elasticScale.snapTo(1f) } }
                                 ) { _, dragAmount ->
                                     this@DynamicIslandView.pullOffset = (this@DynamicIslandView.pullOffset + dragAmount).coerceIn(-50f, 100f)
-                                    elasticScale.value = 1f + pullOffset * 0.002f
+                                    elasticScale.value = 1f + this@DynamicIslandView.pullOffset * 0.002f
                                 }
                             }
                     ) {
