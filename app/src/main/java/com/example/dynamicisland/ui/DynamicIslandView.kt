@@ -26,7 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer   // ← added missing import
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
@@ -35,11 +35,13 @@ import androidx.lifecycle.*
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
-import com.example.dynamicisland.gesture.IslandGesture    // ← added missing import
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.example.dynamicisland.gesture.IslandGesture
 import com.example.dynamicisland.ipc.IslandState
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*
-import com.example.dynamicisland.settings.SettingsState    // ← added (ensure SettingsState exists)
+import com.example.dynamicisland.settings.DesignLanguage
+import com.example.dynamicisland.settings.SettingsState
 import com.example.dynamicisland.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -47,10 +49,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import com.example.dynamicisland.settings.DesignLanguage
 
-// Helper functions (must be inside the file, top-level)
 fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp): Modifier = this
     .blur(blurRadius)
     .background(Color.White.copy(alpha = 0.1f))
@@ -78,7 +77,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     var windowManager: WindowManager? = null
     var windowParams: WindowManager.LayoutParams? = null
-
     var controller: IslandController? = null
 
     var onAppPinnedClick: ((String) -> Unit)? = null
@@ -87,7 +85,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var pendingNotifColor = mutableIntStateOf(android.graphics.Color.WHITE)
     var hasUnseenNotif = mutableStateOf(false)
 
-    // ── Pill geometry and padding ────────────────────────────────────────────
     var ringW = mutableStateOf(45f); var ringH = mutableStateOf(45f); var ringX = mutableStateOf(0f); var ringY = mutableStateOf(48f)
     var miniW = mutableStateOf(180f); var miniH = mutableStateOf(36f); var miniX = mutableStateOf(0f); var miniY = mutableStateOf(48f)
     var midW = mutableStateOf(320f); var midH = mutableStateOf(80f); var midX = mutableStateOf(0f); var midY = mutableStateOf(48f)
@@ -100,7 +97,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var isCubeRotationEnabled = mutableStateOf(true)
     var activeTheme = mutableStateOf(IslandTheme())
 
-    // Hardware / global states
     var globalBatteryLevel = mutableIntStateOf(100)
     var hardwareVolume = mutableIntStateOf(0)
     var hardwareBrightness = mutableIntStateOf(0)
@@ -116,7 +112,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
     val splitModel = mutableStateOf<LiveActivityModel?>(null)
 
-    // System callbacks
     var onVolumeDrag: ((Int) -> Unit)? = null
     var onBrightnessDrag: ((Int) -> Unit)? = null
     var onAutoBrightnessToggle: (() -> Unit)? = null
@@ -135,21 +130,19 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onAudioOutputClick: (() -> Unit)? = null
     var onCustomMediaAction: ((String) -> Unit)? = null
 
-    // ── Gaming HUD stats ─────────────────────────────────────────────────────
     var gamingFps = mutableFloatStateOf(0f)
     var gamingFrameMs = mutableFloatStateOf(0f)
     var gamingJankPct = mutableFloatStateOf(0f)
+
     fun updateGamingStats(fps: Float, frameMs: Float, jankPct: Float) {
-        gamingFps.floatValue     = fps
+        gamingFps.floatValue = fps
         gamingFrameMs.floatValue = frameMs
         gamingJankPct.floatValue = jankPct
     }
 
-    // ── Elastic stretch animation state ──────────────────────────────────────
     val elasticScale = Animatable(1f)
     private var pullOffset = 0f
 
-    // ── Sub‑systems ──────────────────────────────────────────────────────────
     private var flowJob: Job? = null
     val mainPillRect = android.graphics.Rect()
     val splitCubeRect = android.graphics.Rect()
@@ -181,28 +174,26 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         composeView.setViewTreeLifecycleOwner(this@DynamicIslandView)
         composeView.setViewTreeViewModelStoreOwner(this@DynamicIslandView)
-        // Fix for setViewTreeSavedStateRegistryOwner (requires API 33+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             composeView.setViewTreeSavedStateRegistryOwner(this@DynamicIslandView)
         }
 
+        // Capture 'this' for use inside setContent lambda
+        val dynamicIslandView = this@DynamicIslandView
+
         composeView.setContent {
-            // Safely retrieve settings from the controller or fallback
             val settings = controller?.settingsState ?: SettingsState()
             val shape = getPillShape(settings.pillShape, settings.pillCornerRadius)
 
-            // Background: liquid glass, dynamic gradient, or solid dark
             val backgroundModifier = if (settings.designLanguage == DesignLanguage.APPLE_LIQUID_GLASS) {
                 Modifier.glassBackground(blurRadius = settings.blurIntensity.dp)
             } else if (settings.dynamicGradient && activeModel.value is LiveActivityModel.Music) {
-                // Use controller's gradient if available, else default
                 val gradientColors: List<Color> = controller?.currentGradientColors ?: listOf(Color.DarkGray, Color.Black)
                 Modifier.background(Brush.verticalGradient(gradientColors))
             } else {
                 Modifier.background(Color.Black.copy(alpha = 0.85f))
             }
 
-            // Shadow and glow
             val shadowModifier = if (settings.shadowCasting) {
                 Modifier.shadow(16.dp, shape, ambientColor = controller?.currentBrandColor?.copy(alpha = 0.4f) ?: Color.White.copy(alpha = 0.4f))
             } else Modifier
@@ -212,7 +203,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     LocalIslandTheme provides activeTheme.value,
                     androidx.compose.ui.platform.LocalContext provides moduleContext
                 ) {
-                    // We need a coroutine scope to call suspend functions inside drag handlers
                     val scope = rememberCoroutineScope()
                     Box(
                         modifier = Modifier
@@ -228,20 +218,18 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             .pointerInput(Unit) {
                                 detectVerticalDragGestures(
                                     onDragEnd = {
-                                        // Launch inside a coroutine (this is a suspend function)
                                         scope.launch { elasticScale.animateTo(1f, spring()) }
                                         pullOffset = 0f
                                     },
                                     onDragCancel = { scope.launch { elasticScale.snapTo(1f) } }
                                 ) { _, dragAmount ->
                                     pullOffset = (pullOffset + dragAmount).coerceIn(-50f, 100f)
-                                    // snapTo is not a suspend function, but call it correctly
                                     elasticScale.value = 1f + pullOffset * 0.002f
                                 }
                             }
                     ) {
-                        // Call the main UI composable
-                        controller?.let { view.IslandMainUI(it) }
+                        // ✅ FIXED: use dynamicIslandView.IslandUI (not view.IslandMainUI)
+                        controller?.let { dynamicIslandView.IslandUI(it) }
                     }
                 }
             }
@@ -258,12 +246,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             pingIntent.setPackage("com.example.dynamicisland")
             pingIntent.addFlags(0x01000000)
             context.sendBroadcast(pingIntent)
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-
         try {
             val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
             if (insetsListenerProxy == null) {
@@ -283,9 +270,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 }
             }
             viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListenerProxy)
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
 
-        val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+        val displayCutout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             windowManager?.currentWindowMetrics?.windowInsets?.displayCutout
         } else null
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
@@ -293,13 +280,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
             insetsUpdateFlow.conflate().collect {
                 windowParams?.let { wp ->
-                    try { windowManager?.updateViewLayout(this@DynamicIslandView, wp) } catch (e: Exception) {}
+                    try { windowManager?.updateViewLayout(this@DynamicIslandView, wp) } catch (_: Exception) {}
                 }
             }
         }
 
         val securePermission = "com.redwood.permission.SECURE_IPC"
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(prefsReceiver, IntentFilter("com.example.dynamicisland.RELOAD_PREFS"), securePermission, null, Context.RECEIVER_EXPORTED)
             context.registerReceiver(appChangeReceiver, IntentFilter("com.example.dynamicisland.APP_CHANGED"), Context.RECEIVER_EXPORTED)
         } else {
@@ -307,42 +294,36 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             context.registerReceiver(prefsReceiver, IntentFilter("com.example.dynamicisland.RELOAD_PREFS"), securePermission, null)
             context.registerReceiver(appChangeReceiver, IntentFilter("com.example.dynamicisland.APP_CHANGED"))
         }
-
         context.registerReceiver(screenReceiver, IntentFilter().apply { addAction(Intent.ACTION_SCREEN_ON); addAction(Intent.ACTION_SCREEN_OFF) })
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
-
         try {
             if (insetsListenerProxy != null) {
                 val aliveObserver = if (viewTreeObserver.isAlive) viewTreeObserver else this.viewTreeObserver
                 val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
                 aliveObserver.javaClass.getMethod("removeOnComputeInternalInsetsListener", listenerClass).invoke(aliveObserver, insetsListenerProxy)
             }
-        } catch (e: Exception) {}
-
+        } catch (_: Exception) {}
         flowJob?.cancel()
         flowJob = null
-
-        try { context.unregisterReceiver(prefsReceiver) } catch (e: Exception) {}
-        try { context.unregisterReceiver(appChangeReceiver) } catch (e: Exception) {}
-        try { context.unregisterReceiver(screenReceiver) } catch (e: Exception) {}
-
+        try { context.unregisterReceiver(prefsReceiver) } catch (_: Exception) {}
+        try { context.unregisterReceiver(appChangeReceiver) } catch (_: Exception) {}
+        try { context.unregisterReceiver(screenReceiver) } catch (_: Exception) {}
         BatteryPlugin.stop(context)
         context.sendBroadcast(Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui"))
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration?) {
         super.onConfigurationChanged(newConfig)
-        val displayCutout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+        val displayCutout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             windowManager?.currentWindowMetrics?.windowInsets?.displayCutout
         } else null
         displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
     }
 
-    // ── Existing update helpers ──────────────────────────────────────────────
     fun updateAutoBrightnessState(isAuto: Boolean) { hardwareAutoBrightness.value = isAuto }
     fun updateRingerState(mode: Int) { hardwareRingerMode.intValue = mode }
     fun updateHardwareVolume(vol: Int) { hardwareVolume.intValue = vol }

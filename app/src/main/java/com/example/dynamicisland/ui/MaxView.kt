@@ -27,14 +27,13 @@ import com.example.dynamicisland.manager.IslandMediaManager
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.performance.IslandShaderWaveform
 import com.example.dynamicisland.settings.SettingsState
+
+// Import the shared extractGradientColors from MusicMid.kt
 import com.example.dynamicisland.ui.extractGradientColors
 
 @Composable
 fun MaxView(model: LiveActivityModel?, controller: IslandController) {
-    // Note: IslandController must have a public `settingsState` property for this to compile.
-    // If not already added, insert this in IslandController:
-    //     val settingsState = SettingsState()
-    val settings = controller.settingsState ?: SettingsState()
+    val settings = controller.settingsState
     val shape = RoundedCornerShape(settings.pillCornerRadius.dp)
 
     when (model) {
@@ -127,22 +126,23 @@ private fun MusicMax(
                 }
             }
 
-            // ✅ Fixed waveform call with correct parameters
+            // Correct IslandShaderWaveform call
             IslandShaderWaveform(
                 durationMs = music.durationMs,
-                posProvider = { music.positionMs },
+                posProvider = { music.positionMs.toFloat() },
                 isPlaying = music.isPlaying,
                 color = Color.White,
                 trackColor = Color.Gray,
                 onSeek = { fraction ->
                     val seekPos = (fraction * music.durationMs).toLong()
                     mediaManager.activeMediaController?.transportControls?.seekTo(seekPos)
-                }
-                modifier = Modifier.fillMaxWidth().height(40.dp)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
             )
-            Spacer(Modifier.height(8.dp))
 
-            // ✅ Media buttons now use sendMediaCommand
+            Spacer(Modifier.height(8.dp))
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -210,4 +210,3 @@ private fun GenericMax(model: LiveActivityModel?) {
         Text(model?.toString() ?: "No content", color = Color.White)
     }
 }
-1

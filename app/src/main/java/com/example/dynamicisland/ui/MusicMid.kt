@@ -103,7 +103,7 @@ fun MusicMid(
 
             IslandShaderWaveform(
                 durationMs = music.durationMs,
-                posProvider = { music.positionMs.toFloat() },
+                posProvider = { music.positionMs },   // ✅ removed .toFloat(), now returns Long
                 isPlaying = music.isPlaying,
                 color = Color.White,
                 trackColor = Color.Gray,
