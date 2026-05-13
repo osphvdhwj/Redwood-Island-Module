@@ -224,7 +224,11 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 ) { _, dragAmount ->
                                     localPullOffset.floatValue =
                                         (localPullOffset.floatValue + dragAmount).coerceIn(-50f, 100f)
-                                    elasticScale.value = 1f + localPullOffset.floatValue * 0.002f
+            
+                                    // THE FIX: Use scope.launch and snapTo() instead of "="
+                                    scope.launch {
+                                        elasticScale.snapTo(1f + localPullOffset.floatValue * 0.002f)
+                                    }
                                 }
                             }
                     ) {
