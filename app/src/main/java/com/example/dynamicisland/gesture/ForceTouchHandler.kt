@@ -8,6 +8,7 @@ import com.example.dynamicisland.model.IslandGesture
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import com.example.dynamicisland.gesture.IslandGesture
 
 /**
  * BATCH 5: Force Touch Handler

@@ -7,6 +7,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.util.concurrent.ConcurrentLinkedDeque
 import kotlin.math.*
+import com.example.dynamicisland.gesture.IslandGesture
 
 /**
  * BATCH 5: ML Gesture Classifier
