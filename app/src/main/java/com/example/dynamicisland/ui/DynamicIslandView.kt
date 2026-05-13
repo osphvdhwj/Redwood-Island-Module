@@ -47,6 +47,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.example.dynamicisland.settings.DesignLanguage
 
 // Helper functions (must be inside the file, top-level)
 fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp): Modifier = this
@@ -194,7 +196,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                 Modifier.glassBackground(blurRadius = settings.blurIntensity.dp)
             } else if (settings.dynamicGradient && activeModel.value is LiveActivityModel.Music) {
                 // Use controller's gradient if available, else default
-                val gradientColors = controller?.currentGradientColors ?: listOf(Color.DarkGray, Color.Black)
+                val gradientColors: List<Color> = controller?.currentGradientColors ?: listOf(Color.DarkGray, Color.Black)
                 Modifier.background(Brush.verticalGradient(gradientColors))
             } else {
                 Modifier.background(Color.Black.copy(alpha = 0.85f))
@@ -234,12 +236,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 ) { _, dragAmount ->
                                     pullOffset = (pullOffset + dragAmount).coerceIn(-50f, 100f)
                                     // snapTo is not a suspend function, but call it correctly
-                                    elasticScale.snapTo(1f + pullOffset * 0.002f)
+                                    elasticScale.value = 1f + pullOffset * 0.002f
                                 }
                             }
                     ) {
                         // Call the main UI composable
-                        controller?.let { IslandMainUI(it) }
+                        controller?.let { view.IslandMainUI(it) }
                     }
                 }
             }

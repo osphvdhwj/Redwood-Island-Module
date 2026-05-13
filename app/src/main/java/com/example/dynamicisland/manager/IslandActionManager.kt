@@ -57,9 +57,9 @@ class IslandActionManager(
                     // AOSP States: 0 = Unavailable, 1 = Inactive, 2 = Active
                     newTileStates.add(
                         QSTileState(
-                            tileSpec = tileSpec,
-                            label = label.toString(),
+                            tileName = tileSpec,               // tileSpec is the identifier
                             isActive = stateInt == 2,
+                            iconRes = 0,                       // placeholder, you can load actual icon later
                             isUnavailable = stateInt == 0
                         )
                     )

@@ -2,7 +2,6 @@ package com.example.dynamicisland.gesture
 
 import android.content.Context
 import android.view.MotionEvent
-import com.example.dynamicisland.model.IslandGesture
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.util.concurrent.ConcurrentLinkedDeque

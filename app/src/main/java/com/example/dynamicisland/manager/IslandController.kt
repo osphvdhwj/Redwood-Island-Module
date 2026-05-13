@@ -26,14 +26,15 @@ import com.example.dynamicisland.settings.SettingsState
 import com.example.dynamicisland.settings.SettingsViewModel
 import com.example.dynamicisland.ipc.IslandState
 import com.example.dynamicisland.gesture.IslandGesture
+import androidx.compose.ui.graphics.Color
 
 class IslandController(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val activeExternalActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
     
     val settingsState = SettingsState()
-    val currentGradientColors = listOf(Color(0xFF1E1E2E), Color(0xFF0A0A0A))
-    val currentBrandColor = Color.White
+    val currentGradientColors: List<Color> = listOf(Color(0xFF1E1E2E), Color(0xFF0A0A0A))
+    val currentBrandColor: Color = Color.White
     
     private var pendingNotificationColor: Int = android.graphics.Color.WHITE
     private var hasUnseenNotification = false
@@ -311,7 +312,7 @@ class IslandController(private val context: Context) {
                             if (tilesArr != null) {
                                 for (i in 0 until tilesArr.length()) {
                                     val obj = tilesArr.getJSONObject(i)
-                                    tilesList.add(QSTileState(tileSpec = obj.getString("spec"), label = obj.getString("label"), isActive = false, isUnavailable = false))
+                                    tilesList.add(QSTileState(tileName = obj.getString("spec"), isActive = false, isUnavailable = false, iconRes = 0))
                                 }
                             }
 

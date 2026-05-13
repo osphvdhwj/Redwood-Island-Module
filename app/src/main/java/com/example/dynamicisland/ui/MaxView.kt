@@ -27,6 +27,7 @@ import com.example.dynamicisland.manager.IslandMediaManager
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.performance.IslandShaderWaveform
 import com.example.dynamicisland.settings.SettingsState
+import com.example.dynamicisland.ui.extractGradientColors
 
 @Composable
 fun MaxView(model: LiveActivityModel?, controller: IslandController) {
@@ -129,14 +130,14 @@ private fun MusicMax(
             // ✅ Fixed waveform call with correct parameters
             IslandShaderWaveform(
                 durationMs = music.durationMs,
-                posProvider = { music.positionMs.toFloat() },
+                posProvider = { music.positionMs },
                 isPlaying = music.isPlaying,
                 color = Color.White,
                 trackColor = Color.Gray,
                 onSeek = { fraction ->
                     val seekPos = (fraction * music.durationMs).toLong()
-                    controller.onSeekTo?.invoke(seekPos)   // `controller` from outer scope
-                },
+                    mediaManager.activeMediaController?.transportControls?.seekTo(seekPos)
+                }
                 modifier = Modifier.fillMaxWidth().height(40.dp)
             )
             Spacer(Modifier.height(8.dp))
@@ -209,16 +210,4 @@ private fun GenericMax(model: LiveActivityModel?) {
         Text(model?.toString() ?: "No content", color = Color.White)
     }
 }
-
-// Helper remains private – it’s only used inside this file, so fine.
-private fun extractGradientColors(bitmap: Bitmap): List<Color> {
-    val palette = Palette.from(bitmap).generate()
-    val colors = mutableListOf<Color>()
-    palette.dominantSwatch?.rgb?.let { colors.add(Color(it)) }
-    palette.vibrantSwatch?.rgb?.let { colors.add(Color(it)) }
-    if (colors.isEmpty()) {
-        colors.add(Color.DarkGray)
-        colors.add(Color.Black)
-    }
-    return colors.distinct().take(2)
-}
+1
