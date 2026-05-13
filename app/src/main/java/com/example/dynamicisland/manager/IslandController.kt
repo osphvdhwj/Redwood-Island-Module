@@ -2,9 +2,6 @@ package com.example.dynamicisland.manager
 
 import android.content.*
 import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.database.ContentObserver
 import android.graphics.Bitmap
 import android.media.AudioManager
@@ -28,6 +25,7 @@ import com.example.dynamicisland.settings.SettingsManager
 import com.example.dynamicisland.settings.SettingsState
 import com.example.dynamicisland.settings.SettingsViewModel
 import com.example.dynamicisland.ipc.IslandState
+import com.example.dynamicisland.gesture.IslandGesture
 
 class IslandController(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -176,14 +174,15 @@ class IslandController(private val context: Context) {
     private var isPeeking = false
     private var isPanelExpanded = false
 
-    // 🚀 NEW: Smart Configuration States
+    // Smart Configuration States
     private var isChargingEnabled = true
     private var isAlertsEnabled = true
     private var isTimersEnabled = true
     private var hideInLandscape = false
     private var idleSwipeAction = "BRIGHTNESS"
     private var longPressAction = "SCREENSHOT"
-    private val gestureMatrix = mutableMapOf<String, IslandAction>()
+    // FIXED: gestureMatrix now stores action names (String) instead of IslandAction objects
+    private val gestureMatrix = mutableMapOf<String, String>()
 
     private val brightnessObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) { super.onChange(selfChange); hardwareManager.updateBrightnessState(islandView) }
@@ -537,15 +536,22 @@ class IslandController(private val context: Context) {
                 if (payload != null && payload.length < 5000) {
                     val json = JSONObject(payload)
                     gestureMatrix.clear()
-                    json.keys().forEach { key -> try { if (key.startsWith("TYPE_")) { gestureMatrix[key] = IslandAction.valueOf(json.getString(key)) } } catch (e: Exception) {} }
+                    json.keys().forEach { key ->
+                        try {
+                            if (key.startsWith("TYPE_")) {
+                                // FIXED: Store the action string directly, not IslandAction.valueOf
+                                gestureMatrix[key] = json.getString(key)
+                            }
+                        } catch (e: Exception) {}
+                    }
                 }
             } catch (e: Exception) {}
         }
 
         view.onGestureEvent = { gesture ->
             val currentState = _islandState.value.name
-
-            var actionName = gestureMatrix["${currentState}_${gesture.name}"]?.name
+            // FIXED: gestureMatrix now holds action name strings
+            var actionName = gestureMatrix["${currentState}_${gesture.name}"]
 
             if (gesture.name == "SWIPE_LEFT" || gesture.name == "SWIPE_RIGHT") {
                 if (currentMedia != null && currentMedia?.isPlaying == true) {

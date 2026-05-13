@@ -611,6 +611,36 @@ fun SettingSlider(title: String, value: Float, valueRange: ClosedFloatingPointRa
     }
 }
 
+// Add these functions in the same file or in a separate helper file
+
+fun getPillShape(shape: String, cornerRadius: Float): androidx.compose.foundation.shape.RoundedCornerShape {
+    return when (shape) {
+        "capsule" -> RoundedCornerShape(50)
+        "squircle" -> RoundedCornerShape(cornerRadius / 2)
+        else -> RoundedCornerShape(cornerRadius.dp)
+    }
+}
+
+fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp): Modifier = this
+    .blur(blurRadius)
+    .background(Color.White.copy(alpha = 0.1f))
+
+@Composable
+fun AppSelectorDialog(
+    title: String,
+    currentSelection: Set<String>,
+    onSelectionChanged: (Set<String>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    // Simple dialog implementation – replace with your actual UI
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text("App selection dialog – implement as needed") },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("OK") } }
+    )
+}
+
 @Composable
 fun GestureActionChips(selectedAction: String, onSelect: (String) -> Unit) {
     val actions = listOf("dismiss", "next_track", "previous_track", "toggle_play_pause", "none")

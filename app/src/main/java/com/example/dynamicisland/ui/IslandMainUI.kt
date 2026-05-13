@@ -1,8 +1,8 @@
 package com.example.dynamicisland.ui
+
 import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*
-
 import android.view.WindowManager
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -46,6 +46,8 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 import com.example.dynamicisland.ipc.IslandState
+import com.example.dynamicisland.gesture.IslandGesture
+import androidx.compose.foundation.Canvas   // added missing import
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -130,7 +132,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         label = "blackhole_alpha"
     )
 
-    // Enhanced: dynamic background color with optional gradient for music Mid/Max
+    // background color logic unchanged
     val baseBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else {
         val baseAlpha = if (theme.isGlassmorphism) 0.65f else 1.0f
         if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) {
@@ -156,7 +158,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         label = "borderColor"
     )
     
-    // Premium: particle burst trigger on state change
+    // particle burst
     var particleTrigger by remember { mutableStateOf(0L) }
     val particles = remember { mutableStateListOf<Particle>() }
     
@@ -174,7 +176,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     }
     
     LaunchedEffect(state, model, isLandscape) {
-        // ... (existing layout flag logic) ...
         if (!isAttachedToWindow) return@LaunchedEffect
         val wp = windowParams ?: return@LaunchedEffect
         val wm = windowManager ?: return@LaunchedEffect
@@ -240,7 +241,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                 .shadow(elevation = shadowElevation, shape = RoundedCornerShape(animatedRadius), spotColor = Color.Black)
                 .clip(RoundedCornerShape(animatedRadius))
                 .then(
-                    // Premium: dynamic gradient background for music mid/max
                     if (state == IslandState.TYPE_2_MID && model is LiveActivityModel.Music && model.dominantColor != null) {
                         Modifier.background(
                             brush = Brush.verticalGradient(
@@ -416,9 +416,10 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                             }
                         }
 
-                        // Premium: draw particle burst overlay
+                        // Fixed: Canvas now defines `center` properly
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             if (particles.isNotEmpty()) {
+                                val center = Offset(size.width / 2, size.height / 2)
                                 val now = System.currentTimeMillis()
                                 particles.forEach { p ->
                                     val elapsed = now - p.birthTime
@@ -459,7 +460,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     }
 }
 
-// Data class for particle effect
 private data class Particle(
     val angle: Float,
     val speed: Float,

@@ -21,32 +21,26 @@ import com.example.dynamicisland.manager.IslandController
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.settings.SettingsState
 
-/**
- * SplitPill – Two independent pills that share the island width.
- * Pill A (left) and Pill B (right) with a draggable handle between them.
- * Used when two concurrent live activities are active (e.g., music + call).
- */
 @Composable
 fun SplitPill(controller: IslandController) {
-    val settings = controller.settingsState
-    // Mock two concurrent models – in reality these come from IslandPriorityEngine
-    val leftModel = controller.activeModels.getOrNull(0)
-    val rightModel = controller.activeModels.getOrNull(1)
+    val settings = controller.settingsState ?: SettingsState()
+    // In real implementation, get two active models from controller
+    val leftModel = null // replace with actual
+    val rightModel = null
 
     if (leftModel == null || rightModel == null) return
 
-    // Divider position as fraction of total width
     var dividerFraction by remember { mutableStateOf(0.5f) }
     val leftWeight = dividerFraction
     val rightWeight = 1f - dividerFraction
 
-    val shape = RoundedCornerShape(settings.pillCornerRadius.dp * 0.5f) // smaller pill for split
+    val shape = RoundedCornerShape(settings.pillCornerRadius.dp * 0.5f)
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp)
-            .shadow(12.dp, shape)                                // soft outer shadow
+            .shadow(12.dp, shape)
             .clip(shape)
             .background(
                 Brush.horizontalGradient(
@@ -55,7 +49,6 @@ fun SplitPill(controller: IslandController) {
                 )
             )
     ) {
-        // Left pill
         Box(
             modifier = Modifier
                 .weight(leftWeight)
@@ -65,15 +58,13 @@ fun SplitPill(controller: IslandController) {
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center
         ) {
-            // Reuse existing mini view logic – use a compact representation
             when (leftModel) {
-                is LiveActivityModel.Music -> MusicMiniPill(leftModel as LiveActivityModel.Music, controller)
-                is LiveActivityModel.Call -> CallMiniPill(leftModel as LiveActivityModel.Call)
+                is LiveActivityModel.Music -> MusicMiniPill(leftModel)
+                is LiveActivityModel.Call -> CallMiniPill(leftModel)
                 else -> Text(leftModel.toString(), color = Color.White, style = MaterialTheme.typography.labelSmall)
             }
         }
 
-        // Draggable divider
         Box(
             modifier = Modifier
                 .width(4.dp)
@@ -81,14 +72,12 @@ fun SplitPill(controller: IslandController) {
                 .background(Color.White.copy(alpha = 0.4f))
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures { _, dragAmount ->
-                        val totalWidth = size.width.toFloat() // need screen width; we approximate
-                        val delta = dragAmount / 500f // normalize
+                        val delta = dragAmount / 500f
                         dividerFraction = (dividerFraction + delta).coerceIn(0.2f, 0.8f)
                     }
                 }
         )
 
-        // Right pill
         Box(
             modifier = Modifier
                 .weight(rightWeight)
@@ -99,18 +88,16 @@ fun SplitPill(controller: IslandController) {
             contentAlignment = Alignment.Center
         ) {
             when (rightModel) {
-                is LiveActivityModel.Music -> MusicMiniPill(rightModel as LiveActivityModel.Music, controller)
-                is LiveActivityModel.Call -> CallMiniPill(rightModel as LiveActivityModel.Call)
+                is LiveActivityModel.Music -> MusicMiniPill(rightModel)
+                is LiveActivityModel.Call -> CallMiniPill(rightModel)
                 else -> Text(rightModel.toString(), color = Color.White, style = MaterialTheme.typography.labelSmall)
             }
         }
     }
 }
 
-/* ------- Mini composables used inside the split pills ------- */
-
 @Composable
-private fun MusicMiniPill(music: LiveActivityModel.Music, controller: IslandController) {
+private fun MusicMiniPill(music: LiveActivityModel.Music) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)

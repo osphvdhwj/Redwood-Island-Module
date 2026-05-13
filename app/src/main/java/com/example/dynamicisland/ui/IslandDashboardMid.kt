@@ -1,8 +1,4 @@
 package com.example.dynamicisland.ui
-import com.example.dynamicisland.R
-import com.example.dynamicisland.manager.*
-import com.example.dynamicisland.model.*
-import com.example.dynamicisland.manager.*
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,7 +19,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import com.example.dynamicisland.ipc.IslandState
+import com.example.dynamicisland.manager.QSTileState
+import com.example.dynamicisland.model.LiveActivityModel
 
 @Composable
 fun DynamicIslandView.DashboardMid(model: LiveActivityModel.Dashboard) {
@@ -49,7 +46,8 @@ fun DynamicIslandView.DashboardMid(model: LiveActivityModel.Dashboard) {
                     .alpha(alpha)
                     .clickable(enabled = !tile.isUnavailable) { 
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onGestureEvent?.invoke(IslandGesture.valueOf("QS_CLICK_${tile.tileSpec}"))
+                        // 🔧 FIXED: call onQsTileClick directly instead of IslandGesture.valueOf
+                        onQsTileClick?.invoke(tile.tileSpec)
                     },
                 contentAlignment = Alignment.Center
             ) {

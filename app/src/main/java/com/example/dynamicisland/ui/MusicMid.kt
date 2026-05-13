@@ -25,22 +25,15 @@ import com.example.dynamicisland.manager.IslandMediaManager
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.performance.IslandShaderWaveform
 import com.example.dynamicisland.settings.SettingsState
-import androidx.compose.foundation.text.BasicMarquee
 
-/**
- * MusicMid – Medium expanded music view.
- * Shows blurred album art, marquee title/artist, waveform seeker, and inline controls.
- */
 @Composable
 fun MusicMid(
     music: LiveActivityModel.Music,
     mediaManager: IslandMediaManager,
     settings: SettingsState
 ) {
-    // Extract colors from album art if dynamic gradient is enabled
     var gradientColors by remember { mutableStateOf(listOf(Color.DarkGray, Color.Black)) }
 
-    // Determine background brush
     val backgroundBrush = if (settings.dynamicGradient && gradientColors.size >= 2) {
         Brush.verticalGradient(gradientColors)
     } else {
@@ -50,11 +43,10 @@ fun MusicMid(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(120.dp)   // compact mid size
+            .height(120.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(backgroundBrush)
     ) {
-        // Blurred album art as background
         if (music.albumArtUri != null) {
             AsyncImage(
                 model = music.albumArtUri,
@@ -67,16 +59,13 @@ fun MusicMid(
             )
         }
 
-        // Foreground content
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(12.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Track info with marquee
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Small album art thumbnail
                 AsyncImage(
                     model = music.albumArtUri,
                     contentDescription = null,
@@ -99,19 +88,18 @@ fun MusicMid(
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
-                        overflow = TextOverflow.Marquee
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = music.artist,
                         color = Color.White.copy(alpha = 0.7f),
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 1,
-                        overflow = TextOverflow.Marquee
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
-            // Waveform seeker using existing IslandShaderWaveform
             IslandShaderWaveform(
                 progress = music.progress,
                 modifier = Modifier
@@ -119,7 +107,6 @@ fun MusicMid(
                     .height(28.dp)
             )
 
-            // Playback controls
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -148,9 +135,6 @@ fun MusicMid(
     }
 }
 
-/**
- * Helper to extract two prominent colors from album art bitmap.
- */
 private fun extractGradientColors(bitmap: Bitmap): List<Color> {
     val palette = Palette.from(bitmap).generate()
     val colors = mutableListOf<Color>()

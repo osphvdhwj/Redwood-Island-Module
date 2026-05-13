@@ -1,5 +1,6 @@
 package com.example.dynamicisland.ui
 
+import android.graphics.Bitmap
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,24 +20,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import androidx.palette.graphics.Palette
+import com.example.dynamicisland.manager.IslandController
 import com.example.dynamicisland.manager.IslandMediaManager
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.performance.IslandShaderWaveform
 import com.example.dynamicisland.settings.SettingsState
-import com.example.dynamicisland.util.extractGradientColors   // If you don't have this, I'll provide it below
 
-/**
- * MaxView – Full expanded island dashboard.
- * Now correctly integrated into the existing project.
- */
 @Composable
-fun MaxView(model: LiveActivityModel?, controller: IslandController) {   // Assume IslandController is in manager/
-    val settings = controller.settingsState
-
-    // Use the existing pill shape helper if available, otherwise a default shape
-    val shape = remember(settings.pillShape, settings.pillCornerRadius) {
-        RoundedCornerShape(settings.pillCornerRadius.dp)   // simplified; adjust if you have a custom shape utility
-    }
+fun MaxView(model: LiveActivityModel?, controller: IslandController) {
+    val settings = controller.settingsState ?: SettingsState()
+    val shape = RoundedCornerShape(settings.pillCornerRadius.dp)
 
     when (model) {
         is LiveActivityModel.Music -> MusicMax(model, controller.mediaManager, settings)
@@ -199,4 +193,16 @@ private fun GenericMax(model: LiveActivityModel?) {
     ) {
         Text(model?.toString() ?: "No content", color = Color.White)
     }
+}
+
+private fun extractGradientColors(bitmap: Bitmap): List<Color> {
+    val palette = Palette.from(bitmap).generate()
+    val colors = mutableListOf<Color>()
+    palette.dominantSwatch?.rgb?.let { colors.add(Color(it)) }
+    palette.vibrantSwatch?.rgb?.let { colors.add(Color(it)) }
+    if (colors.isEmpty()) {
+        colors.add(Color.DarkGray)
+        colors.add(Color.Black)
+    }
+    return colors.distinct().take(2)
 }

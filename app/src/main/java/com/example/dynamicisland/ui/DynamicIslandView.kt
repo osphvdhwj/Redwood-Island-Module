@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
@@ -19,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -41,6 +43,19 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import com.example.dynamicisland.ipc.IslandState
+
+// Helper functions (must be inside the file, top-level)
+fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp): Modifier = this
+    .blur(blurRadius)
+    .background(Color.White.copy(alpha = 0.1f))
+
+fun getPillShape(shape: String, cornerRadius: Float): androidx.compose.foundation.shape.RoundedCornerShape {
+    return when (shape) {
+        "capsule" -> androidx.compose.foundation.shape.RoundedCornerShape(50)
+        "squircle" -> androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius / 2)
+        else -> androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius.dp)
+    }
+}
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @SuppressLint("ViewConstructor")
@@ -160,7 +175,10 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         composeView.setViewTreeLifecycleOwner(this@DynamicIslandView)
         composeView.setViewTreeViewModelStoreOwner(this@DynamicIslandView)
-        composeView.setViewTreeSavedStateRegistryOwner(this@DynamicIslandView)
+        // Fix for setViewTreeSavedStateRegistryOwner (requires API 33+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            composeView.setViewTreeSavedStateRegistryOwner(this@DynamicIslandView)
+        }
 
         composeView.setContent {
             // Read settings directly from the controller (if available) or use defaults
@@ -171,14 +189,14 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             val backgroundModifier = if (settings.designLanguage == com.example.dynamicisland.settings.DesignLanguage.APPLE_LIQUID_GLASS) {
                 Modifier.glassBackground(blurRadius = settings.blurIntensity.dp)
             } else if (settings.example.dynamicGradient && activeModel.value is LiveActivityModel.Music) {
-                Modifier.background(Brush.verticalGradient(controller.currentGradientColors))
+                Modifier.background(Brush.verticalGradient(controller?.currentGradientColors ?: listOf(Color.DarkGray, Color.Black)))
             } else {
                 Modifier.background(Color.Black.copy(alpha = 0.85f))
             }
 
             // Shadow and glow
             val shadowModifier = if (settings.shadowCasting) {
-                Modifier.shadow(16.dp, shape, ambientColor = controller.currentBrandColor?.copy(alpha = 0.4f) ?: Color.White.copy(alpha = 0.4f))
+                Modifier.shadow(16.dp, shape, ambientColor = controller?.currentBrandColor?.copy(alpha = 0.4f) ?: Color.White.copy(alpha = 0.4f))
             } else Modifier
 
             MaterialTheme(colorScheme = darkColorScheme()) {
