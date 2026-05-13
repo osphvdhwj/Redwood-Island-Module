@@ -30,7 +30,11 @@ import com.example.dynamicisland.gesture.IslandGesture
 class IslandController(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val activeExternalActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
-
+    
+    val settingsState = SettingsState()
+    val currentGradientColors = listOf(Color(0xFF1E1E2E), Color(0xFF0A0A0A))
+    val currentBrandColor = Color.White
+    
     private var pendingNotificationColor: Int = android.graphics.Color.WHITE
     private var hasUnseenNotification = false
 
@@ -131,7 +135,7 @@ class IslandController(private val context: Context) {
         currentHardware = newHw; evaluatePriority()
     }
 
-    private val mediaManager = IslandMediaManager(context, scope,
+    val mediaManager = IslandMediaManager(context, scope,
         onMediaChanged = { newMedia -> currentMedia = newMedia; evaluatePriority() },
         onMediaTick = { pos -> islandView?.updateTicker(pos) },
         onPeekRequested = {

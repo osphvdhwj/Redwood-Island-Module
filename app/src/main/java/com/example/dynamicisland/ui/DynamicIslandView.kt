@@ -1,3 +1,4 @@
+// File: app/src/main/java/com/example/dynamicisland/ui/DynamicIslandView.kt
 package com.example.dynamicisland.ui
 
 import android.annotation.SuppressLint
@@ -25,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer   // ← added missing import
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
@@ -33,8 +35,11 @@ import androidx.lifecycle.*
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
+import com.example.dynamicisland.gesture.IslandGesture    // ← added missing import
+import com.example.dynamicisland.ipc.IslandState
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*
+import com.example.dynamicisland.settings.SettingsState    // ← added (ensure SettingsState exists)
 import com.example.dynamicisland.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -42,7 +47,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-import com.example.dynamicisland.ipc.IslandState
 
 // Helper functions (must be inside the file, top-level)
 fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp): Modifier = this
@@ -181,15 +185,17 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         }
 
         composeView.setContent {
-            // Read settings directly from the controller (if available) or use defaults
-            val settings = controller?.settingsState ?: com.example.dynamicisland.settings.SettingsState()
+            // Safely retrieve settings from the controller or fallback
+            val settings = controller?.settingsState ?: SettingsState()
             val shape = getPillShape(settings.pillShape, settings.pillCornerRadius)
 
             // Background: liquid glass, dynamic gradient, or solid dark
-            val backgroundModifier = if (settings.designLanguage == com.example.dynamicisland.settings.DesignLanguage.APPLE_LIQUID_GLASS) {
+            val backgroundModifier = if (settings.designLanguage == DesignLanguage.APPLE_LIQUID_GLASS) {
                 Modifier.glassBackground(blurRadius = settings.blurIntensity.dp)
-            } else if (settings.example.dynamicGradient && activeModel.value is LiveActivityModel.Music) {
-                Modifier.background(Brush.verticalGradient(controller?.currentGradientColors ?: listOf(Color.DarkGray, Color.Black)))
+            } else if (settings.dynamicGradient && activeModel.value is LiveActivityModel.Music) {
+                // Use controller's gradient if available, else default
+                val gradientColors = controller?.currentGradientColors ?: listOf(Color.DarkGray, Color.Black)
+                Modifier.background(Brush.verticalGradient(gradientColors))
             } else {
                 Modifier.background(Color.Black.copy(alpha = 0.85f))
             }
@@ -204,6 +210,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     LocalIslandTheme provides activeTheme.value,
                     androidx.compose.ui.platform.LocalContext provides moduleContext
                 ) {
+                    // We need a coroutine scope to call suspend functions inside drag handlers
+                    val scope = rememberCoroutineScope()
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -218,17 +226,19 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             .pointerInput(Unit) {
                                 detectVerticalDragGestures(
                                     onDragEnd = {
-                                        elasticScale.animateTo(1f, spring())
+                                        // Launch inside a coroutine (this is a suspend function)
+                                        scope.launch { elasticScale.animateTo(1f, spring()) }
                                         pullOffset = 0f
                                     },
-                                    onDragCancel = { elasticScale.snapTo(1f) }
+                                    onDragCancel = { scope.launch { elasticScale.snapTo(1f) } }
                                 ) { _, dragAmount ->
                                     pullOffset = (pullOffset + dragAmount).coerceIn(-50f, 100f)
+                                    // snapTo is not a suspend function, but call it correctly
                                     elasticScale.snapTo(1f + pullOffset * 0.002f)
                                 }
                             }
                     ) {
-                        // Call the original IslandUI or the new IslandMainUI via controller
+                        // Call the main UI composable
                         controller?.let { IslandMainUI(it) }
                     }
                 }

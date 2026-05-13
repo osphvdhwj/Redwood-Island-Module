@@ -1,3 +1,4 @@
+// File: app/src/main/java/com/example/dynamicisland/manager/IslandMediaManager.kt
 package com.example.dynamicisland.manager
 
 import com.example.dynamicisland.model.*
@@ -146,8 +147,15 @@ class IslandMediaManager(
                 }
             }
 
-            // Extract Custom Actions
-            val extractedActions = pbState.customActions?.map { CustomMediaAction(it.action, null, null, true) } ?: emptyList()
+            // ✅ FIXED: CustomMediaAction mapping – correct arguments and no extra parameter
+            val extractedActions = pbState.customActions?.map { customAction ->
+                CustomMediaAction(
+                    action = customAction.action ?: "",
+                    icon   = null,
+                    label  = customAction.name?.toString() ?: customAction.action ?: ""
+                )
+            } ?: emptyList()
+
             var systemLiked = false; var systemShuffle = false; var systemRepeat = 0
             
             pbState.customActions?.forEach { action ->

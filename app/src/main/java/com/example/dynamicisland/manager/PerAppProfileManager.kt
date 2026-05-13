@@ -1,11 +1,11 @@
+// File: app/src/main/java/com/example/dynamicisland/manager/PerAppProfileManager.kt
 package com.example.dynamicisland.manager
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.example.dynamicisland.model.IslandState
+import com.example.dynamicisland.ipc.IslandState   // ← keep only this import
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
-import com.example.dynamicisland.ipc.IslandState
 
 /**
  * BATCH 4: Per-App Island Behaviour Profiles

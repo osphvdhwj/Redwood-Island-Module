@@ -1,4 +1,6 @@
+// File: app/src/main/java/com/example/dynamicisland/ui/ConfigActivity.kt
 package com.example.dynamicisland.ui
+
 import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*
@@ -6,32 +8,37 @@ import com.example.dynamicisland.model.*
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
 
 class ConfigActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
-        setContent { 
-            MaterialTheme(colorScheme = darkColorScheme()) { 
-                Surface(modifier = Modifier.fillMaxSize()) { 
-                    ConfigScreenNav(prefs) 
-                } 
-            } 
+
+        // Use ComposeView directly – no need for the missing activity-compose dependency
+        val composeView = ComposeView(this).apply {
+            setContent {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    Surface(modifier = Modifier.fillMaxSize()) {
+                        ConfigScreenNav(prefs)
+                    }
+                }
+            }
         }
+        setContentView(composeView)
     }
 
     @Composable
     fun ConfigScreenNav(prefs: android.content.SharedPreferences) {
         var selectedNav by remember { mutableIntStateOf(0) }
-        
+
         Scaffold(
             bottomBar = {
                 NavigationBar {

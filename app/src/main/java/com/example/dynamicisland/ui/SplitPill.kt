@@ -124,11 +124,11 @@ private fun CallMiniPill(call: LiveActivityModel.Call) {
     ) {
         Icon(
             Icons.Default.Phone, null,
-            tint = if (call.isIncoming) Color(0xFF34C759) else Color(0xFFFF3B30),
+            tint = if (call.state == "RINGING") Color(0xFF34C759) else Color(0xFFFF3B30),
             modifier = Modifier.size(16.dp)
         )
         Text(
-            text = call.contactName ?: "Unknown",
+            text = call.callerName ?: "Unknown",
             color = Color.White,
             style = MaterialTheme.typography.labelSmall,
             maxLines = 1

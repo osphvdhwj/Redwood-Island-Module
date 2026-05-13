@@ -1,3 +1,4 @@
+// File: app/src/main/java/com/example/dynamicisland/ui/IslandDashboardMax.kt
 package com.example.dynamicisland.ui
 import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.*
@@ -22,8 +23,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.blur
@@ -397,14 +396,14 @@ fun UtilityGrid(tiles: List<QSTileState>, onQsClick: (String) -> Unit, haptic: a
                             .clickable {
                                 if (tile != null) {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onQsClick(tile.tileSpec)
+                                    onQsClick(tile.tileName)  // ✅ now uses tileName instead of tileSpec
                                 }
                             },
                         isActive = isActive
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             Icon(
-                                imageVector = getIconForSpec(tile?.tileSpec),
+                                imageVector = getIconForSpec(tile?.tileName),
                                 contentDescription = null,
                                 tint = if (isActive) Color.White else Color.White.copy(alpha = 0.7f),
                                 modifier = Modifier.size(24.dp)
@@ -412,7 +411,7 @@ fun UtilityGrid(tiles: List<QSTileState>, onQsClick: (String) -> Unit, haptic: a
                             if (tile != null) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = tile.label.take(8),
+                                    text = tile.tileName.take(8),  // ✅ simple label from tileName
                                     color = if (isActive) Color.White else Color.White.copy(alpha = 0.7f),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold

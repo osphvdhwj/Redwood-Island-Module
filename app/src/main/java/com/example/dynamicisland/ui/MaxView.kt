@@ -1,3 +1,4 @@
+// File: app/src/main/java/com/example/dynamicisland/ui/MaxView.kt
 package com.example.dynamicisland.ui
 
 import android.graphics.Bitmap
@@ -29,6 +30,9 @@ import com.example.dynamicisland.settings.SettingsState
 
 @Composable
 fun MaxView(model: LiveActivityModel?, controller: IslandController) {
+    // Note: IslandController must have a public `settingsState` property for this to compile.
+    // If not already added, insert this in IslandController:
+    //     val settingsState = SettingsState()
     val settings = controller.settingsState ?: SettingsState()
     val shape = RoundedCornerShape(settings.pillCornerRadius.dp)
 
@@ -94,7 +98,8 @@ private fun MusicMax(
                         .clip(RoundedCornerShape(16.dp)),
                     contentScale = ContentScale.Crop,
                     onSuccess = { state ->
-                        val bitmap = state.result.image.bitmap
+                        val drawable = state.result.drawable
+                        val bitmap = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
                         if (settings.dynamicGradient && bitmap != null) {
                             gradientColors = extractGradientColors(bitmap)
                         }
@@ -121,23 +126,33 @@ private fun MusicMax(
                 }
             }
 
+            // ✅ Fixed waveform call with correct parameters
             IslandShaderWaveform(
-                progress = music.progress,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp)
+                durationMs = music.durationMs,
+                posProvider = { music.positionMs.toFloat() },
+                isPlaying = music.isPlaying,
+                color = Color.White,
+                trackColor = Color.Gray,
+                onSeek = { fraction ->
+                    val seekPos = (fraction * music.durationMs).toLong()
+                    controller.onSeekTo?.invoke(seekPos)   // `controller` from outer scope
+                },
+                modifier = Modifier.fillMaxWidth().height(40.dp)
             )
-
             Spacer(Modifier.height(8.dp))
+
+            // ✅ Media buttons now use sendMediaCommand
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { mediaManager.skipToPrevious() }) {
+                IconButton(onClick = { mediaManager.sendMediaCommand("PREV") }) {
                     Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White)
                 }
-                IconButton(onClick = { mediaManager.playPause() }) {
+                IconButton(onClick = {
+                    mediaManager.sendMediaCommand(if (music.isPlaying) "PAUSE" else "PLAY")
+                }) {
                     Icon(
                         if (music.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         "Play/Pause",
@@ -145,7 +160,7 @@ private fun MusicMax(
                         modifier = Modifier.size(36.dp)
                     )
                 }
-                IconButton(onClick = { mediaManager.skipToNext() }) {
+                IconButton(onClick = { mediaManager.sendMediaCommand("NEXT") }) {
                     Icon(Icons.Default.SkipNext, "Next", tint = Color.White)
                 }
             }
@@ -195,6 +210,7 @@ private fun GenericMax(model: LiveActivityModel?) {
     }
 }
 
+// Helper remains private – it’s only used inside this file, so fine.
 private fun extractGradientColors(bitmap: Bitmap): List<Color> {
     val palette = Palette.from(bitmap).generate()
     val colors = mutableListOf<Color>()

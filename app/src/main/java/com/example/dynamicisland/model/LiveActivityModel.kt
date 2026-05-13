@@ -1,4 +1,4 @@
-// File: app/src/main/java/com/dynamicisland/model/LiveActivityModel.kt
+// File: app/src/main/java/com/example/dynamicisland/model/LiveActivityModel.kt
 package com.example.dynamicisland.model
 
 import com.example.dynamicisland.ipc.LiveActivityInfo
@@ -43,7 +43,7 @@ sealed class LiveActivityModel {
 
     data class Call(
         override val id: String = "sys_call",
-        override val type: ActivityType = ActivityType.ONGOING_TASK,
+        override val type: ActivityType = ActivityType.CALL,   // now valid
         override val isTransient: Boolean = false,
         override val isCritical: Boolean = true,
         override val isSensitive: Boolean = true,
@@ -200,7 +200,7 @@ sealed class LiveActivityModel {
         override val type: ActivityType = ActivityType.MESSAGE,
         val content: String,
         val format: String,                         // "QR_CODE", "EAN_13", etc.
-        val label: String = "",                     // <-- ADD THIS LINE
+        val label: String = "",                     // <-- ALREADY ADDED
         override val isTransient: Boolean = true,
         override val isCritical: Boolean = false,
         override val isSensitive: Boolean = false
@@ -209,7 +209,7 @@ sealed class LiveActivityModel {
     // Navigation instruction
     data class Navigation(
         override val id: String = "sys_nav",
-        override val type: ActivityType = ActivityType.ONGOING_TASK,
+        override val type: ActivityType = ActivityType.NAVIGATION,   // use new constant
         val instruction: String,                    // "Turn left in 200m"
         val distance: Int,                          // meters
         override val isTransient: Boolean = false,
@@ -355,11 +355,12 @@ data class CustomMediaAction(
 data class QSTileState(
     val tileName: String,
     val isActive: Boolean,
-    val iconRes: Int
+    val iconRes: Int,
+    val isUnavailable: Boolean = false   // ← add this field
 )
 
 /**
- * Simplified activity type enum – can be extended to match your IPC layer.
+ * Simplified activity type enum – now includes all needed constants.
  */
 enum class ActivityType {
     MESSAGE,
@@ -367,16 +368,11 @@ enum class ActivityType {
     CHARGING,
     HARDWARE,
     ALARM,
-    TIMER
+    TIMER,
+    CALL,             // ← added
+    NAVIGATION,       // ← added
+    BATTERY_LOW,      // ← added
+    BLUETOOTH,        // ← added
+    WIFI,             // ← added
+    NONE              // ← added (for use as a default / "no activity")
 }
-
-/**
- * Minimal IPC wrapper (original `LiveActivityInfo` from your hook layer).
- * Keep this in sync with your actual IPC model.
- 
-data class LiveActivityInfo(
-    val packageName: String = "",
-    val action: String = "",
-    val extras: Bundle = Bundle.EMPTY
-)
-*/

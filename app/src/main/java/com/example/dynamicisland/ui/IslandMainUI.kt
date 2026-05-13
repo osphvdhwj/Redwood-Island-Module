@@ -1,3 +1,4 @@
+// File: app/src/main/java/com/example/dynamicisland/ui/IslandMainUI.kt
 package com.example.dynamicisland.ui
 
 import com.example.dynamicisland.R
@@ -41,13 +42,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay   // ← added
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 import com.example.dynamicisland.ipc.IslandState
 import com.example.dynamicisland.gesture.IslandGesture
-import androidx.compose.foundation.Canvas   // added missing import
+import androidx.compose.foundation.Canvas
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -170,7 +172,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                 val speed = Random.nextFloat() * 400f + 200f
                 particles.add(Particle(angle, speed, particleTrigger))
             }
-            delay(1500)
+            delay(1500)   // now resolved
             particles.clear()
         }
     }
@@ -372,7 +374,11 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                         is LiveActivityModel.ExternalActivity -> ExternalActivityMid(model)
                                         is LiveActivityModel.LinkIntercept   -> LinkInterceptMid(model)
                                         is LiveActivityModel.SystemAlert     -> {
-                                            if (model.alertType == "OTP_CATCHER") OtpMid(model)
+                                            if (model.alertType == "OTP_CATCHER") {
+                                                // Convert SystemAlert to Otp and pass settings
+                                                val otpModel = LiveActivityModel.Otp(code = model.message)
+                                                OtpMid(otpModel, settings = controller?.settingsState ?: com.example.dynamicisland.settings.SettingsState())
+                                            }
                                             else SystemAlertMid(model)
                                         }
                                         is LiveActivityModel.General         -> {
@@ -380,9 +386,16 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                                 model.id == "sys_translation"  -> TranslationGeneralMid(model)
                                                 model.id == "sys_barcode"      -> BarcodeGeneralMid(model)
                                                 model.id == "sys_navigation"
-                                                    || model.type == com.example.dynamicisland.model.ActivityType.MESSAGE
-                                                        && model.accentColor == android.graphics.Color.parseColor("#34A853")
-                                                -> NavigationMid(model)
+                                                    || (model.type == ActivityType.MESSAGE
+                                                        && model.accentColor == android.graphics.Color.parseColor("#34A853"))
+                                                -> {
+                                                    // Convert General to Navigation model for the UI
+                                                    val navModel = LiveActivityModel.Navigation(
+                                                        instruction = model.dataText.ifEmpty { model.title },
+                                                        distance = 0   // unknown
+                                                    )
+                                                    NavigationMid(navModel)
+                                                }
                                                 else                           -> GeneralMid(model)
                                             }
                                         }
@@ -416,7 +429,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                             }
                         }
 
-                        // Fixed: Canvas now defines `center` properly
+                        // Particles canvas – fixed `center` declaration
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             if (particles.isNotEmpty()) {
                                 val center = Offset(size.width / 2, size.height / 2)

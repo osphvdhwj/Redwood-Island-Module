@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.LiveActivityModel
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.center
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.DrawScope
 

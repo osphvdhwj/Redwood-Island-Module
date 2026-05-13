@@ -1,3 +1,4 @@
+// File: app/src/main/java/com/example/dynamicisland/ui/IslandDashboardMid.kt
 package com.example.dynamicisland.ui
 
 import androidx.compose.foundation.Image
@@ -16,23 +17,27 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.example.dynamicisland.manager.QSTileState
 import com.example.dynamicisland.model.LiveActivityModel
+import com.example.dynamicisland.model.QSTileState
 
 @Composable
 fun DynamicIslandView.DashboardMid(model: LiveActivityModel.Dashboard) {
     val haptic = LocalHapticFeedback.current
-    
+
     Row(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         val tilesToShow = model.activeTiles.take(4)
-        
+
         tilesToShow.forEach { tile ->
             val bgColor = if (tile.isActive) Color.White else Color.White.copy(alpha = 0.15f)
             val fgColor = if (tile.isActive) Color.Black else Color.White
@@ -44,22 +49,27 @@ fun DynamicIslandView.DashboardMid(model: LiveActivityModel.Dashboard) {
                     .clip(CircleShape)
                     .background(bgColor)
                     .alpha(alpha)
-                    .clickable(enabled = !tile.isUnavailable) { 
+                    .clickable(enabled = !tile.isUnavailable) {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        // 🔧 FIXED: call onQsTileClick directly instead of IslandGesture.valueOf
-                        onQsTileClick?.invoke(tile.tileSpec)
+                        onQsTileClick?.invoke(tile.tileName)   // 👈 now uses tileName
                     },
                 contentAlignment = Alignment.Center
             ) {
-                 if (tile.iconBitmap != null) {
-                     Image(
-                        bitmap = tile.iconBitmap.asImageBitmap(),
-                        contentDescription = tile.label,
-                        colorFilter = ColorFilter.tint(fgColor),
+                // Use the resource ID to show icon; fallback to default Settings icon
+                if (tile.iconRes != 0) {
+                    Icon(
+                        painter = painterResource(id = tile.iconRes),
+                        contentDescription = tile.tileName,     // 👈 tileName as label
+                        tint = fgColor,
                         modifier = Modifier.size(20.dp)
                     )
                 } else {
-                    Icon(Icons.Default.Settings, contentDescription = null, tint = fgColor, modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = tile.tileName,
+                        tint = fgColor,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }

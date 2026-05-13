@@ -1,4 +1,4 @@
-// File: SettingsScreen.kt
+// File: app/src/main/java/com/example/dynamicisland/ui/settings/SettingsScreen.kt
 // Full settings UI with all sections implemented.
 // Requires:
 //   - com.dynamicisland.util.getPillShape
@@ -18,6 +18,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow      // ← added
+import androidx.compose.ui.draw.blur        // ← added
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -86,6 +88,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
 }
 
 // ---------- Essentials Tab ----------
+@OptIn(ExperimentalLayoutApi::class)   // ← added for FlowRow
 @Composable
 fun EssentialsTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery: String) {
     val scrollState = rememberScrollState()
@@ -370,7 +373,7 @@ fun AdvancedTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery:
         Spacer(Modifier.height(12.dp))
 
         // iOS-Inspired
-        CollapsibleSection("iOS-Inspired", Icons.Default.Apple, false, searchQuery,
+        CollapsibleSection("iOS-Inspired", Icons.Default.Phone, false, searchQuery,   // ← changed from Apple
             listOf("Live Activities", "Focus Filter", "Universal Clipboard Previews", "Always-On Display",
                 "Face ID Padlock", "Ring/Silent Switch", "Timer", "MagSafe Animation", "Proximity Wake", "Focus Mode Pill")) {
             SettingSwitch("Live Activities API", null, state.liveActivitiesApi) { viewModel.updateSetting(SettingKey.LIVE_ACTIVITIES_API, it) }
@@ -507,7 +510,7 @@ fun IslandPreview(state: SettingsState) {
         .size(width = 200.dp, height = 40.dp)
         .clip(shape)
         .background(gradient ?: Brush.verticalGradient(listOf(Color.DarkGray, Color.Black)))
-        .then(if (state.glowEffect) Modifier.shadow(8.dp, shape) else Modifier)
+        .then(if (state.glowEffect) Modifier.shadow(8.dp, shape) else Modifier)   // shadow import now present
         .padding(8.dp)
 
     Card(
@@ -622,7 +625,7 @@ fun getPillShape(shape: String, cornerRadius: Float): androidx.compose.foundatio
 }
 
 fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp): Modifier = this
-    .blur(blurRadius)
+    .blur(blurRadius)                          // blur import now present
     .background(Color.White.copy(alpha = 0.1f))
 
 @Composable
@@ -641,6 +644,7 @@ fun AppSelectorDialog(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)   // ← added for FlowRow
 @Composable
 fun GestureActionChips(selectedAction: String, onSelect: (String) -> Unit) {
     val actions = listOf("dismiss", "next_track", "previous_track", "toggle_play_pause", "none")
@@ -654,4 +658,3 @@ fun GestureActionChips(selectedAction: String, onSelect: (String) -> Unit) {
         }
     }
 }
-// (AppSelectorDialog, PillShape utility, etc. are assumed to be already defined in their own files)

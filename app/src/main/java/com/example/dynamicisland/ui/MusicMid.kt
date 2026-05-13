@@ -74,7 +74,8 @@ fun MusicMid(
                         .clip(RoundedCornerShape(12.dp)),
                     contentScale = ContentScale.Crop,
                     onSuccess = { state ->
-                        val bitmap = state.result.image.bitmap
+                        val drawable = state.result.drawable
+                        val bitmap = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
                         if (settings.dynamicGradient && bitmap != null) {
                             gradientColors = extractGradientColors(bitmap)
                         }
@@ -101,10 +102,13 @@ fun MusicMid(
             }
 
             IslandShaderWaveform(
-                progress = music.progress,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(28.dp)
+                durationMs = music.durationMs,
+                posProvider = { music.positionMs.toFloat() },
+                isPlaying = music.isPlaying,
+                color = Color.White,
+                trackColor = Color.Gray,
+                onSeek = { /* optional: handle seek */ },
+                modifier = Modifier.fillMaxWidth().height(28.dp)
             )
 
             Row(
@@ -112,21 +116,25 @@ fun MusicMid(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { mediaManager.skipToPrevious() }) {
+                IconButton(onClick = { mediaManager.sendMediaCommand("PREV") }) {
                     Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White)
                 }
-                IconButton(onClick = { mediaManager.playPause() }) {
+                IconButton(onClick = {
+                    mediaManager.sendMediaCommand(if (music.isPlaying) "PAUSE" else "PLAY")
+                }) {
                     Icon(
                         if (music.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         "Play/Pause",
                         tint = Color.White
                     )
                 }
-                IconButton(onClick = { mediaManager.skipToNext() }) {
+                IconButton(onClick = { mediaManager.sendMediaCommand("NEXT") }) {
                     Icon(Icons.Default.SkipNext, "Next", tint = Color.White)
                 }
-                if (mediaManager.isLiked()) {
-                    IconButton(onClick = { mediaManager.toggleLike() }) {
+                if (music.isLiked) {
+                    IconButton(onClick = {
+                        mediaManager.activeMediaController?.transportControls?.sendCustomAction("TOGGLE_LIKE", null)
+                    }) {
                         Icon(Icons.Default.Favorite, "Like", tint = Color.Red, modifier = Modifier.size(20.dp))
                     }
                 }
@@ -135,7 +143,7 @@ fun MusicMid(
     }
 }
 
-private fun extractGradientColors(bitmap: Bitmap): List<Color> {
+fun extractGradientColors(bitmap: Bitmap): List<Color> {
     val palette = Palette.from(bitmap).generate()
     val colors = mutableListOf<Color>()
     palette.dominantSwatch?.rgb?.let { colors.add(Color(it)) }

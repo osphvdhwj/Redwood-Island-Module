@@ -1,3 +1,4 @@
+// File: app/src/main/java/com/example/dynamicisland/ui/IslandGamingHUD.kt
 package com.example.dynamicisland.ui
 
 import androidx.compose.ui.geometry.CornerRadius
@@ -18,8 +19,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.dynamicisland.model.IslandState
-import com.example.dynamicisland.ipc.IslandState
+import com.example.dynamicisland.ipc.IslandState   // ← only this import (model.IslandState removed)
 
 /**
  * BATCH 6: Gaming HUD

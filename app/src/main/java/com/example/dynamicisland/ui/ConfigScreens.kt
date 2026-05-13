@@ -1,9 +1,11 @@
+// File: app/src/main/java/com/example/dynamicisland/ui/ConfigScreens.kt
 package com.example.dynamicisland.ui
+
 import androidx.compose.material.icons.filled.Settings
 import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*
-import com.example.dynamicisland.manager.*
+import com.example.dynamicisland.gesture.IslandGesture   // ← ADD THIS
 
 import android.content.Context
 import android.content.Intent
@@ -31,6 +33,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+// ── The rest of the file stays EXACTLY as you posted ─────────────────────
+// … all the @Composable functions LayoutScreen, ThemeScreen, DashboardScreen, FeaturesScreen, GesturesScreen …
+// (I'm not duplicating them because they are already correct.)
 
 @Composable
 fun LayoutScreen(prefs: SharedPreferences) {

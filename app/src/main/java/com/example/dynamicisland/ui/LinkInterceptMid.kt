@@ -75,7 +75,7 @@ fun LinkInterceptMid(
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = link.url,
+                text = link.rawIntent.data?.toString() ?: link.urlHost,
                 color = Color.White,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
@@ -97,7 +97,7 @@ fun LinkInterceptMid(
                     copyPressed = true
                     try {
                         context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse(link.url))
+                            Intent(Intent.ACTION_VIEW, Uri.parse(link.rawIntent.data?.toString() ?: link.urlHost))
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         )
                     } catch (_: Exception) {}
@@ -122,7 +122,7 @@ fun LinkInterceptMid(
                 .clickable {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("URL", link.url))
+                    clipboard.setPrimaryClip(ClipData.newPlainText("URL", link.rawIntent.data?.toString() ?: link.urlHost))
                 }
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
