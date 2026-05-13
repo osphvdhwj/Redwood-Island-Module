@@ -1,4 +1,3 @@
-// File: app/src/main/java/com/example/dynamicisland/ui/DynamicIslandView.kt
 package com.example.dynamicisland.ui
 
 import android.annotation.SuppressLint
@@ -82,31 +81,31 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onAppPinnedClick: ((String) -> Unit)? = null
     var onQsTileClick: ((String) -> Unit)? = null
 
-    var pendingNotifColor = mutableIntStateOf(android.graphics.Color.WHITE)
-    var hasUnseenNotif = mutableStateOf(false)
+    val pendingNotifColor = mutableIntStateOf(android.graphics.Color.WHITE)
+    val hasUnseenNotif = mutableStateOf(false)
 
-    var ringW = mutableStateOf(45f); var ringH = mutableStateOf(45f); var ringX = mutableStateOf(0f); var ringY = mutableStateOf(48f)
-    var miniW = mutableStateOf(180f); var miniH = mutableStateOf(36f); var miniX = mutableStateOf(0f); var miniY = mutableStateOf(48f)
-    var midW = mutableStateOf(320f); var midH = mutableStateOf(80f); var midX = mutableStateOf(0f); var midY = mutableStateOf(48f)
-    var maxW = mutableStateOf(360f); var maxH = mutableStateOf(220f); var maxX = mutableStateOf(0f); var maxY = mutableStateOf(48f)
-    var cubeW = mutableStateOf(85f); var cubeH = mutableStateOf(85f); var cubeX = mutableStateOf(0f); var cubeY = mutableStateOf(48f)
+    val ringW = mutableStateOf(45f); val ringH = mutableStateOf(45f); val ringX = mutableStateOf(0f); val ringY = mutableStateOf(48f)
+    val miniW = mutableStateOf(180f); val miniH = mutableStateOf(36f); val miniX = mutableStateOf(0f); val miniY = mutableStateOf(48f)
+    val midW = mutableStateOf(320f); val midH = mutableStateOf(80f); val midX = mutableStateOf(0f); val midY = mutableStateOf(48f)
+    val maxW = mutableStateOf(360f); val maxH = mutableStateOf(220f); val maxX = mutableStateOf(0f); val maxY = mutableStateOf(48f)
+    val cubeW = mutableStateOf(85f); val cubeH = mutableStateOf(85f); val cubeX = mutableStateOf(0f); val cubeY = mutableStateOf(48f)
 
-    var padT = mutableStateOf(0f); var padB = mutableStateOf(0f); var padL = mutableStateOf(0f); var padR = mutableStateOf(0f)
-    var ringThickness = mutableStateOf(6f)
-    var expandUpwards = mutableStateOf(false)
-    var isCubeRotationEnabled = mutableStateOf(true)
-    var activeTheme = mutableStateOf(IslandTheme())
+    val padT = mutableStateOf(0f); val padB = mutableStateOf(0f); val padL = mutableStateOf(0f); val padR = mutableStateOf(0f)
+    val ringThickness = mutableStateOf(6f)
+    val expandUpwards = mutableStateOf(false)
+    val isCubeRotationEnabled = mutableStateOf(true)
+    val activeTheme = mutableStateOf(IslandTheme())
 
-    var globalBatteryLevel = mutableIntStateOf(100)
-    var hardwareVolume = mutableIntStateOf(0)
-    var hardwareBrightness = mutableIntStateOf(0)
-    var hardwareAutoBrightness = mutableStateOf(false)
-    var hardwareRingerMode = mutableIntStateOf(android.media.AudioManager.RINGER_MODE_NORMAL)
-    var globalIsCharging = mutableStateOf(false)
-    var currentMediaPos = mutableLongStateOf(0L)
-    var displayCutoutWidth = mutableFloatStateOf(0f)
-    var pinnedApps = mutableStateListOf("", "", "", "", "", "", "", "")
-    var qsTiles = mutableStateListOf("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
+    val globalBatteryLevel = mutableIntStateOf(100)
+    val hardwareVolume = mutableIntStateOf(0)
+    val hardwareBrightness = mutableIntStateOf(0)
+    val hardwareAutoBrightness = mutableStateOf(false)
+    val hardwareRingerMode = mutableIntStateOf(android.media.AudioManager.RINGER_MODE_NORMAL)
+    val globalIsCharging = mutableStateOf(false)
+    val currentMediaPos = mutableLongStateOf(0L)
+    val displayCutoutWidth = mutableFloatStateOf(0f)
+    val pinnedApps = mutableStateListOf("", "", "", "", "", "", "", "")
+    val qsTiles = mutableStateListOf("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
 
     val islandState = mutableStateOf(IslandState.HIDDEN)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
@@ -130,9 +129,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onAudioOutputClick: (() -> Unit)? = null
     var onCustomMediaAction: ((String) -> Unit)? = null
 
-    var gamingFps = mutableFloatStateOf(0f)
-    var gamingFrameMs = mutableFloatStateOf(0f)
-    var gamingJankPct = mutableFloatStateOf(0f)
+    val gamingFps = mutableFloatStateOf(0f)
+    val gamingFrameMs = mutableFloatStateOf(0f)
+    val gamingJankPct = mutableFloatStateOf(0f)
 
     fun updateGamingStats(fps: Float, frameMs: Float, jankPct: Float) {
         gamingFps.floatValue = fps
