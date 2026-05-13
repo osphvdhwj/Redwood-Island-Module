@@ -129,7 +129,7 @@ private fun MusicMax(
             // Correct IslandShaderWaveform call
             IslandShaderWaveform(
                 durationMs = music.durationMs,
-                posProvider = { music.positionMs.toFloat() },
+                posProvider = { music.positionMs }             // ✅ Long,
                 isPlaying = music.isPlaying,
                 color = Color.White,
                 trackColor = Color.Gray,

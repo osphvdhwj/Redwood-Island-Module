@@ -219,17 +219,17 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 detectVerticalDragGestures(
                                     onDragEnd = {
                                         scope.launch { elasticScale.animateTo(1f, spring()) }
-                                        pullOffset = 0f
+                                        this@DynamicIslandView.pullOffset = 0f
                                     },
                                     onDragCancel = { scope.launch { elasticScale.snapTo(1f) } }
                                 ) { _, dragAmount ->
-                                    pullOffset = (pullOffset + dragAmount).coerceIn(-50f, 100f)
+                                    this@DynamicIslandView.pullOffset = (this@DynamicIslandView.pullOffset + dragAmount).coerceIn(-50f, 100f)
                                     elasticScale.value = 1f + pullOffset * 0.002f
                                 }
                             }
                     ) {
                         // ✅ FIXED: use dynamicIslandView.IslandUI (not view.IslandMainUI)
-                        controller?.let { dynamicIslandView.IslandUI(it) }
+                        dynamicIslandView.IslandUI(islandState.value)         // ✅ islandState is the mutable state
                     }
                 }
             }
