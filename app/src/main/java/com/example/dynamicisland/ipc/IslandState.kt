@@ -1,6 +1,15 @@
+// In app/src/main/java/com/example/dynamicisland/ipc/IslandState.kt
 package com.example.dynamicisland.ipc
 
 enum class IslandState {
+    // Add the missing state constants
+    HIDDEN,
+    TYPE_1_MINI,
+    TYPE_2_MID,
+    TYPE_3_MAX,
+    TYPE_CUBE,
+    TYPE_SPLIT,
+    // Keep the existing ones
     TYPE_0_RING,
     CALL,
     BATTERY_LOW,
