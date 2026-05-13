@@ -141,7 +141,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     }
 
     val elasticScale = Animatable(1f)
-    // No class-level pullOffset field – using local composable state instead
 
     private var flowJob: Job? = null
     val mainPillRect = android.graphics.Rect()
@@ -203,7 +202,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     androidx.compose.ui.platform.LocalContext provides moduleContext
                 ) {
                     val scope = rememberCoroutineScope()
-                    var localPullOffset by remember { mutableFloatStateOf(0f) }
+                    val localPullOffset = remember { mutableFloatStateOf(0f) }
 
                     Box(
                         modifier = Modifier
@@ -220,12 +219,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 detectVerticalDragGestures(
                                     onDragEnd = {
                                         scope.launch { elasticScale.animateTo(1f, spring()) }
-                                        localPullOffset = 0f
+                                        localPullOffset.floatValue = 0f
                                     },
                                     onDragCancel = { scope.launch { elasticScale.snapTo(1f) } }
                                 ) { _, dragAmount ->
-                                    localPullOffset = (localPullOffset + dragAmount).coerceIn(-50f, 100f)
-                                    elasticScale.value = 1f + localPullOffset * 0.002f
+                                    localPullOffset.floatValue =
+                                        (localPullOffset.floatValue + dragAmount).coerceIn(-50f, 100f)
+                                    elasticScale.value = 1f + localPullOffset.floatValue * 0.002f
                                 }
                             }
                     ) {
