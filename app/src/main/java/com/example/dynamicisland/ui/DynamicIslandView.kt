@@ -141,7 +141,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     }
 
     val elasticScale = Animatable(1f)
-    private var pullOffset = 0f
+
+    // ✅ REMOVED: private var pullOffset = 0f — using local composable state instead
 
     private var flowJob: Job? = null
     val mainPillRect = android.graphics.Rect()
@@ -204,6 +205,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     androidx.compose.ui.platform.LocalContext provides moduleContext
                 ) {
                     val scope = rememberCoroutineScope()
+                    val pullOffsetState = remember { mutableFloatStateOf(0f) }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -219,17 +221,17 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 detectVerticalDragGestures(
                                     onDragEnd = {
                                         scope.launch { elasticScale.animateTo(1f, spring()) }
-                                        this@DynamicIslandView.pullOffset = 0f
+                                        pullOffsetState.floatValue = 0f
                                     },
                                     onDragCancel = { scope.launch { elasticScale.snapTo(1f) } }
                                 ) { _, dragAmount ->
-                                    this@DynamicIslandView.pullOffset = (this@DynamicIslandView.pullOffset + dragAmount).coerceIn(-50f, 100f)
-                                    elasticScale.value = 1f + this@DynamicIslandView.pullOffset * 0.002f
+                                    pullOffsetState.floatValue =
+                                        (pullOffsetState.floatValue + dragAmount).coerceIn(-50f, 100f)
+                                    elasticScale.value = 1f + pullOffsetState.floatValue * 0.002f
                                 }
                             }
                     ) {
-                        // ✅ FIXED: use dynamicIslandView.IslandUI (not view.IslandMainUI)
-                        dynamicIslandView.IslandUI(islandState.value)         // ✅ islandState is the mutable state
+                        dynamicIslandView.IslandUI(islandState.value)
                     }
                 }
             }
