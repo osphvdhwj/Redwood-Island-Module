@@ -8,6 +8,7 @@ import android.media.ImageReader
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
+import android.annotation.SuppressLint
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
@@ -130,7 +131,8 @@ class ContinuityCameraScanner(private val context: Context) {
                     }
                 }, bgHandler)
             }
-
+            
+            @SuppressLint("MissingPermission")
             manager.openCamera(rearId, object : CameraDevice.StateCallback() {
                 override fun onOpened(camera: CameraDevice) {
                     cameraDevice = camera

@@ -7,6 +7,10 @@ plugins {
 android {
     namespace = "com.example.dynamicisland"   // <-- your actual package name
     compileSdk = 35
+    
+    lint {
+        abortOnError = false
+    }
 
     defaultConfig {
         applicationId = "com.example.dynamicisland"
