@@ -1,0 +1,85 @@
+package com.example.dynamicisland.ipc
+
+import android.app.Service
+import android.content.Intent
+import android.os.Binder
+import android.os.Bundle
+import android.os.IBinder
+import android.util.Log
+import com.example.dynamicisland.model.ActivityType
+import com.example.dynamicisland.model.LiveActivityModel
+
+class LiveActivityManagerService : Service() {
+
+    private val activeActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
+
+    inner class LocalBinder : Binder() {
+        fun startActivity(info: LiveActivityInfo): String {
+            val token = info.activityId.ifEmpty { return "" }
+            val model = LiveActivityModel.ExternalActivity(
+                id          = token,
+                type        = ActivityType.MESSAGE,
+                info        = info,
+                state       = info.initialState,
+                isTransient = false,
+                isCritical  = false,
+                isSensitive = false
+            )
+            activeActivities[token] = model
+            Log.d("LiveActivityService", "Started activity: $token")
+            broadcastActivityUpdate(model)
+            return token
+        }
+
+        fun updateActivity(token: String, state: Bundle) {
+            activeActivities[token]?.let { existing ->
+                val updated = LiveActivityModel.ExternalActivity(
+                    id          = existing.id,
+                    type        = existing.type,
+                    info        = existing.info,
+                    state       = state,
+                    isTransient = existing.isTransient,
+                    isCritical  = existing.isCritical,
+                    isSensitive = existing.isSensitive
+                )
+                activeActivities[token] = updated
+                Log.d("LiveActivityService", "Updated activity: $token")
+                broadcastActivityUpdate(updated)
+            }
+        }
+
+        fun endActivity(token: String) {
+            val removed = activeActivities.remove(token)
+            if (removed != null) {
+                Log.d("LiveActivityService", "Ended activity: $token")
+                broadcastActivityEnd(token)
+            }
+        }
+
+        fun getActiveActivities(): List<LiveActivityInfo> =
+            activeActivities.values.map { activity -> activity.info }
+    }
+
+    private val binder = LocalBinder()
+
+    override fun onBind(intent: Intent?): IBinder = binder
+
+    private fun broadcastActivityUpdate(model: LiveActivityModel.ExternalActivity) {
+        val intent = Intent("com.example.dynamicisland.EXTERNAL_ACTIVITY_UPDATED").apply {
+            setPackage("com.android.systemui")
+            putExtra("activity_id",  model.id)
+            putExtra("package_name", model.info.appPackage)
+            putExtra("layout_type",  model.info.layoutType)
+            putExtra("state",        model.state)
+        }
+        sendBroadcast(intent, "com.redwood.permission.SECURE_IPC")
+    }
+
+    private fun broadcastActivityEnd(activityId: String) {
+        val intent = Intent("com.example.dynamicisland.EXTERNAL_ACTIVITY_ENDED").apply {
+            setPackage("com.android.systemui")
+            putExtra("activity_id", activityId)
+        }
+        sendBroadcast(intent, "com.redwood.permission.SECURE_IPC")
+    }
+}
