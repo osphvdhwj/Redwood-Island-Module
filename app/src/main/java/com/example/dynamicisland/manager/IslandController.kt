@@ -72,28 +72,28 @@ class IslandController @Inject constructor(
         
         // Audio & Visualizers
         if (state.bpmPulse || state.ambientReactiveRing) {
-            audioBeatDetector.startListening()
+            audioBeatDetector.start()
         } else {
-            audioBeatDetector.stopListening()
+            audioBeatDetector.stop()
         }
 
         // Gamification
-        if (state.islandStreaksEnabled || state.showAchievementBadges) {
-            achievementManager.initialize()
+        if (state.islandStreaks || state.achievementsEnabled) {
+            // achievementManager is initialized in its constructor
         }
 
         // Accessibility
-        if (state.talkBackIntegration) {
-            accessibilityManager.enable()
+        if (state.talkbackIntegration) {
+            accessibilityManager.start()
         } else {
-            accessibilityManager.disable()
+            accessibilityManager.stop()
         }
 
         // Sensors
         if (state.proximityWake) {
-            proximityWakeManager.startSensing()
+            proximityWakeManager.start()
         } else {
-            proximityWakeManager.stopSensing()
+            proximityWakeManager.stop()
         }
 
         // Haptics

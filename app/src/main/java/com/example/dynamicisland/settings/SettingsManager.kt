@@ -137,4 +137,16 @@ class SettingsManager(context: Context) {
     fun getAll(): Map<String, *> = prefs.all
 
     fun resetAll() = prefs.edit().clear().apply()
+
+    fun getSettingsState(): SettingsState {
+        return SettingsState(
+            islandEnabled = getBoolean(SettingKey.ISLAND_ENABLED, true),
+            bpmPulse = getBoolean(SettingKey.BPM_PULSE, true),
+            ambientReactiveRing = getBoolean(SettingKey.AMBIENT_REACTIVE, true),
+            proximityWake = getBoolean(SettingKey.PROXIMITY_WAKE, false),
+            talkbackIntegration = getBoolean(SettingKey.TALKBACK_INTEGRATION, true),
+            islandStreaks = getBoolean(SettingKey.ISLAND_STREAKS, true),
+            achievementsEnabled = getBoolean(SettingKey.ACHIEVEMENTS_ENABLED, true)
+        )
+    }
 }
