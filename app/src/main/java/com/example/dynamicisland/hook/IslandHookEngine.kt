@@ -4,6 +4,8 @@ import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 
+import com.example.dynamicisland.hook.providers.DefaultAospProvider
+
 /**
  * Central hook engine.
  *
@@ -22,6 +24,24 @@ import de.robv.android.xposed.XposedHelpers
 object IslandHookEngine {
 
     private const val TAG = "DynamicIsland"
+    private var activeProvider: SystemEventProvider? = null
+
+    /**
+     * Determines the current OS/ROM environment and instantiates the correct SystemEventProvider.
+     * Routes the initialization of hooks to the chosen provider.
+     */
+    fun initHooks(classLoader: ClassLoader, listener: SystemEventListener) {
+        val provider = determineProvider()
+        provider.setSystemEventListener(listener)
+        provider.initHooks(classLoader)
+        activeProvider = provider
+    }
+
+    private fun determineProvider(): SystemEventProvider {
+        // In the future, check Build.MANUFACTURER or Build.DISPLAY to return ROM-specific providers
+        // e.g., if (android.os.Build.MANUFACTURER.equals("xiaomi", true)) return MiuiProvider()
+        return DefaultAospProvider()
+    }
 
     // ── Core safe hook ────────────────────────────────────────────────────────
 

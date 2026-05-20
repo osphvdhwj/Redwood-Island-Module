@@ -1,48 +1,73 @@
 package com.example.dynamicisland.privacy
 
+import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import com.example.dynamicisland.settings.SettingsManager
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
- * Automatically clears sensitive clipboard content after a timeout.
- * Detects common patterns like OTP codes, credit card numbers, and passwords.
+ * Feature #135 / #158: Automated Privacy Clipboard Cleaner Engine.
+ * Automatically clears sensitive items like OTP codes, credit cards, and credentials after a timeout.
  */
-class ClipboardCleaner(context: Context, private val timeoutMs: Long = 30_000L) {
+@Singleton
+class ClipboardCleaner @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val settingsManager: SettingsManager
+) {
     private val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var cleaningJob: Job? = null
 
+    // Pattern matching arrays for explicit token checking
+    private val sensitivePatterns = listOf(
+        Regex("password|passwort|clave|senha|secret|token", RegexOption.IGNORE_CASE),
+        Regex("\\b\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}\\b"), // 16-Digit Cards
+        Regex("\\b\\d{4,8}\\b"),                                       // Explicit 4-8 Digit OTP/PIN Codes
+        Regex("\\b[A-Z0-9]{6,10}\\b")                                  // Alpha-numeric Transaction Hashes
+    )
+
     /**
-     * Schedule a cleanup if the current clipboard text looks sensitive.
+     * Inspects the active clipboard stream and schedules a secure deletion if matches occur.
      */
     fun scheduleIfSensitive() {
-        val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: return
+        val currentSettings = settingsManager.getSettingsState()
+        
+        // Safety switch verification from Pillar 4 settings
+        if (!currentSettings.clipboardCleanerEnabled) return
+
+        val primaryClip = clipboard.primaryClip ?: return
+        if (primaryClip.itemCount == 0) return
+        
+        val text = primaryClip.getItemAt(0).text?.toString() ?: return
+
         if (isSensitive(text)) {
             cleaningJob?.cancel()
-            cleaningJob = CoroutineScope(Dispatchers.Main).launch {
-                delay(timeoutMs)
-                // Only clear if still the same text (avoids removing an innocent clip)
-                val current = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
-                if (current == text) {
-                    clipboard.clearPrimaryClip()
+            cleaningJob = scope.launch {
+                val delayDuration = currentSettings.clipboardClearTimeoutMs.takeIf { it > 0L } ?: 60000L
+                delay(delayDuration)
+
+                // Verify the block hasn't been modified by user interventions during sleep cycle
+                val freshClip = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
+                if (freshClip == text) {
+                    // Execute secure erasure via empty assignment
+                    clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
                 }
             }
         }
     }
 
     /**
-     * Cancel any pending cleanup (e.g., on user manual paste).
+     * Aborts pending destruction coroutines.
      */
-    fun cancel() {
+    fun cancelPendingClear() {
         cleaningJob?.cancel()
     }
 
     private fun isSensitive(text: String): Boolean {
-        return listOf(
-            Regex("password|passwort|clave|senha", RegexOption.IGNORE_CASE),
-            Regex("\\b\\d{4}\\s?\\d{4}\\s?\\d{4}\\s?\\d{4}\\b"),  // credit card 16 digits
-            Regex("\\b\\d{6,10}\\b"),                               // OTP or PIN
-            Regex("\\b\\d{3}[-.]?\\d{2}[-.]?\\d{4}\\b")             // SSN-like
-        ).any { it.containsMatchIn(text) }
+        return sensitivePatterns.any { it.containsMatchIn(text) }
     }
 }

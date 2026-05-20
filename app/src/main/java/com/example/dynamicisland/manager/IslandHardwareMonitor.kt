@@ -7,7 +7,7 @@ import java.io.File
 
 class IslandHardwareMonitor(
     private val scope: CoroutineScope,
-    private val onHardwareUpdate: (LiveActivityModel.HardwareMonitor?) -> Unit
+    var onHardwareUpdate: (LiveActivityModel.HardwareMonitor?) -> Unit
 ) {
     var isScreenOn = true
         set(value) { field = value; evaluatePolling() }

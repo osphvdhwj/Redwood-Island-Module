@@ -25,11 +25,11 @@ import kotlin.math.max
 class IslandMediaManager(
     private val context: Context,
     private val scope: CoroutineScope,
-    private val onMediaChanged: (LiveActivityModel.Music?) -> Unit,
-    private val onMediaTick: (Long) -> Unit,
-    private val onPeekRequested: () -> Unit,
-    private val onPauseFadeRequested: () -> Unit,
-    private val onUncollapseRequested: () -> Unit
+    var onMediaChanged: (LiveActivityModel.Music?) -> Unit,
+    var onMediaTick: (Long) -> Unit,
+    var onPeekRequested: () -> Unit,
+    var onPauseFadeRequested: () -> Unit,
+    var onUncollapseRequested: () -> Unit
 ) {
     var isMediaEnabled = true
         set(value) { field = value; if (!value) { currentMedia = null; stopTicker(); onMediaChanged(null) } else updateActiveSession() }

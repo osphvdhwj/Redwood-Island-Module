@@ -42,7 +42,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay   // ← added
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -65,9 +65,13 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         label = "blackhole_scale"
     )
 
-    val theme = LocalIslandTheme.current
-    val dpPhysicsSpec = spring<Dp>(dampingRatio = theme.springDamping, stiffness = theme.springStiffness)
-    val floatPhysicsSpec = spring<Float>(dampingRatio = theme.springDamping, stiffness = theme.springStiffness)
+    // FIXED: Stripped LocalIslandTheme and use safe default physics constants
+    val settings = view.controller?.settingsState ?: com.example.dynamicisland.settings.SettingsState()
+    val springDamping = 0.65f
+    val springStiffness = 300f
+    
+    val dpPhysicsSpec = spring<Dp>(dampingRatio = springDamping, stiffness = springStiffness)
+    val floatPhysicsSpec = spring<Float>(dampingRatio = springDamping, stiffness = springStiffness)
     
     val haptic = LocalHapticFeedback.current
     var isSquished by remember { mutableStateOf(false) }
@@ -134,9 +138,9 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         label = "blackhole_alpha"
     )
 
-    // background color logic unchanged
+    // FIXED: Defaulting to glassmorphism transparency logic
     val baseBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else {
-        val baseAlpha = if (theme.isGlassmorphism) 0.65f else 1.0f
+        val baseAlpha = 0.65f
         if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) {
             Color(model.dominantColor).copy(alpha = baseAlpha)
         } else if (state == IslandState.TYPE_3_MAX) {
@@ -172,7 +176,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                 val speed = Random.nextFloat() * 400f + 200f
                 particles.add(Particle(angle, speed, particleTrigger))
             }
-            delay(1500)   // now resolved
+            delay(1500)
             particles.clear()
         }
     }
@@ -304,9 +308,8 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
             Box(modifier = Modifier.fillMaxSize().padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp)) {
                 
                 if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
-                    val bgBitmap = if (theme.blurIntensity > 0.dp && model.blurredAlbumArt != null) { 
-                        model.blurredAlbumArt.asImageBitmap() 
-                    } else model.albumArt.asImageBitmap()
+                    // FIXED: Safe fallback for blur
+                    val bgBitmap = if (model.blurredAlbumArt != null) model.blurredAlbumArt.asImageBitmap() else model.albumArt.asImageBitmap()
                     Image(
                         bitmap = bgBitmap,
                         contentDescription = "Cinematic BG",
@@ -314,7 +317,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                         modifier = Modifier
                             .fillMaxSize()
                             .alpha(if (state == IslandState.TYPE_3_MAX) 0.5f else 0.25f)
-                            .blur(if (state == IslandState.TYPE_3_MAX) theme.blurIntensity else (theme.blurIntensity + 8.dp))
+                            .blur(if (state == IslandState.TYPE_3_MAX) 16.dp else 24.dp)
                     )
                 }
 
@@ -375,9 +378,8 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                         is LiveActivityModel.LinkIntercept   -> LinkInterceptMid(model)
                                         is LiveActivityModel.SystemAlert     -> {
                                             if (model.alertType == "OTP_CATCHER") {
-                                                // Convert SystemAlert to Otp and pass settings
                                                 val otpModel = LiveActivityModel.Otp(code = model.message)
-                                                OtpMid(otpModel, settings = controller?.settingsState ?: com.example.dynamicisland.settings.SettingsState())
+                                                OtpMid(otpModel, settings = settings)
                                             }
                                             else SystemAlertMid(model)
                                         }
@@ -389,10 +391,9 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                                     || (model.type == ActivityType.MESSAGE
                                                         && model.accentColor == android.graphics.Color.parseColor("#34A853"))
                                                 -> {
-                                                    // Convert General to Navigation model for the UI
                                                     val navModel = LiveActivityModel.Navigation(
                                                         instruction = model.dataText.ifEmpty { model.title },
-                                                        distance = 0   // unknown
+                                                        distance = 0
                                                     )
                                                     NavigationMid(navModel)
                                                 }
@@ -429,7 +430,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                             }
                         }
 
-                        // Particles canvas – fixed `center` declaration
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             if (particles.isNotEmpty()) {
                                 val center = Offset(size.width / 2, size.height / 2)

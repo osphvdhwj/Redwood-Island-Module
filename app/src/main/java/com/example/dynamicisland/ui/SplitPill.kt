@@ -2,136 +2,133 @@ package com.example.dynamicisland.ui
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.dynamicisland.manager.IslandController
+import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.model.LiveActivityModel
-import com.example.dynamicisland.settings.SettingsState
 
+/**
+ * Split Pill UI – Handles two simultaneous ongoing activities.
+ * Standard layout: A larger primary pill on the left (e.g., Music), 
+ * and a smaller circular indicator on the right (e.g., Timer or Call).
+ */
 @Composable
-fun SplitPill(controller: IslandController) {
-    val settings = controller.settingsState ?: SettingsState()
-    // In real implementation, get two active models from controller
-    val leftModel = null // replace with actual
-    val rightModel = null
-
-    if (leftModel == null || rightModel == null) return
-
-    var dividerFraction by remember { mutableStateOf(0.5f) }
-    val leftWeight = dividerFraction
-    val rightWeight = 1f - dividerFraction
-
-    val shape = RoundedCornerShape(settings.pillCornerRadius.dp * 0.5f)
+fun SplitPill(
+    primaryModel: LiveActivityModel,
+    secondaryModel: LiveActivityModel,
+    onPrimaryClick: () -> Unit = {},
+    onSecondaryClick: () -> Unit = {}
+) {
+    val haptic = LocalHapticFeedback.current
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp)
-            .shadow(12.dp, shape)
-            .clip(shape)
-            .background(
-                Brush.horizontalGradient(
-                    if (settings.dynamicGradient) listOf(Color(0xFF2C2C2E), Color(0xFF1C1C1E))
-                    else listOf(Color.Black.copy(alpha = 0.9f), Color.Black.copy(alpha = 0.85f))
-                )
-            )
+        modifier = Modifier.fillMaxSize(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        // --- PRIMARY PILL (Left) ---
         Box(
             modifier = Modifier
-                .weight(leftWeight)
+                .weight(1f)
                 .fillMaxHeight()
-                .clip(shape)
-                .background(Color.Transparent)
-                .padding(horizontal = 8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            when (leftModel) {
-                is LiveActivityModel.Music -> MusicMiniPill(leftModel)
-                is LiveActivityModel.Call -> CallMiniPill(leftModel)
-                else -> Text(leftModel.toString(), color = Color.White, style = MaterialTheme.typography.labelSmall)
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .width(4.dp)
-                .fillMaxHeight()
-                .background(Color.White.copy(alpha = 0.4f))
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures { _, dragAmount ->
-                        val delta = dragAmount / 500f
-                        dividerFraction = (dividerFraction + delta).coerceIn(0.2f, 0.8f)
-                    }
+                .clip(RoundedCornerShape(percent = 50))
+                .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onPrimaryClick()
                 }
-        )
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = getIconForModel(primaryModel),
+                    contentDescription = null,
+                    tint = getAccentForModel(primaryModel),
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                
+                // Simple waveform or scrolling text could go here
+                Text(
+                    text = getLabelForModel(primaryModel),
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
+                )
+            }
+        }
 
+        // --- DIVIDER (Invisible Space) ---
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // --- SECONDARY PILL (Right) ---
         Box(
             modifier = Modifier
-                .weight(rightWeight)
+                .aspectRatio(1f) // Keep it a perfect circle
                 .fillMaxHeight()
-                .clip(shape)
-                .background(Color.Transparent)
-                .padding(horizontal = 8.dp),
+                .clip(CircleShape)
+                .background(getAccentForModel(secondaryModel).copy(alpha = 0.15f))
+                .border(1.dp, getAccentForModel(secondaryModel).copy(alpha = 0.3f), CircleShape)
+                .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onSecondaryClick()
+                },
             contentAlignment = Alignment.Center
         ) {
-            when (rightModel) {
-                is LiveActivityModel.Music -> MusicMiniPill(rightModel)
-                is LiveActivityModel.Call -> CallMiniPill(rightModel)
-                else -> Text(rightModel.toString(), color = Color.White, style = MaterialTheme.typography.labelSmall)
-            }
+            Icon(
+                imageVector = getIconForModel(secondaryModel),
+                contentDescription = null,
+                tint = getAccentForModel(secondaryModel),
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }
 
-@Composable
-private fun MusicMiniPill(music: LiveActivityModel.Music) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Icon(
-            Icons.Default.MusicNote, null,
-            tint = Color(0xFF1DB954),
-            modifier = Modifier.size(16.dp)
-        )
-        Text(
-            text = "${music.artist} · ${music.title}",
-            color = Color.White,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1
-        )
+// Helper methods to extract UI elements from generic LiveActivityModels
+private fun getIconForModel(model: LiveActivityModel): ImageVector {
+    return when (model) {
+        is LiveActivityModel.Call -> Icons.Default.Call
+        is LiveActivityModel.Music -> Icons.Default.MusicNote
+        is LiveActivityModel.AppTimerWarning -> Icons.Default.Timer
+        else -> Icons.Default.Call // Fallback
     }
 }
 
-@Composable
-private fun CallMiniPill(call: LiveActivityModel.Call) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Icon(
-            Icons.Default.Phone, null,
-            tint = if (call.state == "RINGING") Color(0xFF34C759) else Color(0xFFFF3B30),
-            modifier = Modifier.size(16.dp)
-        )
-        Text(
-            text = call.callerName ?: "Unknown",
-            color = Color.White,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1
-        )
+private fun getAccentForModel(model: LiveActivityModel): Color {
+    return when (model) {
+        is LiveActivityModel.Call -> Color(0xFF4CAF50)
+        is LiveActivityModel.Music -> Color(0xFFE040FB)
+        is LiveActivityModel.AppTimerWarning -> Color(0xFFFFB74D)
+        else -> Color.White // Fallback
+    }
+}
+
+private fun getLabelForModel(model: LiveActivityModel): String {
+    return when (model) {
+        is LiveActivityModel.Call -> model.callerName
+        is LiveActivityModel.Music -> model.title
+        is LiveActivityModel.AppTimerWarning -> "Time Limit"
+        else -> "Active" // Fallback
     }
 }

@@ -13,11 +13,16 @@
     <uses-permission android:name="com.redwood.permission.SECURE_IPC" />
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
     <application
+        android:name=".RedwoodApp" 
+        android:icon="@mipmap/ic_launcher"
+        android:name=".IslandApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -121,6 +126,15 @@
             <intent-filter>
                 <action android:name="com.example.dynamicisland.STATE_SERVICE" />
             </intent-filter>
+        </service>
+
+        <service
+            android:name=".system.window.IslandWindowService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Overlay window management for Dynamic Island UI."/>
         </service>
 
     </application>

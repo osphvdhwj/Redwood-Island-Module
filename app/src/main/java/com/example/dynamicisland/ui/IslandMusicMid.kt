@@ -33,38 +33,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.model.LiveActivityModel
 
-/**
- * Mid-state music card.
- *
- * Layout (horizontal, fills the TYPE_2_MID pill):
- *
- *   [Album art 52dp] | Title / Artist (scrolling) | ◀  ▶  ▶|  like
- *                    | Seeker bar (full width)     |
- *
- * The seeker uses InteractiveWavyMediaBar so it is reactive to playback.
- * Album art has a soft drop-shadow and rounded corners.
- * Background tints toward the dominant album colour at 20% opacity.
- */
 @Composable
-fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
+fQun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
     val haptic = LocalHapticFeedback.current
 
-    // Hard-coded dimensions (previously from LocalIslandTheme)
     val alertTitleSize = 14.sp
     val alertMsgSize = 12.sp
-    val musicSeekerThick = 4.dp   // base thickness, multiplied later
+    val musicSeekerThick = 4.dp
 
-    // Resolve text / accent colour from album art palette
     val accentColor = music.dominantColor?.let { Color(it) } ?: Color.White
     val textColor   = Color(music.titleTextColor)
         .takeIf { it != Color.Transparent && it != Color.Black } ?: Color.White
 
-    // Local liked state (mirrors remote until next metadata update)
     var localIsLiked by remember(music.title, music.isLiked) { mutableStateOf(music.isLiked) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-
-        // ── Coloured background wash ──────────────────────────────────────
         if (music.dominantColor != null) {
             Box(
                 modifier = Modifier
@@ -86,8 +69,6 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
-            // ── Album art ──────────────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .size(52.dp)
@@ -107,12 +88,10 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
 
             Spacer(Modifier.width(10.dp))
 
-            // ── Centre column: title / artist + seeker ────────────────────
             Column(
                 modifier            = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Title
                 Text(
                     text       = music.title,
                     color      = textColor,
@@ -122,7 +101,6 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
                     overflow   = TextOverflow.Ellipsis,
                     modifier   = Modifier.safeMarquee(islandState.value)
                 )
-                // Artist
                 Text(
                     text     = music.artist,
                     color    = textColor.copy(alpha = 0.65f),
@@ -131,7 +109,6 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.safeMarquee(islandState.value)
                 )
-                // Seeker (3x base thickness)
                 InteractiveWavyMediaBar(
                     durationMs  = music.durationMs,
                     posProvider = { currentMediaPos.longValue },
@@ -139,18 +116,16 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
                     color       = accentColor,
                     trackColor  = accentColor.copy(alpha = 0.20f),
                     onSeek      = { onSeekTo?.invoke(it) },
-                    modifier    = Modifier.height(musicSeekerThick * 3)
+                    modifier    = Modifier.height(musicSeekerThick * 3f) // FIXED: Replaced 3 with 3f
                 )
             }
 
             Spacer(Modifier.width(8.dp))
 
-            // ── Right controls ─────────────────────────────────────────────
             Row(
                 verticalAlignment   = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                // Previous
                 SmallMediaBtn(
                     icon    = Icons.Default.SkipPrevious,
                     tint    = textColor.copy(alpha = 0.75f),
@@ -158,7 +133,6 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
                     haptic  = haptic
                 ) { onPrevClick?.invoke() }
 
-                // Play / Pause
                 AnimatedContent(
                     targetState  = music.isPlaying,
                     transitionSpec = {
@@ -174,7 +148,6 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
                     ) { onPlayPauseClick?.invoke() }
                 }
 
-                // Next
                 SmallMediaBtn(
                     icon    = Icons.Default.SkipNext,
                     tint    = textColor.copy(alpha = 0.75f),
@@ -182,7 +155,6 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
                     haptic  = haptic
                 ) { onNextClick?.invoke() }
 
-                // Like (only if the session exposes a like action)
                 val hasLike = music.customActions.any {
                     it.action.contains("heart", true) || it.action.contains("like", true)
                 }
@@ -218,8 +190,6 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
         }
     }
 }
-
-// ── Tiny reusable icon button used only inside MusicMid ───────────────────
 
 @Composable
 private fun SmallMediaBtn(

@@ -28,13 +28,159 @@ import com.example.dynamicisland.ipc.IslandState
 import com.example.dynamicisland.gesture.IslandGesture
 import androidx.compose.ui.graphics.Color
 
-class IslandController(private val context: Context) {
+import javax.inject.Inject
+import javax.inject.Singleton
+import dagger.hilt.android.qualifiers.ApplicationContext
+
+@Singleton
+class IslandController @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val settingsManager: SettingsManager,
+    val mediaManager: IslandMediaManager,
+    private val hardwareMonitor: IslandHardwareMonitor
+) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val activeExternalActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
     
     val settingsState = SettingsState()
     val currentGradientColors: List<Color> = listOf(Color(0xFF1E1E2E), Color(0xFF0A0A0A))
     val currentBrandColor: Color = Color.White
+    
+    // 1. Declare your settings state and managers at the top of the controller
+    var settingsState by mutableStateOf(com.example.dynamicisland.settings.SettingsState())
+        private set
+
+    // Lazy load the managers so they don't crash if they aren't needed yet
+    private val audioBeatDetector by lazy { com.example.dynamicisland.audio.AudioBeatDetector() }
+    private val achievementManager by lazy { com.example.dynamicisland.achievements.AchievementManager(context) }
+    private val accessibilityManager by lazy { com.example.dynamicisland.accessibility.IslandAccessibilityManager(context) }
+    private val proximityWakeManager by lazy { com.example.dynamicisland.sensors.ProximityWakeManager(context) }
+
+    // 2. Add this initialization function. Call this in your controller's init{} block!
+    fun loadAndApplySettings() {
+        // Fetch the latest state
+        settingsState = settingsManager.getSettingsState()
+        
+        applySettings(settingsState)
+    }
+
+    // 3. The engine that turns features on/off based on settings
+    private fun applySettings(state: com.example.dynamicisland.settings.SettingsState) {
+        // Feature 199: Wire up the managers based on toggles
+        
+        // Audio & Visualizers
+        if (state.bpmPulse || state.ambientReactiveRing) {
+            audioBeatDetector.startListening()
+        } else {
+            audioBeatDetector.stopListening()
+        }
+
+        // Gamification
+        if (state.islandStreaksEnabled || state.showAchievementBadges) {
+            achievementManager.initialize()
+        }
+
+        // Accessibility
+        if (state.talkBackIntegration) {
+            accessibilityManager.enable()
+        } else {
+            accessibilityManager.disable()
+        }
+
+        // Sensors
+        if (state.proximityWake) {
+            proximityWakeManager.startSensing()
+        } else {
+            proximityWakeManager.stopSensing()
+        }
+
+        // Haptics
+        // You can update a global haptics configuration here if needed
+
+        // Re-evaluate current island priority based on new settings (e.g. if notifications were just disabled)
+        // IslandPriorityEngine.evaluateCurrentState(...)
+    }
+    
+    // NOTE: Add this variable to track the dismissed state for the Undo feature
+    private var recentlyDismissedModel: LiveActivityModel? = null
+    private var undoDismissJob: Job? = null
+
+    // NOTE: Add this function to your IslandController to process gestures from IslandMainUI.kt
+        fun handleGesture(gesture: IslandGesture) {
+    // Every time the user interacts, stop the auto-collapse from happening immediately
+        resetAutoCollapseTimer()
+
+        val currentModel = activeModel.value ?: return
+
+        when (gesture) {
+            IslandGesture.SINGLE_TAP -> {
+            // Usually expands Mid to Max, or launches the app
+            // if (currentState == IslandState.TYPE_2_MID) setIslandState(IslandState.TYPE_3_MAX)
+            }
+            IslandGesture.LONG_PRESS -> {
+            // Could launch a contextual menu or trigger a specific action
+            }
+            IslandGesture.SWIPE_UP -> {
+            // Dismiss action
+                dismissCurrentActivity(currentModel)
+            }
+            IslandGesture.SWIPE_DOWN -> {
+            // Expand action (Elastic stretch)
+            // if (currentState == IslandState.TYPE_1_MINI || currentState == IslandState.TYPE_0_RING) {
+            //     setIslandState(IslandState.TYPE_2_MID)
+            // }
+            }
+            IslandGesture.SWIPE_LEFT, IslandGesture.SWIPE_RIGHT -> {
+            // Handle horizontal swipes based on settings (e.g., skip music track)
+                if (currentModel is LiveActivityModel.Music) {
+                    if (gesture == IslandGesture.SWIPE_RIGHT) {
+                    // Trigger next track
+                    } else {
+                    // Trigger previous track
+                    }
+                }
+            }
+            else -> {}
+        }
+    }
+
+    private fun dismissCurrentActivity(model: LiveActivityModel) {
+        // 1. Save the model in case the user wants to undo
+        recentlyDismissedModel = model
+    
+        // 2. Actually dismiss it from the UI (collapse to ring)
+        collapseToIdle()
+
+        // 3. Show the "Undo" Snackbar/Overlay
+        showUndoSnackbar()
+
+        // 4. Clear the saved model after 2 seconds if not undone
+        undoDismissJob?.cancel()
+        undoDismissJob = controllerScope.launch {
+            delay(2000) // 2-second window
+            recentlyDismissedModel = null
+            hideUndoSnackbar()
+        }
+    }
+
+    fun undoDismiss() {
+        recentlyDismissedModel?.let { model ->
+            // Restore the model and cancel the cleanup job
+            undoDismissJob?.cancel()
+            // restoreActivity(model) // Your method to put the model back on screen
+            recentlyDismissedModel = null
+            hideUndoSnackbar()
+        }
+    }
+
+    // Stub functions - you will need to implement the actual UI display for the snackbar
+    private fun showUndoSnackbar() {
+        // e.g., send a broadcast or update a Compose state variable to show a toast/snackbar
+    }
+
+    private fun hideUndoSnackbar() {
+        // hide it
+    }
     
     private var pendingNotificationColor: Int = android.graphics.Color.WHITE
     private var hasUnseenNotification = false
@@ -80,6 +226,87 @@ class IslandController(private val context: Context) {
             )
         }
     }
+    
+    // NOTE: Add this variable to track the dismissed state for the Undo feature
+private var recentlyDismissedModel: LiveActivityModel? = null
+private var undoDismissJob: Job? = null
+
+// NOTE: Add this function to your IslandController to process gestures from IslandMainUI.kt
+fun handleGesture(gesture: IslandGesture) {
+    // Every time the user interacts, stop the auto-collapse from happening immediately
+    resetAutoCollapseTimer()
+
+    val currentModel = activeModel.value ?: return
+
+    when (gesture) {
+        IslandGesture.SINGLE_TAP -> {
+            // Usually expands Mid to Max, or launches the app
+            // if (currentState == IslandState.TYPE_2_MID) setIslandState(IslandState.TYPE_3_MAX)
+        }
+        IslandGesture.LONG_PRESS -> {
+            // Could launch a contextual menu or trigger a specific action
+        }
+        IslandGesture.SWIPE_UP -> {
+            // Dismiss action
+            dismissCurrentActivity(currentModel)
+        }
+        IslandGesture.SWIPE_DOWN -> {
+            // Expand action (Elastic stretch)
+            // if (currentState == IslandState.TYPE_1_MINI || currentState == IslandState.TYPE_0_RING) {
+            //     setIslandState(IslandState.TYPE_2_MID)
+            // }
+        }
+        IslandGesture.SWIPE_LEFT, IslandGesture.SWIPE_RIGHT -> {
+            // Handle horizontal swipes based on settings (e.g., skip music track)
+            if (currentModel is LiveActivityModel.Music) {
+                if (gesture == IslandGesture.SWIPE_RIGHT) {
+                    // Trigger next track
+                } else {
+                    // Trigger previous track
+                }
+            }
+        }
+        else -> {}
+    }
+}
+
+private fun dismissCurrentActivity(model: LiveActivityModel) {
+    // 1. Save the model in case the user wants to undo
+    recentlyDismissedModel = model
+    
+    // 2. Actually dismiss it from the UI (collapse to ring)
+    collapseToIdle()
+
+    // 3. Show the "Undo" Snackbar/Overlay
+    showUndoSnackbar()
+
+    // 4. Clear the saved model after 2 seconds if not undone
+    undoDismissJob?.cancel()
+    undoDismissJob = controllerScope.launch {
+        delay(2000) // 2-second window
+        recentlyDismissedModel = null
+        hideUndoSnackbar()
+    }
+}
+
+fun undoDismiss() {
+    recentlyDismissedModel?.let { model ->
+        // Restore the model and cancel the cleanup job
+        undoDismissJob?.cancel()
+        // restoreActivity(model) // Your method to put the model back on screen
+        recentlyDismissedModel = null
+        hideUndoSnackbar()
+    }
+}
+
+// Stub functions - you will need to implement the actual UI display for the snackbar
+private fun showUndoSnackbar() {
+    // e.g., send a broadcast or update a Compose state variable to show a toast/snackbar
+}
+
+private fun hideUndoSnackbar() {
+    // hide it
+}
 
     private val connectivityManager = IslandConnectivityManager(context) { connModel ->
         if (isAlertsEnabled) postTransientNotification(connModel, 4000L)
@@ -131,28 +358,6 @@ class IslandController(private val context: Context) {
     private val callManager = IslandCallManager(context, audioManager) { newCall ->
         currentCall = newCall; evaluatePriority()
     }
-
-    private val hardwareMonitor = IslandHardwareMonitor(scope) { newHw ->
-        currentHardware = newHw; evaluatePriority()
-    }
-
-    val mediaManager = IslandMediaManager(context, scope,
-        onMediaChanged = { newMedia -> currentMedia = newMedia; evaluatePriority() },
-        onMediaTick = { pos -> islandView?.updateTicker(pos) },
-        onPeekRequested = {
-            if (userForceCollapsed && !isPeeking) {
-                isPeeking = true; userForceCollapsed = false
-                scope.launch { delay(3000); userForceCollapsed = true; isPeeking = false; evaluatePriority() }
-            }
-        },
-        onPauseFadeRequested = {
-            pauseFadeJob?.cancel()
-            pauseFadeJob = scope.launch { delay(3000); userForceCollapsed = true; evaluatePriority() }
-        },
-        onUncollapseRequested = {
-            userForceCollapsed = false; pauseFadeJob?.cancel()
-        }
-    )
 
     private var windowManager: WindowManager? = null
     private var islandView: DynamicIslandView? = null
@@ -712,6 +917,26 @@ class IslandController(private val context: Context) {
     }
 
     init {
+        hardwareMonitor.onHardwareUpdate = { newHw ->
+            currentHardware = newHw; evaluatePriority()
+        }
+
+        mediaManager.onMediaChanged = { newMedia -> currentMedia = newMedia; evaluatePriority() }
+        mediaManager.onMediaTick = { pos -> islandView?.updateTicker(pos) }
+        mediaManager.onPeekRequested = {
+            if (userForceCollapsed && !isPeeking) {
+                isPeeking = true; userForceCollapsed = false
+                scope.launch { delay(3000); userForceCollapsed = true; isPeeking = false; evaluatePriority() }
+            }
+        }
+        mediaManager.onPauseFadeRequested = {
+            pauseFadeJob?.cancel()
+            pauseFadeJob = scope.launch { delay(3000); userForceCollapsed = true; evaluatePriority() }
+        }
+        mediaManager.onUncollapseRequested = {
+            userForceCollapsed = false; pauseFadeJob?.cancel()
+        }
+
         hardwareManager.updateVolumeState(null)
         hardwareManager.updateBrightnessState(null)
 
