@@ -4,6 +4,7 @@ interface SystemEventListener {
     fun onNotification(title: String, text: String, pkg: String)
     fun onMediaPlay()
     // Add other relevant system events here
+    fun onClipboardChanged() {} 
 }
 
 interface SystemEventProvider {
