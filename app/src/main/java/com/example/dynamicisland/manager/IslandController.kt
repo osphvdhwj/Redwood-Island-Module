@@ -27,6 +27,9 @@ import com.example.dynamicisland.settings.SettingsViewModel
 import com.example.dynamicisland.ipc.IslandState
 import com.example.dynamicisland.gesture.IslandGesture
 import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -42,7 +45,6 @@ class IslandController @Inject constructor(
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val activeExternalActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
     
-    val settingsState = SettingsState()
     val currentGradientColors: List<Color> = listOf(Color(0xFF1E1E2E), Color(0xFF0A0A0A))
     val currentBrandColor: Color = Color.White
     
