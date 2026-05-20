@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.model.LiveActivityModel
 
 @Composable
-fQun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
+fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
     val haptic = LocalHapticFeedback.current
 
     val alertTitleSize = 14.sp
