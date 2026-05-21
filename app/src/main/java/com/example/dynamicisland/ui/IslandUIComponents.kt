@@ -51,7 +51,7 @@ fun AlertMidSlot(
     }
 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(theme.batIconSize + 8.dp)) { iconContent() }
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.width(theme.batIconSize + 8.dp).height(theme.batIconSize + 8.dp)) { iconContent() }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
              Text(text = title, color = titleColor, fontSize = theme.alertTitleSize, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState))
