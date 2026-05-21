@@ -1,0 +1,615 @@
+kaptDebugKotlin
+build	Run Code Checks	2026-05-21T12:23:00.7876942Z 
+build	Run Code Checks	2026-05-21T12:23:00.7906635Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/hook/FloatingWindowHook.kt:32:68 Unresolved reference 'windowingMode'.
+build	Run Code Checks	2026-05-21T12:23:00.7935977Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/hook/FloatingWindowHook.kt:32:112 Unresolved reference 'WINDOWING_MODE_FULLSCREEN'.
+build	Run Code Checks	2026-05-21T12:23:00.7937599Z > Task :app:compileDebugKotlin FAILED
+build	Run Code Checks	2026-05-21T12:23:00.7939438Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/hook/FloatingWindowHook.kt:48:92 Unresolved reference 'windowingMode'.
+build	Run Code Checks	2026-05-21T12:23:00.7965986Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/hook/FloatingWindowHook.kt:48:136 Unresolved reference 'WINDOWING_MODE_FULLSCREEN'.
+build	Run Code Checks	2026-05-21T12:23:00.7967486Z 
+build	Run Code Checks	2026-05-21T12:23:00.7967716Z > Task :app:compileReleaseKotlin FAILED
+build	Run Code Checks	2026-05-21T12:23:00.7995978Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/manager/IslandController.kt:839:9 Unresolved reference 'connectivityManager'.
+build	Run Code Checks	2026-05-21T12:23:00.8012455Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/manager/IslandController.kt:995:9 Unresolved reference 'connectivityManager'.
+build	Run Code Checks	2026-05-21T12:23:00.8045846Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/privacy/ClipboardCleaner.kt:40:30 Unresolved reference 'clipboardCleanerEnabled'.
+build	Run Code Checks	2026-05-21T12:23:00.8048873Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/privacy/ClipboardCleaner.kt:50:37 Argument type mismatch: actual type is 'T?', but 'K?' was expected.
+build	Run Code Checks	2026-05-21T12:23:00.8075907Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/privacy/ClipboardCleaner.kt:50:53 Unresolved reference 'clipboardClearTimeoutMs'.
+build	Run Code Checks	2026-05-21T12:23:00.8109067Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/privacy/ClipboardCleaner.kt:50:77 Cannot infer type for this parameter. Please specify it explicitly.
+build	Run Code Checks	2026-05-21T12:23:00.8135853Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/privacy/ClipboardCleaner.kt:50:84 Cannot infer type for this parameter. Please specify it explicitly.
+build	Run Code Checks	2026-05-21T12:23:00.8166066Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/privacy/ClipboardCleaner.kt:50:89 'operator' modifier is required on 'FirNamedFunctionSymbol kotlin/compareTo' in 'compareTo'.
+build	Run Code Checks	2026-05-21T12:23:00.8198883Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/privacy/ClipboardCleaner.kt:50:99 Argument type mismatch: actual type is 'kotlin.Long', but 'K' was expected.
+build	Run Code Checks	2026-05-21T12:23:00.8225776Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/system/window/IslandWindowService.kt:50:17 Conflicting declarations:
+build	Run Code Checks	2026-05-21T12:23:00.8234710Z val viewModelStore: ViewModelStore
+build	Run Code Checks	2026-05-21T12:23:00.8256206Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/system/window/IslandWindowService.kt:50:17 'viewModelStore' hides member of supertype 'ViewModelStoreOwner' and needs an 'override' modifier.
+build	Run Code Checks	2026-05-21T12:23:00.8286551Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/system/window/IslandWindowService.kt:54:18 Conflicting declarations:
+build	Run Code Checks	2026-05-21T12:23:00.8314820Z val viewModelStore: ViewModelStore
+build	Run Code Checks	2026-05-21T12:23:00.8345932Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/system/window/IslandWindowService.kt:54:57 Overload resolution ambiguity between candidates:
+build	Run Code Checks	2026-05-21T12:23:00.8357359Z val viewModelStore: ViewModelStore
+build	Run Code Checks	2026-05-21T12:23:00.8384687Z val viewModelStore: ViewModelStore
+build	Run Code Checks	2026-05-21T12:23:00.8409254Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/system/window/IslandWindowService.kt:158:17 Unresolved reference 'IslandApp'.
+build	Run Code Checks	2026-05-21T12:23:00.8416973Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/system/window/IslandWindowService.kt:213:15 Abstract member cannot be accessed directly.
+build	Run Code Checks	2026-05-21T12:23:00.8435937Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/IslandMainUI.kt:87:29 None of the following candidates is applicable:
+build	Run Code Checks	2026-05-21T12:23:00.8437807Z constructor(topStart: CornerSize, topEnd: CornerSize, bottomEnd: CornerSize, bottomStart: CornerSize): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8438893Z fun RoundedCornerShape(corner: CornerSize): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8465030Z fun RoundedCornerShape(size: Dp): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8505196Z fun RoundedCornerShape(topStart: Dp = ..., topEnd: Dp = ..., bottomEnd: Dp = ..., bottomStart: Dp = ...): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8535032Z fun RoundedCornerShape(size: Float): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8555416Z fun RoundedCornerShape(topStart: Float = ..., topEnd: Float = ..., bottomEnd: Float = ..., bottomStart: Float = ...): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8556592Z fun RoundedCornerShape(percent: Int): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8558321Z fun RoundedCornerShape(topStartPercent: Int = ..., topEndPercent: Int = ..., bottomEndPercent: Int = ..., bottomStartPercent: Int = ...): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8560590Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MaxView.kt:23:8 Unresolved reference 'coil'.
+build	Run Code Checks	2026-05-21T12:23:00.8562703Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MaxView.kt:66:13 Unresolved reference 'AsyncImage'.
+build	Run Code Checks	2026-05-21T12:23:00.8565131Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MaxView.kt:91:17 Unresolved reference 'AsyncImage'.
+build	Run Code Checks	2026-05-21T12:23:00.8567575Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MaxView.kt:98:35 Cannot infer type for this parameter. Please specify it explicitly.
+build	Run Code Checks	2026-05-21T12:23:00.8569965Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MaxView.kt:99:46 Unresolved reference 'result'.
+build	Run Code Checks	2026-05-21T12:23:00.8572168Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MusicMid.kt:22:8 Unresolved reference 'coil'.
+build	Run Code Checks	2026-05-21T12:23:00.8574494Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MusicMid.kt:51:13 Unresolved reference 'AsyncImage'.
+build	Run Code Checks	2026-05-21T12:23:00.8577045Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MusicMid.kt:69:17 Unresolved reference 'AsyncImage'.
+build	Run Code Checks	2026-05-21T12:23:00.8612109Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MusicMid.kt:76:35 Cannot infer type for this parameter. Please specify it explicitly.
+build	Run Code Checks	2026-05-21T12:23:00.8615035Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MusicMid.kt:77:46 Unresolved reference 'result'.
+build	Run Code Checks	2026-05-21T12:23:00.8636202Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/OnboardingOverlay.kt:136:39 Unresolved reference 'CircleShape'.
+build	Run Code Checks	2026-05-21T12:23:00.8638682Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/state/IslandUiState.kt:12:12 Redeclaration:
+build	Run Code Checks	2026-05-21T12:23:00.8640204Z data class IslandUiState : Any
+build	Run Code Checks	2026-05-21T12:23:00.8641643Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/state/IslandViewModel.kt:22:12 Redeclaration:
+build	Run Code Checks	2026-05-21T12:23:00.8643124Z data class IslandUiState : Any
+build	Run Code Checks	2026-05-21T12:23:00.8644921Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/hook/FloatingWindowHook.kt:32:68 Unresolved reference 'windowingMode'.
+build	Run Code Checks	2026-05-21T12:23:00.8647643Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/hook/FloatingWindowHook.kt:32:112 Unresolved reference 'WINDOWING_MODE_FULLSCREEN'.
+build	Run Code Checks	2026-05-21T12:23:00.8650281Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/hook/FloatingWindowHook.kt:48:92 Unresolved reference 'windowingMode'.
+build	Run Code Checks	2026-05-21T12:23:00.8652936Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/hook/FloatingWindowHook.kt:48:136 Unresolved reference 'WINDOWING_MODE_FULLSCREEN'.
+build	Run Code Checks	2026-05-21T12:23:00.8655986Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/manager/IslandController.kt:839:9 Unresolved reference 'connectivityManager'.
+build	Run Code Checks	2026-05-21T12:23:00.8659017Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/manager/IslandController.kt:995:9 Unresolved reference 'connectivityManager'.
+build	Run Code Checks	2026-05-21T12:23:00.8661897Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/privacy/ClipboardCleaner.kt:40:30 Unresolved reference 'clipboardCleanerEnabled'.
+build	Run Code Checks	2026-05-21T12:23:00.8664936Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/privacy/ClipboardCleaner.kt:50:37 Argument type mismatch: actual type is 'T?', but 'K?' was expected.
+build	Run Code Checks	2026-05-21T12:23:00.8667802Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/privacy/ClipboardCleaner.kt:50:53 Unresolved reference 'clipboardClearTimeoutMs'.
+build	Run Code Checks	2026-05-21T12:23:00.8670668Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/privacy/ClipboardCleaner.kt:50:77 Cannot infer type for this parameter. Please specify it explicitly.
+build	Run Code Checks	2026-05-21T12:23:00.8673681Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/privacy/ClipboardCleaner.kt:50:84 Cannot infer type for this parameter. Please specify it explicitly.
+build	Run Code Checks	2026-05-21T12:23:00.8677261Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/privacy/ClipboardCleaner.kt:50:89 'operator' modifier is required on 'FirNamedFunctionSymbol kotlin/compareTo' in 'compareTo'.
+build	Run Code Checks	2026-05-21T12:23:00.8680433Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/privacy/ClipboardCleaner.kt:50:99 Argument type mismatch: actual type is 'kotlin.Long', but 'K' was expected.
+build	Run Code Checks	2026-05-21T12:23:00.8683207Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/system/window/IslandWindowService.kt:50:17 Conflicting declarations:
+build	Run Code Checks	2026-05-21T12:23:00.8685016Z val viewModelStore: ViewModelStore
+build	Run Code Checks	2026-05-21T12:23:00.8687052Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/system/window/IslandWindowService.kt:50:17 'viewModelStore' hides member of supertype 'ViewModelStoreOwner' and needs an 'override' modifier.
+build	Run Code Checks	2026-05-21T12:23:00.8690288Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/system/window/IslandWindowService.kt:54:18 Conflicting declarations:
+build	Run Code Checks	2026-05-21T12:23:00.8691972Z val viewModelStore: ViewModelStore
+build	Run Code Checks	2026-05-21T12:23:00.8693689Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/system/window/IslandWindowService.kt:54:57 Overload resolution ambiguity between candidates:
+build	Run Code Checks	2026-05-21T12:23:00.8725629Z val viewModelStore: ViewModelStore
+build	Run Code Checks	2026-05-21T12:23:00.8754890Z val viewModelStore: ViewModelStore
+build	Run Code Checks	2026-05-21T12:23:00.8785751Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/system/window/IslandWindowService.kt:158:17 Unresolved reference 'IslandApp'.
+build	Run Code Checks	2026-05-21T12:23:00.8797972Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/system/window/IslandWindowService.kt:213:15 Abstract member cannot be accessed directly.
+build	Run Code Checks	2026-05-21T12:23:00.8800471Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/IslandMainUI.kt:87:29 None of the following candidates is applicable:
+build	Run Code Checks	2026-05-21T12:23:00.8802391Z constructor(topStart: CornerSize, topEnd: CornerSize, bottomEnd: CornerSize, bottomStart: CornerSize): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8803602Z fun RoundedCornerShape(corner: CornerSize): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8805062Z fun RoundedCornerShape(size: Dp): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8806114Z fun RoundedCornerShape(topStart: Dp = ..., topEnd: Dp = ..., bottomEnd: Dp = ..., bottomStart: Dp = ...): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8807398Z fun RoundedCornerShape(size: Float): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8808521Z fun RoundedCornerShape(topStart: Float = ..., topEnd: Float = ..., bottomEnd: Float = ..., bottomStart: Float = ...): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8809680Z fun RoundedCornerShape(percent: Int): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8811028Z fun RoundedCornerShape(topStartPercent: Int = ..., topEndPercent: Int = ..., bottomEndPercent: Int = ..., bottomStartPercent: Int = ...): RoundedCornerShape
+build	Run Code Checks	2026-05-21T12:23:00.8812953Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MaxView.kt:23:8 Unresolved reference 'coil'.
+build	Run Code Checks	2026-05-21T12:23:00.8815260Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MaxView.kt:66:13 Unresolved reference 'AsyncImage'.
+build	Run Code Checks	2026-05-21T12:23:00.8817404Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MaxView.kt:91:17 Unresolved reference 'AsyncImage'.
+build	Run Code Checks	2026-05-21T12:23:00.8819675Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MaxView.kt:98:35 Cannot infer type for this parameter. Please specify it explicitly.
+build	Run Code Checks	2026-05-21T12:23:00.8821900Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MaxView.kt:99:46 Unresolved reference 'result'.
+build	Run Code Checks	2026-05-21T12:23:00.8823921Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MusicMid.kt:22:8 Unresolved reference 'coil'.
+build	Run Code Checks	2026-05-21T12:23:00.8826531Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MusicMid.kt:51:13 Unresolved reference 'AsyncImage'.
+build	Run Code Checks	2026-05-21T12:23:00.8829183Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MusicMid.kt:69:17 Unresolved reference 'AsyncImage'.
+build	Run Code Checks	2026-05-21T12:23:00.8831850Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MusicMid.kt:76:35 Cannot infer type for this parameter. Please specify it explicitly.
+build	Run Code Checks	2026-05-21T12:23:00.8835076Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/MusicMid.kt:77:46 Unresolved reference 'result'.
+build	Run Code Checks	2026-05-21T12:23:00.8839946Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/OnboardingOverlay.kt:136:39 Unresolved reference 'CircleShape'.
+build	Run Code Checks	2026-05-21T12:23:00.8842274Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/state/IslandUiState.kt:12:12 Redeclaration:
+build	Run Code Checks	2026-05-21T12:23:00.8843744Z data class IslandUiState : Any
+build	Run Code Checks	2026-05-21T12:23:00.8845491Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/state/IslandViewModel.kt:22:12 Redeclaration:
+build	Run Code Checks	2026-05-21T12:23:00.8847116Z data class IslandUiState : Any
+build	Run Code Checks	2026-05-21T12:23:00.9877374Z 
+build	Run Code Checks	2026-05-21T12:23:00.9975470Z FAILURE: Build completed with 2 failures.
+build	Run Code Checks	2026-05-21T12:23:01.0004698Z 
+build	Run Code Checks	2026-05-21T12:23:01.0020724Z 1: Task failed with an exception.
+build	Run Code Checks	2026-05-21T12:23:01.0034860Z -----------
+build	Run Code Checks	2026-05-21T12:23:01.0064881Z * What went wrong:
+build	Run Code Checks	2026-05-21T12:23:01.0094989Z Execution failed for task ':app:compileDebugKotlin'.
+build	Run Code Checks	2026-05-21T12:23:01.0096549Z > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+build	Run Code Checks	2026-05-21T12:23:01.0123581Z    > Compilation error. See log for more details
+build	Run Code Checks	2026-05-21T12:23:01.0126609Z 
+build	Run Code Checks	2026-05-21T12:23:01.0126992Z * Try:
+build	Run Code Checks	2026-05-21T12:23:01.0127674Z > Run with --info or --debug option to get more log output.
+build	Run Code Checks	2026-05-21T12:23:01.0128840Z > Run with --scan to get full insights.
+build	Run Code Checks	2026-05-21T12:23:01.0129668Z > Get more help at https://help.gradle.org.
+build	Run Code Checks	2026-05-21T12:23:01.0130288Z 
+build	Run Code Checks	2026-05-21T12:23:01.0130600Z * Exception is:
+build	Run Code Checks	2026-05-21T12:23:01.0131540Z org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileDebugKotlin'.
+build	Run Code Checks	2026-05-21T12:23:01.0133435Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:130)
+build	Run Code Checks	2026-05-21T12:23:01.0135617Z 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:293)
+build	Run Code Checks	2026-05-21T12:23:01.0137144Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:128)
+build	Run Code Checks	2026-05-21T12:23:01.0139126Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+build	Run Code Checks	2026-05-21T12:23:01.0140921Z 	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+build	Run Code Checks	2026-05-21T12:23:01.0142734Z 	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+build	Run Code Checks	2026-05-21T12:23:01.0144708Z 	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+build	Run Code Checks	2026-05-21T12:23:01.0146290Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+build	Run Code Checks	2026-05-21T12:23:01.0147839Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+build	Run Code Checks	2026-05-21T12:23:01.0149423Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+build	Run Code Checks	2026-05-21T12:23:01.0150987Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+build	Run Code Checks	2026-05-21T12:23:01.0152742Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+build	Run Code Checks	2026-05-21T12:23:01.0154990Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	Run Code Checks	2026-05-21T12:23:01.0157288Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	Run Code Checks	2026-05-21T12:23:01.0159313Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	Run Code Checks	2026-05-21T12:23:01.0161099Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0162925Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	Run Code Checks	2026-05-21T12:23:01.0165025Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0166871Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	Run Code Checks	2026-05-21T12:23:01.0168515Z 41 actionable tasks: 35 executed, 6 from cache
+build	Run Code Checks	2026-05-21T12:23:01.0193024Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+build	Run Code Checks	2026-05-21T12:23:01.0194997Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+build	Run Code Checks	2026-05-21T12:23:01.0196498Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+build	Run Code Checks	2026-05-21T12:23:01.0198308Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+build	Run Code Checks	2026-05-21T12:23:01.0200169Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+build	Run Code Checks	2026-05-21T12:23:01.0202154Z 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+build	Run Code Checks	2026-05-21T12:23:01.0203986Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+build	Run Code Checks	2026-05-21T12:23:01.0206239Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+build	Run Code Checks	2026-05-21T12:23:01.0208137Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+build	Run Code Checks	2026-05-21T12:23:01.0209563Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+build	Run Code Checks	2026-05-21T12:23:01.0211123Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+build	Run Code Checks	2026-05-21T12:23:01.0212669Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+build	Run Code Checks	2026-05-21T12:23:01.0215398Z Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionException: A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+build	Run Code Checks	2026-05-21T12:23:01.0218113Z 	at org.gradle.workers.internal.DefaultWorkerExecutor$WorkItemExecution.waitForCompletion(DefaultWorkerExecutor.java:287)
+build	Run Code Checks	2026-05-21T12:23:01.0220101Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.lambda$waitForItemsAndGatherFailures$2(DefaultAsyncWorkTracker.java:130)
+build	Run Code Checks	2026-05-21T12:23:01.0221570Z 	at org.gradle.internal.Factories$1.create(Factories.java:31)
+build	Run Code Checks	2026-05-21T12:23:01.0223047Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocks(DefaultWorkerLeaseService.java:335)
+build	Run Code Checks	2026-05-21T12:23:01.0225205Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocks(DefaultWorkerLeaseService.java:318)
+build	Run Code Checks	2026-05-21T12:23:01.0226920Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLock(DefaultWorkerLeaseService.java:323)
+build	Run Code Checks	2026-05-21T12:23:01.0228769Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:126)
+build	Run Code Checks	2026-05-21T12:23:01.0230828Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:92)
+build	Run Code Checks	2026-05-21T12:23:01.0232568Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForAll(DefaultAsyncWorkTracker.java:78)
+build	Run Code Checks	2026-05-21T12:23:01.0234401Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForCompletion(DefaultAsyncWorkTracker.java:66)
+build	Run Code Checks	2026-05-21T12:23:01.0235896Z 	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:252)
+build	Run Code Checks	2026-05-21T12:23:01.0237258Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+build	Run Code Checks	2026-05-21T12:23:01.0238770Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+build	Run Code Checks	2026-05-21T12:23:01.0240294Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	Run Code Checks	2026-05-21T12:23:01.0241768Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0243227Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	Run Code Checks	2026-05-21T12:23:01.0244910Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0246372Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+build	Run Code Checks	2026-05-21T12:23:01.0247742Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:229)
+build	Run Code Checks	2026-05-21T12:23:01.0249053Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:212)
+build	Run Code Checks	2026-05-21T12:23:01.0250510Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:195)
+build	Run Code Checks	2026-05-21T12:23:01.0251895Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:162)
+build	Run Code Checks	2026-05-21T12:23:01.0253338Z 	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:105)
+build	Run Code Checks	2026-05-21T12:23:01.0254890Z 	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:44)
+build	Run Code Checks	2026-05-21T12:23:01.0255994Z 	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0257010Z 	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:56)
+build	Run Code Checks	2026-05-21T12:23:01.0258486Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	Run Code Checks	2026-05-21T12:23:01.0260378Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	Run Code Checks	2026-05-21T12:23:01.0262075Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	Run Code Checks	2026-05-21T12:23:01.0263564Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0265420Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	Run Code Checks	2026-05-21T12:23:01.0267143Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0268776Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	Run Code Checks	2026-05-21T12:23:01.0270234Z 	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:56)
+build	Run Code Checks	2026-05-21T12:23:01.0271669Z 	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:44)
+build	Run Code Checks	2026-05-21T12:23:01.0273094Z 	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:42)
+build	Run Code Checks	2026-05-21T12:23:01.0274921Z 	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:75)
+build	Run Code Checks	2026-05-21T12:23:01.0276446Z 	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+build	Run Code Checks	2026-05-21T12:23:01.0277895Z 	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:50)
+build	Run Code Checks	2026-05-21T12:23:01.0279631Z 	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:28)
+build	Run Code Checks	2026-05-21T12:23:01.0281443Z 	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:67)
+build	Run Code Checks	2026-05-21T12:23:01.0283303Z 	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:37)
+build	Run Code Checks	2026-05-21T12:23:01.0285154Z 	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:61)
+build	Run Code Checks	2026-05-21T12:23:01.0286771Z 	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:26)
+build	Run Code Checks	2026-05-21T12:23:01.0288464Z 	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:69)
+build	Run Code Checks	2026-05-21T12:23:01.0290214Z 	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:46)
+build	Run Code Checks	2026-05-21T12:23:01.0291823Z 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:40)
+build	Run Code Checks	2026-05-21T12:23:01.0293268Z 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:29)
+build	Run Code Checks	2026-05-21T12:23:01.0294852Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:189)
+build	Run Code Checks	2026-05-21T12:23:01.0296263Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeAndStoreInCache(BuildCacheStep.java:145)
+build	Run Code Checks	2026-05-21T12:23:01.0297678Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$4(BuildCacheStep.java:101)
+build	Run Code Checks	2026-05-21T12:23:01.0299060Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$5(BuildCacheStep.java:101)
+build	Run Code Checks	2026-05-21T12:23:01.0300360Z 	at org.gradle.internal.Try$Success.map(Try.java:175)
+build	Run Code Checks	2026-05-21T12:23:01.0301360Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithCache(BuildCacheStep.java:85)
+build	Run Code Checks	2026-05-21T12:23:01.0302823Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$0(BuildCacheStep.java:74)
+build	Run Code Checks	2026-05-21T12:23:01.0303828Z 	at org.gradle.internal.Either$Left.fold(Either.java:115)
+build	Run Code Checks	2026-05-21T12:23:01.0305016Z 	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
+build	Run Code Checks	2026-05-21T12:23:01.0306171Z 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:73)
+build	Run Code Checks	2026-05-21T12:23:01.0307333Z 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:48)
+build	Run Code Checks	2026-05-21T12:23:01.0308631Z 	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:46)
+build	Run Code Checks	2026-05-21T12:23:01.0310071Z 	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:35)
+build	Run Code Checks	2026-05-21T12:23:01.0311464Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:75)
+build	Run Code Checks	2026-05-21T12:23:01.0312776Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:53)
+build	Run Code Checks	2026-05-21T12:23:01.0314055Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:53)
+build	Run Code Checks	2026-05-21T12:23:01.0315525Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:35)
+build	Run Code Checks	2026-05-21T12:23:01.0317080Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+build	Run Code Checks	2026-05-21T12:23:01.0319001Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+build	Run Code Checks	2026-05-21T12:23:01.0320946Z 	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:49)
+build	Run Code Checks	2026-05-21T12:23:01.0322946Z 	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:27)
+build	Run Code Checks	2026-05-21T12:23:01.0325008Z 	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:71)
+build	Run Code Checks	2026-05-21T12:23:01.0326868Z 	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:39)
+build	Run Code Checks	2026-05-21T12:23:01.0328367Z 	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:65)
+build	Run Code Checks	2026-05-21T12:23:01.0329751Z 	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:36)
+build	Run Code Checks	2026-05-21T12:23:01.0330974Z 	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:107)
+build	Run Code Checks	2026-05-21T12:23:01.0332102Z 	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:56)
+build	Run Code Checks	2026-05-21T12:23:01.0333661Z 	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:64)
+build	Run Code Checks	2026-05-21T12:23:01.0336006Z 	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:43)
+build	Run Code Checks	2026-05-21T12:23:01.0337969Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.executeWithNonEmptySources(AbstractSkipEmptyWorkStep.java:125)
+build	Run Code Checks	2026-05-21T12:23:01.0339659Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:61)
+build	Run Code Checks	2026-05-21T12:23:01.0341177Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:36)
+build	Run Code Checks	2026-05-21T12:23:01.0342878Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+build	Run Code Checks	2026-05-21T12:23:01.0344846Z 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
+build	Run Code Checks	2026-05-21T12:23:01.0346527Z 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
+build	Run Code Checks	2026-05-21T12:23:01.0348365Z 	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:75)
+build	Run Code Checks	2026-05-21T12:23:01.0349959Z 	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:41)
+build	Run Code Checks	2026-05-21T12:23:01.0351472Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$execute$0(AssignMutableWorkspaceStep.java:35)
+build	Run Code Checks	2026-05-21T12:23:01.0352925Z 	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:289)
+build	Run Code Checks	2026-05-21T12:23:01.0354505Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:31)
+build	Run Code Checks	2026-05-21T12:23:01.0356397Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:22)
+build	Run Code Checks	2026-05-21T12:23:01.0358075Z 	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+build	Run Code Checks	2026-05-21T12:23:01.0359543Z 	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+build	Run Code Checks	2026-05-21T12:23:01.0361316Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+build	Run Code Checks	2026-05-21T12:23:01.0363319Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+build	Run Code Checks	2026-05-21T12:23:01.0365649Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+build	Run Code Checks	2026-05-21T12:23:01.0367437Z 	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+build	Run Code Checks	2026-05-21T12:23:01.0368888Z 	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+build	Run Code Checks	2026-05-21T12:23:01.0370254Z 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:48)
+build	Run Code Checks	2026-05-21T12:23:01.0371522Z 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:35)
+build	Run Code Checks	2026-05-21T12:23:01.0372942Z 	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:61)
+build	Run Code Checks	2026-05-21T12:23:01.0375101Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:127)
+build	Run Code Checks	2026-05-21T12:23:01.0377071Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+build	Run Code Checks	2026-05-21T12:23:01.0378961Z 	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+build	Run Code Checks	2026-05-21T12:23:01.0380763Z 	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+build	Run Code Checks	2026-05-21T12:23:01.0382446Z 	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+build	Run Code Checks	2026-05-21T12:23:01.0384029Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+build	Run Code Checks	2026-05-21T12:23:01.0385852Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+build	Run Code Checks	2026-05-21T12:23:01.0387422Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+build	Run Code Checks	2026-05-21T12:23:01.0388910Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+build	Run Code Checks	2026-05-21T12:23:01.0390383Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+build	Run Code Checks	2026-05-21T12:23:01.0392064Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	Run Code Checks	2026-05-21T12:23:01.0393938Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	Run Code Checks	2026-05-21T12:23:01.0395854Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	Run Code Checks	2026-05-21T12:23:01.0397648Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0399320Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	Run Code Checks	2026-05-21T12:23:01.0400840Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0402324Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	Run Code Checks	2026-05-21T12:23:01.0403797Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+build	Run Code Checks	2026-05-21T12:23:01.0405385Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+build	Run Code Checks	2026-05-21T12:23:01.0407026Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+build	Run Code Checks	2026-05-21T12:23:01.0408810Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+build	Run Code Checks	2026-05-21T12:23:01.0410710Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+build	Run Code Checks	2026-05-21T12:23:01.0412394Z 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+build	Run Code Checks	2026-05-21T12:23:01.0414015Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+build	Run Code Checks	2026-05-21T12:23:01.0416204Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+build	Run Code Checks	2026-05-21T12:23:01.0417857Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+build	Run Code Checks	2026-05-21T12:23:01.0419174Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+build	Run Code Checks	2026-05-21T12:23:01.0420561Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+build	Run Code Checks	2026-05-21T12:23:01.0421945Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+build	Run Code Checks	2026-05-21T12:23:01.0423382Z Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
+build	Run Code Checks	2026-05-21T12:23:01.0425113Z 	at org.jetbrains.kotlin.gradle.tasks.TasksUtilsKt.throwExceptionIfCompilationFailed(tasksUtils.kt:21)
+build	Run Code Checks	2026-05-21T12:23:01.0426693Z 	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.run(GradleKotlinCompilerWork.kt:119)
+build	Run Code Checks	2026-05-21T12:23:01.0428598Z 	at org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction.execute(GradleCompilerRunnerWithWorkers.kt:76)
+build	Run Code Checks	2026-05-21T12:23:01.0430367Z 	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
+build	Run Code Checks	2026-05-21T12:23:01.0431639Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:66)
+build	Run Code Checks	2026-05-21T12:23:01.0432999Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:62)
+build	Run Code Checks	2026-05-21T12:23:01.0434564Z 	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
+build	Run Code Checks	2026-05-21T12:23:01.0436067Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:62)
+build	Run Code Checks	2026-05-21T12:23:01.0437311Z 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+build	Run Code Checks	2026-05-21T12:23:01.0438298Z 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+build	Run Code Checks	2026-05-21T12:23:01.0439730Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	Run Code Checks	2026-05-21T12:23:01.0441587Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	Run Code Checks	2026-05-21T12:23:01.0443867Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	Run Code Checks	2026-05-21T12:23:01.0445776Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0447294Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	Run Code Checks	2026-05-21T12:23:01.0448788Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0450256Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	Run Code Checks	2026-05-21T12:23:01.0451696Z 	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+build	Run Code Checks	2026-05-21T12:23:01.0453038Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0454616Z 	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
+build	Run Code Checks	2026-05-21T12:23:01.0456308Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:194)
+build	Run Code Checks	2026-05-21T12:23:01.0458105Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:127)
+build	Run Code Checks	2026-05-21T12:23:01.0459816Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:169)
+build	Run Code Checks	2026-05-21T12:23:01.0461085Z 	at org.gradle.internal.Factories$1.create(Factories.java:31)
+build	Run Code Checks	2026-05-21T12:23:01.0462221Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
+build	Run Code Checks	2026-05-21T12:23:01.0463656Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
+build	Run Code Checks	2026-05-21T12:23:01.0465420Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:132)
+build	Run Code Checks	2026-05-21T12:23:01.0467298Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:164)
+build	Run Code Checks	2026-05-21T12:23:01.0469199Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:133)
+build	Run Code Checks	2026-05-21T12:23:01.0470520Z 	... 2 more
+build	Run Code Checks	2026-05-21T12:23:01.0470896Z 
+build	Run Code Checks	2026-05-21T12:23:01.0471269Z ==============================================================================
+build	Run Code Checks	2026-05-21T12:23:01.0471881Z 
+build	Run Code Checks	2026-05-21T12:23:01.0472232Z 2: Task failed with an exception.
+build	Run Code Checks	2026-05-21T12:23:01.0472834Z -----------
+build	Run Code Checks	2026-05-21T12:23:01.0473322Z * What went wrong:
+build	Run Code Checks	2026-05-21T12:23:01.0473978Z Execution failed for task ':app:compileReleaseKotlin'.
+build	Run Code Checks	2026-05-21T12:23:01.0475637Z > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+build	Run Code Checks	2026-05-21T12:23:01.0476909Z    > Compilation error. See log for more details
+build	Run Code Checks	2026-05-21T12:23:01.0477395Z 
+build	Run Code Checks	2026-05-21T12:23:01.0477637Z * Try:
+build	Run Code Checks	2026-05-21T12:23:01.0478169Z > Run with --info or --debug option to get more log output.
+build	Run Code Checks	2026-05-21T12:23:01.0478844Z > Run with --scan to get full insights.
+build	Run Code Checks	2026-05-21T12:23:01.0479459Z > Get more help at https://help.gradle.org.
+build	Run Code Checks	2026-05-21T12:23:01.0479922Z 
+build	Run Code Checks	2026-05-21T12:23:01.0480186Z * Exception is:
+build	Run Code Checks	2026-05-21T12:23:01.0481001Z org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileReleaseKotlin'.
+build	Run Code Checks	2026-05-21T12:23:01.0482557Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:130)
+build	Run Code Checks	2026-05-21T12:23:01.0483928Z 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:293)
+build	Run Code Checks	2026-05-21T12:23:01.0485489Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:128)
+build	Run Code Checks	2026-05-21T12:23:01.0487155Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+build	Run Code Checks	2026-05-21T12:23:01.0489104Z 	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+build	Run Code Checks	2026-05-21T12:23:01.0491025Z 	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+build	Run Code Checks	2026-05-21T12:23:01.0492765Z 	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+build	Run Code Checks	2026-05-21T12:23:01.0494574Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+build	Run Code Checks	2026-05-21T12:23:01.0496144Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+build	Run Code Checks	2026-05-21T12:23:01.0497705Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+build	Run Code Checks	2026-05-21T12:23:01.0499149Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+build	Run Code Checks	2026-05-21T12:23:01.0500600Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+build	Run Code Checks	2026-05-21T12:23:01.0502254Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	Run Code Checks	2026-05-21T12:23:01.0504148Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	Run Code Checks	2026-05-21T12:23:01.0506283Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	Run Code Checks	2026-05-21T12:23:01.0508077Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0509817Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	Run Code Checks	2026-05-21T12:23:01.0511551Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0513213Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	Run Code Checks	2026-05-21T12:23:01.0514919Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+build	Run Code Checks	2026-05-21T12:23:01.0516278Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+build	Run Code Checks	2026-05-21T12:23:01.0517840Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+build	Run Code Checks	2026-05-21T12:23:01.0519594Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+build	Run Code Checks	2026-05-21T12:23:01.0521500Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+build	Run Code Checks	2026-05-21T12:23:01.0523214Z 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+build	Run Code Checks	2026-05-21T12:23:01.0525088Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+build	Run Code Checks	2026-05-21T12:23:01.0527052Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+build	Run Code Checks	2026-05-21T12:23:01.0528985Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+build	Run Code Checks	2026-05-21T12:23:01.0530391Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+build	Run Code Checks	2026-05-21T12:23:01.0531754Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+build	Run Code Checks	2026-05-21T12:23:01.0533104Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+build	Run Code Checks	2026-05-21T12:23:01.0534595Z 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+build	Run Code Checks	2026-05-21T12:23:01.0536324Z 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+build	Run Code Checks	2026-05-21T12:23:01.0537309Z 	at java.base/java.lang.Thread.run(Thread.java:840)
+build	Run Code Checks	2026-05-21T12:23:01.0539298Z Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionException: A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+build	Run Code Checks	2026-05-21T12:23:01.0541592Z 	at org.gradle.workers.internal.DefaultWorkerExecutor$WorkItemExecution.waitForCompletion(DefaultWorkerExecutor.java:287)
+build	Run Code Checks	2026-05-21T12:23:01.0543244Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.lambda$waitForItemsAndGatherFailures$2(DefaultAsyncWorkTracker.java:130)
+build	Run Code Checks	2026-05-21T12:23:01.0544745Z 	at org.gradle.internal.Factories$1.create(Factories.java:31)
+build	Run Code Checks	2026-05-21T12:23:01.0545996Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocks(DefaultWorkerLeaseService.java:335)
+build	Run Code Checks	2026-05-21T12:23:01.0547663Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocks(DefaultWorkerLeaseService.java:318)
+build	Run Code Checks	2026-05-21T12:23:01.0549290Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLock(DefaultWorkerLeaseService.java:323)
+build	Run Code Checks	2026-05-21T12:23:01.0550974Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:126)
+build	Run Code Checks	2026-05-21T12:23:01.0552638Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:92)
+build	Run Code Checks	2026-05-21T12:23:01.0554108Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForAll(DefaultAsyncWorkTracker.java:78)
+build	Run Code Checks	2026-05-21T12:23:01.0555744Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForCompletion(DefaultAsyncWorkTracker.java:66)
+build	Run Code Checks	2026-05-21T12:23:01.0557030Z 	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:252)
+build	Run Code Checks	2026-05-21T12:23:01.0558359Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+build	Run Code Checks	2026-05-21T12:23:01.0559869Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+build	Run Code Checks	2026-05-21T12:23:01.0561310Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	Run Code Checks	2026-05-21T12:23:01.0562802Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0564552Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	Run Code Checks	2026-05-21T12:23:01.0566263Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0567952Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+build	Run Code Checks	2026-05-21T12:23:01.0569533Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:229)
+build	Run Code Checks	2026-05-21T12:23:01.0571060Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:212)
+build	Run Code Checks	2026-05-21T12:23:01.0572757Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:195)
+build	Run Code Checks	2026-05-21T12:23:01.0574676Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:162)
+build	Run Code Checks	2026-05-21T12:23:01.0576083Z 	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:105)
+build	Run Code Checks	2026-05-21T12:23:01.0577390Z 	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:44)
+build	Run Code Checks	2026-05-21T12:23:01.0578677Z 	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0579887Z 	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:56)
+build	Run Code Checks	2026-05-21T12:23:01.0581554Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	Run Code Checks	2026-05-21T12:23:01.0583627Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	Run Code Checks	2026-05-21T12:23:01.0586045Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	Run Code Checks	2026-05-21T12:23:01.0587948Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0589615Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	Run Code Checks	2026-05-21T12:23:01.0591258Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0592779Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	Run Code Checks	2026-05-21T12:23:01.0594129Z 	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:56)
+build	Run Code Checks	2026-05-21T12:23:01.0595714Z 	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:44)
+build	Run Code Checks	2026-05-21T12:23:01.0596968Z 	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:42)
+build	Run Code Checks	2026-05-21T12:23:01.0598290Z 	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:75)
+build	Run Code Checks	2026-05-21T12:23:01.0599482Z 	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+build	Run Code Checks	2026-05-21T12:23:01.0600783Z 	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:50)
+build	Run Code Checks	2026-05-21T12:23:01.0602304Z 	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:28)
+build	Run Code Checks	2026-05-21T12:23:01.0603853Z 	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:67)
+build	Run Code Checks	2026-05-21T12:23:01.0605604Z 	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:37)
+build	Run Code Checks	2026-05-21T12:23:01.0607227Z 	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:61)
+build	Run Code Checks	2026-05-21T12:23:01.0608918Z 	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:26)
+build	Run Code Checks	2026-05-21T12:23:01.0610708Z 	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:69)
+build	Run Code Checks	2026-05-21T12:23:01.0612496Z 	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:46)
+build	Run Code Checks	2026-05-21T12:23:01.0614039Z 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:40)
+build	Run Code Checks	2026-05-21T12:23:01.0615742Z 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:29)
+build	Run Code Checks	2026-05-21T12:23:01.0617170Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:189)
+build	Run Code Checks	2026-05-21T12:23:01.0618573Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeAndStoreInCache(BuildCacheStep.java:145)
+build	Run Code Checks	2026-05-21T12:23:01.0619983Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$4(BuildCacheStep.java:101)
+build	Run Code Checks	2026-05-21T12:23:01.0621141Z 	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+build	Run Code Checks	2026-05-21T12:23:01.0622305Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$5(BuildCacheStep.java:101)
+build	Run Code Checks	2026-05-21T12:23:01.0623442Z 	at org.gradle.internal.Try$Success.map(Try.java:175)
+build	Run Code Checks	2026-05-21T12:23:01.0624731Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithCache(BuildCacheStep.java:85)
+build	Run Code Checks	2026-05-21T12:23:01.0626183Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$0(BuildCacheStep.java:74)
+build	Run Code Checks	2026-05-21T12:23:01.0627205Z 	at org.gradle.internal.Either$Left.fold(Either.java:115)
+build	Run Code Checks	2026-05-21T12:23:01.0628126Z 	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
+build	Run Code Checks	2026-05-21T12:23:01.0629448Z 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:73)
+build	Run Code Checks	2026-05-21T12:23:01.0632320Z 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:48)
+build	Run Code Checks	2026-05-21T12:23:01.0633941Z 	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:46)
+build	Run Code Checks	2026-05-21T12:23:01.0635865Z 	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:35)
+build	Run Code Checks	2026-05-21T12:23:01.0637316Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:75)
+build	Run Code Checks	2026-05-21T12:23:01.0638753Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:53)
+build	Run Code Checks	2026-05-21T12:23:01.0639946Z 	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+build	Run Code Checks	2026-05-21T12:23:01.0641111Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:53)
+build	Run Code Checks	2026-05-21T12:23:01.0642624Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:35)
+build	Run Code Checks	2026-05-21T12:23:01.0644553Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+build	Run Code Checks	2026-05-21T12:23:01.0646629Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+build	Run Code Checks	2026-05-21T12:23:01.0648622Z 	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:49)
+build	Run Code Checks	2026-05-21T12:23:01.0650614Z 	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:27)
+build	Run Code Checks	2026-05-21T12:23:01.0652461Z 	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:71)
+build	Run Code Checks	2026-05-21T12:23:01.0654151Z 	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:39)
+build	Run Code Checks	2026-05-21T12:23:01.0655875Z 	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:65)
+build	Run Code Checks	2026-05-21T12:23:01.0657149Z 	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:36)
+build	Run Code Checks	2026-05-21T12:23:01.0658369Z 	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:107)
+build	Run Code Checks	2026-05-21T12:23:01.0659486Z 	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:56)
+build	Run Code Checks	2026-05-21T12:23:01.0661003Z 	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:64)
+build	Run Code Checks	2026-05-21T12:23:01.0663015Z 	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:43)
+build	Run Code Checks	2026-05-21T12:23:01.0665217Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.executeWithNonEmptySources(AbstractSkipEmptyWorkStep.java:125)
+build	Run Code Checks	2026-05-21T12:23:01.0667104Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:61)
+build	Run Code Checks	2026-05-21T12:23:01.0668687Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:36)
+build	Run Code Checks	2026-05-21T12:23:01.0670535Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+build	Run Code Checks	2026-05-21T12:23:01.0672346Z 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
+build	Run Code Checks	2026-05-21T12:23:01.0674085Z 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
+build	Run Code Checks	2026-05-21T12:23:01.0676021Z 	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:75)
+build	Run Code Checks	2026-05-21T12:23:01.0677589Z 	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:41)
+build	Run Code Checks	2026-05-21T12:23:01.0679097Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$execute$0(AssignMutableWorkspaceStep.java:35)
+build	Run Code Checks	2026-05-21T12:23:01.0680459Z 	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:289)
+build	Run Code Checks	2026-05-21T12:23:01.0682010Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:31)
+build	Run Code Checks	2026-05-21T12:23:01.0683611Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:22)
+build	Run Code Checks	2026-05-21T12:23:01.0685264Z 	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+build	Run Code Checks	2026-05-21T12:23:01.0686490Z 	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+build	Run Code Checks	2026-05-21T12:23:01.0687948Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+build	Run Code Checks	2026-05-21T12:23:01.0689226Z 	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+build	Run Code Checks	2026-05-21T12:23:01.0690409Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+build	Run Code Checks	2026-05-21T12:23:01.0692061Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+build	Run Code Checks	2026-05-21T12:23:01.0693463Z 	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+build	Run Code Checks	2026-05-21T12:23:01.0694794Z 	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+build	Run Code Checks	2026-05-21T12:23:01.0695871Z 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:48)
+build	Run Code Checks	2026-05-21T12:23:01.0696877Z 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:35)
+build	Run Code Checks	2026-05-21T12:23:01.0697991Z 	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:61)
+build	Run Code Checks	2026-05-21T12:23:01.0699385Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:127)
+build	Run Code Checks	2026-05-21T12:23:01.0700945Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+build	Run Code Checks	2026-05-21T12:23:01.0702438Z 	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+build	Run Code Checks	2026-05-21T12:23:01.0704026Z 	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+build	Run Code Checks	2026-05-21T12:23:01.0705793Z 	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+build	Run Code Checks	2026-05-21T12:23:01.0707212Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+build	Run Code Checks	2026-05-21T12:23:01.0708579Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+build	Run Code Checks	2026-05-21T12:23:01.0709974Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+build	Run Code Checks	2026-05-21T12:23:01.0711313Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+build	Run Code Checks	2026-05-21T12:23:01.0712599Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+build	Run Code Checks	2026-05-21T12:23:01.0714098Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	Run Code Checks	2026-05-21T12:23:01.0715998Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	Run Code Checks	2026-05-21T12:23:01.0717632Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	Run Code Checks	2026-05-21T12:23:01.0719092Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0720555Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	Run Code Checks	2026-05-21T12:23:01.0722031Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0723485Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	Run Code Checks	2026-05-21T12:23:01.0725444Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+build	Run Code Checks	2026-05-21T12:23:01.0726972Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+build	Run Code Checks	2026-05-21T12:23:01.0728442Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+build	Run Code Checks	2026-05-21T12:23:01.0730258Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+build	Run Code Checks	2026-05-21T12:23:01.0732276Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+build	Run Code Checks	2026-05-21T12:23:01.0734100Z 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+build	Run Code Checks	2026-05-21T12:23:01.0735936Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+build	Run Code Checks	2026-05-21T12:23:01.0737887Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+build	Run Code Checks	2026-05-21T12:23:01.0739526Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+build	Run Code Checks	2026-05-21T12:23:01.0740871Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+build	Run Code Checks	2026-05-21T12:23:01.0742346Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+build	Run Code Checks	2026-05-21T12:23:01.0743859Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+build	Run Code Checks	2026-05-21T12:23:01.0745558Z 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+build	Run Code Checks	2026-05-21T12:23:01.0747051Z 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+build	Run Code Checks	2026-05-21T12:23:01.0748186Z 	at java.base/java.lang.Thread.run(Thread.java:840)
+build	Run Code Checks	2026-05-21T12:23:01.0749364Z Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
+build	Run Code Checks	2026-05-21T12:23:01.0751019Z 	at org.jetbrains.kotlin.gradle.tasks.TasksUtilsKt.throwExceptionIfCompilationFailed(tasksUtils.kt:21)
+build	Run Code Checks	2026-05-21T12:23:01.0752636Z 	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.run(GradleKotlinCompilerWork.kt:119)
+build	Run Code Checks	2026-05-21T12:23:01.0754864Z 	at org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction.execute(GradleCompilerRunnerWithWorkers.kt:76)
+build	Run Code Checks	2026-05-21T12:23:01.0756842Z 	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
+build	Run Code Checks	2026-05-21T12:23:01.0758412Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:66)
+build	Run Code Checks	2026-05-21T12:23:01.0760033Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:62)
+build	Run Code Checks	2026-05-21T12:23:01.0761598Z 	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
+build	Run Code Checks	2026-05-21T12:23:01.0763197Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:62)
+build	Run Code Checks	2026-05-21T12:23:01.0764794Z 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+build	Run Code Checks	2026-05-21T12:23:01.0765797Z 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+build	Run Code Checks	2026-05-21T12:23:01.0767210Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	Run Code Checks	2026-05-21T12:23:01.0769080Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	Run Code Checks	2026-05-21T12:23:01.0770758Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	Run Code Checks	2026-05-21T12:23:01.0772490Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0773987Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	Run Code Checks	2026-05-21T12:23:01.0775918Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0777402Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	Run Code Checks	2026-05-21T12:23:01.0778803Z 	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+build	Run Code Checks	2026-05-21T12:23:01.0780180Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:59)
+build	Run Code Checks	2026-05-21T12:23:01.0781515Z 	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
+build	Run Code Checks	2026-05-21T12:23:01.0782657Z 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+build	Run Code Checks	2026-05-21T12:23:01.0783982Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:194)
+build	Run Code Checks	2026-05-21T12:23:01.0785913Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:127)
+build	Run Code Checks	2026-05-21T12:23:01.0787605Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:169)
+build	Run Code Checks	2026-05-21T12:23:01.0788790Z 	at org.gradle.internal.Factories$1.create(Factories.java:31)
+build	Run Code Checks	2026-05-21T12:23:01.0789829Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
+build	Run Code Checks	2026-05-21T12:23:01.0791220Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
+build	Run Code Checks	2026-05-21T12:23:01.0792694Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:132)
+build	Run Code Checks	2026-05-21T12:23:01.0794477Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:164)
+build	Run Code Checks	2026-05-21T12:23:01.0796412Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:133)
+build	Run Code Checks	2026-05-21T12:23:01.0798029Z 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+build	Run Code Checks	2026-05-21T12:23:01.0799188Z 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+build	Run Code Checks	2026-05-21T12:23:01.0799976Z 	... 5 more
+build	Run Code Checks	2026-05-21T12:23:01.0800286Z 
+build	Run Code Checks	2026-05-21T12:23:01.0800559Z ==============================================================================
+build	Run Code Checks	2026-05-21T12:23:01.0801038Z 
+build	Run Code Checks	2026-05-21T12:23:01.0801309Z BUILD FAILED in 2m 48s
+build	Run Code Checks	2026-05-21T12:23:01.0877116Z Configuration cache entry stored.
+build	Run Code Checks	2026-05-21T12:23:01.6123778Z ##[error]Process completed with exit code 1.
+build	Upload Lint Reports (if Code Checks failed)	﻿2026-05-21T12:23:01.6190199Z ##[group]Run actions/upload-artifact@v4
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6190529Z with:
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6190723Z   name: lint-reports
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6191398Z   path: app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt
+build	Upload Lint Reports (if Code Checks failed)	app/build/reports/lint-results-debug.html
+build	Upload Lint Reports (if Code Checks failed)	
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6192103Z   overwrite: true
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6192320Z   if-no-files-found: warn
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6192558Z   compression-level: 6
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6192786Z   include-hidden-files: false
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6193022Z env:
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6193329Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6193836Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6194592Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6194931Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6195238Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6195691Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6196372Z   DEVELOCITY_AUTO_INJECTION_CUSTOM_VALUE: gradle-actions
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6196951Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.6197440Z ##[endgroup]
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.8393552Z Multiple search paths detected. Calculating the least common ancestor of all paths
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.8397756Z The least common ancestor is /home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/build. This will be the root directory of the artifact
+build	Upload Lint Reports (if Code Checks failed)	2026-05-21T12:23:01.8402302Z ##[warning]No files were found with the provided path: app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt
+build	Upload Lint Reports (if Code Checks failed)	app/build/reports/lint-results-debug.html. No artifacts will be uploaded.
+build	Post Setup Gradle	﻿2026-05-21T12:23:01.8597368Z Post job cleanup.
+build	Post Setup Gradle	2026-05-21T12:23:02.1065593Z In post-action step
+build	Post Setup Gradle	2026-05-21T12:23:02.1074241Z Stopping all Gradle daemons before saving Gradle User Home state
+build	Post Setup Gradle	2026-05-21T12:23:02.1075691Z Stopping Gradle daemons for /home/runner/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1
+build	Post Setup Gradle	2026-05-21T12:23:02.1095231Z [command]/home/runner/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle --stop
+build	Post Setup Gradle	2026-05-21T12:23:02.8431708Z Stopping Daemon(s)
+build	Post Setup Gradle	2026-05-21T12:23:02.8432481Z 1 Daemon stopped
+build	Post Setup Gradle	2026-05-21T12:23:02.8555999Z ##[group]Caching Gradle state
+build	Post Setup Gradle	2026-05-21T12:23:02.8794500Z Not saving configuration-cache state, as no encryption key was provided
+build	Post Setup Gradle	2026-05-21T12:23:02.8878418Z Caching generated-gradle-jars with path '/home/runner/.gradle/caches/8.11.1/generated-gradle-jars/gradle-api-8.11.1.jar' and cache key: gradle-generated-gradle-jars-v1-162ec066fc0a1bae82804bbc69cfff33
+build	Post Setup Gradle	2026-05-21T12:23:02.8907558Z Caching wrapper-zips with path '/home/runner/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c' and cache key: gradle-wrapper-zips-v1-c3a078940a5ca7b83357239a46024f48
+build	Post Setup Gradle	2026-05-21T12:23:02.9083726Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	Post Setup Gradle	2026-05-21T12:23:02.9125480Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	Post Setup Gradle	2026-05-21T12:23:03.7998022Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches/8.11.1/generated-gradle-jars/gradle-api-8.11.1.jar' and key: gradle-generated-gradle-jars-v1-162ec066fc0a1bae82804bbc69cfff33: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0J/kOagAAAADfffqibYX2TaSlCgJ2sZJDUEhMMzBFREdFMDIxOABFZGdl
+build	Post Setup Gradle	2026-05-21T12:23:03.8354569Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c' and key: gradle-wrapper-zips-v1-c3a078940a5ca7b83357239a46024f48: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0J/kOagAAAABbxxcfOzyTTYGrajTzI18lUEhMMzBFREdFMDIwNgBFZGdl
+build	Post Setup Gradle	2026-05-21T12:23:03.9960692Z Caching dependencies with path '/home/runner/.gradle/caches/modules-*/files-*/*/*/*/*' and cache key: gradle-dependencies-v1-c0838b6bf8f235e067dedee8a7b0b035
+build	Post Setup Gradle	2026-05-21T12:23:04.0028093Z Caching instrumented-jars with path '/home/runner/.gradle/caches/jars-*/*/' and cache key: gradle-instrumented-jars-v1-a28e35082f8b33a768a79c3127096ff5
+build	Post Setup Gradle	2026-05-21T12:23:04.0174058Z Caching kotlin-dsl with path '/home/runner/.gradle/caches/*/kotlin-dsl/accessors/*/
+build	Post Setup Gradle	2026-05-21T12:23:04.0175438Z /home/runner/.gradle/caches/*/kotlin-dsl/scripts/*/' and cache key: gradle-kotlin-dsl-v1-29ddc04307733b9e4220a258ff0d1dd7
+build	Post Setup Gradle	2026-05-21T12:23:04.0242924Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	Post Setup Gradle	2026-05-21T12:23:04.0355077Z Caching groovy-dsl with path '/home/runner/.gradle/caches/*/groovy-dsl/*/' and cache key: gradle-groovy-dsl-v1-43680091b3edad6a76d57c45a151865a
+build	Post Setup Gradle	2026-05-21T12:23:04.0581786Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	Post Setup Gradle	2026-05-21T12:23:04.0770399Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	Post Setup Gradle	2026-05-21T12:23:04.1089823Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches/jars-*/*/' and key: gradle-instrumented-jars-v1-a28e35082f8b33a768a79c3127096ff5: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0KPkOagAAAAAymHrAWnqzRLss7aARwhLSUEhMMzBFREdFMDExNABFZGdl
+build	Post Setup Gradle	2026-05-21T12:23:04.1634103Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches/*/groovy-dsl/*/' and key: gradle-groovy-dsl-v1-43680091b3edad6a76d57c45a151865a: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0KPkOagAAAAAh4r+FvA7FTKE+2weUKfckUEhMMzBFREdFMDIwOQBFZGdl
+build	Post Setup Gradle	2026-05-21T12:23:04.1792037Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches/*/kotlin-dsl/accessors/*/
+build	Post Setup Gradle	/home/runner/.gradle/caches/*/kotlin-dsl/scripts/*/' and key: gradle-kotlin-dsl-v1-29ddc04307733b9e4220a258ff0d1dd7: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0KPkOagAAAADECoHIRMZZR7nDP38VhdwrUEhMMzBFREdFMDQxMQBFZGdl
+build	Post Setup Gradle	2026-05-21T12:23:04.7347417Z Caching transforms with path '/home/runner/.gradle/caches/transforms-4/*/
+build	Post Setup Gradle	2026-05-21T12:23:04.7348670Z /home/runner/.gradle/caches/*/transforms/*/' and cache key: gradle-transforms-v1-182ca5cb8ddcdd88ce7a6b28225802c0
+build	Post Setup Gradle	2026-05-21T12:23:04.7791206Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	Post Setup Gradle	2026-05-21T12:23:05.3098220Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	Post Setup Gradle	2026-05-21T12:23:06.4236201Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches/modules-*/files-*/*/*/*/*' and key: gradle-dependencies-v1-c0838b6bf8f235e067dedee8a7b0b035: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0KvkOagAAAADxYoMoDmkVTIjdRWWKnXvyUEhMMzBFREdFMDQyMgBFZGdl
+build	Post Setup Gradle	2026-05-21T12:23:08.1045148Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches/transforms-4/*/
+build	Post Setup Gradle	/home/runner/.gradle/caches/*/transforms/*/' and key: gradle-transforms-v1-182ca5cb8ddcdd88ce7a6b28225802c0: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0LPkOagAAAAB/mbr+yrx5SKZ+jQaoijHvUEhMMzBFREdFMDQwNwBFZGdl
+build	Post Setup Gradle	2026-05-21T12:23:08.8965646Z Caching Gradle User Home with cache key: gradle-home-v1|Linux|build[cf940f3ebadc02090f040e056cc1a147]-0d3114cf4f14e341f2dc2cb2046f77edee695b02
+build	Post Setup Gradle	2026-05-21T12:23:08.9058021Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	Post Setup Gradle	2026-05-21T12:23:09.1117987Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches,/home/runner/.gradle/notifications,/home/runner/.gradle/.setup-gradle' and key: gradle-home-v1|Linux|build[cf940f3ebadc02090f040e056cc1a147]-0d3114cf4f14e341f2dc2cb2046f77edee695b02: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0LfkOagAAAADnDJDwFwxLQa7NJq30dMZoUEhMMzBFREdFMDIxNwBFZGdl
+build	Post Setup Gradle	2026-05-21T12:23:09.1123071Z ##[endgroup]
+build	Post Setup Gradle	2026-05-21T12:23:09.1123422Z Generating Job Summary
+build	Post Setup Gradle	2026-05-21T12:23:09.1137088Z Completed post-action step
+build	Post Set up JDK 17	﻿2026-05-21T12:23:09.1438091Z Post job cleanup.
+build	Post Checkout Code	﻿2026-05-21T12:23:09.3263972Z Post job cleanup.
+build	Post Checkout Code	2026-05-21T12:23:09.4250443Z [command]/usr/bin/git version
+build	Post Checkout Code	2026-05-21T12:23:09.4287860Z git version 2.54.0
+build	Post Checkout Code	2026-05-21T12:23:09.4331064Z Temporarily overriding HOME='/home/runner/work/_temp/3d1eeb08-bd57-4b2c-80ac-f9068281b6d2' before making global git config changes
+build	Post Checkout Code	2026-05-21T12:23:09.4332361Z Adding repository directory to the temporary git global config as a safe directory
+build	Post Checkout Code	2026-05-21T12:23:09.4337102Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Redwood-Island-Module/Redwood-Island-Module
+build	Post Checkout Code	2026-05-21T12:23:09.4372350Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build	Post Checkout Code	2026-05-21T12:23:09.4405114Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build	Post Checkout Code	2026-05-21T12:23:09.4629707Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build	Post Checkout Code	2026-05-21T12:23:09.4655785Z http.https://github.com/.extraheader
+build	Post Checkout Code	2026-05-21T12:23:09.4668315Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+build	Post Checkout Code	2026-05-21T12:23:09.4699105Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build	Post Checkout Code	2026-05-21T12:23:09.4915669Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build	Post Checkout Code	2026-05-21T12:23:09.4945213Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build	Complete job	﻿2026-05-21T12:23:09.5267802Z Cleaning up orphan processes
+build	Complete job	2026-05-21T12:23:09.5550209Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-java@v4, actions/upload-artifact@v4, gradle/actions/setup-gradle@v3. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

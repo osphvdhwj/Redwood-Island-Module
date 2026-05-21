@@ -37,7 +37,7 @@ class ClipboardCleaner @Inject constructor(
         val currentSettings = settingsManager.getSettingsState()
         
         // Safety switch verification from Pillar 4 settings
-        if (!currentSettings.clipboardCleanerEnabled) return
+        if (!currentSettings.clipboardCleaner) return
 
         val primaryClip = clipboard.primaryClip ?: return
         if (primaryClip.itemCount == 0) return
@@ -47,7 +47,7 @@ class ClipboardCleaner @Inject constructor(
         if (isSensitive(text)) {
             cleaningJob?.cancel()
             cleaningJob = scope.launch {
-                val delayDuration = currentSettings.clipboardClearTimeoutMs.takeIf { it > 0L } ?: 60000L
+                val delayDuration = 60000L
                 delay(delayDuration)
 
                 // Verify the block hasn't been modified by user interventions during sleep cycle

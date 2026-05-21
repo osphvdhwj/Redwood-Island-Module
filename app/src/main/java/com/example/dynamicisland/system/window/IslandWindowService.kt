@@ -210,7 +210,6 @@ class IslandWindowService : Service(), LifecycleOwner, ViewModelStoreOwner, Save
     }
 
     override fun onBind(intent: Intent): IBinder? {
-        super.onBind(intent)
         return null
     }
 

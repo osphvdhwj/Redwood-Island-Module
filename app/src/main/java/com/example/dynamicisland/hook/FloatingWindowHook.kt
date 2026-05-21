@@ -45,7 +45,7 @@ object FloatingWindowHook {
                     // Example: layoutParams.flags = layoutParams.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                     // param.args[1] = layoutParams // If modifying, ensure the change is passed on.
 
-                } else if (layoutParams.type == TARGET_OVERLAY_WINDOW_TYPE && layoutParams.windowingMode == WindowManager.LayoutParams.WINDOWING_MODE_FULLSCREEN) {
+                } else if (layoutParams.type == TARGET_OVERLAY_WINDOW_TYPE && layoutParams.width == WindowManager.LayoutParams.MATCH_PARENT && layoutParams.height == WindowManager.LayoutParams.MATCH_PARENT) {
                     // This is a more general case for overlays that might not be on display 5
                     // but still exhibit "floating" characteristics with fullscreen windowing mode.
                     XposedBridge.log("$TAG ✅: Overlay window detected with type ${layoutParams.type} and fullscreen windowing mode!")

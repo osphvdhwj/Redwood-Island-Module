@@ -1,5 +1,6 @@
 package com.example.dynamicisland.ui
 
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background

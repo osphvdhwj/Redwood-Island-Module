@@ -84,7 +84,7 @@ fun EdgeLightUI(isActive: Boolean) {
                             Color.Cyan, Color.Magenta, Color.Yellow, Color.Cyan
                         )
                     ),
-                    shape = RoundedCornerShape(inheritRadius = true) // Pseudo-code, will use actual radius
+                    shape = RoundedCornerShape(100f) // Removed invalid pseudo-code
                 )
                 .blur(4.dp)
                 .alpha(alpha)

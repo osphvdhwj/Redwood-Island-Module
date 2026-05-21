@@ -19,11 +19,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
 // 1. The Single Source of Truth
-data class IslandUiState(
-    val state: IslandState = IslandState.TYPE_0_RING,
-    val activeModel: LiveActivityModel? = null,
-    val isSquished: Boolean = false
-)
+// Removed duplicate IslandUiState
 
 /**
  * Central ViewModel for managing the Dynamic Island state using MVI.

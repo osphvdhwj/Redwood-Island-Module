@@ -194,6 +194,10 @@ class IslandController @Inject constructor(
     private val callManager = IslandCallManager(context, audioManager) { newCall ->
         currentCall = newCall; evaluatePriority()
     }
+    
+    private val connectivityManager = IslandConnectivityManager(context) { model ->
+        postTransientNotification(model, 5000L)
+    }
 
     private var windowManager: WindowManager? = null
     private var islandView: DynamicIslandView? = null
