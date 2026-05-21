@@ -222,7 +222,19 @@ object SystemUIA15Hooks {
                     scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default + kotlinx.coroutines.SupervisorJob()),
                     onHardwareUpdate = {}
                 )
-                val controller = com.example.dynamicisland.manager.IslandController(windowContext, settingsManager, mediaManager, hardwareMonitor)
+                val eventBus = com.example.dynamicisland.ui.state.IslandEventBus()
+                val hapticsManager = com.example.dynamicisland.manager.IslandHapticsManager(windowContext)
+                val networkMonitor = com.example.dynamicisland.manager.IslandNetworkMonitor()
+                
+                val controller = com.example.dynamicisland.manager.IslandController(
+                    windowContext, 
+                    settingsManager, 
+                    mediaManager, 
+                    hardwareMonitor,
+                    eventBus,
+                    hapticsManager,
+                    networkMonitor
+                )
                 val islandView = controller.createIslandView(wm, params)
                 wm.addView(islandView, params)
                 XposedBridge.log("$TAG ✅: DynamicIslandView injected into WindowManager")
