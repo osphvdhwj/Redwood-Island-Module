@@ -13,16 +13,17 @@ object FloatingWindowHook {
     private const val TARGET_OVERLAY_WINDOW_TYPE = 2024 // WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY (or similar overlay type)
 
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam) {
-        // Hook the addView method of WindowManagerImpl, which is the concrete implementation
-        // This method is called when a view is added to the window manager.
-        IslandHookEngine.hookAfterAllOverloads(
-            "android.view.WindowManagerImpl", // Concrete implementation of WindowManager
+        // Hook the addView method of WindowManagerImpl with precise signature
+        IslandHookEngine.hookAfter(
+            "android.view.WindowManagerImpl",
             lpparam.classLoader,
-            "addView"
+            "addView",
+            android.view.View::class.java,
+            android.view.ViewGroup.LayoutParams::class.java
         ) { param ->
             try {
-                val view = param.args[0] as? android.view.View ?: return@hookAfterAllOverloads
-                val layoutParams = param.args[1] as? WindowManager.LayoutParams ?: return@hookAfterAllOverloads
+                val view = param.args[0] as? android.view.View ?: return@hookAfter
+                val layoutParams = param.args[1] as? WindowManager.LayoutParams ?: return@hookAfter
 
                 // Attempt to get the displayId from the View's associated Display
                 val display = view.display

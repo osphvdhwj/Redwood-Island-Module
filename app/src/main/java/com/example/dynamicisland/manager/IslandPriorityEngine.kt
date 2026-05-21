@@ -2,9 +2,15 @@ package com.example.dynamicisland.manager
 
 import android.content.Context
 import android.view.WindowManager
-import kotlinx.coroutines.flow.MutableStateFlow
 import com.example.dynamicisland.model.*
 import com.example.dynamicisland.ipc.IslandState
+
+data class PriorityResult(
+    val islandState: IslandState,
+    val activeModel: LiveActivityModel?,
+    val splitModel: LiveActivityModel?,
+    val userForceCollapsed: Boolean
+)
 
 object IslandPriorityEngine {
     fun evaluatePriority(
@@ -20,91 +26,71 @@ object IslandPriorityEngine {
         isMediaEnabled: Boolean,
         userForceCollapsed: Boolean,
         currentActiveModel: LiveActivityModel?,
-        currentVisualState: IslandState,
-        _activeModel: MutableStateFlow<LiveActivityModel?>,
-        _splitModel: MutableStateFlow<LiveActivityModel?>,
-        _islandState: MutableStateFlow<IslandState>
-    ): Boolean {
+        currentVisualState: IslandState
+    ): PriorityResult {
         
         val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val isGaming = currentHardware?.isGamingModeOn == true
 
         // 1. Notification Shade takes absolute priority (Hide Island)
         if (isPanelExpanded) {
-            _islandState.value = IslandState.HIDDEN
-            return userForceCollapsed
+            return PriorityResult(IslandState.HIDDEN, currentActiveModel, null, userForceCollapsed)
         }
 
         // 2. 📞 CALLS: Always break through, even in games or videos!
         if (currentCall != null) {
-            _activeModel.value = currentCall
-            _islandState.value = if (userForceCollapsed) IslandState.TYPE_0_RING else IslandState.TYPE_2_MID
-            _splitModel.value = null
-            return userForceCollapsed
+            return PriorityResult(
+                if (userForceCollapsed) IslandState.TYPE_0_RING else IslandState.TYPE_2_MID,
+                currentCall,
+                null,
+                userForceCollapsed
+            )
         }
 
         // 3. 🚨 CRITICAL ALERTS: (Low Battery, OTP) Break through games and videos!
         if (transientModel != null && transientModel.isCritical) {
-            _activeModel.value = transientModel
-            _islandState.value = IslandState.TYPE_2_MID
-            _splitModel.value = null
-            return userForceCollapsed
+            return PriorityResult(IslandState.TYPE_2_MID, transientModel, null, userForceCollapsed)
         }
 
         // 4. 🎬🎮 IMMERSION MODE: Hide idle states for Video and Landscape Games
         if (currentMedia?.isVideo == true || (isGaming && isLandscape)) {
-            _islandState.value = IslandState.HIDDEN
-            return true
+            return PriorityResult(IslandState.HIDDEN, currentActiveModel, null, true)
         }
 
         // 5. 🔔 STANDARD TRANSIENTS: (Downloads, Bluetooth, etc.)
         if (transientModel != null && !transientModel.isCritical) {
-            _activeModel.value = transientModel
-            _islandState.value = IslandState.TYPE_1_MINI
-            // Only show split music pill if it's actually music, not a video in the background
-            if (currentMedia != null && isMediaEnabled && currentMedia.isVideo == false) _splitModel.value = currentMedia
-            else _splitModel.value = null
-            return userForceCollapsed
+            val split = if (currentMedia != null && isMediaEnabled && currentMedia.isVideo == false) currentMedia else null
+            return PriorityResult(IslandState.TYPE_1_MINI, transientModel, split, userForceCollapsed)
         }
 
         // 6. 🎛️ DASHBOARD
         if (currentActiveModel is LiveActivityModel.Dashboard && currentVisualState == IslandState.TYPE_3_MAX) {
-            return userForceCollapsed
+            return PriorityResult(currentVisualState, currentActiveModel, null, userForceCollapsed)
         }
 
         // 7. 🎵 MUSIC
         if (currentMedia != null && isMediaEnabled) {
-            _activeModel.value = currentMedia
-            _splitModel.value = null
-            if (currentVisualState == IslandState.TYPE_3_MAX && !userForceCollapsed) {
-                _islandState.value = IslandState.TYPE_3_MAX
+            val state = if (currentVisualState == IslandState.TYPE_3_MAX && !userForceCollapsed) {
+                IslandState.TYPE_3_MAX
             } else if (currentMedia.isPlaying && !userForceCollapsed) {
-                // 🚀 FIXED: Now uses the MID state for active music!
-                _islandState.value = IslandState.TYPE_2_MID 
+                IslandState.TYPE_2_MID 
             } else {
-                _islandState.value = IslandState.TYPE_0_RING
+                IslandState.TYPE_0_RING
             }
-            return userForceCollapsed
+            return PriorityResult(state, currentMedia, null, userForceCollapsed)
         }
         
         // 7.5 EXTERNAL ACTIVITIES (via SDK)
         if (activeExternalActivity != null) {
-            _activeModel.value = activeExternalActivity
-            _islandState.value = IslandState.TYPE_2_MID
-            return userForceCollapsed
+            return PriorityResult(IslandState.TYPE_2_MID, activeExternalActivity, null, userForceCollapsed)
         }
 
         // 8. 📱 GAMING (Portrait) 
-        // If they are gaming in portrait mode, hide the idle ring so it's not distracting
         if (isGaming) {
-            _islandState.value = IslandState.HIDDEN
-            return true
+            return PriorityResult(IslandState.HIDDEN, currentActiveModel, null, true)
         }
 
         // 9. DEFAULT IDLE (Camera Cutout Ring)
-        _activeModel.value = null
-        _splitModel.value = null
-        _islandState.value = IslandState.TYPE_0_RING
-        return true
+        return PriorityResult(IslandState.TYPE_0_RING, null, null, true)
     }
 }

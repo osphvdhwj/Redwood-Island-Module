@@ -27,13 +27,19 @@ import kotlinx.coroutines.flow.onEach
 @HiltViewModel
 class IslandViewModel @Inject constructor(
     private val eventProvider: SystemEventProvider,
-    private val settingsManager: SettingsManager
+    private val settingsManager: SettingsManager,
+    private val eventBus: IslandEventBus
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(IslandUiState())
     val uiState: StateFlow<IslandUiState> = _uiState.asStateFlow()
 
     init {
+        // Collect from the central event bus
+        eventBus.intents
+            .onEach { intent -> handleIntent(intent) }
+            .launchIn(viewModelScope)
+
         // Pillar 5: Debounce hardware events to reduce CPU load and UI redraws
         eventProvider.hardwareEvents
             .debounce(250L) // Limit to 4 updates per second max
@@ -61,6 +67,11 @@ class IslandViewModel @Inject constructor(
         _uiState.update { currentState ->
             when (intent) {
                 is IslandIntent.UpdateState -> currentState.copy(islandState = intent.state)
+                is IslandIntent.SyncState -> currentState.copy(
+                    islandState = intent.state,
+                    activeModel = intent.activeModel,
+                    splitModel = intent.splitModel
+                )
                 is IslandIntent.NewActivity -> processNewActivity(currentState, intent.model)
                 is IslandIntent.RemoveActivity -> processRemoveActivity(currentState, intent.activityId)
                 

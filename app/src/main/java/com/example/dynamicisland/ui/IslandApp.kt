@@ -37,30 +37,14 @@ fun IslandApp(viewModel: IslandViewModel) {
                 },
                 label = "IslandContent"
             ) { state ->
-                when (state) {
-                    IslandState.TYPE_1_MINI -> MiniPill(uiState.activeModel)
-                    IslandState.TYPE_2_MID -> MidPill(uiState.activeModel)
-                    IslandState.TYPE_3_MAX -> MaxPill(uiState.activeModel)
-                    // Add other states as components are implemented
-                    else -> Box(modifier = Modifier.size(0.dp))
-                }
+                PillRouter(
+                    state = state,
+                    model = uiState.activeModel,
+                    onIntent = { viewModel.handleIntent(it) }
+                )
             }
         }
     }
 }
 
-@Composable
-fun MiniPill(model: LiveActivityModel?) {
-    // Implement Mini view based on model
-    // This will eventually call specialized components like MiniMusicView
-}
-
-@Composable
-fun MidPill(model: LiveActivityModel?) {
-    // Implement Mid view based on model
-}
-
-@Composable
-fun MaxPill(model: LiveActivityModel?) {
-    // Implement Max view based on model
-}
+// Removed legacy stubs in favor of PillRouter

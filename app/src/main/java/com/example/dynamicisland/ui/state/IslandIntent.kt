@@ -10,6 +10,7 @@ import com.example.dynamicisland.settings.SettingsState
  */
 sealed class IslandIntent {
     data class UpdateState(val state: IslandState) : IslandIntent()
+    data class SyncState(val state: IslandState, val activeModel: LiveActivityModel?, val splitModel: LiveActivityModel?) : IslandIntent()
     data class NewActivity(val model: LiveActivityModel) : IslandIntent()
     data class RemoveActivity(val activityId: String) : IslandIntent()
     

@@ -35,12 +35,18 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import dagger.hilt.android.qualifiers.ApplicationContext
 
+import com.example.dynamicisland.ui.state.IslandEventBus
+import com.example.dynamicisland.ui.state.IslandIntent
+
 @Singleton
 class IslandController @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settingsManager: SettingsManager,
     val mediaManager: IslandMediaManager,
-    private val hardwareMonitor: IslandHardwareMonitor
+    private val hardwareMonitor: IslandHardwareMonitor,
+    private val eventBus: IslandEventBus,
+    private val hapticsManager: IslandHapticsManager,
+    private val networkMonitor: IslandNetworkMonitor
 ) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val activeExternalActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
@@ -106,34 +112,12 @@ class IslandController @Inject constructor(
     private var pendingNotificationColor: Int = android.graphics.Color.WHITE
     private var hasUnseenNotification = false
 
-    private var lastHapticState: IslandState = IslandState.HIDDEN
-
     private fun triggerTransitionHaptic(newState: IslandState) {
-        if (newState == lastHapticState) return
-        val prev = lastHapticState
-        lastHapticState = newState
-
-        val strength = when {
-            newState == IslandState.TYPE_3_MAX -> 3
-            newState == IslandState.TYPE_2_MID && currentCall?.state == "RINGING" -> 2
-            newState == IslandState.TYPE_0_RING && prev != IslandState.HIDDEN -> 1
-            newState.ordinal > prev.ordinal -> 2
-            else -> 0
-        }
-        if (strength > 0) performCustomHaptic(context, strength, topAppPackage)
+        hapticsManager.triggerTransitionHaptic(newState, currentCall?.state, topAppPackage)
     }
 
     private fun performCustomHaptic(context: Context, strength: Int, topAppPackage: String) {
-        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            manager.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        }
-        val timing = longArrayOf(0, (30 * strength).toLong(), 50, (40 * strength).toLong())
-        val amplitudes = intArrayOf(0, (100 * strength).coerceAtMost(255), 0, (150 * strength).coerceAtMost(255))
-        vibrator.vibrate(VibrationEffect.createWaveform(timing, amplitudes, -1))
+        hapticsManager.performCustomHaptic(strength, topAppPackage)
     }
 
     private val storageManager = IslandStorageManager(context)
@@ -148,36 +132,19 @@ class IslandController @Inject constructor(
         }
     }
 
-    private var downloadSpeedJob: Job? = null
-    private var lastRxBytes = 0L
-
     private val notificationManager = IslandNotificationManager(context, scope,
         onProgressCaught = { progressModel ->
-            if (downloadSpeedJob?.isActive != true) {
-                lastRxBytes = android.net.TrafficStats.getTotalRxBytes()
-                downloadSpeedJob = scope.launch(Dispatchers.Main) {
-                    while (isActive) {
-                        delay(1000)
-                        val currentRx = android.net.TrafficStats.getTotalRxBytes()
-                        val bytesPerSec = currentRx - lastRxBytes
-                        lastRxBytes = currentRx
-
-                        val speedStr = if (bytesPerSec > 1048576) {
-                            String.format("%.1f MB/s", bytesPerSec / 1048576f)
-                        } else {
-                            String.format("%d KB/s", bytesPerSec / 1024)
-                        }
-
-                        val current = _activeModel.value
-                        if (current is LiveActivityModel.OngoingTask) {
-                            _activeModel.value = current.copy(networkSpeed = speedStr)
-                        }
-                    }
+            networkMonitor.startMonitoring(scope) { speedStr ->
+                val current = _lastActiveModel
+                if (current is LiveActivityModel.OngoingTask) {
+                    val updated = current.copy(networkSpeed = speedStr)
+                    _lastActiveModel = updated
+                    eventBus.emit(IslandIntent.SyncState(_lastIslandState, updated, _lastSplitModel))
                 }
             }
 
-            _activeModel.value = progressModel
-            if (_islandState.value == IslandState.TYPE_0_RING) _islandState.value = IslandState.TYPE_1_MINI
+            _lastActiveModel = progressModel
+            if (_lastIslandState == IslandState.TYPE_0_RING) _lastIslandState = IslandState.TYPE_1_MINI
             evaluatePriority()
         },
         onNavigationCaught = { navModel ->
@@ -202,12 +169,10 @@ class IslandController @Inject constructor(
     private var windowManager: WindowManager? = null
     private var islandView: DynamicIslandView? = null
 
-    private val _islandState = MutableStateFlow(IslandState.TYPE_0_RING)
-    val islandState = _islandState.asStateFlow()
-    private val _activeModel = MutableStateFlow<LiveActivityModel?>(null)
-    val activeModel = _activeModel.asStateFlow()
-    private val _splitModel = MutableStateFlow<LiveActivityModel?>(null)
-    val splitModel = _splitModel.asStateFlow()
+    // Trackers for the priority engine
+    private var _lastIslandState = IslandState.TYPE_0_RING
+    private var _lastActiveModel: LiveActivityModel? = null
+    private var _lastSplitModel: LiveActivityModel? = null
 
     private var currentCall: LiveActivityModel.Call? = null
     private var currentMedia: LiveActivityModel.Music? = null
@@ -365,8 +330,10 @@ class IslandController @Inject constructor(
                             pinnedAppsCache = appsList
                             qsTilesCache = tilesList
 
-                            if (_activeModel.value is LiveActivityModel.Dashboard) {
-                                _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
+                            if (_lastActiveModel is LiveActivityModel.Dashboard) {
+                                val dashboard = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
+                                _lastActiveModel = dashboard
+                                eventBus.emit(IslandIntent.SyncState(_lastIslandState, dashboard, _lastSplitModel))
                             }
                         } catch (e: Throwable) {}
                     }
@@ -387,14 +354,15 @@ class IslandController @Inject constructor(
                     )
                     activeExternalActivities[activityId] = model
 
-                    _activeModel.value = model
-                    _islandState.value = IslandState.TYPE_2_MID
+                    _lastActiveModel = model
+                    _lastIslandState = IslandState.TYPE_2_MID
+                    eventBus.emit(IslandIntent.SyncState(IslandState.TYPE_2_MID, model, _lastSplitModel))
                     evaluatePriority()
                 }
                 "com.example.dynamicisland.EXTERNAL_ACTIVITY_ENDED" -> {
                     val activityId = intent.getStringExtra("activity_id") ?: return
                     activeExternalActivities.remove(activityId)
-                    if (_activeModel.value?.id == activityId) {
+                    if (_lastActiveModel?.id == activityId) {
                         evaluatePriority()
                     }
                 }
@@ -572,7 +540,7 @@ class IslandController @Inject constructor(
     }
 
     private fun evaluatePriority() {
-        userForceCollapsed = IslandPriorityEngine.evaluatePriority(
+        val result = IslandPriorityEngine.evaluatePriority(
             context = context,
             windowManager = windowManager,
             topAppPackage = topAppPackage,
@@ -584,18 +552,25 @@ class IslandController @Inject constructor(
             currentHardware = currentHardware,
             isMediaEnabled = mediaManager.isMediaEnabled,
             userForceCollapsed = userForceCollapsed,
-            currentActiveModel = _activeModel.value,
-            currentVisualState = _islandState.value,
-            _activeModel = _activeModel,
-            _splitModel = _splitModel,
-            _islandState = _islandState
+            currentActiveModel = _lastActiveModel,
+            currentVisualState = _lastIslandState
         )
+
+        userForceCollapsed = result.userForceCollapsed
+        _lastIslandState = result.islandState
+        _lastActiveModel = result.activeModel
+        _lastSplitModel = result.splitModel
+
+        eventBus.emit(IslandIntent.SyncState(result.islandState, result.activeModel, result.splitModel))
+        triggerTransitionHaptic(result.islandState)
 
         val productivityApps = listOf("com.notion.id", "com.microsoft.teams", "com.google.android.apps.docs")
         if (productivityApps.contains(topAppPackage)) {
-            if (_activeModel.value !is LiveActivityModel.RealityPill) {
-                _activeModel.value = LiveActivityModel.RealityPill(appName = "Focus Mode", sessionMinutes = 0)
-                _islandState.value = IslandState.TYPE_1_MINI
+            if (_lastActiveModel !is LiveActivityModel.RealityPill) {
+                val focusModel = LiveActivityModel.RealityPill(appName = "Focus Mode", sessionMinutes = 0)
+                _lastActiveModel = focusModel
+                _lastIslandState = IslandState.TYPE_1_MINI
+                eventBus.emit(IslandIntent.SyncState(IslandState.TYPE_1_MINI, focusModel, null))
                 try { if (audioManager.ringerMode != AudioManager.RINGER_MODE_SILENT) audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT } catch (e: Throwable) {}
             }
         }
@@ -629,15 +604,15 @@ class IslandController @Inject constructor(
         view.onOpenCallUI = { callManager.openNativeCallUI(view) }
         view.onAutoBrightnessToggle = { hardwareManager.toggleAutoBrightness(view) }
         view.onRingerToggle = { hardwareManager.toggleRingerMode(view) }
-        view.onAppPinnedClick = { pkg -> actionManager.launchAppIntent(pkg) { userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING; evaluatePriority() } }
+        view.onAppPinnedClick = { pkg -> actionManager.launchAppIntent(pkg) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() } }
         view.onQsTileClick = { tileSpec -> actionManager.handleQSTileClick(tileSpec) { } }
         view.onSplitPillClick = {
-            if (_splitModel.value is LiveActivityModel.Charging) {
+            if (_lastSplitModel is LiveActivityModel.Charging) {
                 try {
                     val intent = Intent().setComponent(ComponentName("com.crdroid.batterywellbeing", "com.crdroid.batterywellbeing.MainActivity"))
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                     context.startActivity(intent)
-                } catch(e: Throwable) { _islandState.value = IslandState.TYPE_CUBE }
+                } catch(e: Throwable) { _lastIslandState = IslandState.TYPE_CUBE; evaluatePriority() }
             }
         }
 
@@ -673,7 +648,7 @@ class IslandController @Inject constructor(
         }
 
         view.onGestureEvent = { gesture ->
-            val currentState = _islandState.value.name
+            val currentState = _lastIslandState.name
             // FIXED: gestureMatrix now holds action name strings
             var actionName = gestureMatrix["${currentState}_${gesture.name}"]
 
@@ -696,7 +671,11 @@ class IslandController @Inject constructor(
 
             if (gesture.name.startsWith("QS_CLICK_")) {
                 actionManager.handleQSTileClick(gesture.name) { newTiles ->
-                    if (_activeModel.value is LiveActivityModel.Dashboard) _activeModel.value = LiveActivityModel.Dashboard(activeTiles = newTiles)
+                    if (_lastActiveModel is LiveActivityModel.Dashboard) {
+                        val dashboard = LiveActivityModel.Dashboard(activeTiles = newTiles)
+                        _lastActiveModel = dashboard
+                        eventBus.emit(IslandIntent.SyncState(_lastIslandState, dashboard, _lastSplitModel))
+                    }
                 }
             } else {
                 executeSmartAction(actionName)
@@ -711,15 +690,18 @@ class IslandController @Inject constructor(
         view.onCustomMediaAction = { action -> mediaManager.activeMediaController?.transportControls?.sendCustomAction(action, null) }
 
         scope.launch {
-            islandState.collect { state ->
-                view.islandState.value = state
-                val isVisible = state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING
-                mediaManager.isIslandVisible = isVisible
-                hardwareMonitor.isDashboardOpen = (state == IslandState.TYPE_3_MAX)
+            eventBus.intents.collect { intent ->
+                if (intent is IslandIntent.SyncState) {
+                    view.islandState.value = intent.state
+                    view.activeModel.value = intent.activeModel
+                    view.splitModel.value = intent.splitModel
+                    
+                    val isVisible = intent.state != IslandState.HIDDEN && intent.state != IslandState.TYPE_0_RING
+                    mediaManager.isIslandVisible = isVisible
+                    hardwareMonitor.isDashboardOpen = (intent.state == IslandState.TYPE_3_MAX)
+                }
             }
         }
-        scope.launch { activeModel.collect { model -> view.activeModel.value = model } }
-        scope.launch { splitModel.collect { model -> view.splitModel.value = model } }
         return view
     }
 
@@ -740,43 +722,53 @@ class IslandController @Inject constructor(
                 context.sendBroadcast(intent)
             }
             "OPEN_DASHBOARD" -> {
-                if (_activeModel.value == null) _activeModel.value = LiveActivityModel.Dashboard()
-                _islandState.value = IslandState.TYPE_3_MAX
+                val dashboard = _lastActiveModel as? LiveActivityModel.Dashboard ?: LiveActivityModel.Dashboard()
+                _lastActiveModel = dashboard
+                _lastIslandState = IslandState.TYPE_3_MAX
+                eventBus.emit(IslandIntent.SyncState(IslandState.TYPE_3_MAX, dashboard, _lastSplitModel))
             }
             "OPEN_QUICK_TOGGLES" -> {
-                if (_activeModel.value == null || _activeModel.value is LiveActivityModel.Dashboard) {
-                    _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
-                    _islandState.value = IslandState.TYPE_2_MID
+                if (_lastActiveModel == null || _lastActiveModel is LiveActivityModel.Dashboard) {
+                    val dashboard = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
+                    _lastActiveModel = dashboard
+                    _lastIslandState = IslandState.TYPE_2_MID
+                    eventBus.emit(IslandIntent.SyncState(IslandState.TYPE_2_MID, dashboard, _lastSplitModel))
                 }
             }
             "COLLAPSE" -> {
-                if (_activeModel.value is LiveActivityModel.Dashboard) {
+                if (_lastActiveModel is LiveActivityModel.Dashboard) {
                     if (currentMedia != null) {
-                        if (currentMedia?.isPlaying == true) { _islandState.value = IslandState.TYPE_1_MINI; userForceCollapsed = false }
-                        else { _islandState.value = IslandState.TYPE_0_RING; userForceCollapsed = true }
-                        _activeModel.value = currentMedia
+                        if (currentMedia?.isPlaying == true) { _lastIslandState = IslandState.TYPE_1_MINI; userForceCollapsed = false }
+                        else { _lastIslandState = IslandState.TYPE_0_RING; userForceCollapsed = true }
+                        _lastActiveModel = currentMedia
                     } else {
-                        _activeModel.value = null; _islandState.value = IslandState.TYPE_0_RING
+                        _lastActiveModel = null; _lastIslandState = IslandState.TYPE_0_RING
                     }
                 } else {
-                    userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING
+                    userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING
                 }
                 evaluatePriority()
             }
             "EXPAND" -> {
                 userForceCollapsed = false
-                when (_islandState.value) {
+                when (_lastIslandState) {
                     IslandState.TYPE_0_RING -> {
-                        if (currentMedia != null) { _islandState.value = IslandState.TYPE_2_MID }
-                        else { _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache); _islandState.value = IslandState.TYPE_3_MAX }
+                        if (currentMedia != null) { _lastIslandState = IslandState.TYPE_2_MID }
+                        else {
+                            val dashboard = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
+                            _lastActiveModel = dashboard
+                            _lastIslandState = IslandState.TYPE_3_MAX
+                        }
                     }
                     IslandState.TYPE_1_MINI -> {
-                        _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
-                        _islandState.value = IslandState.TYPE_3_MAX
+                        val dashboard = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
+                        _lastActiveModel = dashboard
+                        _lastIslandState = IslandState.TYPE_3_MAX
                     }
                     IslandState.TYPE_2_MID, IslandState.TYPE_SPLIT -> {
-                        _activeModel.value = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
-                        _islandState.value = IslandState.TYPE_3_MAX
+                        val dashboard = LiveActivityModel.Dashboard(activeTiles = qsTilesCache, pinnedApps = pinnedAppsCache)
+                        _lastActiveModel = dashboard
+                        _lastIslandState = IslandState.TYPE_3_MAX
                     }
                     else -> {}
                 }
@@ -788,12 +780,12 @@ class IslandController @Inject constructor(
                 val isMuted = audioManager.isStreamMute(AudioManager.STREAM_MUSIC)
                 audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, if (isMuted) AudioManager.ADJUST_UNMUTE else AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
             }
-            "LAUNCH_SETTINGS" -> actionManager.launchAppIntent("com.android.settings") { userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING; evaluatePriority() }
+            "LAUNCH_SETTINGS" -> actionManager.launchAppIntent("com.android.settings") { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() }
             "LAUNCH_CAMERA" -> {
                 val cameraIntent = Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
                 try { context.startActivity(cameraIntent) } catch (e: Exception) {}
             }
-            else -> { if (actionName.startsWith("LAUNCH_APP_")) actionManager.launchAppIntent(actionName.removePrefix("LAUNCH_APP_")) { userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING; evaluatePriority() } }
+            else -> { if (actionName.startsWith("LAUNCH_APP_")) actionManager.launchAppIntent(actionName.removePrefix("LAUNCH_APP_")) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() } }
         }
     }
 
@@ -806,14 +798,15 @@ class IslandController @Inject constructor(
     }
 
     private fun collapseToIdle() {
-        _islandState.value = IslandState.TYPE_0_RING
+        _lastIslandState = IslandState.TYPE_0_RING
         evaluatePriority()
     }
 
     private fun triggerVisualScreenshotFlash() {
-        val current = _islandState.value
-        _islandState.value = IslandState.HIDDEN
-        scope.launch { delay(50); _islandState.value = current }
+        val current = _lastIslandState
+        _lastIslandState = IslandState.HIDDEN
+        eventBus.emit(IslandIntent.SyncState(IslandState.HIDDEN, _lastActiveModel, _lastSplitModel))
+        scope.launch { delay(50); _lastIslandState = current; evaluatePriority() }
     }
 
     private fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
@@ -831,7 +824,7 @@ class IslandController @Inject constructor(
             }
             if (!profile.allowsEvent(eventFlag)) return
         }
-        triggerTransitionHaptic(_islandState.value)
+        triggerTransitionHaptic(_lastIslandState)
         transientJob?.cancel(); transientModel = model; evaluatePriority()
         transientJob = scope.launch { delay(durationMs); transientModel = null; evaluatePriority() }
     }
@@ -877,7 +870,7 @@ class IslandController @Inject constructor(
                 when (intent.action) {
                     "com.example.dynamicisland.ACTION_LAUNCH_APP" -> {
                         val pkg = intent.getStringExtra("pkg") ?: return
-                        actionManager.launchAppIntent(pkg) { userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING; evaluatePriority() }
+                        actionManager.launchAppIntent(pkg) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() }
                     }
                     "com.example.dynamicisland.ACTION_QS" -> {
                         val tile = intent.getStringExtra("tile") ?: return
@@ -904,7 +897,7 @@ class IslandController @Inject constructor(
                             }
                             if (settingsIntent != null) {
                                 settingsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                actionManager.executeBackgroundIntent(settingsIntent) { userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING; evaluatePriority() }
+                                actionManager.executeBackgroundIntent(settingsIntent) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() }
                             }
                         } catch (e: Exception) {}
                     }
@@ -972,8 +965,10 @@ class IslandController @Inject constructor(
                     if (hideInLandscape && isLandscape) {
                         postTransientNotification(LiveActivityModel.Charging("sys_battery", ActivityType.CHARGING, level, true, false), 5000L)
                     } else {
-                        _islandState.value = IslandState.TYPE_3_MAX
-                        _activeModel.value = LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true, isCritical = false)
+                        _lastIslandState = IslandState.TYPE_3_MAX
+                        val batteryModel = LiveActivityModel.Charging(id = "sys_battery", level = level, isPluggedIn = true, isTransient = true, isCritical = false)
+                        _lastActiveModel = batteryModel
+                        eventBus.emit(IslandIntent.SyncState(IslandState.TYPE_3_MAX, batteryModel, _lastSplitModel))
 
                         scope.launch { delay(3000); evaluatePriority() }
                         performCustomHaptic(context, 2, topAppPackage)
