@@ -34,9 +34,10 @@ import androidx.compose.ui.unit.sp
 fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
     val dynamicTextColor = Color(music.titleTextColor).takeIf { it != Color.Transparent && it != Color.Black } ?: Color.White
     val theme = LocalIslandTheme.current
+    val context = LocalContext.current
+    
     var isBluetooth by remember { mutableStateOf(false) }
     var audioLabel by remember { mutableStateOf("Phone") }
-    val context = LocalContext.current
     
     var localIsLiked by remember(music.title, music.isLiked) { mutableStateOf(music.isLiked) }
     var localIsShuffled by remember(music.title, music.isShuffled) { mutableStateOf(music.isShuffled) }
@@ -47,28 +48,35 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
             val am = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
             val devices = am?.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS) ?: emptyArray()
             val hasBt = devices.any { it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET }
-            if (hasBt) { isBluetooth = true; audioLabel = "Bluetooth" } else { isBluetooth = false; audioLabel = "Phone" }
-        } catch (e: Exception) {}
+            isBluetooth = hasBt
+            audioLabel = if (hasBt) "Bluetooth" else "Phone"
+        } catch (_: Exception) {}
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (music.blurredAlbumArt != null) {
+        // --- Layer 1: Cinematic Blurred Background ---
+        if (music.albumArt != null) {
+            val bgBitmap = music.blurredAlbumArt?.asImageBitmap() ?: music.albumArt.asImageBitmap()
             Image(
-                bitmap = music.blurredAlbumArt.asImageBitmap(),
+                bitmap = bgBitmap,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(0.35f)
+                    .blur(40.dp)
             )
         }
         
+        // --- Layer 2: Adaptive Gradient Overlay ---
+        val dominantColor = music.dominantColor?.let { Color(it) } ?: Color.Black
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.1f),
-                        0.4f to Color.Black.copy(alpha = 0.3f),
-                        1f to Color.Black.copy(alpha = 0.85f)
+                    Brush.radialGradient(
+                        colors = listOf(dominantColor.copy(alpha = 0.4f), Color.Transparent),
+                        center = Offset(0f, 0f)
                     )
                 )
         )
@@ -76,10 +84,10 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp)
-                .padding(top = 16.dp, bottom = 20.dp),
+                .padding(horizontal = 24.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
+            // --- Header: App Icon & Output ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -90,123 +98,130 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                         bitmap = music.appIcon.asImageBitmap(),
                         contentDescription = null,
                         modifier = Modifier
-                            .size(20.dp)
+                            .size(22.dp)
                             .clip(RoundedCornerShape(6.dp))
-                            .alpha(0.8f)
+                            .alpha(0.9f)
                     )
                 } else {
-                    Box(Modifier.size(20.dp).background(Color.White.copy(0.2f), RoundedCornerShape(6.dp)))
+                    Box(Modifier.size(22.dp).background(Color.White.copy(0.2f), RoundedCornerShape(6.dp)))
                 }
 
-                Surface(onClick = { onAudioOutputClick?.invoke() }, color = Color.White.copy(alpha=0.15f), shape = RoundedCornerShape(12.dp)) {
-                    Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .squishClickable { onAudioOutputClick?.invoke() }
+                        .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         val painter = if (isBluetooth) painterResource(R.drawable.ic_bluetooth_vector) else painterResource(R.drawable.ic_phone_vector)
-                        Icon(painter, contentDescription = "Output", tint = dynamicTextColor, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(6.dp)); Text(audioLabel, color = dynamicTextColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Icon(painter, contentDescription = null, tint = dynamicTextColor, modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(audioLabel, color = dynamicTextColor, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                     }
                 }
             }
 
+            // --- Main Content: Album Art & Titles ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                horizontalArrangement = Arrangement.spacedBy(18.dp)
             ) {
+                var artPressed by remember { mutableStateOf(false) }
+                val artScale by animateFloatAsState(if(artPressed) 0.92f else 1f, IslandPhysics.springFloat, label="art")
+                
                 if (music.albumArt != null) {
                     Image(
                         bitmap = music.albumArt.asImageBitmap(),
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .size(56.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .shadow(8.dp, RoundedCornerShape(10.dp))
+                            .size(64.dp)
+                            .scale(artScale)
+                            .clip(RoundedCornerShape(12.dp))
+                            .shadow(12.dp, RoundedCornerShape(12.dp))
+                            .pointerInput(Unit) {
+                                awaitEachGesture {
+                                    awaitFirstDown(); artPressed = true
+                                    waitForUpOrCancellation(); artPressed = false
+                                }
+                            }
                     )
-                } else {
-                     Box(Modifier.size(56.dp).background(Color.White.copy(0.2f), RoundedCornerShape(10.dp)))
                 }
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = music.title,
                         color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
                         maxLines = 1,
                         modifier = Modifier.safeMarquee(islandState.value)
                     )
-                    Spacer(Modifier.height(2.dp))
                     Text(
                         text = music.artist,
-                        color = Color.White.copy(alpha = 0.7f),
-                        fontSize = 13.sp,
+                        color = Color.White.copy(alpha = 0.65f),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         modifier = Modifier.safeMarquee(islandState.value)
                     )
                 }
 
                 music.customActions.find { it.action.contains("heart", true) || it.action.contains("like", true) }?.let { action ->
-                    InteractiveIconButton(icon = if (localIsLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, tint = if (localIsLiked) Color(0xFFFF2A5F) else Color.White.copy(0.8f), baseSize = 36.dp) { localIsLiked = !localIsLiked; onCustomMediaAction?.invoke(action.action) }
+                    InteractiveIconButton(
+                        icon = if (localIsLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        tint = if (localIsLiked) Color(0xFFFF2D55) else Color.White.copy(0.7f),
+                        baseSize = 40.dp
+                    ) { 
+                        localIsLiked = !localIsLiked
+                        onCustomMediaAction?.invoke(action.action) 
+                    }
                 }
             }
 
-            Column {
+            // --- Progress Section ---
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 InteractiveWavyMediaBar(
                     durationMs = music.durationMs,
                     posProvider = { currentMediaPos.longValue },
                     isPlaying = music.isPlaying,
                     color = dynamicTextColor,
-                    trackColor = dynamicTextColor.copy(alpha = 0.2f),
+                    trackColor = Color.White.copy(alpha = 0.1f),
                     onSeek = { onSeekTo?.invoke(it) },
-                    modifier = Modifier.height(theme.musicSeekerThick * 4)
+                    modifier = Modifier.height(32.dp)
                 )
 
-                Spacer(Modifier.height(4.dp))
-
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        formatTime(currentMediaPos.longValue),
-                        color = Color.White.copy(0.5f),
-                        fontSize = 11.sp
-                    )
-                    Text(
-                        formatTime(music.durationMs),
-                        color = Color.White.copy(0.5f),
-                        fontSize = 11.sp
-                    )
+                    Text(formatTime(currentMediaPos.longValue), color = Color.White.copy(0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(formatTime(music.durationMs), color = Color.White.copy(0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
+            // --- Control Bar ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 music.customActions.find { it.action.contains("shuffle", true) }?.let { action ->
-                    InteractiveIconButton(painter = painterResource(R.drawable.ic_shuffle_vector), tint = if (localIsShuffled) dynamicTextColor else Color.White.copy(0.5f), baseSize = 32.dp) { localIsShuffled = !localIsShuffled; onCustomMediaAction?.invoke(action.action) }
-                } ?: Spacer(Modifier.width(32.dp))
+                    InteractiveIconButton(painter = painterResource(R.drawable.ic_shuffle_vector), tint = if (localIsShuffled) dominantColor else Color.White.copy(0.4f), baseSize = 36.dp) { localIsShuffled = !localIsShuffled; onCustomMediaAction?.invoke(action.action) }
+                } ?: Spacer(Modifier.width(36.dp))
 
-                InteractiveIconButton(
-                    icon = Icons.AutoMirrored.Filled.ArrowBack,
-                    tint = Color.White,
-                    baseSize = 44.dp
-                ) { onPrevClick?.invoke() }
+                InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, tint = Color.White, baseSize = 48.dp) { onPrevClick?.invoke() }
 
                 val playPainter = if (music.isPlaying) painterResource(R.drawable.ic_pause_vector) else painterResource(R.drawable.ic_play_vector)
-                InteractiveIconButton(painter = playPainter, tint = Color.White, baseSize = 56.dp, bgAlpha = 0.2f) { onPlayPauseClick?.invoke() }
+                InteractiveIconButton(painter = playPainter, tint = Color.White, baseSize = 64.dp, bgAlpha = 0.15f) { onPlayPauseClick?.invoke() }
 
-                InteractiveIconButton(
-                    icon = Icons.AutoMirrored.Filled.ArrowForward,
-                    tint = Color.White,
-                    baseSize = 44.dp
-                ) { onNextClick?.invoke() }
+                InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowForward, tint = Color.White, baseSize = 48.dp) { onNextClick?.invoke() }
 
                 music.customActions.find { it.action.contains("repeat", true) }?.let { action ->
-                    InteractiveIconButton(painter = painterResource(R.drawable.ic_sync_vector), tint = if (localRepeatMode > 0) dynamicTextColor else Color.White.copy(0.5f), baseSize = 32.dp) { localRepeatMode = (localRepeatMode + 1) % 3; onCustomMediaAction?.invoke(action.action) }
-                } ?: Spacer(Modifier.width(32.dp))
+                    InteractiveIconButton(painter = painterResource(R.drawable.ic_sync_vector), tint = if (localRepeatMode > 0) dominantColor else Color.White.copy(0.4f), baseSize = 36.dp) { localRepeatMode = (localRepeatMode + 1) % 3; onCustomMediaAction?.invoke(action.action) }
+                } ?: Spacer(Modifier.width(36.dp))
             }
         }
     }

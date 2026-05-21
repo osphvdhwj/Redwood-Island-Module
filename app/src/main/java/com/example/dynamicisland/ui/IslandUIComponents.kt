@@ -14,9 +14,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -25,6 +27,54 @@ import com.example.dynamicisland.model.ActivityType
 import com.example.dynamicisland.model.LocalIslandTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+
+object IslandPhysics {
+    val Damping = Spring.DampingRatioMediumBouncy
+    val Stiffness = Spring.StiffnessLow
+    
+    val springFloat = spring<Float>(Damping, Stiffness)
+    val springDp = spring<androidx.compose.ui.unit.Dp>(Damping, Stiffness)
+}
+
+fun Modifier.squishClickable(
+    enabled: Boolean = true,
+    haptic: HapticFeedbackType = HapticFeedbackType.TextHandleMove,
+    onClick: () -> Unit
+): Modifier = this.composed {
+    val hapticFeedback = LocalHapticFeedback.current
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.94f else 1f,
+        animationSpec = IslandPhysics.springFloat,
+        label = "squish_scale"
+    )
+
+    this
+        .graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
+        .pointerInput(enabled) {
+            if (!enabled) return@pointerInput
+            awaitEachGesture {
+                awaitFirstDown(pass = PointerEventPass.Initial)
+                isPressed = true
+                hapticFeedback.performHapticFeedback(haptic)
+                waitForUpOrCancellation(pass = PointerEventPass.Initial)
+                isPressed = false
+            }
+        }
+        .clickable(enabled = enabled, onClick = onClick)
+}
 
 @Composable
 fun AlertMidSlot(

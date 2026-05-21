@@ -41,90 +41,71 @@ fun BarcodeMid(
     onDismiss: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val haptic  = LocalHapticFeedback.current
 
-    val (iconRes, accentColor) = when {
-        barcode.content.startsWith("http") -> AnyIcon(painter = painterResource(R.drawable.ic_sync_vector)) to Color(0xFF4FC3F7)
-        barcode.content.contains("@")      -> AnyIcon(imageVector = Icons.Default.Email) to Color(0xFFFFB74D)
-        barcode.content.matches(Regex("[\\d\\s\\+\\-\\(\\)]{7,}")) -> AnyIcon(painter = painterResource(R.drawable.ic_phone_vector)) to Color(0xFF81C784)
-        barcode.content.startsWith("WIFI:")  -> AnyIcon(painter = painterResource(R.drawable.ic_wifi_vector)) to Color(0xFF4FC3F7)
-        barcode.content.startsWith("geo:")   -> AnyIcon(painter = painterResource(R.drawable.ic_map_vector)) to Color(0xFFFF8A65)
-        else                                 -> AnyIcon(painter = painterResource(R.drawable.ic_map_vector)) to Color.White
+    val (icon, accentColor) = when {
+        barcode.content.startsWith("http") -> Icons.Default.Search to Color(0xFF007AFF)
+        barcode.content.contains("@")      -> Icons.Default.Email to Color(0xFFFF9500)
+        barcode.content.matches(Regex("[\\d\\s\\+\\-\\(\\)]{7,}")) -> Icons.Default.Call to Color(0xFF34C759)
+        barcode.content.startsWith("WIFI:")  -> Icons.Default.Refresh to Color(0xFF5856D6)
+        barcode.content.startsWith("geo:")   -> Icons.Default.Place to Color(0xFFFF2D55)
+        else                                 -> Icons.Default.Info to Color.White
     }
-
-    var actionPressed by remember { mutableStateOf(false) }
-    val actionScale by animateFloatAsState(
-        targetValue = if (actionPressed) 0.88f else 1f,
-        animationSpec = spring(dampingRatio = 0.5f, stiffness = 600f),
-        label = "barcode_btn"
-    )
 
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // --- High-Fidelity Icon Backdrop ---
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(46.dp)
                 .background(accentColor.copy(alpha = 0.15f), CircleShape)
-                .border(1.dp, accentColor.copy(alpha = 0.40f), CircleShape),
+                .border(1.dp, accentColor.copy(alpha = 0.35f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            when {
-                iconRes.imageVector != null -> Icon(imageVector = iconRes.imageVector, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
-                iconRes.painter != null -> Icon(painter = iconRes.painter, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
-            }
+            Icon(icon, null, tint = accentColor, modifier = Modifier.size(24.dp))
         }
 
-        Spacer(modifier = Modifier.width(10.dp))
+        Spacer(modifier = Modifier.width(14.dp))
 
+        // --- Contextual Text ---
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = barcode.format.replaceFirstChar { it.uppercase() },
-                color = Color.White.copy(alpha = 0.55f),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium
+                barcode.format.uppercase(),
+                color = accentColor,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 1.2.sp
             )
             Text(
-                text = barcode.content,
+                barcode.content,
                 color = Color.White,
-                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
+        // --- Action Badge ---
         Box(
             modifier = Modifier
-                .scale(actionScale)
-                .background(accentColor.copy(alpha = 0.20f), RoundedCornerShape(10.dp))
-                .border(1.dp, accentColor.copy(alpha = 0.40f), RoundedCornerShape(10.dp))
-                .clickable {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    actionPressed = true
-                    executeBarcodeAction(context, barcode)
-                }
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .squishClickable { executeBarcodeAction(context, barcode) }
+                .background(accentColor.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                .border(1.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 14.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = barcode.label,
+                barcode.label.uppercase(),
                 color = accentColor,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Black
             )
-        }
-    }
-
-    LaunchedEffect(actionPressed) {
-        if (actionPressed) {
-            kotlinx.coroutines.delay(300)
-            actionPressed = false
         }
     }
 }

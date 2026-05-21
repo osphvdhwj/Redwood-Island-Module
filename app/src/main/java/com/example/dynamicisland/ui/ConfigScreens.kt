@@ -11,6 +11,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -178,6 +182,32 @@ fun ThemeScreen(prefs: SharedPreferences) {
         Slider(value = stiffness, onValueChange = { stiffness = it }, onValueChangeFinished = {
             ConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("spring_stiffness", stiffness) }) { ConfigManager.sendGestureUpdate(context, prefs) }
         }, valueRange = 50f..1000f)
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Icon Pack", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Cyan)
+        var selectedIconPack by remember { mutableStateOf(prefs.getString("icon_pack", "AMOLED_CYBERPUNK") ?: "AMOLED_CYBERPUNK") }
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("AMOLED_CYBERPUNK" to "Cyberpunk", "MATERIAL_YOU" to "Material", "CUPERTINO_GLASS" to "Glass").forEach { (pack, label) ->
+                FilterChip(
+                    selected = selectedIconPack == pack,
+                    onClick = {
+                        selectedIconPack = pack
+                        ConfigManager.commitAndBroadcast(prefs, scope, context, { putString("icon_pack", pack) }) { ConfigManager.sendGestureUpdate(context, prefs) }
+                    },
+                    label = { Text(label) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Color(0xFF00FFFF).copy(alpha = 0.2f),
+                        selectedLabelColor = Color(0xFF00FFFF),
+                        selectedLeadingIconColor = Color(0xFF00FFFF)
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = selectedIconPack == pack,
+                        borderColor = if (selectedIconPack == pack) Color(0xFF00FFFF) else Color.Gray
+                    )
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -516,7 +546,11 @@ fun GesturesScreen(prefs: SharedPreferences) {
                         Text(label, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                         Icon(if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null)
                     }
-                    AnimatedVisibility(expanded) {
+                    AnimatedVisibility(
+                        visible = expanded,
+                        enter = expandVertically(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)),
+                        exit = shrinkVertically(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+                    ) {
                         Column(modifier = Modifier.padding(top = 16.dp)) {
                             gestures.forEach { gesture ->
                                 val prefKey = "${stateKey}_${gesture.name}"

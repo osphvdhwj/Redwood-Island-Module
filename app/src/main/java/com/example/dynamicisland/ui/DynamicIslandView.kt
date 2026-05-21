@@ -177,6 +177,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     }
 
     init {
+        setBackgroundColor(android.graphics.Color.TRANSPARENT)
         IslandPreferencesManager.load(this)
         savedStateRegistryController.performRestore(Bundle())
         lifecycleRegistry.currentState = Lifecycle.State.RESUMED

@@ -102,23 +102,18 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
 
     val islandScale by animateFloatAsState(
         targetValue = if (isEffectivelyHidden) 0f else 1f,
-        animationSpec = if (isEffectivelyHidden) tween(350, easing = FastOutLinearInEasing) else spring(dampingRatio = 0.65f, stiffness = 300f),
+        animationSpec = if (isEffectivelyHidden) tween(350, easing = FastOutLinearInEasing) else IslandPhysics.springFloat,
         label = "blackhole_scale"
     )
 
-    // FIXED: Stripped LocalIslandTheme and use safe default physics constants
+    // FIXED: Using shared physics tokens
     val settings = view.controller?.settingsState ?: com.example.dynamicisland.settings.SettingsState()
-    val springDamping = 0.65f
-    val springStiffness = 300f
-    
-    val dpPhysicsSpec = spring<Dp>(dampingRatio = springDamping, stiffness = springStiffness)
-    val floatPhysicsSpec = spring<Float>(dampingRatio = springDamping, stiffness = springStiffness)
     
     val haptic = LocalHapticFeedback.current
     var isSquished by remember { mutableStateOf(false) }
     val touchScale by animateFloatAsState(
-        targetValue = if (isSquished) 0.96f else 1f, 
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+        targetValue = if (isSquished) 0.94f else 1f, 
+        animationSpec = IslandPhysics.springFloat,
         label = "squish"
     )
     
@@ -161,33 +156,30 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         else -> ringY.value 
     }
 
-    val animatedWidth by animateDpAsState(targetWidth.dp, dpPhysicsSpec, label = "width")
-    val animatedHeight by animateDpAsState(targetHeight.dp, dpPhysicsSpec, label = "height")
+    val animatedWidth by animateDpAsState(targetWidth.dp, IslandPhysics.springDp, label = "width")
+    val animatedHeight by animateDpAsState(targetHeight.dp, IslandPhysics.springDp, label = "height")
     val radTarget = when (state) { 
         IslandState.TYPE_3_MAX -> 42.dp
         IslandState.TYPE_2_MID -> 16.dp
         IslandState.TYPE_CUBE -> 24.dp
         else -> (targetHeight / 2).dp 
     }
-    val animatedRadius by animateDpAsState(radTarget, dpPhysicsSpec, label = "rad")
+    val animatedRadius by animateDpAsState(radTarget, IslandPhysics.springDp, label = "rad")
     
-    val offsetX by animateFloatAsState(targetX, floatPhysicsSpec, label = "x")
-    val offsetY by animateFloatAsState(targetY, floatPhysicsSpec, label = "y")
+    val offsetX by animateFloatAsState(targetX, IslandPhysics.springFloat, label = "x")
+    val offsetY by animateFloatAsState(targetY, IslandPhysics.springFloat, label = "y")
     val islandAlpha by animateFloatAsState(
         targetValue = if (isEffectivelyHidden) 0f else 1f,
         animationSpec = tween(300),
         label = "blackhole_alpha"
     )
 
-    // FIXED: Defaulting to glassmorphism transparency logic
+    // True black AMOLED background
     val baseBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else {
-        val baseAlpha = 0.65f
         if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) {
-            Color(model.dominantColor).copy(alpha = baseAlpha)
-        } else if (state == IslandState.TYPE_3_MAX) {
-            Color(0xFF080808).copy(alpha = baseAlpha)
+            Color(model.dominantColor).copy(alpha = 0.85f)
         } else {
-            Color.Black.copy(alpha = baseAlpha)
+            Color.Black // True AMOLED Black
         }
     }
     val bgColor by animateColorAsState(
@@ -195,12 +187,12 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         animationSpec = when {
             state == IslandState.TYPE_3_MAX -> tween(400, easing = FastOutSlowInEasing)
             state == IslandState.TYPE_0_RING -> tween(250, easing = LinearOutSlowInEasing)
-            else -> spring(dampingRatio = 0.85f, stiffness = 300f)
+            else -> spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
         },
         label = "bgColor"
     )
     val borderColor by animateColorAsState(
-        targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color.White.copy(alpha = 0.08f),
+        targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color(0xFF00FFFF).copy(alpha = 0.8f), // Vivid Neon Cyan Edge Accents
         animationSpec = tween(600),
         label = "borderColor"
     )
@@ -544,6 +536,10 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
 }
 
 private data class Particle(
+    val angle: Float,
+    val speed: Float,
+    val birthTime: Long
+)
     val angle: Float,
     val speed: Float,
     val birthTime: Long

@@ -64,8 +64,7 @@ private fun InteractiveIconButtonContent(
             .size(baseSize)
             .clip(RoundedCornerShape(theme.buttonCornerRadius))
             .background(currentTint.copy(alpha = bgAlpha))
-            .clickable { 
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            .squishClickable(haptic = HapticFeedbackType.TextHandleMove) { 
                 isClicked = true
                 onClick() 
             },

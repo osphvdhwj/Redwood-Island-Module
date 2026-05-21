@@ -164,3 +164,4 @@ data class SettingsState(
 
 enum class DesignLanguage { MATERIAL_YOU, APPLE_LIQUID_GLASS }
 enum class AnimationSpeed { SLOW, NORMAL, FAST }
+enum class IconPack { CUPERTINO_GLASS, MATERIAL_YOU, AMOLED_CYBERPUNK }

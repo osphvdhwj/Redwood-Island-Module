@@ -15,7 +15,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.graphics.Color
 import dagger.hilt.android.AndroidEntryPoint
+
+private val AmoledCyanColorScheme = darkColorScheme(
+    primary = Color(0xFF00FFFF), // Neon Cyan
+    onPrimary = Color.Black,
+    primaryContainer = Color(0xFF008B8B),
+    onPrimaryContainer = Color.White,
+    secondary = Color(0xFF00FFFF),
+    onSecondary = Color.Black,
+    secondaryContainer = Color(0xFF004040),
+    onSecondaryContainer = Color.White,
+    background = Color.Black, // True AMOLED Black
+    onBackground = Color.White,
+    surface = Color.Black,
+    onSurface = Color.White,
+    surfaceVariant = Color(0xFF121212), // Slightly elevated true black
+    onSurfaceVariant = Color.White,
+    outline = Color(0xFF00FFFF)
+)
 
 @AndroidEntryPoint
 class ConfigActivity : ComponentActivity() {
@@ -27,8 +46,8 @@ class ConfigActivity : ComponentActivity() {
         // Use ComposeView directly – no need for the missing activity-compose dependency
         val composeView = ComposeView(this).apply {
             setContent {
-                MaterialTheme(colorScheme = darkColorScheme()) {
-                    Surface(modifier = Modifier.fillMaxSize()) {
+                MaterialTheme(colorScheme = AmoledCyanColorScheme) {
+                    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                         ConfigScreenNav(prefs)
                     }
                 }
@@ -43,12 +62,30 @@ class ConfigActivity : ComponentActivity() {
 
         Scaffold(
             bottomBar = {
-                NavigationBar {
-                    NavigationBarItem(selected = selectedNav == 0, onClick = { selectedNav = 0 }, icon = { Icon(Icons.Default.Build, null) }, label = { Text("Layout") })
-                    NavigationBarItem(selected = selectedNav == 1, onClick = { selectedNav = 1 }, icon = { Icon(Icons.Default.Create, null) }, label = { Text("Theme") })
-                    NavigationBarItem(selected = selectedNav == 2, onClick = { selectedNav = 2 }, icon = { Icon(Icons.Default.List, null) }, label = { Text("Dashboard") })
-                    NavigationBarItem(selected = selectedNav == 3, onClick = { selectedNav = 3 }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Features") })
-                    NavigationBarItem(selected = selectedNav == 4, onClick = { selectedNav = 4 }, icon = { Icon(Icons.Default.Notifications, null) }, label = { Text("Gestures") })
+                NavigationBar(
+                    containerColor = Color.Black,
+                    contentColor = Color(0xFF00FFFF)
+                ) {
+                    NavigationBarItem(
+                        selected = selectedNav == 0, onClick = { selectedNav = 0 }, icon = { Icon(Icons.Default.Build, null) }, label = { Text("Layout") },
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.Black, selectedTextColor = Color(0xFF00FFFF), indicatorColor = Color(0xFF00FFFF), unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray)
+                    )
+                    NavigationBarItem(
+                        selected = selectedNav == 1, onClick = { selectedNav = 1 }, icon = { Icon(Icons.Default.Create, null) }, label = { Text("Theme") },
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.Black, selectedTextColor = Color(0xFF00FFFF), indicatorColor = Color(0xFF00FFFF), unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray)
+                    )
+                    NavigationBarItem(
+                        selected = selectedNav == 2, onClick = { selectedNav = 2 }, icon = { Icon(Icons.Default.List, null) }, label = { Text("Dashboard") },
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.Black, selectedTextColor = Color(0xFF00FFFF), indicatorColor = Color(0xFF00FFFF), unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray)
+                    )
+                    NavigationBarItem(
+                        selected = selectedNav == 3, onClick = { selectedNav = 3 }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Features") },
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.Black, selectedTextColor = Color(0xFF00FFFF), indicatorColor = Color(0xFF00FFFF), unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray)
+                    )
+                    NavigationBarItem(
+                        selected = selectedNav == 4, onClick = { selectedNav = 4 }, icon = { Icon(Icons.Default.Notifications, null) }, label = { Text("Gestures") },
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.Black, selectedTextColor = Color(0xFF00FFFF), indicatorColor = Color(0xFF00FFFF), unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray)
+                    )
                 }
             }
         ) { paddingValues ->

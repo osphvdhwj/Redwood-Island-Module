@@ -34,113 +34,93 @@ import com.example.dynamicisland.model.LocalIslandTheme
 
 @Composable
 fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controller: IslandController) {
-    val context = LocalContext.current
     val theme = LocalIslandTheme.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header
+        // --- Header: Title & Quick Settings Entry ---
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "Dashboard",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
+            Column {
+                Text("Smart Dashboard", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                Text("System Vitals & Controls", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            }
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                    .squishClickable { onGestureEvent?.invoke(IslandGesture.LONG_PRESS) },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Settings, null, tint = Color.White, modifier = Modifier.size(20.dp))
+            }
+        }
+
+        // --- Section 1: System Vitals (Smart Cards) ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            SystemVitalCard(
+                modifier = Modifier.weight(1f),
+                label = "Battery",
+                value = "${globalBatteryLevel.intValue}%",
+                progress = globalBatteryLevel.intValue / 100f,
+                color = when {
+                    globalBatteryLevel.intValue <= 20 -> Color(0xFFFF3B30)
+                    globalBatteryLevel.intValue <= 50 -> Color(0xFFFFCC00)
+                    else -> Color(0xFF34C759)
+                },
+                icon = painterResource(R.drawable.ic_battery_full_vector)
             )
-            IconButton(onClick = { /* Action handled by onGestureEvent if needed */ }) {
-                Icon(Icons.Default.Settings, null, tint = Color.White)
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // Quick Controls
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            DashboardTile(
+            SystemVitalCard(
                 modifier = Modifier.weight(1f),
-                title = "Volume",
-                value = "${hardwareVolume.intValue}%",
-                icon = painterResource(R.drawable.ic_play_vector), // Placeholder
-                color = Color(0xFF4FC3F7)
-            ) {
-                // Volume adjust
-            }
-            DashboardTile(
-                modifier = Modifier.weight(1f),
-                title = "Brightness",
-                value = "Auto",
-                icon = Icons.Default.Search, // Placeholder
-                color = Color(0xFFFFD54F)
-            ) {
-                // Brightness adjust
-            }
+                label = "Gaming",
+                value = "${gamingFps.floatValue.toInt()} FPS",
+                progress = (gamingFps.floatValue / 120f).coerceIn(0f, 1f),
+                color = Color(0xFF00FFFF),
+                icon = Icons.Default.Info
+            )
         }
 
-        Spacer(Modifier.height(12.dp))
-
-        // System Stats
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
-                    .padding(12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Info, null, tint = Color.LightGray, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("${gamingFps.floatValue.toInt()} FPS", color = Color.White, fontSize = 14.sp)
-                }
-            }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
-                    .padding(12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(painterResource(R.drawable.ic_battery_full_vector), null, tint = Color.White, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("${globalBatteryLevel.intValue}%", color = Color.White, fontSize = 14.sp)
-                }
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        // Media Mini Controller (if playing)
+        // --- Section 2: Media Mini (Cinematic) ---
         val media = activeModel.value as? LiveActivityModel.Music
         if (media != null) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(72.dp)
                     .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
-                    .padding(12.dp)
+                    .padding(horizontal = 12.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color.Gray))
+                    if (media.albumArt != null) {
+                        Image(
+                            bitmap = media.albumArt.asImageBitmap(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.dp))
+                        )
+                    } else {
+                        Box(Modifier.size(48.dp).background(Color.White.copy(0.1f), RoundedCornerShape(10.dp)))
+                    }
+                    
                     Spacer(Modifier.width(12.dp))
+                    
                     Column(Modifier.weight(1f)) {
                         Text(media.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                         Text(media.artist, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, maxLines = 1)
                     }
-                    Row {
-                        IconButton(onClick = { onPrevClick?.invoke() }) {
-                            Icon(painterResource(R.drawable.ic_prev_vector), null, tint = Color.White, modifier = Modifier.size(24.dp))
-                        }
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         IconButton(onClick = { onPlayPauseClick?.invoke() }) {
                             Icon(
                                 painter = if (media.isPlaying) painterResource(R.drawable.ic_pause_vector) else painterResource(R.drawable.ic_play_vector),
@@ -153,69 +133,69 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                     }
                 }
             }
-        } else {
-            Box(
-                modifier = Modifier.fillMaxWidth().height(64.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(painterResource(R.drawable.ic_play_vector), null, tint = Color.White.copy(alpha = 0.2f), modifier = Modifier.size(40.dp))
-            }
         }
 
-        Spacer(Modifier.height(16.dp))
-
-        // Quick Settings Grid
-        Text("Quick Settings", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
-        
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.weight(1f)
-        ) {
-            items(qsTiles) { tile ->
-                QSCircleTile(tile, onQsTileClick)
+        // --- Section 3: Quick Settings Grid ---
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Quick Actions", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                qsTiles.take(4).forEach { tile ->
+                    QSTileModern(tile, onQsTileClick)
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                qsTiles.drop(4).take(4).forEach { tile ->
+                    QSTileModern(tile, onQsTileClick)
+                }
+                if (qsTiles.size < 8) {
+                    repeat(4 - (qsTiles.size - 4)) { Spacer(Modifier.size(64.dp)) }
+                }
             }
         }
     }
 }
 
 @Composable
-fun DashboardTile(
+fun SystemVitalCard(
     modifier: Modifier,
-    title: String,
+    label: String,
     value: String,
-    icon: Any, // Icon or Painter
+    progress: Float,
     color: Color,
-    onClick: () -> Unit
+    icon: Any
 ) {
     Box(
         modifier = modifier
-            .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
-            .clickable { onClick() }
+            .height(80.dp)
+            .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(22.dp))
             .padding(12.dp)
     ) {
-        Column {
-            Box(
-                modifier = Modifier.size(32.dp).background(color.copy(alpha = 0.15f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                if (icon is ImageVector) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) {
+                CircularProgressIndicator(
+                    progress = { progress },
+                    color = color,
+                    trackColor = color.copy(alpha = 0.15f),
+                    strokeWidth = 3.dp,
+                    modifier = Modifier.fillMaxSize()
+                )
+                if (icon is androidx.compose.ui.graphics.painter.Painter) {
                     Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
-                } else if (icon is androidx.compose.ui.graphics.painter.Painter) {
+                } else if (icon is ImageVector) {
                     Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Text(title, color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
-            Text(value, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Column {
+                Text(label, color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(value, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black)
+            }
         }
     }
 }
 
 @Composable
-fun QSCircleTile(tileSpec: String, onClick: ((String) -> Unit)?) {
+fun QSTileModern(tileSpec: String, onClick: ((String) -> Unit)?) {
     val (icon, label) = when (tileSpec.lowercase()) {
         "wifi" -> painterResource(R.drawable.ic_wifi_vector) to "Wi-Fi"
         "bluetooth" -> painterResource(R.drawable.ic_bluetooth_vector) to "BT"
@@ -227,12 +207,13 @@ fun QSCircleTile(tileSpec: String, onClick: ((String) -> Unit)?) {
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { onClick?.invoke(tileSpec) }
+        modifier = Modifier.width(64.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(48.dp)
-                .background(Color.White.copy(alpha = 0.1f), CircleShape),
+                .size(52.dp)
+                .background(Color.White.copy(alpha = 0.08f), CircleShape)
+                .squishClickable { onClick?.invoke(tileSpec) },
             contentAlignment = Alignment.Center
         ) {
             if (icon is androidx.compose.ui.graphics.painter.Painter) {
@@ -241,7 +222,7 @@ fun QSCircleTile(tileSpec: String, onClick: ((String) -> Unit)?) {
                 Icon(icon, null, tint = Color.White, modifier = Modifier.size(22.dp))
             }
         }
-        Spacer(Modifier.height(4.dp))
-        Text(label, color = Color.White, fontSize = 10.sp, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(6.dp))
+        Text(label, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
     }
 }

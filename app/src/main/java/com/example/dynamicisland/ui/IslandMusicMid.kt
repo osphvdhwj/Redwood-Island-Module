@@ -37,31 +37,32 @@ import com.example.dynamicisland.model.LiveActivityModel
 
 @Composable
 fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
-    val haptic = LocalHapticFeedback.current
-    var localIsLiked by remember(music.title, music.isLiked) { mutableStateOf(music.isLiked) }
+    val dominantColor = music.dominantColor?.let { Color(it) } ?: Color.White
+    val theme = LocalIslandTheme.current
     
-    // Smooth transition between playing/paused states
-    val playing = music.isPlaying
-    val animatedProgress by animateFloatAsState(
-        targetValue = if (playing) 1f else 0.95f,
-        animationSpec = spring(dampingRatio = 0.5f, stiffness = 200f),
-        label = "playingProgress"
-    )
+    var artPressed by remember { mutableStateOf(false) }
+    val artScale by animateFloatAsState(if(artPressed) 0.90f else 1f, IslandPhysics.springFloat, label="art")
 
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 14.dp),
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Left Side: Album Art with shadow and circular clip
+        // --- Left: Album Art with Shadow ---
         Box(
             modifier = Modifier
-                .size(44.dp)
-                .scale(animatedProgress)
-                .shadow(6.dp, CircleShape)
+                .size(48.dp)
+                .scale(artScale)
+                .shadow(8.dp, CircleShape)
                 .clip(CircleShape)
-                .background(Color(0xFF222222))
+                .background(Color(0xFF1A1A1A))
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(); artPressed = true
+                        waitForUpOrCancellation(); artPressed = false
+                    }
+                }
         ) {
             if (music.albumArt != null) {
                 Image(
@@ -73,71 +74,54 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
             }
         }
 
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(14.dp))
 
-        // Middle: Title & Artist
+        // --- Middle: Scrolling Titles ---
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = music.title,
                 color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.ExtraBold,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                modifier = Modifier.safeMarquee(islandState.value)
             )
             Text(
                 text = music.artist,
                 color = Color.White.copy(alpha = 0.6f),
-                fontSize = 12.sp,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                modifier = Modifier.safeMarquee(islandState.value)
             )
         }
 
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(10.dp))
 
-        // Right Side: Minimal Controls
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            // Previous
+        // --- Right: Fluid Controls ---
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Icon(
                 painter = painterResource(R.drawable.ic_prev_vector),
-                contentDescription = "Prev",
-                tint = Color.White.copy(alpha = 0.8f),
-                modifier = Modifier.size(20.dp).clickable { onPrevClick?.invoke() }
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.size(18.dp).squishClickable { onPrevClick?.invoke() }
             )
 
-            // Play/Pause
             Icon(
-                painter = if (playing) painterResource(R.drawable.ic_pause_vector) else painterResource(R.drawable.ic_play_vector),
-                contentDescription = "Play/Pause",
+                painter = if (music.isPlaying) painterResource(R.drawable.ic_pause_vector) else painterResource(R.drawable.ic_play_vector),
+                contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier
-                    .size(28.dp)
-                    .clickable { onPlayPauseClick?.invoke() }
+                modifier = Modifier.size(30.dp).squishClickable { onPlayPauseClick?.invoke() }
             )
 
-            // Next
             Icon(
                 painter = painterResource(R.drawable.ic_next_vector),
-                contentDescription = "Next",
-                tint = Color.White.copy(alpha = 0.8f),
-                modifier = Modifier.size(20.dp).clickable { onNextClick?.invoke() }
-            )
-
-            // Like/Heart
-            Icon(
-                imageVector = if (localIsLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                contentDescription = "Like",
-                tint = if (localIsLiked) Color(0xFFFF2A5F) else Color.White.copy(alpha = 0.4f),
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable {
-                        localIsLiked = !localIsLiked
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        music.customActions.find { it.action.contains("like", true) || it.action.contains("heart", true) }?.let {
-                            onCustomMediaAction?.invoke(it.action)
-                        }
-                    }
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.size(18.dp).squishClickable { onNextClick?.invoke() }
             )
         }
     }

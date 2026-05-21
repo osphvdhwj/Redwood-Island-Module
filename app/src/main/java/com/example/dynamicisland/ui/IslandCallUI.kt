@@ -32,57 +32,52 @@ import com.example.dynamicisland.ipc.IslandState
 
 @Composable
 fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
-    val haptic = LocalHapticFeedback.current
     val isRinging = model.state == "RINGING"
 
-    val rippleScale by rememberInfiniteTransition(label="ringRipple").animateFloat(
+    val infiniteTransition = rememberInfiniteTransition(label="ring")
+    val rippleScale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 1.08f,
+        targetValue = 1.10f,
         animationSpec = infiniteRepeatable(
-            tween(400, easing = FastOutSlowInEasing),
+            tween(600, easing = FastOutSlowInEasing),
             RepeatMode.Reverse
         ), label = "ripple"
     )
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 0.6f,
+        animationSpec = infiniteRepeatable(
+            tween(800, easing = LinearOutSlowInEasing),
+            RepeatMode.Reverse
+        ), label = "glow"
+    )
 
     val bgColor = if (isRinging) {
-        androidx.compose.ui.graphics.Brush.horizontalGradient(
-            listOf(Color(0xFF00C853), Color(0xFF1DE9B6))
-        )
+        Brush.horizontalGradient(listOf(Color(0xFF34C759), Color(0xFF248A3D)))
     } else {
-        androidx.compose.ui.graphics.Brush.horizontalGradient(
-            listOf(Color(0xFF00897B), Color(0xFF00C853))
-        )
+        Brush.horizontalGradient(listOf(Color(0xFF30D158), Color(0xFF34C759)))
     }
 
     Row(
         modifier = Modifier
             .fillMaxSize()
             .graphicsLayer {
-                scaleX = if (isRinging) rippleScale else 1f
-                scaleY = if (isRinging) rippleScale else 1f
+                val s = if (isRinging) rippleScale else 1f
+                scaleX = s; scaleY = s
             }
             .background(bgColor, RoundedCornerShape(50))
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        if (isRinging) onOpenCallUI?.invoke() else setState(IslandState.TYPE_2_MID)
-                    },
-                    onLongPress = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onOpenCallUI?.invoke()
-                    }
-                )
+            .squishClickable {
+                if (isRinging) onOpenCallUI?.invoke() else setState(IslandState.TYPE_2_MID)
             }
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        val phoneRotation by rememberInfiniteTransition(label="phoneRot").animateFloat(
+        val phoneRotation by infiniteTransition.animateFloat(
             initialValue = -15f,
             targetValue = 15f,
             animationSpec = infiniteRepeatable(
-                tween(150, easing = LinearEasing),
+                tween(200, easing = LinearEasing),
                 RepeatMode.Reverse
             ), label = "rotation"
         )
@@ -92,18 +87,16 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
             contentDescription = null,
             tint = Color.White,
             modifier = Modifier
-                .size(14.dp)
-                .graphicsLayer {
-                    rotationZ = if (isRinging) phoneRotation else 0f
-                }
+                .size(15.dp)
+                .graphicsLayer { rotationZ = if (isRinging) phoneRotation else 0f }
         )
 
         if (isRinging) {
             Text(
                 text = model.callerName.ifEmpty { "Incoming Call" },
                 color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Black,
                 maxLines = 1,
                 modifier = Modifier.weight(1f)
             )
@@ -111,8 +104,8 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
             IsolatedTimerText(
                 startTime = model.startTime,
                 color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 13.sp,
+                fontWeight = FontWeight.ExtraBold
             )
         }
     }
@@ -121,7 +114,6 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
 @Composable
 fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {
     val context = LocalContext.current
-    val haptic = LocalHapticFeedback.current
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
     val theme = LocalIslandTheme.current
     
@@ -130,31 +122,39 @@ fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {
 
     AlertMidSlot(
         islandState = islandState.value,
-        swipeAction = {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            onOpenCallUI?.invoke()
-        },
+        swipeAction = { onOpenCallUI?.invoke() },
         iconContent = {
-            val pulseScale by rememberInfiniteTransition(label="pulse").animateFloat(initialValue = 0.95f, targetValue = 1.05f, animationSpec = infiniteRepeatable(tween(1500), RepeatMode.Reverse), label="scale")
-            Box(modifier = Modifier.fillMaxSize().graphicsLayer { scaleX=pulseScale; scaleY=pulseScale }.background(Color(0xFF333333), CircleShape), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(theme.batIconSize * 0.65f))
+            val pulse by rememberInfiniteTransition(label="p").animateFloat(initialValue = 0.96f, targetValue = 1.04f, animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Reverse), label="s")
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { scaleX = pulse; scaleY = pulse }
+                    .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                    .border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(26.dp))
             }
         },
         title = model.callerName,
         titleColor = Color.White,
         subtitleContent = {
-            IsolatedTimerText(startTime = model.startTime, color = Color(0xFF00C853), fontSize = theme.alertMsgSize, fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(6.dp).background(Color(0xFF30D158), CircleShape))
+                Spacer(Modifier.width(6.dp))
+                IsolatedTimerText(startTime = model.startTime, color = Color(0xFF30D158), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
         },
         rightContent = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                QuickCircleBtn(painter = if(isMicMuted) painterResource(R.drawable.ic_close_vector) else painterResource(R.drawable.ic_heart_vector), isActive = isMicMuted, activeColor = Color.White, inactiveColor = Color.White.copy(0.15f)) { 
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onMicToggle?.invoke(); isMicMuted = !isMicMuted 
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                QuickCircleBtn(icon = if(isMicMuted) Icons.Default.Close else Icons.Default.Check, isActive = isMicMuted, activeColor = Color.White, inactiveColor = Color.White.copy(0.15f)) { 
+                    onMicToggle?.invoke(); isMicMuted = !isMicMuted 
                 }
-                QuickCircleBtn(painter = painterResource(R.drawable.ic_bluetooth_vector), isActive = isSpeakerOn, activeColor = Color.White, inactiveColor = Color.White.copy(0.15f)) { 
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onSpeakerToggle?.invoke(); isSpeakerOn = !isSpeakerOn 
+                QuickCircleBtn(icon = Icons.Default.Notifications, isActive = isSpeakerOn, activeColor = Color.White, inactiveColor = Color.White.copy(0.15f)) { 
+                    onSpeakerToggle?.invoke(); isSpeakerOn = !isSpeakerOn 
                 }
-                QuickCircleBtn(painter = painterResource(R.drawable.ic_phone_vector), isActive = true, activeColor = Color(0xFFFF3B30), inactiveColor = Color(0xFFFF3B30)) { 
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress); onEndCallClick?.invoke() 
+                QuickCircleBtn(icon = Icons.Default.Call, isActive = true, activeColor = Color(0xFFFF3B30), inactiveColor = Color(0xFFFF3B30)) { 
+                    onEndCallClick?.invoke() 
                 }
             }
         }
