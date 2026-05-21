@@ -725,20 +725,6 @@ class IslandController @Inject constructor(
             "PREV_TRACK" -> mediaManager.sendMediaCommand("PREV")
             "VOLUME" -> {
                 audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_SAME, AudioManager.FLAG_SHOW_UI)
-        }
-    }
-    private fun resetAutoCollapseTimer() {
-        autoCollapseJob?.cancel()
-        autoCollapseJob = scope.launch {
-            delay(8000)
-            collapseToIdle()
-        }
-    }
-
-    private fun collapseToIdle() {
-        _islandState.value = IslandState.TYPE_0_RING
-        evaluatePriority()
-    }
             }
             "BRIGHTNESS" -> { }
             "PREV_APP" -> {
@@ -804,6 +790,19 @@ class IslandController @Inject constructor(
             }
             else -> { if (actionName.startsWith("LAUNCH_APP_")) actionManager.launchAppIntent(actionName.removePrefix("LAUNCH_APP_")) { userForceCollapsed = true; _islandState.value = IslandState.TYPE_0_RING; evaluatePriority() } }
         }
+    }
+
+    private fun resetAutoCollapseTimer() {
+        autoCollapseJob?.cancel()
+        autoCollapseJob = scope.launch {
+            delay(8000)
+            collapseToIdle()
+        }
+    }
+
+    private fun collapseToIdle() {
+        _islandState.value = IslandState.TYPE_0_RING
+        evaluatePriority()
     }
 
     private fun triggerVisualScreenshotFlash() {
