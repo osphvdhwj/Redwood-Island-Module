@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.toBitmap
 import androidx.palette.graphics.Palette
 import com.example.dynamicisland.manager.IslandMediaManager
 import com.example.dynamicisland.model.LiveActivityModel
@@ -74,8 +75,7 @@ fun MusicMid(
                         .clip(RoundedCornerShape(12.dp)),
                     contentScale = ContentScale.Crop,
                     onSuccess = { state ->
-                        val drawable = state.result.drawable
-                        val bitmap = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                        val bitmap = state.result.image.toBitmap()
                         if (settings.dynamicGradient && bitmap != null) {
                             gradientColors = extractGradientColors(bitmap)
                         }

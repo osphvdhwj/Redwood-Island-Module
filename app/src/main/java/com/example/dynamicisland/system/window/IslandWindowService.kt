@@ -20,6 +20,7 @@ import com.example.dynamicisland.R
 import com.example.dynamicisland.ipc.IslandState
 import com.example.dynamicisland.ui.state.IslandViewModel
 import com.example.dynamicisland.ui.state.IslandUiState
+import com.example.dynamicisland.ui.IslandApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -47,11 +48,11 @@ import kotlinx.coroutines.flow.sample
 class IslandWindowService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
-    private val viewModelStore = ViewModelStore()
+    private val _viewModelStore = ViewModelStore()
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
 
     override val lifecycle: Lifecycle get() = lifecycleRegistry
-    override val viewModelStore: ViewModelStore get() = viewModelStore
+    override val viewModelStore: ViewModelStore get() = _viewModelStore
     override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
 
     private lateinit var windowManager: WindowManager

@@ -29,7 +29,7 @@ object FloatingWindowHook {
                 val displayId = display?.displayId ?: Display.DEFAULT_DISPLAY // Default to 0 if null
 
                 // Check for the specific floating window characteristics
-                if (displayId == TARGET_DISPLAY_ID && layoutParams.windowingMode == WindowManager.LayoutParams.WINDOWING_MODE_FULLSCREEN) {
+                if (displayId == TARGET_DISPLAY_ID && layoutParams.width == WindowManager.LayoutParams.MATCH_PARENT && layoutParams.height == WindowManager.LayoutParams.MATCH_PARENT) {
                     XposedBridge.log("$TAG ✅: Floating window detected on Display $displayId (Fullscreen mode)!")
                     XposedBridge.log("$TAG -> Package: ${view.context.packageName}")
                     XposedBridge.log("$TAG -> Window Type: ${layoutParams.type}")
