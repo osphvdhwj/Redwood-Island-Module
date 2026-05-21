@@ -17,12 +17,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.toBitmap
 import androidx.palette.graphics.Palette
+import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.IslandController
 import com.example.dynamicisland.manager.IslandMediaManager
 import com.example.dynamicisland.model.LiveActivityModel
@@ -146,20 +148,20 @@ private fun MusicMax(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { mediaManager.sendMediaCommand("PREV") }) {
-                    Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White)
+                    Icon(painterResource(R.drawable.ic_prev_vector), "Previous", tint = Color.White)
                 }
                 IconButton(onClick = {
                     mediaManager.sendMediaCommand(if (music.isPlaying) "PAUSE" else "PLAY")
                 }) {
                     Icon(
-                        if (music.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        "Play/Pause",
+                        painter = if (music.isPlaying) painterResource(R.drawable.ic_pause_vector) else painterResource(R.drawable.ic_play_vector),
+                        contentDescription = "Play/Pause",
                         tint = Color.White,
                         modifier = Modifier.size(36.dp)
                     )
                 }
                 IconButton(onClick = { mediaManager.sendMediaCommand("NEXT") }) {
-                    Icon(Icons.Default.SkipNext, "Next", tint = Color.White)
+                    Icon(painterResource(R.drawable.ic_next_vector), "Next", tint = Color.White)
                 }
             }
         }
@@ -183,7 +185,7 @@ private fun LiveActivityMax(activity: LiveActivityModel.LiveActivity) {
             activity.progress?.let {
                 Spacer(Modifier.height(8.dp))
                 LinearProgressIndicator(
-                    progress = it,
+                    progress = { it },
                     modifier = Modifier.fillMaxWidth(),
                     color = Color.White,
                     trackColor = Color.White.copy(alpha = 0.2f)

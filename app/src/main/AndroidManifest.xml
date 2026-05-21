@@ -53,7 +53,7 @@
             android:resource="@array/xposed_scope" />
         <meta-data
             android:name="com.google.mlkit.vision.DEPENDENCIES"
-            android:value="barcode_ui,translate" />
+            android:value="barcode,translate" />
 
         <activity
             android:name=".ui.ConfigActivity"

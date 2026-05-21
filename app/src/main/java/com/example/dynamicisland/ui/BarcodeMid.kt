@@ -3,6 +3,7 @@ package com.example.dynamicisland.ui
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.hook.ContinuityCameraScanner
 import com.example.dynamicisland.settings.SettingsState
+import com.example.dynamicisland.R
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -23,18 +24,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-/**
- * Premium barcode/QR result pill – immersive, contextual, haptic.
- * Automatically adapts to the active accent colour from settings when available.
- */
 @Composable
 fun BarcodeMid(
     barcode: LiveActivityModel.Barcode,
@@ -44,14 +43,15 @@ fun BarcodeMid(
     val context = LocalContext.current
     val haptic  = LocalHapticFeedback.current
 
-    // Determine icon + accent from barcode type
-    val (icon, accentColor) = when {
-        barcode.content.startsWith("http") -> Icons.Default.Link to Color(0xFF4FC3F7)
-        barcode.content.contains("@")      -> Icons.Default.Email to Color(0xFFFFB74D)
-        barcode.content.matches(Regex("[\\d\\s\\+\\-\\(\\)]{7,}")) -> Icons.Default.Phone to Color(0xFF81C784)
-        barcode.content.startsWith("WIFI:")  -> Icons.Default.Wifi to Color(0xFF4FC3F7)
-        barcode.content.startsWith("geo:")   -> Icons.Default.LocationOn to Color(0xFFFF8A65)
-        else                                 -> Icons.Default.QrCode to Color.White
+    // Determine painter + accent from barcode type
+    // Using a mix of Core icons and local drawables to save APK size
+    val (painter, accentColor) = when {
+        barcode.content.startsWith("http") -> painterResource(R.drawable.ic_sync_vector) to Color(0xFF4FC3F7)
+        barcode.content.contains("@")      -> painterResource(com.google.android.material.R.drawable.googleg_disabled) to Color(0xFFFFB74D) // Using a material one or fallback
+        barcode.content.matches(Regex("[\\d\\s\\+\\-\\(\\)]{7,}")) -> painterResource(R.drawable.ic_phone_vector) to Color(0xFF81C784)
+        barcode.content.startsWith("WIFI:")  -> painterResource(R.drawable.ic_wifi_vector) to Color(0xFF4FC3F7)
+        barcode.content.startsWith("geo:")   -> painterResource(R.drawable.ic_map_vector) to Color(0xFFFF8A65)
+        else                                 -> painterResource(R.drawable.ic_map_vector) to Color.White
     }
 
     // Bounce animation for action button
@@ -77,7 +77,7 @@ fun BarcodeMid(
                 .border(1.dp, accentColor.copy(alpha = 0.40f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+            Icon(painter = painter, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
         }
 
         Spacer(modifier = Modifier.width(10.dp))

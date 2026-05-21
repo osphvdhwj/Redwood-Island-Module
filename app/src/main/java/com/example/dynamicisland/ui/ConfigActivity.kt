@@ -44,11 +44,11 @@ class ConfigActivity : ComponentActivity() {
         Scaffold(
             bottomBar = {
                 NavigationBar {
-                    NavigationBarItem(selected = selectedNav == 0, onClick = { selectedNav = 0 }, icon = { Icon(Icons.Default.AspectRatio, null) }, label = { Text("Layout") })
-                    NavigationBarItem(selected = selectedNav == 1, onClick = { selectedNav = 1 }, icon = { Icon(Icons.Default.Palette, null) }, label = { Text("Theme") })
-                    NavigationBarItem(selected = selectedNav == 2, onClick = { selectedNav = 2 }, icon = { Icon(Icons.Default.Dashboard, null) }, label = { Text("Dashboard") })
-                    NavigationBarItem(selected = selectedNav == 3, onClick = { selectedNav = 3 }, icon = { Icon(Icons.Default.SettingsSystemDaydream, null) }, label = { Text("Features") })
-                    NavigationBarItem(selected = selectedNav == 4, onClick = { selectedNav = 4 }, icon = { Icon(Icons.Default.TouchApp, null) }, label = { Text("Gestures") })
+                    NavigationBarItem(selected = selectedNav == 0, onClick = { selectedNav = 0 }, icon = { Icon(Icons.Default.Build, null) }, label = { Text("Layout") })
+                    NavigationBarItem(selected = selectedNav == 1, onClick = { selectedNav = 1 }, icon = { Icon(Icons.Default.Create, null) }, label = { Text("Theme") })
+                    NavigationBarItem(selected = selectedNav == 2, onClick = { selectedNav = 2 }, icon = { Icon(Icons.Default.List, null) }, label = { Text("Dashboard") })
+                    NavigationBarItem(selected = selectedNav == 3, onClick = { selectedNav = 3 }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Features") })
+                    NavigationBarItem(selected = selectedNav == 4, onClick = { selectedNav = 4 }, icon = { Icon(Icons.Default.Notifications, null) }, label = { Text("Gestures") })
                 }
             }
         ) { paddingValues ->

@@ -16,12 +16,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.toBitmap
 import androidx.palette.graphics.Palette
+import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.IslandMediaManager
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.performance.IslandShaderWaveform
@@ -69,7 +71,7 @@ fun MusicMid(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AsyncImage(
                     model = music.albumArtUri,
-                    contentDescription = null,
+                    contentDescription = "Album art",
                     modifier = Modifier
                         .size(48.dp)
                         .clip(RoundedCornerShape(12.dp)),
@@ -84,7 +86,7 @@ fun MusicMid(
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = music.title,
+                        music.title,
                         color = Color.White,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
@@ -92,7 +94,7 @@ fun MusicMid(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = music.artist,
+                        music.artist,
                         color = Color.White.copy(alpha = 0.7f),
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 1,
@@ -103,7 +105,7 @@ fun MusicMid(
 
             IslandShaderWaveform(
                 durationMs = music.durationMs,
-                posProvider = { music.positionMs },   // ✅ removed .toFloat(), now returns Long
+                posProvider = { music.positionMs },
                 isPlaying = music.isPlaying,
                 color = Color.White,
                 trackColor = Color.Gray,
@@ -117,19 +119,19 @@ fun MusicMid(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { mediaManager.sendMediaCommand("PREV") }) {
-                    Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White)
+                    Icon(painterResource(R.drawable.ic_prev_vector), "Previous", tint = Color.White)
                 }
                 IconButton(onClick = {
                     mediaManager.sendMediaCommand(if (music.isPlaying) "PAUSE" else "PLAY")
                 }) {
                     Icon(
-                        if (music.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        "Play/Pause",
+                        painter = if (music.isPlaying) painterResource(R.drawable.ic_pause_vector) else painterResource(R.drawable.ic_play_vector),
+                        contentDescription = "Play/Pause",
                         tint = Color.White
                     )
                 }
                 IconButton(onClick = { mediaManager.sendMediaCommand("NEXT") }) {
-                    Icon(Icons.Default.SkipNext, "Next", tint = Color.White)
+                    Icon(painterResource(R.drawable.ic_next_vector), "Next", tint = Color.White)
                 }
                 if (music.isLiked) {
                     IconButton(onClick = {

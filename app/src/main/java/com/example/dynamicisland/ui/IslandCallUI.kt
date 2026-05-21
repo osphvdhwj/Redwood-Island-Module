@@ -24,6 +24,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -146,13 +147,13 @@ fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {
         },
         rightContent = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                QuickCircleBtn(icon = if(isMicMuted) Icons.Default.MicOff else Icons.Default.Mic, isActive = isMicMuted, activeColor = Color.White, inactiveColor = Color.White.copy(0.15f)) { 
+                QuickCircleBtn(painter = if(isMicMuted) painterResource(R.drawable.ic_close_vector) else painterResource(R.drawable.ic_heart_vector), isActive = isMicMuted, activeColor = Color.White, inactiveColor = Color.White.copy(0.15f)) { 
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onMicToggle?.invoke(); isMicMuted = !isMicMuted 
                 }
-                QuickCircleBtn(icon = Icons.Default.VolumeUp, isActive = isSpeakerOn, activeColor = Color.White, inactiveColor = Color.White.copy(0.15f)) { 
+                QuickCircleBtn(painter = painterResource(R.drawable.ic_bluetooth_vector), isActive = isSpeakerOn, activeColor = Color.White, inactiveColor = Color.White.copy(0.15f)) { 
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onSpeakerToggle?.invoke(); isSpeakerOn = !isSpeakerOn 
                 }
-                QuickCircleBtn(icon = Icons.Default.CallEnd, isActive = true, activeColor = Color(0xFFFF3B30), inactiveColor = Color(0xFFFF3B30)) { 
+                QuickCircleBtn(painter = painterResource(R.drawable.ic_phone_vector), isActive = true, activeColor = Color(0xFFFF3B30), inactiveColor = Color(0xFFFF3B30)) { 
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress); onEndCallClick?.invoke() 
                 }
             }

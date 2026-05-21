@@ -1,8 +1,6 @@
 package com.example.dynamicisland.ui
 import com.example.dynamicisland.R
-import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*
-import com.example.dynamicisland.manager.*
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -18,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -26,6 +25,23 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun InteractiveIconButton(icon: ImageVector, tint: Color, baseSize: Dp, bgAlpha: Float = 0f, onClick: () -> Unit) {
+    InteractiveIconButtonContent(icon = icon, painter = null, tint = tint, baseSize = baseSize, bgAlpha = bgAlpha, onClick = onClick)
+}
+
+@Composable
+fun InteractiveIconButton(painter: Painter, tint: Color, baseSize: Dp, bgAlpha: Float = 0f, onClick: () -> Unit) {
+    InteractiveIconButtonContent(icon = null, painter = painter, tint = tint, baseSize = baseSize, bgAlpha = bgAlpha, onClick = onClick)
+}
+
+@Composable
+private fun InteractiveIconButtonContent(
+    icon: ImageVector?,
+    painter: Painter?,
+    tint: Color,
+    baseSize: Dp,
+    bgAlpha: Float = 0f,
+    onClick: () -> Unit
+) {
     val theme = LocalIslandTheme.current
     var isClicked by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
@@ -39,8 +55,9 @@ fun InteractiveIconButton(icon: ImageVector, tint: Color, baseSize: Dp, bgAlpha:
 
     val scale by animateFloatAsState(if (isClicked && theme.actionAnimType == "BOUNCE") 1.3f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f), label="scale")
     val alpha by animateFloatAsState(if (isClicked && theme.actionAnimType == "PULSE") 0.3f else 1f, tween(150), label="alpha")
-    val currentIcon = if (isClicked && theme.actionAnimType == "CHECKMARK") Icons.Default.Check else icon
-    val currentTint = if (isClicked && theme.actionAnimType == "CHECKMARK") Color.Green else tint
+    
+    val showCheck = isClicked && theme.actionAnimType == "CHECKMARK"
+    val currentTint = if (showCheck) Color.Green else tint
 
     Box(
         modifier = Modifier
@@ -54,11 +71,27 @@ fun InteractiveIconButton(icon: ImageVector, tint: Color, baseSize: Dp, bgAlpha:
             },
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = currentIcon,
-            contentDescription = null,
-            tint = currentTint.copy(alpha = alpha),
-            modifier = Modifier.size(baseSize * 0.55f).graphicsLayer { scaleX = scale; scaleY = scale }
-        )
+        if (showCheck) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                tint = currentTint.copy(alpha = alpha),
+                modifier = Modifier.size(baseSize * 0.55f).graphicsLayer { scaleX = scale; scaleY = scale }
+            )
+        } else if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = currentTint.copy(alpha = alpha),
+                modifier = Modifier.size(baseSize * 0.55f).graphicsLayer { scaleX = scale; scaleY = scale }
+            )
+        } else if (painter != null) {
+            Icon(
+                painter = painter,
+                contentDescription = null,
+                tint = currentTint.copy(alpha = alpha),
+                modifier = Modifier.size(baseSize * 0.55f).graphicsLayer { scaleX = scale; scaleY = scale }
+            )
+        }
     }
 }

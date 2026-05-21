@@ -30,7 +30,7 @@ fun DynamicIslandView.SystemAlertMid(alert: LiveActivityModel.SystemAlert) {
         islandState = islandState.value,
         iconContent = {
             Box(modifier = Modifier.fillMaxSize().background(color.copy(alpha=0.2f), CircleShape).border(1.dp, color.copy(alpha=0.5f), CircleShape), contentAlignment = Alignment.Center) {
-                val icon = when(alert.alertType) { "THERMAL" -> Icons.Default.Warning; "ROGUE" -> Icons.Default.BatteryAlert; else -> Icons.Default.Info }
+                val icon = when(alert.alertType) { "THERMAL" -> Icons.Default.Warning; "ROGUE" -> Icons.Default.Warning; else -> Icons.Default.Info }
                 Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
             }
         },

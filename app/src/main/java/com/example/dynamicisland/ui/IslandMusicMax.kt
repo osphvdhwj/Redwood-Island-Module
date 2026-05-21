@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,7 +34,7 @@ import androidx.compose.ui.unit.sp
 fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
     val dynamicTextColor = Color(music.titleTextColor).takeIf { it != Color.Transparent && it != Color.Black } ?: Color.White
     val theme = LocalIslandTheme.current
-    var audioIcon by remember { mutableStateOf(Icons.Default.Smartphone) }
+    var audioIcon by remember { mutableStateOf(Icons.Default.Phone) }
     var audioLabel by remember { mutableStateOf("Phone") }
     val context = LocalContext.current
     
@@ -46,7 +47,7 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
             val am = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
             val devices = am?.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS) ?: emptyArray()
             val hasBt = devices.any { it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET }
-            if (hasBt) { audioIcon = Icons.Default.Bluetooth; audioLabel = "Bluetooth" } else { audioIcon = Icons.Default.Smartphone; audioLabel = "Phone" }
+            if (hasBt) { audioIcon = Icons.Default.Bluetooth; audioLabel = "Bluetooth" } else { audioIcon = Icons.Default.Phone; audioLabel = "Phone" }
         } catch (e: Exception) {}
     }
 
@@ -184,7 +185,7 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 music.customActions.find { it.action.contains("shuffle", true) }?.let { action ->
-                    InteractiveIconButton(icon = Icons.Default.Shuffle, tint = if (localIsShuffled) dynamicTextColor else Color.White.copy(0.5f), baseSize = 32.dp) { localIsShuffled = !localIsShuffled; onCustomMediaAction?.invoke(action.action) }
+                    InteractiveIconButton(painter = painterResource(R.drawable.ic_shuffle_vector), tint = if (localIsShuffled) dynamicTextColor else Color.White.copy(0.5f), baseSize = 32.dp) { localIsShuffled = !localIsShuffled; onCustomMediaAction?.invoke(action.action) }
                 } ?: Spacer(Modifier.width(32.dp))
 
                 InteractiveIconButton(
@@ -193,8 +194,8 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                     baseSize = 44.dp
                 ) { onPrevClick?.invoke() }
 
-                val playIcon = if (music.isPlaying) ImageVector.vectorResource(id = R.drawable.ic_pause_vector) else ImageVector.vectorResource(id = R.drawable.ic_play_vector)
-                InteractiveIconButton(icon = playIcon, tint = Color.White, baseSize = 56.dp, bgAlpha = 0.2f) { onPlayPauseClick?.invoke() }
+                val playPainter = if (music.isPlaying) painterResource(R.drawable.ic_pause_vector) else painterResource(R.drawable.ic_play_vector)
+                InteractiveIconButton(painter = playPainter, tint = Color.White, baseSize = 56.dp, bgAlpha = 0.2f) { onPlayPauseClick?.invoke() }
 
                 InteractiveIconButton(
                     icon = Icons.AutoMirrored.Filled.ArrowForward,
@@ -203,7 +204,7 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                 ) { onNextClick?.invoke() }
 
                 music.customActions.find { it.action.contains("repeat", true) }?.let { action ->
-                    InteractiveIconButton(icon = if (localRepeatMode == 1) Icons.Default.RepeatOne else Icons.Default.Repeat, tint = if (localRepeatMode > 0) dynamicTextColor else Color.White.copy(0.5f), baseSize = 32.dp) { localRepeatMode = (localRepeatMode + 1) % 3; onCustomMediaAction?.invoke(action.action) }
+                    InteractiveIconButton(painter = painterResource(R.drawable.ic_sync_vector), tint = if (localRepeatMode > 0) dynamicTextColor else Color.White.copy(0.5f), baseSize = 32.dp) { localRepeatMode = (localRepeatMode + 1) % 3; onCustomMediaAction?.invoke(action.action) }
                 } ?: Spacer(Modifier.width(32.dp))
             }
         }

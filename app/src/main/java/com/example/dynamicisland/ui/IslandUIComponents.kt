@@ -1,11 +1,5 @@
 package com.example.dynamicisland.ui
 
-import com.example.dynamicisland.R
-import com.example.dynamicisland.manager.*
-import com.example.dynamicisland.model.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -20,31 +14,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import com.example.dynamicisland.ipc.IslandState
+import com.example.dynamicisland.model.ActivityType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import com.example.dynamicisland.ipc.IslandState
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AlertMidSlot(
     islandState: IslandState,
-    iconContent: @Composable BoxScope.() -> Unit,
+    iconContent: @Composable () -> Unit,
     title: String,
-    titleColor: Color,
+    titleColor: Color = Color.White,
     subtitle: String? = null,
-    subtitleColor: Color = Color.White.copy(alpha = 0.7f),
-    subtitleContent: (@Composable () -> Unit)? = null,
-    swipeAction: (() -> Unit)? = null,
-    rightContent: (@Composable RowScope.() -> Unit)? = null
+    subtitleColor: Color = Color.White.copy(alpha=0.7f),
+    subtitleContent: @Composable (() -> Unit)? = null,
+    rightContent: @Composable (() -> Unit)? = null,
+    swipeAction: (() -> Unit)? = null
 ) {
     val theme = LocalIslandTheme.current
     var modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
-    
+
     if (swipeAction != null) {
         modifier = modifier.pointerInput(Unit) {
             detectDragGestures { change, dragAmount ->
@@ -93,21 +88,42 @@ fun IsolatedCountdownText(targetTimeMs: Long, prefix: String, suffix: String, co
 
 @Composable
 fun QuickCircleBtn(icon: ImageVector, isActive: Boolean, activeColor: Color, inactiveColor: Color, onClick: () -> Unit) {
+    QuickCircleBtnContent(icon = icon, painter = null, isActive = isActive, activeColor = activeColor, inactiveColor = inactiveColor, onClick = onClick)
+}
+
+@Composable
+fun QuickCircleBtn(painter: Painter, isActive: Boolean, activeColor: Color, inactiveColor: Color, onClick: () -> Unit) {
+    QuickCircleBtnContent(icon = null, painter = painter, isActive = isActive, activeColor = activeColor, inactiveColor = inactiveColor, onClick = onClick)
+}
+
+@Composable
+private fun QuickCircleBtnContent(
+    icon: ImageVector?,
+    painter: Painter?,
+    isActive: Boolean,
+    activeColor: Color,
+    inactiveColor: Color,
+    onClick: () -> Unit
+) {
     Box(
-        modifier = Modifier.size(40.dp).clip(CircleShape).background(if (isActive) activeColor else inactiveColor).clickable { onClick() }, 
+        modifier = Modifier.size(40.dp).clip(CircleShape).background(if (isActive) activeColor else inactiveColor).clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, contentDescription=null, tint = if (isActive && activeColor == Color.White) Color.Black else Color.White, modifier = Modifier.size(20.dp))
+        if (icon != null) {
+            Icon(icon, contentDescription=null, tint = if (isActive && activeColor == Color.White) Color.Black else Color.White, modifier = Modifier.size(20.dp))
+        } else if (painter != null) {
+            Icon(painter, contentDescription=null, tint = if (isActive && activeColor == Color.White) Color.Black else Color.White, modifier = Modifier.size(20.dp))
+        }
     }
 }
 
-fun getIconForType(type: ActivityType): ImageVector { 
-    return when(type) { 
-        ActivityType.CALL -> Icons.Default.Phone; ActivityType.NAVIGATION -> Icons.Default.LocationOn; 
-        ActivityType.TIMER -> Icons.Default.Notifications; ActivityType.MESSAGE -> Icons.Default.Email; 
-        ActivityType.ALARM -> Icons.Default.Notifications; ActivityType.CHARGING -> Icons.Default.Add; 
-        ActivityType.BATTERY_LOW -> Icons.Default.Warning; ActivityType.BLUETOOTH -> Icons.Default.Bluetooth; 
-        ActivityType.WIFI -> Icons.Default.Wifi; ActivityType.HARDWARE -> Icons.Default.Info; 
-        else -> Icons.Default.Info 
-    } 
+fun getIconForType(type: ActivityType): ImageVector {
+    return when(type) {
+        ActivityType.CALL -> Icons.Default.Phone; ActivityType.NAVIGATION -> Icons.Default.LocationOn;
+        ActivityType.TIMER -> Icons.Default.Notifications; ActivityType.MESSAGE -> Icons.Default.Email;
+        ActivityType.ALARM -> Icons.Default.Notifications; ActivityType.CHARGING -> Icons.Default.Add;
+        ActivityType.BATTERY_LOW -> Icons.Default.Warning; ActivityType.BLUETOOTH -> Icons.Default.Bluetooth;
+        ActivityType.WIFI -> Icons.Default.Wifi; ActivityType.HARDWARE -> Icons.Default.Info;
+        else -> Icons.Default.Info
+    }
 }

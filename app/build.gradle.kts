@@ -66,7 +66,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.material:material-icons-core")
 
     // Image Loading
     implementation("io.coil-kt.coil3:coil-compose:3.0.4")
@@ -79,11 +79,11 @@ dependencies {
     // Concurrency
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
-    // UI Components
-    implementation("com.google.android.material:material:1.12.0")
+    // UI Components (Minimal)
+    implementation("androidx.appcompat:appcompat:1.7.0")
 
     // ML Kit Intelligence
-    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+    implementation("com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0")
     implementation("com.google.mlkit:translate:17.0.3")
     implementation("com.google.android.gms:play-services-mlkit-language-id:17.0.0")
 
