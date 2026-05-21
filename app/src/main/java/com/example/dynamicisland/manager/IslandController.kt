@@ -565,6 +565,10 @@ class IslandController @Inject constructor(
                             accentColor = android.graphics.Color.parseColor("#4CAF50")
                         ), 3000L
                     )
+                }
+            }
+        }
+    }
 
     private fun evaluatePriority() {
         userForceCollapsed = IslandPriorityEngine.evaluatePriority(
