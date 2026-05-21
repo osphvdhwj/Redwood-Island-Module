@@ -43,18 +43,15 @@ fun BarcodeMid(
     val context = LocalContext.current
     val haptic  = LocalHapticFeedback.current
 
-    // Determine painter + accent from barcode type
-    // Using a mix of Core icons and local drawables to save APK size
-    val (painter, accentColor) = when {
-        barcode.content.startsWith("http") -> painterResource(R.drawable.ic_sync_vector) to Color(0xFF4FC3F7)
-        barcode.content.contains("@")      -> painterResource(com.google.android.material.R.drawable.googleg_disabled) to Color(0xFFFFB74D) // Using a material one or fallback
-        barcode.content.matches(Regex("[\\d\\s\\+\\-\\(\\)]{7,}")) -> painterResource(R.drawable.ic_phone_vector) to Color(0xFF81C784)
-        barcode.content.startsWith("WIFI:")  -> painterResource(R.drawable.ic_wifi_vector) to Color(0xFF4FC3F7)
-        barcode.content.startsWith("geo:")   -> painterResource(R.drawable.ic_map_vector) to Color(0xFFFF8A65)
-        else                                 -> painterResource(R.drawable.ic_map_vector) to Color.White
+    val (iconRes, accentColor) = when {
+        barcode.content.startsWith("http") -> AnyIcon(painter = painterResource(R.drawable.ic_sync_vector)) to Color(0xFF4FC3F7)
+        barcode.content.contains("@")      -> AnyIcon(imageVector = Icons.Default.Email) to Color(0xFFFFB74D)
+        barcode.content.matches(Regex("[\\d\\s\\+\\-\\(\\)]{7,}")) -> AnyIcon(painter = painterResource(R.drawable.ic_phone_vector)) to Color(0xFF81C784)
+        barcode.content.startsWith("WIFI:")  -> AnyIcon(painter = painterResource(R.drawable.ic_wifi_vector)) to Color(0xFF4FC3F7)
+        barcode.content.startsWith("geo:")   -> AnyIcon(painter = painterResource(R.drawable.ic_map_vector)) to Color(0xFFFF8A65)
+        else                                 -> AnyIcon(painter = painterResource(R.drawable.ic_map_vector)) to Color.White
     }
 
-    // Bounce animation for action button
     var actionPressed by remember { mutableStateOf(false) }
     val actionScale by animateFloatAsState(
         targetValue = if (actionPressed) 0.88f else 1f,
@@ -62,14 +59,12 @@ fun BarcodeMid(
         label = "barcode_btn"
     )
 
-    // Fluid row layout (glass‑like)
     Row(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Type icon with glowing background
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -77,12 +72,14 @@ fun BarcodeMid(
                 .border(1.dp, accentColor.copy(alpha = 0.40f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Icon(painter = painter, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+            when {
+                iconRes.imageVector != null -> Icon(imageVector = iconRes.imageVector, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                iconRes.painter != null -> Icon(painter = iconRes.painter, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+            }
         }
 
         Spacer(modifier = Modifier.width(10.dp))
 
-        // Text content
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = barcode.format.replaceFirstChar { it.uppercase() },
@@ -102,7 +99,6 @@ fun BarcodeMid(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Contextual action button
         Box(
             modifier = Modifier
                 .scale(actionScale)
@@ -133,6 +129,8 @@ fun BarcodeMid(
     }
 }
 
+private data class AnyIcon(val imageVector: ImageVector? = null, val painter: Painter? = null)
+
 private fun executeBarcodeAction(context: Context, barcode: LiveActivityModel.Barcode) {
     try {
         when {
@@ -149,7 +147,6 @@ private fun executeBarcodeAction(context: Context, barcode: LiveActivityModel.Ba
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${barcode.content}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 
             else -> {
-                // Fallback: copy to clipboard
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("Scanned", barcode.content))
             }

@@ -1,16 +1,10 @@
 package com.example.dynamicisland.ui
+
 import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*
-import com.example.dynamicisland.manager.*
 
 import androidx.compose.animation.core.*
-import kotlin.math.pow
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.drawscope.clipPath
-import kotlin.math.pow
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,18 +20,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import kotlin.math.pow
 
 @Composable
 fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) {
@@ -52,7 +45,12 @@ fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) {
         islandState = islandState.value,
         iconContent = {
             Box(modifier = Modifier.fillMaxSize().background(batteryColor.copy(alpha = if (charging.isPluggedIn || isLow) glowAlpha else 0.1f), CircleShape).blur(if (charging.isPluggedIn || isLow) 12.dp else 0.dp))
-            Icon(imageVector = if (charging.isPluggedIn) Icons.Default.Add else if (isLow) Icons.Default.Warning else Icons.Default.BatteryFull, contentDescription = null, tint = batteryColor, modifier = Modifier.size(theme.batIconSize * 0.65f))
+            Icon(
+                painter = if (charging.isPluggedIn) painterResource(R.drawable.ic_charging_vector) else if (isLow) painterResource(R.drawable.ic_battery_alert_vector) else painterResource(R.drawable.ic_battery_full_vector),
+                contentDescription = null,
+                tint = batteryColor,
+                modifier = Modifier.size(theme.batIconSize * 0.65f)
+            )
         },
         title = if (charging.isPluggedIn) "Charging" else if (isLow) "Low Battery" else "Battery",
         titleColor = if (isLow) batteryColor else Color.White,
@@ -97,14 +95,13 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
         }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            val icon = if (model.isPluggedIn) Icons.Default.Add else if (isLow) Icons.Default.Warning else Icons.Default.BatteryFull
-            Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+            val painter = if (model.isPluggedIn) painterResource(R.drawable.ic_charging_vector) else if (isLow) painterResource(R.drawable.ic_battery_alert_vector) else painterResource(R.drawable.ic_battery_full_vector)
+            Icon(painter = painter, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
             Text(text = "${model.level}%", color = color, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
         }
     }
 }
 
-// 🚀 NEW: The Massive iOS-Style Charging Expansion
 @Composable
 fun DynamicIslandView.ChargingMax(charging: LiveActivityModel.Charging) {
     val batteryColor = Color(0xFF00FF55)
@@ -153,7 +150,7 @@ fun DynamicIslandView.ChargingMax(charging: LiveActivityModel.Charging) {
             Box(contentAlignment = Alignment.Center) {
                 Box(modifier = Modifier.size(48.dp).background(batteryColor.copy(alpha = 0.2f), CircleShape).blur(12.dp))
                 Icon(
-                    imageVector = Icons.Default.Bolt,
+                    painter = painterResource(R.drawable.ic_charging_vector),
                     contentDescription = "Charging",
                     tint = batteryColor,
                     modifier = Modifier.size(40.dp)
@@ -192,13 +189,20 @@ fun LiquidBatteryCanvas(level: Int, color: Color, isCharging: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.width(46.dp).height(24.dp).border(2.dp, Color.White.copy(alpha=0.3f), RoundedCornerShape(6.dp)).padding(3.dp)) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val clipPath = androidx.compose.ui.graphics.Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(rect = androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height), cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx(), 3.dp.toPx()))) }
-                clipPath(clipPath) {
+                val path = androidx.compose.ui.graphics.Path().apply {
+                    addRoundRect(
+                        androidx.compose.ui.geometry.RoundRect(
+                            rect = androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                        )
+                    )
+                }
+                clipPath(path) {
                     drawRect(color = color, topLeft = androidx.compose.ui.geometry.Offset.Zero, size = androidx.compose.ui.geometry.Size(size.width * animatedFill, size.height))
                 }
             }
             if (isCharging) {
-                Icon(Icons.Default.Add, contentDescription=null, tint=Color.Black.copy(alpha=0.6f), modifier = Modifier.align(Alignment.Center).size(16.dp))
+                Icon(painter = painterResource(R.drawable.ic_add_vector), contentDescription=null, tint=Color.Black.copy(alpha=0.6f), modifier = Modifier.align(Alignment.Center).size(16.dp))
             }
         }
         Box(modifier = Modifier.width(4.dp).height(10.dp).background(Color.White.copy(alpha=0.3f), RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp)))

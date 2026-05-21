@@ -2,6 +2,7 @@ package com.example.dynamicisland.ui
 
 import androidx.compose.runtime.collectAsState
 import com.example.dynamicisland.model.LocalIslandTheme
+import com.example.dynamicisland.R
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -31,14 +33,6 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.intelligence.IslandTranslationEngine
 import com.example.dynamicisland.model.LiveActivityModel
 
-/**
- * BATCH 6: Translation Overlay UI
- *
- * Shown in TYPE_2_MID when a foreign-language clipboard item is detected.
- * Layout:
- *   [🌐 flag]  Original text (truncated)      [Copy ✓]
- *              Translated text (highlighted)
- */
 @Composable
 fun DynamicIslandView.TranslationMid(result: IslandTranslationEngine.TranslationResult) {
     val context = LocalContext.current
@@ -59,7 +53,6 @@ fun DynamicIslandView.TranslationMid(result: IslandTranslationEngine.Translation
         }
     }
 
-    // Language code → display flag emoji
     fun langFlag(code: String): String = when (code.take(2).lowercase()) {
         "ja" -> "🇯🇵"; "zh" -> "🇨🇳"; "ko" -> "🇰🇷"; "ar" -> "🇸🇦"
         "fr" -> "🇫🇷"; "de" -> "🇩🇪"; "es" -> "🇪🇸"; "pt" -> "🇧🇷"
@@ -75,7 +68,6 @@ fun DynamicIslandView.TranslationMid(result: IslandTranslationEngine.Translation
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // ── Language flag ─────────────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .size(theme.batIconSize + 4.dp)
@@ -99,9 +91,7 @@ fun DynamicIslandView.TranslationMid(result: IslandTranslationEngine.Translation
 
         Spacer(modifier = Modifier.width(10.dp))
 
-        // ── Text column ───────────────────────────────────────────────────────
         Column(modifier = Modifier.weight(1f)) {
-            // Original (source)
             Text(
                 text     = result.originalText,
                 color    = Color.White.copy(alpha = 0.55f),
@@ -110,7 +100,6 @@ fun DynamicIslandView.TranslationMid(result: IslandTranslationEngine.Translation
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(2.dp))
-            // Translation (target)
             AnimatedContent(
                 targetState = result.translatedText,
                 label       = "translation_text"
@@ -137,7 +126,6 @@ fun DynamicIslandView.TranslationMid(result: IslandTranslationEngine.Translation
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // ── Copy button ───────────────────────────────────────────────────────
         if (result.translatedText.isNotEmpty()) {
             Box(
                 modifier = Modifier
@@ -157,17 +145,21 @@ fun DynamicIslandView.TranslationMid(result: IslandTranslationEngine.Translation
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = if (copyDone) Icons.Default.Check else Icons.Default.ContentCopy,
-                    contentDescription = "Copy translation",
-                    tint = if (copyDone) Color(0xFF4CAF50) else Color.White,
-                    modifier = Modifier
-                        .size(16.dp)
-                        .graphicsLayer {
-                            scaleX = copyScale
-                            scaleY = copyScale
-                        }
-                )
+                if (copyDone) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Copy done",
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(16.dp).graphicsLayer { scaleX = copyScale; scaleY = copyScale }
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_sync_vector),
+                        contentDescription = "Copy translation",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
     }

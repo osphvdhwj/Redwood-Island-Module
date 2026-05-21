@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.ipc.IslandState
 import com.example.dynamicisland.model.ActivityType
+import com.example.dynamicisland.model.LocalIslandTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -122,8 +123,8 @@ fun getIconForType(type: ActivityType): ImageVector {
         ActivityType.CALL -> Icons.Default.Phone; ActivityType.NAVIGATION -> Icons.Default.LocationOn;
         ActivityType.TIMER -> Icons.Default.Notifications; ActivityType.MESSAGE -> Icons.Default.Email;
         ActivityType.ALARM -> Icons.Default.Notifications; ActivityType.CHARGING -> Icons.Default.Add;
-        ActivityType.BATTERY_LOW -> Icons.Default.Warning; ActivityType.BLUETOOTH -> Icons.Default.Bluetooth;
-        ActivityType.WIFI -> Icons.Default.Wifi; ActivityType.HARDWARE -> Icons.Default.Info;
+        ActivityType.BATTERY_LOW -> Icons.Default.Warning; ActivityType.BLUETOOTH -> Icons.Default.Settings;
+        ActivityType.WIFI -> Icons.Default.Refresh; ActivityType.HARDWARE -> Icons.Default.Info;
         else -> Icons.Default.Info
     }
 }

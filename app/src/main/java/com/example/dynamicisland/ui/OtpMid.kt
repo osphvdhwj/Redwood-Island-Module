@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,17 +23,15 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dynamicisland.R
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.settings.SettingsState
 
-/**
- * Premium OTP MID view – shows verification code with copy button, haptic feedback,
- * and spring-scale animation. Fully compatible with the new SettingsState theme.
- */
 @Composable
 fun OtpMid(
     otp: LiveActivityModel.Otp,
@@ -55,7 +52,6 @@ fun OtpMid(
         if (copied) { kotlinx.coroutines.delay(1500); copied = false }
     }
 
-    // Space digits for readability
     val displayCode = code.toCharArray().joinToString(" ")
 
     Row(
@@ -64,10 +60,9 @@ fun OtpMid(
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Shield icon
         Box(
             modifier = Modifier
-                .size(40.dp)                     // fixed size, resolves any overload ambiguity
+                .size(40.dp)
                 .background(Color(0xFF4285F4).copy(alpha = 0.15f), CircleShape)
                 .border(1.dp, Color(0xFF4285F4).copy(alpha = 0.4f), CircleShape),
             contentAlignment = Alignment.Center
@@ -82,7 +77,6 @@ fun OtpMid(
 
         Spacer(modifier = Modifier.width(10.dp))
 
-        // Code label + digits
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "Verification Code",
@@ -93,7 +87,7 @@ fun OtpMid(
             Text(
                 text = displayCode,
                 color = Color.White,
-                fontSize = 22.sp,                // explicit .sp, no ambiguity
+                fontSize = 22.sp,
                 fontWeight = FontWeight.ExtraBold,
                 fontFamily = FontFamily.Monospace,
                 letterSpacing = 2.sp
@@ -102,10 +96,9 @@ fun OtpMid(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Copy button
         Box(
             modifier = Modifier
-                .size(38.dp)                    // fixed size
+                .size(38.dp)
                 .background(
                     color = if (copied) Color(0xFF4CAF50).copy(alpha = 0.25f)
                             else Color(0xFF4285F4).copy(alpha = 0.18f),
@@ -125,14 +118,21 @@ fun OtpMid(
                 },
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
-                contentDescription = "Copy OTP",
-                tint = if (copied) Color(0xFF4CAF50) else Color(0xFF4285F4),
-                modifier = Modifier
-                    .size(17.dp)                // fixed size
-                    .graphicsLayer { scaleX = copyScale; scaleY = copyScale }
-            )
+            if (copied) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Copy done",
+                    tint = Color(0xFF4CAF50),
+                    modifier = Modifier.size(17.dp).graphicsLayer { scaleX = copyScale; scaleY = copyScale }
+                )
+            } else {
+                Icon(
+                    painter = painterResource(R.drawable.ic_sync_vector),
+                    contentDescription = "Copy OTP",
+                    tint = Color(0xFF4285F4),
+                    modifier = Modifier.size(17.dp)
+                )
+            }
         }
     }
 }

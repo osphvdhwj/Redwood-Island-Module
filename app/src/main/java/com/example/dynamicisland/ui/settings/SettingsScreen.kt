@@ -1,10 +1,4 @@
 // File: app/src/main/java/com/example/dynamicisland/ui/settings/SettingsScreen.kt
-// Full settings UI with all sections implemented.
-// Requires:
-//   - com.dynamicisland.util.getPillShape
-//   - com.dynamicisland.util.glassBackground
-//   - com.dynamicisland.ui.settings.AppSelectorDialog (already defined earlier)
-
 package com.example.dynamicisland.ui.settings
 
 import androidx.compose.animation.*
@@ -18,8 +12,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow      // ← added
-import androidx.compose.ui.draw.blur        // ← added
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -30,7 +24,6 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.settings.*
 import com.example.dynamicisland.settings.SettingsManager.SettingKey
 
-// ---------- Main entry point ----------
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel) {
@@ -50,7 +43,6 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         }
     ) { padding ->
         Column(Modifier.padding(padding)) {
-            // Search bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -67,7 +59,6 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 shape = RoundedCornerShape(12.dp)
             )
 
-            // Tabs
             TabRow(selectedTabIndex = selectedTab) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
@@ -78,7 +69,6 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 }
             }
 
-            // Content per tab
             when (selectedTab) {
                 0 -> EssentialsTab(state, viewModel, searchQuery)
                 1 -> AdvancedTab(state, viewModel, searchQuery)
@@ -87,8 +77,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     }
 }
 
-// ---------- Essentials Tab ----------
-@OptIn(ExperimentalLayoutApi::class)   // ← added for FlowRow
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EssentialsTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery: String) {
     val scrollState = rememberScrollState()
@@ -99,15 +88,13 @@ fun EssentialsTab(state: SettingsState, viewModel: SettingsViewModel, searchQuer
             .verticalScroll(scrollState)
             .padding(bottom = 32.dp)
     ) {
-        // Live preview (Appearance only)
         if (searchQuery.isEmpty() || searchQuery.contains("appearance", ignoreCase = true)) {
             IslandPreview(state)
         }
 
-        // --- Global Controls ---
         CollapsibleSection(
             title = "Global Controls",
-            icon = Icons.Default.ToggleOff,
+            icon = Icons.Default.CheckCircle,
             expanded = true,
             searchQuery = searchQuery,
             toggleTitles = listOf("Enable Dynamic Island", "Show on Lockscreen", "Lockscreen Features", "One-Hand Mode Placement")
@@ -142,10 +129,9 @@ fun EssentialsTab(state: SettingsState, viewModel: SettingsViewModel, searchQuer
 
         Spacer(Modifier.height(12.dp))
 
-        // --- Appearance ---
         CollapsibleSection(
             title = "Appearance",
-            icon = Icons.Default.Palette,
+            icon = Icons.Default.Create,
             expanded = true,
             searchQuery = searchQuery,
             toggleTitles = listOf("Design Language", "Dynamic Colors", "Blur Intensity", "Dynamic Gradient",
@@ -216,7 +202,7 @@ fun EssentialsTab(state: SettingsState, viewModel: SettingsViewModel, searchQuer
 
             Text("Animation Speed", style = MaterialTheme.typography.labelLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AnimationSpeed.values().forEach { speed ->
+                AnimationSpeed.entries.forEach { speed ->
                     FilterChip(selected = state.animationSpeed == speed,
                         onClick = { viewModel.updateSetting(SettingKey.ANIM_SPEED, speed.name) },
                         label = { Text(speed.name.lowercase().replaceFirstChar(Char::uppercase)) })
@@ -226,7 +212,6 @@ fun EssentialsTab(state: SettingsState, viewModel: SettingsViewModel, searchQuer
 
         Spacer(Modifier.height(12.dp))
 
-        // --- Notifications ---
         CollapsibleSection(
             title = "Notifications & Detection",
             icon = Icons.Default.Notifications,
@@ -246,10 +231,9 @@ fun EssentialsTab(state: SettingsState, viewModel: SettingsViewModel, searchQuer
 
         Spacer(Modifier.height(12.dp))
 
-        // --- Media & Audio ---
         CollapsibleSection(
             title = "Media & Audio",
-            icon = Icons.Default.MusicNote,
+            icon = Icons.Default.PlayArrow,
             expanded = false,
             searchQuery = searchQuery,
             toggleTitles = listOf("Artwork Blur", "Waveform", "Ambient Reactive Ring", "Audio Sensitivity",
@@ -270,10 +254,9 @@ fun EssentialsTab(state: SettingsState, viewModel: SettingsViewModel, searchQuer
 
         Spacer(Modifier.height(12.dp))
 
-        // --- Haptics ---
         CollapsibleSection(
             title = "Haptics",
-            icon = Icons.Default.Vibration,
+            icon = Icons.Default.Notifications,
             expanded = false,
             searchQuery = searchQuery,
             toggleTitles = listOf("Haptic Feedback", "Intensity", "Ring Cadence Vibration", "Haptic Morse Alerts")
@@ -288,10 +271,9 @@ fun EssentialsTab(state: SettingsState, viewModel: SettingsViewModel, searchQuer
 
         Spacer(Modifier.height(12.dp))
 
-        // --- Gestures ---
         CollapsibleSection(
             title = "Gestures",
-            icon = Icons.Default.Swipe,
+            icon = Icons.Default.ArrowForward,
             expanded = false,
             searchQuery = searchQuery,
             toggleTitles = listOf("Swipe Left", "Swipe Right")
@@ -307,7 +289,6 @@ fun EssentialsTab(state: SettingsState, viewModel: SettingsViewModel, searchQuer
             }
         }
 
-        // App selectors
         Spacer(Modifier.height(12.dp))
         var showMusicSelector by remember { mutableStateOf(false) }
         var showNotifSelector by remember { mutableStateOf(false) }
@@ -334,13 +315,11 @@ fun EssentialsTab(state: SettingsState, viewModel: SettingsViewModel, searchQuer
     }
 }
 
-// ---------- Advanced Tab ----------
 @Composable
 fun AdvancedTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery: String) {
     val scrollState = rememberScrollState()
     Column(Modifier.fillMaxSize().verticalScroll(scrollState).padding(bottom = 32.dp)) {
-        // Prediction & AI
-        CollapsibleSection("Prediction & AI", Icons.Default.Psychology, false, searchQuery,
+        CollapsibleSection("Prediction & AI", Icons.Default.Info, false, searchQuery,
             listOf("Pre-warming Tint", "Predictive Actions", "Auto-dismiss Delay", "Contextual Suggestions",
                 "Gesture Learning", "Voice Trigger", "Adaptive Brightness/Volume", "App Prediction", "Routine Launcher")) {
             SettingSwitch("Pre-warming Tint", null, state.predictionTint) { viewModel.updateSetting(SettingKey.PREDICTION_TINT, it) }
@@ -355,8 +334,7 @@ fun AdvancedTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery:
         }
         Spacer(Modifier.height(12.dp))
 
-        // Cross-Device
-        CollapsibleSection("Cross-Device & Continuity", Icons.Default.Devices, false, searchQuery,
+        CollapsibleSection("Cross-Device & Continuity", Icons.Default.Home, false, searchQuery,
             listOf("Clipboard Sync", "Universal Control", "Quick Note", "Phone↔Tablet", "Nearby Share",
                 "Multi-Device Clipboard", "Wear OS", "AirPods", "AirPlay", "HomePod")) {
             SettingSwitch("Clipboard Sync", null, state.clipboardSync) { viewModel.updateSetting(SettingKey.CLIPBOARD_SYNC, it) }
@@ -372,8 +350,7 @@ fun AdvancedTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery:
         }
         Spacer(Modifier.height(12.dp))
 
-        // iOS-Inspired
-        CollapsibleSection("iOS-Inspired", Icons.Default.Phone, false, searchQuery,   // ← changed from Apple
+        CollapsibleSection("iOS-Inspired", Icons.Default.Phone, false, searchQuery,
             listOf("Live Activities", "Focus Filter", "Universal Clipboard Previews", "Always-On Display",
                 "Face ID Padlock", "Ring/Silent Switch", "Timer", "MagSafe Animation", "Proximity Wake", "Focus Mode Pill")) {
             SettingSwitch("Live Activities API", null, state.liveActivitiesApi) { viewModel.updateSetting(SettingKey.LIVE_ACTIVITIES_API, it) }
@@ -389,8 +366,7 @@ fun AdvancedTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery:
         }
         Spacer(Modifier.height(12.dp))
 
-        // Gaming HUD
-        CollapsibleSection("Gaming HUD", Icons.Default.SportsEsports, false, searchQuery,
+        CollapsibleSection("Gaming HUD", Icons.Default.AddCircle, false, searchQuery,
             listOf("Enable Gaming HUD", "Show FPS", "Show CPU Temp", "Dashboard Overlay")) {
             SettingSwitch("Enable Gaming HUD", null, state.gamingHud) { viewModel.updateSetting(SettingKey.GAMING_HUD, it) }
             if (state.gamingHud) {
@@ -401,16 +377,14 @@ fun AdvancedTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery:
         }
         Spacer(Modifier.height(12.dp))
 
-        // Accessibility
-        CollapsibleSection("Accessibility", Icons.Default.Accessibility, false, searchQuery,
+        CollapsibleSection("Accessibility", Icons.Default.Person, false, searchQuery,
             listOf("TalkBack Integration", "One-Hand Mode")) {
             SettingSwitch("TalkBack Integration", "Screen-reader support", state.talkbackIntegration) { viewModel.updateSetting(SettingKey.TALKBACK_INTEGRATION, it) }
             SettingSwitch("One-Hand Mode", null, state.oneHandMode) { viewModel.updateSetting(SettingKey.ONE_HAND_MODE, it) }
         }
         Spacer(Modifier.height(12.dp))
 
-        // Customisation
-        CollapsibleSection("Customisation", Icons.Default.Brush, false, searchQuery,
+        CollapsibleSection("Customisation", Icons.Default.Create, false, searchQuery,
             listOf("Third-Party Widget API", "Custom Pill Animations")) {
             SettingSwitch("Third-Party Widget API", "Mini widgets in island", state.thirdPartyWidgetApi) { viewModel.updateSetting(SettingKey.THIRD_PARTY_WIDGET_API, it) }
             SettingSwitch("Custom Pill Animations", "Lottie/Rive support", state.customPillAnimations != null) {
@@ -419,8 +393,7 @@ fun AdvancedTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery:
         }
         Spacer(Modifier.height(12.dp))
 
-        // Battery & Performance
-        CollapsibleSection("Battery & Performance", Icons.Default.BatterySaver, false, searchQuery,
+        CollapsibleSection("Battery & Performance", Icons.Default.Add, false, searchQuery,
             listOf("Battery-Aware Animation", "Doze Mode Optimisation", "Quick Performance Profile", "Data Saver")) {
             SettingSwitch("Battery-Aware Animation", "Disable effects <15%", state.batteryAwareAnimation) { viewModel.updateSetting(SettingKey.BATTERY_AWARE_ANIMATION, it) }
             SettingSwitch("Doze Mode Optimisation", null, state.dozeModeOptimisation) { viewModel.updateSetting(SettingKey.DOZE_MODE_OPTIMISATION, it) }
@@ -429,8 +402,7 @@ fun AdvancedTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery:
         }
         Spacer(Modifier.height(12.dp))
 
-        // Gamification
-        CollapsibleSection("Gamification", Icons.Default.EmojiEvents, false, searchQuery,
+        CollapsibleSection("Gamification", Icons.Default.Star, false, searchQuery,
             listOf("Achievements", "Show Badges", "Island Streaks", "Leaderboard", "Exclusive Themes")) {
             SettingSwitch("Achievements", null, state.achievementsEnabled) { viewModel.updateSetting(SettingKey.ACHIEVEMENTS_ENABLED, it) }
             if (state.achievementsEnabled) {
@@ -442,8 +414,7 @@ fun AdvancedTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery:
         }
         Spacer(Modifier.height(12.dp))
 
-        // Privacy & Security
-        CollapsibleSection("Privacy & Security", Icons.Default.Security, false, searchQuery,
+        CollapsibleSection("Privacy & Security", Icons.Default.Lock, false, searchQuery,
             listOf("Clipboard Cleaner", "VPN/Tor Indicator", "Silent/Ring Switch", "Call Screen Transcript")) {
             SettingSwitch("Clipboard Cleaner", "Clear passwords after timeout", state.clipboardCleaner) { viewModel.updateSetting(SettingKey.CLIPBOARD_CLEANER, it) }
             SettingSwitch("VPN / Tor Indicator", null, state.vpnTorIndicator) { viewModel.updateSetting(SettingKey.VPN_TOR_INDICATOR, it) }
@@ -452,16 +423,14 @@ fun AdvancedTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery:
         }
         Spacer(Modifier.height(12.dp))
 
-        // Weather & Environment
-        CollapsibleSection("Weather & Environment", Icons.Default.WbSunny, false, searchQuery,
+        CollapsibleSection("Weather & Environment", Icons.Default.Favorite, false, searchQuery,
             listOf("Weather Mood Ring", "At a Glance")) {
             SettingSwitch("Weather Mood Ring", "Color reflects weather", state.weatherMoodRing) { viewModel.updateSetting(SettingKey.WEATHER_MOOD_RING, it) }
             SettingSwitch("At a Glance", "Calendar/commute/weather", state.atAGlance) { viewModel.updateSetting(SettingKey.AT_A_GLANCE, it) }
         }
         Spacer(Modifier.height(12.dp))
 
-        // Multi-Event Handling
-        CollapsibleSection("Multi-Event Handling", Icons.Default.Layers, false, searchQuery,
+        CollapsibleSection("Multi-Event Handling", Icons.Default.List, false, searchQuery,
             listOf("Split Pill", "Merge Events", "Multi-Island Stack")) {
             SettingSwitch("Split Pill", null, state.splitPillEnabled) { viewModel.updateSetting(SettingKey.SPLIT_PILL_ENABLED, it) }
             SettingSwitch("Merge Simultaneous Events", null, state.mergeSimultaneousEvents) { viewModel.updateSetting(SettingKey.MERGE_SIMULTANEOUS_EVENTS, it) }
@@ -469,8 +438,7 @@ fun AdvancedTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery:
         }
         Spacer(Modifier.height(12.dp))
 
-        // Experimental
-        CollapsibleSection("Experimental", Icons.Default.Science, false, searchQuery,
+        CollapsibleSection("Experimental", Icons.Default.Build, false, searchQuery,
             listOf("AR Island", "Mindfulness Breath Pacer", "Morse Code Input", "Multi-User Profile Switching", "Crypto/Stock Ticker")) {
             SettingSwitch("AR Island", null, state.arIsland) { viewModel.updateSetting(SettingKey.AR_ISLAND, it) }
             SettingSwitch("Mindfulness Breath Pacer", null, state.mindfulnessBreathPacer) { viewModel.updateSetting(SettingKey.MINDFULNESS_BREATH_PACER, it) }
@@ -480,8 +448,7 @@ fun AdvancedTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery:
         }
         Spacer(Modifier.height(12.dp))
 
-        // Developer Tools
-        CollapsibleSection("Developer Tools", Icons.Default.Code, false, searchQuery,
+        CollapsibleSection("Developer Tools", Icons.Default.Settings, false, searchQuery,
             listOf("ADB Command Injector", "Tasker Plugin", "Log/Debug Overlay", "Open-Source SDK", "Root/ADB Features")) {
             SettingSwitch("ADB Command Injector", null, state.adbCommandInjector) { viewModel.updateSetting(SettingKey.ADB_COMMAND_INJECTOR, it) }
             SettingSwitch("Tasker / MacroDroid Plugin", null, state.taskerPlugin) { viewModel.updateSetting(SettingKey.TASKER_PLUGIN, it) }
@@ -491,7 +458,6 @@ fun AdvancedTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery:
         }
         Spacer(Modifier.height(12.dp))
 
-        // Quick Settings & Tiles
         CollapsibleSection("Quick Settings & Tiles", Icons.Default.Settings, false, searchQuery,
             listOf("Quick Settings Tile", "Digital Wellbeing", "Continuity Camera Actions")) {
             SettingSwitch("Quick Settings Tile", null, state.quickSettingsTile) { viewModel.updateSetting(SettingKey.QUICK_SETTINGS_TILE, it) }
@@ -501,7 +467,6 @@ fun AdvancedTab(state: SettingsState, viewModel: SettingsViewModel, searchQuery:
     }
 }
 
-// ---------- Live Preview Composables ----------
 @Composable
 fun IslandPreview(state: SettingsState) {
     val shape = getPillShape(state.pillShape, state.pillCornerRadius)
@@ -510,7 +475,7 @@ fun IslandPreview(state: SettingsState) {
         .size(width = 200.dp, height = 40.dp)
         .clip(shape)
         .background(gradient ?: Brush.verticalGradient(listOf(Color.DarkGray, Color.Black)))
-        .then(if (state.glowEffect) Modifier.shadow(8.dp, shape) else Modifier)   // shadow import now present
+        .then(if (state.glowEffect) Modifier.shadow(8.dp, shape) else Modifier)
         .padding(8.dp)
 
     Card(
@@ -527,7 +492,6 @@ fun IslandPreview(state: SettingsState) {
     }
 }
 
-// ---------- Collapsible Section Helper ----------
 @Composable
 fun CollapsibleSection(
     title: String,
@@ -539,7 +503,6 @@ fun CollapsibleSection(
 ) {
     var isExpanded by remember { mutableStateOf(expanded) }
 
-    // Filter visibility
     val matchesSearch = if (searchQuery.isEmpty()) true
         else title.contains(searchQuery, ignoreCase = true) || toggleTitles.any { it.contains(searchQuery, ignoreCase = true) }
 
@@ -551,7 +514,6 @@ fun CollapsibleSection(
                 .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         ) {
-            // Header with expand/collapse
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -570,12 +532,11 @@ fun CollapsibleSection(
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
-                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     contentDescription = "Toggle",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            // Collapsible content
             AnimatedVisibility(visible = isExpanded, enter = expandVertically(), exit = shrinkVertically()) {
                 Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                     content()
@@ -585,7 +546,6 @@ fun CollapsibleSection(
     }
 }
 
-// ---------- Reusable Setting Components ----------
 @Composable
 fun SettingSwitch(title: String, subtitle: String? = null, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
@@ -614,8 +574,6 @@ fun SettingSlider(title: String, value: Float, valueRange: ClosedFloatingPointRa
     }
 }
 
-// Add these functions in the same file or in a separate helper file
-
 fun getPillShape(shape: String, cornerRadius: Float): androidx.compose.foundation.shape.RoundedCornerShape {
     return when (shape) {
         "capsule" -> RoundedCornerShape(50)
@@ -625,7 +583,7 @@ fun getPillShape(shape: String, cornerRadius: Float): androidx.compose.foundatio
 }
 
 fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp): Modifier = this
-    .blur(blurRadius)                          // blur import now present
+    .blur(blurRadius)
     .background(Color.White.copy(alpha = 0.1f))
 
 @Composable
@@ -635,16 +593,15 @@ fun AppSelectorDialog(
     onSelectionChanged: (Set<String>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    // Simple dialog implementation – replace with your actual UI
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
-        text = { Text("App selection dialog – implement as needed") },
+        text = { Text("App selection dialog") },
         confirmButton = { TextButton(onClick = onDismiss) { Text("OK") } }
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)   // ← added for FlowRow
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun GestureActionChips(selectedAction: String, onSelect: (String) -> Unit) {
     val actions = listOf("dismiss", "next_track", "previous_track", "toggle_play_pause", "none")

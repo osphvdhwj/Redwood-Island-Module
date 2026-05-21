@@ -2,19 +2,18 @@ package com.example.dynamicisland.ui
 import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*
-import com.example.dynamicisland.manager.*
 
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
@@ -42,7 +41,7 @@ fun PrecisionSlider(label: String, value: Float, range: ClosedFloatingPointRange
             localValue = (localValue - 1f).coerceIn(range)
             onValueChange(localValue)
             onValueChangeFinished() 
-        }) { Icon(Icons.Default.Remove, contentDescription = "-") }
+        }) { Icon(painter = painterResource(R.drawable.ic_close_vector), contentDescription = "-") }
         
         Slider(
             value = localValue, 

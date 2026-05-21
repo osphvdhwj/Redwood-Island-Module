@@ -17,10 +17,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.LiveActivityModel
 import androidx.compose.foundation.Canvas
@@ -168,7 +170,7 @@ private fun MiniLinkView(link: LiveActivityModel.LinkIntercept) {
                 )
             } else {
                 Icon(
-                    Icons.Default.Link,
+                    painter = painterResource(R.drawable.ic_sync_vector),
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(20.dp)
