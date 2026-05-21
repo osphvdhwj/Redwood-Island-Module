@@ -31,7 +31,7 @@ fun DynamicIslandView.SplitPill(model: LiveActivityModel, onClick: () -> Unit) {
     
     Box(
         modifier = Modifier
-            .size(theme.splitPillSize)
+            .size(theme.batIconSize + 8.dp)
             .clip(CircleShape)
             .background(Color.White.copy(alpha = 0.12f))
             .clickable { onClick() },
@@ -48,7 +48,7 @@ fun DynamicIslandView.SplitPill(model: LiveActivityModel, onClick: () -> Unit) {
             painter = painter,
             contentDescription = null,
             tint = Color.White,
-            modifier = Modifier.size(theme.splitPillSize * 0.6f)
+            modifier = Modifier.size((theme.batIconSize + 8.dp) * 0.6f)
         )
     }
 }

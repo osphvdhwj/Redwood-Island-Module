@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.sp
 fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
     val dynamicTextColor = Color(music.titleTextColor).takeIf { it != Color.Transparent && it != Color.Black } ?: Color.White
     val theme = LocalIslandTheme.current
-    var audioIcon by remember { mutableStateOf(Icons.Default.Phone) }
+    var isBluetooth by remember { mutableStateOf(false) }
     var audioLabel by remember { mutableStateOf("Phone") }
     val context = LocalContext.current
     
@@ -47,7 +47,7 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
             val am = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
             val devices = am?.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS) ?: emptyArray()
             val hasBt = devices.any { it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET }
-            if (hasBt) { audioIcon = Icons.Default.Bluetooth; audioLabel = "Bluetooth" } else { audioIcon = Icons.Default.Phone; audioLabel = "Phone" }
+            if (hasBt) { isBluetooth = true; audioLabel = "Bluetooth" } else { isBluetooth = false; audioLabel = "Phone" }
         } catch (e: Exception) {}
     }
 
@@ -100,7 +100,8 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
 
                 Surface(onClick = { onAudioOutputClick?.invoke() }, color = Color.White.copy(alpha=0.15f), shape = RoundedCornerShape(12.dp)) {
                     Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(audioIcon, contentDescription = "Output", tint = dynamicTextColor, modifier = Modifier.size(14.dp))
+                        val painter = if (isBluetooth) painterResource(R.drawable.ic_bluetooth_vector) else painterResource(R.drawable.ic_phone_vector)
+                        Icon(painter, contentDescription = "Output", tint = dynamicTextColor, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(6.dp)); Text(audioLabel, color = dynamicTextColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
