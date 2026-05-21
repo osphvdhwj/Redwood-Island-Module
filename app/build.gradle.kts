@@ -85,7 +85,7 @@ dependencies {
     // ML Kit Intelligence
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
     implementation("com.google.mlkit:translate:17.0.3")
-    implementation("com.google.mlkit:language-id:17.0.0")
+    implementation("com.google.android.gms:play-services-mlkit-language-id:17.0.0")
 
     // Xposed API
     compileOnly("de.robv.android.xposed:api:82")
