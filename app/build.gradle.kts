@@ -20,6 +20,14 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "3.0"
+
+        // Reduce APK size by only supporting specific ABIs
+        ndk {
+            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
+        }
+
+        // Keep only English resources to save space
+        resourceConfigurations.addAll(listOf("en"))
     }
 
     buildFeatures {
@@ -30,7 +38,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-            isShrinkResources = false // Protect Xposed entry points and resources
+            isShrinkResources = true // Enable resource shrinking
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
