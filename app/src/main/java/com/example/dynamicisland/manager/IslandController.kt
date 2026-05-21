@@ -484,15 +484,6 @@ class IslandController @Inject constructor(
                         10_000L
                     )
                 }
-            }
-        }
-    }
-
-    private val componentCallbacks = object : android.content.ComponentCallbacks2 {
-        override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { evaluatePriority() }
-        @Suppress("OVERRIDE_DEPRECATION") override fun onLowMemory() {}
-        override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
-    }
                 InfinityXAPIHook.ACTION_INFINITY_GAME_MODE -> {
                     val isActive = intent.getBooleanExtra("isActive", false)
                     currentHardware = if (isActive) {
@@ -568,6 +559,12 @@ class IslandController @Inject constructor(
                 }
             }
         }
+    }
+
+    private val componentCallbacks = object : android.content.ComponentCallbacks2 {
+        override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { evaluatePriority() }
+        @Suppress("OVERRIDE_DEPRECATION") override fun onLowMemory() {}
+        override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
     }
 
     private fun evaluatePriority() {
