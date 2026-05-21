@@ -4,44 +4,20 @@ import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 
-import com.example.dynamicisland.hook.providers.DefaultAospProvider
-
 /**
- * Central hook engine.
+ * Central hook engine providing high-level abstractions for Xposed operations.
  *
  * Key design choices for cross-ROM robustness:
  *
  *  • hookMethodSafe         — single method by exact signature, swallows all errors
- *  • hookAllMethodsByName   — hooks EVERY overload matching a name (no signature needed);
- *                             essential for methods like enqueueNotificationInternal
- *                             whose signatures change across AOSP versions
- *  • hookAfterAllOverloads  — convenience wrapper for hookAllMethodsByName with afterHook
- *  • hookFirstMatch         — tries a list of (className, methodName) pairs, hooks the
- *                             first one that resolves; ideal for renamed ROM methods
- *  • scanAndHook            — when even the method name is uncertain, scans all declared
- *                             methods and hooks ones whose name contains a keyword
+ *  • hookAllMethodsByName   — hooks EVERY overload matching a name (no signature needed)
+ *  • hookAllConstructorsSafe — safe constructor hooking
+ *  • hookFirstMatch         — tries a list of candidates, hooks the first one that resolves
+ *  • scanAndHook            — scans all declared methods for a keyword
  */
 object IslandHookEngine {
 
     private const val TAG = "DynamicIsland"
-    private var activeProvider: SystemEventProvider? = null
-
-    /**
-     * Determines the current OS/ROM environment and instantiates the correct SystemEventProvider.
-     * Routes the initialization of hooks to the chosen provider.
-     */
-    fun initHooks(classLoader: ClassLoader, listener: SystemEventListener) {
-        val provider = determineProvider()
-        provider.setSystemEventListener(listener)
-        provider.initHooks(classLoader)
-        activeProvider = provider
-    }
-
-    private fun determineProvider(): SystemEventProvider {
-        // In the future, check Build.MANUFACTURER or Build.DISPLAY to return ROM-specific providers
-        // e.g., if (android.os.Build.MANUFACTURER.equals("xiaomi", true)) return MiuiProvider()
-        return DefaultAospProvider()
-    }
 
     // ── Core safe hook ────────────────────────────────────────────────────────
 
@@ -119,8 +95,6 @@ object IslandHookEngine {
     /**
      * Tries each (className, methodName) pair in [candidates] until one resolves.
      * Hooks ALL overloads of the first matching method.
-     *
-     * Use this when a method was renamed between ROM versions.
      */
     fun hookFirstMatch(
         classLoader: ClassLoader,
@@ -148,8 +122,7 @@ object IslandHookEngine {
 
     /**
      * Scans all declared methods of [className] and hooks any whose name
-     * contains [nameKeyword] (case-insensitive). Use as last resort when
-     * even method names are unpredictable across ROM variants.
+     * contains [nameKeyword] (case-insensitive).
      */
     fun scanAndHook(
         className: String,

@@ -1,0 +1,26 @@
+--- app/src/main/java/com/example/dynamicisland/hook/MainHook.kt
++++ app/src/main/java/com/example/dynamicisland/hook/MainHook.kt
+@@ -381,7 +381,25 @@
+                     }
+                 }
+ 
+-                val controller = IslandController(windowContext)
++                val settingsManager = com.example.dynamicisland.settings.SettingsManager(windowContext)
++                val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
++                val mediaManager = com.example.dynamicisland.manager.IslandMediaManager(
++                    context = windowContext,
++                    scope = scope,
++                    onMediaChanged = {},
++                    onMediaTick = {},
++                    onPeekRequested = {},
++                    onPauseFadeRequested = {},
++                    onUncollapseRequested = {}
++                )
++                val hardwareMonitor = com.example.dynamicisland.manager.IslandHardwareMonitor(
++                    scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default + kotlinx.coroutines.SupervisorJob()),
++                    onHardwareUpdate = {}
++                )
++                val controller = IslandController(windowContext, settingsManager, mediaManager, hardwareMonitor)
+                 val islandView = controller.createIslandView(wm, params)
+                 wm.addView(islandView, params)
+                 logOk("DynamicIslandView injected into WindowManager")

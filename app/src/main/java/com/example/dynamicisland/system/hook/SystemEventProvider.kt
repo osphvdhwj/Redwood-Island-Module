@@ -4,8 +4,6 @@ import com.example.dynamicisland.model.LiveActivityModel
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Pillar 4: The Strategy Pattern for System Hooks.
- * 
  * Interface defining the contract for system event providers.
  * This allows the island to remain ROM-agnostic by abstracting
  * where and how system events are intercepted.

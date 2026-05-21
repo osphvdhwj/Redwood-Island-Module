@@ -139,6 +139,17 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         gamingJankPct.floatValue = jankPct
     }
 
+    val edgeLightActive = mutableStateOf(false)
+    fun triggerEdgeLight() {
+        edgeLightActive.value = true
+        CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
+            kotlinx.coroutines.delay(2000)
+            edgeLightActive.value = false
+        }
+    }
+
+    val activePrivacyOp = mutableStateOf<String?>(null)
+
     val elasticScale = Animatable(1f)
 
     private var flowJob: Job? = null

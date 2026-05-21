@@ -103,87 +103,6 @@ class IslandController @Inject constructor(
         // IslandPriorityEngine.evaluateCurrentState(...)
     }
     
-    // NOTE: Add this variable to track the dismissed state for the Undo feature
-    private var recentlyDismissedModel: LiveActivityModel? = null
-    private var undoDismissJob: Job? = null
-
-    // NOTE: Add this function to your IslandController to process gestures from IslandMainUI.kt
-        fun handleGesture(gesture: IslandGesture) {
-    // Every time the user interacts, stop the auto-collapse from happening immediately
-        resetAutoCollapseTimer()
-
-        val currentModel = activeModel.value ?: return
-
-        when (gesture) {
-            IslandGesture.SINGLE_TAP -> {
-            // Usually expands Mid to Max, or launches the app
-            // if (currentState == IslandState.TYPE_2_MID) setIslandState(IslandState.TYPE_3_MAX)
-            }
-            IslandGesture.LONG_PRESS -> {
-            // Could launch a contextual menu or trigger a specific action
-            }
-            IslandGesture.SWIPE_UP -> {
-            // Dismiss action
-                dismissCurrentActivity(currentModel)
-            }
-            IslandGesture.SWIPE_DOWN -> {
-            // Expand action (Elastic stretch)
-            // if (currentState == IslandState.TYPE_1_MINI || currentState == IslandState.TYPE_0_RING) {
-            //     setIslandState(IslandState.TYPE_2_MID)
-            // }
-            }
-            IslandGesture.SWIPE_LEFT, IslandGesture.SWIPE_RIGHT -> {
-            // Handle horizontal swipes based on settings (e.g., skip music track)
-                if (currentModel is LiveActivityModel.Music) {
-                    if (gesture == IslandGesture.SWIPE_RIGHT) {
-                    // Trigger next track
-                    } else {
-                    // Trigger previous track
-                    }
-                }
-            }
-            else -> {}
-        }
-    }
-
-    private fun dismissCurrentActivity(model: LiveActivityModel) {
-        // 1. Save the model in case the user wants to undo
-        recentlyDismissedModel = model
-    
-        // 2. Actually dismiss it from the UI (collapse to ring)
-        collapseToIdle()
-
-        // 3. Show the "Undo" Snackbar/Overlay
-        showUndoSnackbar()
-
-        // 4. Clear the saved model after 2 seconds if not undone
-        undoDismissJob?.cancel()
-        undoDismissJob = controllerScope.launch {
-            delay(2000) // 2-second window
-            recentlyDismissedModel = null
-            hideUndoSnackbar()
-        }
-    }
-
-    fun undoDismiss() {
-        recentlyDismissedModel?.let { model ->
-            // Restore the model and cancel the cleanup job
-            undoDismissJob?.cancel()
-            // restoreActivity(model) // Your method to put the model back on screen
-            recentlyDismissedModel = null
-            hideUndoSnackbar()
-        }
-    }
-
-    // Stub functions - you will need to implement the actual UI display for the snackbar
-    private fun showUndoSnackbar() {
-        // e.g., send a broadcast or update a Compose state variable to show a toast/snackbar
-    }
-
-    private fun hideUndoSnackbar() {
-        // hide it
-    }
-    
     private var pendingNotificationColor: Int = android.graphics.Color.WHITE
     private var hasUnseenNotification = false
 
@@ -227,91 +146,6 @@ class IslandController @Inject constructor(
                 ), 4000L
             )
         }
-    }
-    
-    // NOTE: Add this variable to track the dismissed state for the Undo feature
-private var recentlyDismissedModel: LiveActivityModel? = null
-private var undoDismissJob: Job? = null
-
-// NOTE: Add this function to your IslandController to process gestures from IslandMainUI.kt
-fun handleGesture(gesture: IslandGesture) {
-    // Every time the user interacts, stop the auto-collapse from happening immediately
-    resetAutoCollapseTimer()
-
-    val currentModel = activeModel.value ?: return
-
-    when (gesture) {
-        IslandGesture.SINGLE_TAP -> {
-            // Usually expands Mid to Max, or launches the app
-            // if (currentState == IslandState.TYPE_2_MID) setIslandState(IslandState.TYPE_3_MAX)
-        }
-        IslandGesture.LONG_PRESS -> {
-            // Could launch a contextual menu or trigger a specific action
-        }
-        IslandGesture.SWIPE_UP -> {
-            // Dismiss action
-            dismissCurrentActivity(currentModel)
-        }
-        IslandGesture.SWIPE_DOWN -> {
-            // Expand action (Elastic stretch)
-            // if (currentState == IslandState.TYPE_1_MINI || currentState == IslandState.TYPE_0_RING) {
-            //     setIslandState(IslandState.TYPE_2_MID)
-            // }
-        }
-        IslandGesture.SWIPE_LEFT, IslandGesture.SWIPE_RIGHT -> {
-            // Handle horizontal swipes based on settings (e.g., skip music track)
-            if (currentModel is LiveActivityModel.Music) {
-                if (gesture == IslandGesture.SWIPE_RIGHT) {
-                    // Trigger next track
-                } else {
-                    // Trigger previous track
-                }
-            }
-        }
-        else -> {}
-    }
-}
-
-private fun dismissCurrentActivity(model: LiveActivityModel) {
-    // 1. Save the model in case the user wants to undo
-    recentlyDismissedModel = model
-    
-    // 2. Actually dismiss it from the UI (collapse to ring)
-    collapseToIdle()
-
-    // 3. Show the "Undo" Snackbar/Overlay
-    showUndoSnackbar()
-
-    // 4. Clear the saved model after 2 seconds if not undone
-    undoDismissJob?.cancel()
-    undoDismissJob = controllerScope.launch {
-        delay(2000) // 2-second window
-        recentlyDismissedModel = null
-        hideUndoSnackbar()
-    }
-}
-
-fun undoDismiss() {
-    recentlyDismissedModel?.let { model ->
-        // Restore the model and cancel the cleanup job
-        undoDismissJob?.cancel()
-        // restoreActivity(model) // Your method to put the model back on screen
-        recentlyDismissedModel = null
-        hideUndoSnackbar()
-    }
-}
-
-// Stub functions - you will need to implement the actual UI display for the snackbar
-private fun showUndoSnackbar() {
-    // e.g., send a broadcast or update a Compose state variable to show a toast/snackbar
-}
-
-private fun hideUndoSnackbar() {
-    // hide it
-}
-
-    private val connectivityManager = IslandConnectivityManager(context) { connModel ->
-        if (isAlertsEnabled) postTransientNotification(connModel, 4000L)
     }
 
     private var downloadSpeedJob: Job? = null
@@ -378,6 +212,7 @@ private fun hideUndoSnackbar() {
 
     private var transientJob: Job? = null
     private var pauseFadeJob: Job? = null
+    private var autoCollapseJob: Job? = null
 
     private var userForceCollapsed = false
     private var lastReportedBattery = -1
@@ -658,6 +493,78 @@ private fun hideUndoSnackbar() {
         @Suppress("OVERRIDE_DEPRECATION") override fun onLowMemory() {}
         override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
     }
+                InfinityXAPIHook.ACTION_INFINITY_GAME_MODE -> {
+                    val isActive = intent.getBooleanExtra("isActive", false)
+                    currentHardware = if (isActive) {
+                        LiveActivityModel.HardwareMonitor(
+                            id = "hw_monitor", type = ActivityType.HARDWARE,
+                            cpuTempCelsius = 0f, cpuFreqMhz = 0, isGamingModeOn = true
+                        )
+                    } else null
+                    evaluatePriority()
+                }
+                InfinityXAPIHook.ACTION_INFINITY_THERMAL -> {
+                    if (!isAlertsEnabled) return
+                    val profile = intent.getStringExtra("profile") ?: "Default"
+                    postTransientNotification(
+                        LiveActivityModel.SystemAlert(
+                            id = "sys_infinity_thermal", alertType = "THERMAL",
+                            title = "Thermal: $profile", message = "Device temperature optimized",
+                            alertColor = android.graphics.Color.rgb(255, 165, 0)
+                        ), 5000L
+                    )
+                }
+                InfinityXAPIHook.ACTION_INFINITY_SUB_STATE -> {
+                    val state = intent.getStringExtra("state") ?: ""
+                    postTransientNotification(
+                        LiveActivityModel.General(
+                            id = "sys_subo_state", type = ActivityType.HARDWARE,
+                            title = "Subo Environment", dataText = state,
+                            accentColor = android.graphics.Color.MAGENTA
+                        ), 3000L
+                    )
+                }
+                InfinityXAPIHook.ACTION_INFINITY_ROOD_EVENT -> {
+                    val type = intent.getIntExtra("type", -1)
+                    postTransientNotification(
+                        LiveActivityModel.General(
+                            id = "sys_rood_event", type = ActivityType.HARDWARE,
+                            title = "Rood Event", dataText = "Type: $type",
+                            accentColor = android.graphics.Color.RED
+                        ), 3000L
+                    )
+                }
+                InfinityXAPIHook.ACTION_INFINITY_EDGE_LIGHT -> {
+                    islandView?.triggerEdgeLight()
+                }
+                FutureFrameworkA15Hooks.ACTION_FUTURE_VOLUME_CHANGED -> {
+                    hardwareManager.updateVolumeState(islandView)
+                }
+                FutureFrameworkA15Hooks.ACTION_FUTURE_PRIVACY_INDICATOR -> {
+                    val op = intent.getStringExtra("op") ?: ""
+                    val pkg = intent.getStringExtra("pkg") ?: ""
+                    islandView?.activePrivacyOp?.value = op
+                    scope.launch {
+                        delay(5000)
+                        if (islandView?.activePrivacyOp?.value == op) islandView?.activePrivacyOp?.value = null
+                    }
+                    postTransientNotification(
+                        LiveActivityModel.SystemAlert(
+                            id = "sys_privacy", alertType = "PRIVACY",
+                            title = "$op Active", message = "Accessed by $pkg",
+                            alertColor = if (op == "CAMERA") android.graphics.Color.GREEN else android.graphics.Color.rgb(255, 165, 0),
+                            isCritical = true
+                        ), 6000L
+                    )
+                }
+                FutureFrameworkA15Hooks.ACTION_FUTURE_BIOMETRIC_AUTH -> {
+                    postTransientNotification(
+                        LiveActivityModel.General(
+                            id = "sys_biometric", type = ActivityType.HARDWARE,
+                            title = "Biometric Success", dataText = "Authenticated",
+                            accentColor = android.graphics.Color.parseColor("#4CAF50")
+                        ), 3000L
+                    )
 
     private fun evaluatePriority() {
         userForceCollapsed = IslandPriorityEngine.evaluatePriority(
@@ -818,6 +725,20 @@ private fun hideUndoSnackbar() {
             "PREV_TRACK" -> mediaManager.sendMediaCommand("PREV")
             "VOLUME" -> {
                 audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_SAME, AudioManager.FLAG_SHOW_UI)
+        }
+    }
+    private fun resetAutoCollapseTimer() {
+        autoCollapseJob?.cancel()
+        autoCollapseJob = scope.launch {
+            delay(8000)
+            collapseToIdle()
+        }
+    }
+
+    private fun collapseToIdle() {
+        _islandState.value = IslandState.TYPE_0_RING
+        evaluatePriority()
+    }
             }
             "BRIGHTNESS" -> { }
             "PREV_APP" -> {
@@ -1018,6 +939,16 @@ private fun hideUndoSnackbar() {
             addAction(CrDroidAPIHook.ACTION_THERMAL_PROFILE)
             addAction(CrDroidAPIHook.ACTION_DISPLAY_MODE)
             addAction(CrDroidAPIHook.ACTION_SMART_CHARGE)
+            addAction(InfinityXAPIHook.ACTION_INFINITY_GAME_MODE)
+            addAction(InfinityXAPIHook.ACTION_INFINITY_THERMAL)
+            addAction(InfinityXAPIHook.ACTION_INFINITY_SUB_STATE)
+            addAction(InfinityXAPIHook.ACTION_INFINITY_ROOD_EVENT)
+            addAction(InfinityXAPIHook.ACTION_INFINITY_EDGE_LIGHT)
+            addAction(FutureFrameworkA15Hooks.ACTION_FUTURE_VOLUME_CHANGED)
+            addAction(FutureFrameworkA15Hooks.ACTION_FUTURE_BRIGHTNESS_CHANGED)
+            addAction(FutureFrameworkA15Hooks.ACTION_FUTURE_PRIVACY_INDICATOR)
+            addAction(FutureFrameworkA15Hooks.ACTION_FUTURE_BIOMETRIC_AUTH)
+            addAction(FutureFrameworkA15Hooks.ACTION_FUTURE_USB_STATE)
         }
 
         val securePermission = "com.redwood.permission.SECURE_IPC"

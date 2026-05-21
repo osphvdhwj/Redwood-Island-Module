@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.dynamicisland"   // <-- your actual package name
+    namespace = "com.example.dynamicisland"
     compileSdk = 35
     
     lint {
@@ -24,13 +24,13 @@ android {
 
     buildFeatures {
         compose = true
-        buildConfig = false
+        buildConfig = true
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
-            isShrinkResources = true
+            isShrinkResources = false // Protect Xposed entry points and resources
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -39,34 +39,46 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 }
 
 dependencies {
+    // Hilt DI
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-android-compiler:2.51.1")
+
+    // Jetpack Compose
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.compose.material:material-icons-extended")
+
+    // Image Loading
     implementation("io.coil-kt.coil3:coil-compose:3.0.4")
+
+    // System Components
     implementation("androidx.palette:palette-ktx:1.0.0")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
-    implementation("com.google.android.material:material:1.12.0")
-    implementation("com.google.android.material:material:1.12.0")
-    implementation("com.google.mlkit:barcode-scanning:17.2.0")
-    compileOnly("de.robv.android.xposed:api:82")
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+    
+    // Concurrency
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // UI Components
+    implementation("com.google.android.material:material:1.12.0")
+
+    // ML Kit Intelligence
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
     implementation("com.google.mlkit:translate:17.0.3")
     implementation("com.google.mlkit:language-id:17.0.0")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("com.google.mlkit:language-id:17.0.0")
+
+    // Xposed API
+    compileOnly("de.robv.android.xposed:api:82")
 }

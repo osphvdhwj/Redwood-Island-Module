@@ -149,12 +149,12 @@ class IslandViewModel @Inject constructor(
 
     private fun mapModelToState(model: LiveActivityModel): IslandState {
         return when (model) {
-            is LiveActivityModel.Music -> IslandState.MUSIC
-            is LiveActivityModel.Call -> IslandState.CALL
-            is LiveActivityModel.Charging -> IslandState.CHARGING
-            is LiveActivityModel.SystemAlert -> IslandState.SYSTEM_ALERT
-            is LiveActivityModel.HardwareMonitor -> IslandState.HARDWARE_MONITOR
-            is LiveActivityModel.Dashboard -> IslandState.DASHBOARD
+            is LiveActivityModel.Music -> IslandState.TYPE_2_MID
+            is LiveActivityModel.Call -> IslandState.TYPE_2_MID
+            is LiveActivityModel.Charging -> IslandState.TYPE_2_MID
+            is LiveActivityModel.SystemAlert -> IslandState.TYPE_2_MID
+            is LiveActivityModel.HardwareMonitor -> IslandState.TYPE_1_MINI
+            is LiveActivityModel.Dashboard -> IslandState.TYPE_3_MAX
             is LiveActivityModel.Otp -> IslandState.TYPE_2_MID
             is LiveActivityModel.TimerEvent -> IslandState.TYPE_2_MID
             else -> IslandState.TYPE_1_MINI

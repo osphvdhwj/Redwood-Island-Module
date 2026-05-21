@@ -51,6 +51,47 @@ import com.example.dynamicisland.ipc.IslandState
 import com.example.dynamicisland.gesture.IslandGesture
 import androidx.compose.foundation.Canvas
 
+@Composable
+fun PrivacyDotUI(op: String?) {
+    if (op == null) return
+    
+    val color = if (op == "CAMERA") Color.Green else Color(0xFFFFA500) // Orange for MIC
+    
+    Box(
+        modifier = Modifier
+            .size(6.dp)
+            .background(color, CircleShape)
+            .shadow(4.dp, CircleShape)
+    )
+}
+
+@Composable
+fun EdgeLightUI(isActive: Boolean) {
+    val alpha by animateFloatAsState(
+        targetValue = if (isActive) 1f else 0f,
+        animationSpec = if (isActive) tween(300) else tween(800),
+        label = "edge_light_alpha"
+    )
+    
+    if (alpha > 0f) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .border(
+                    width = 2.dp,
+                    brush = Brush.sweepGradient(
+                        colors = listOf(
+                            Color.Cyan, Color.Magenta, Color.Yellow, Color.Cyan
+                        )
+                    ),
+                    shape = RoundedCornerShape(inheritRadius = true) // Pseudo-code, will use actual radius
+                )
+                .blur(4.dp)
+                .alpha(alpha)
+        )
+    }
+}
+
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun DynamicIslandView.IslandUI(state: IslandState) {
@@ -305,6 +346,17 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                 },
             contentAlignment = boxAlignment
         ) {
+            // Privacy Dot Placement
+            if (view.activePrivacyOp.value != null && state != IslandState.HIDDEN) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 4.dp)
+                ) {
+                    PrivacyDotUI(view.activePrivacyOp.value)
+                }
+            }
+
             Box(modifier = Modifier.fillMaxSize().padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp)) {
                 
                 if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
@@ -318,6 +370,28 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                             .fillMaxSize()
                             .alpha(if (state == IslandState.TYPE_3_MAX) 0.5f else 0.25f)
                             .blur(if (state == IslandState.TYPE_3_MAX) 16.dp else 24.dp)
+                    )
+                }
+
+                // Infinity X Edge Light Overlay
+                val edgeLightAlpha by animateFloatAsState(
+                    targetValue = if (view.edgeLightActive.value) 1f else 0f,
+                    animationSpec = if (view.edgeLightActive.value) tween(300) else tween(1000),
+                    label = "edge_light_alpha"
+                )
+                if (edgeLightAlpha > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .border(
+                                width = 3.dp,
+                                brush = Brush.sweepGradient(
+                                    colors = listOf(Color.Cyan, Color.Magenta, Color.Yellow, Color.Cyan)
+                                ),
+                                shape = RoundedCornerShape(animatedRadius)
+                            )
+                            .blur(4.dp)
+                            .alpha(edgeLightAlpha)
                     )
                 }
 

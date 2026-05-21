@@ -1,5 +1,6 @@
 package com.example.dynamicisland.system.hook
 
+import com.example.dynamicisland.hook.IslandHookEngine
 import com.example.dynamicisland.model.LiveActivityModel
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
@@ -8,7 +9,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 /**
- * Pillar 4: AOSP Implementation of SystemEventProvider.
+ * AOSP Implementation of SystemEventProvider.
  * 
  * Uses standard AOSP method hooks to intercept events.
  */
@@ -44,19 +45,16 @@ class AospEventProvider : SystemEventProvider {
                 val isCharging = status == 2 || status == 5 // STATUS_CHARGING or STATUS_FULL
                 
                 _hardwareEvents.tryEmit(HardwareEvent.BatteryChanged(level, isCharging))
-            } catch (e: Exception) {
-                // Log error safely if needed
-            }
+            } catch (_: Exception) {}
         }
     }
 
     private fun hookNotifications(classLoader: ClassLoader) {
-        // EnqueueNotificationInternal is the "Grand Central" for all notifications in AOSP
         IslandHookEngine.hookAllMethodsByName(
             "com.android.server.notification.NotificationManagerService", classLoader,
             "enqueueNotificationInternal", object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    // This is where we would transform StatusBarNotification into LiveActivityModel
+                    // Logic to emit events to _activityEvents
                 }
             }
         )

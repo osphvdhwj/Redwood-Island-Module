@@ -21,7 +21,7 @@ object SystemEventsHook {
     // ── 1. App transitions ────────────────────────────────────────────────────
     //
     // ROM compatibility:
-    //   CrDroid / Infinity X → setResumedActivityUncheckLocked in ATMS
+    //   CrDroid / Infinity X → setResumedActivityUncheckLocked in ATMS //For Infinity X A15
     //   Evolution X Android 15 → onTaskMovedToFront in TaskStackChangeListener
     //
     // We hook BOTH. Whichever fires on the ROM, we catch it.
@@ -33,7 +33,7 @@ object SystemEventsHook {
         var hooked = false
 
         // ── Strategy A: ATMS setResumedActivityUncheckLocked ─────────────────
-        // Works on CrDroid / Infinity X
+        // Works on CrDroid / Infinity X //For Infinity X A15
         val atmsCallback = object : XC_MethodHook() {
             override fun afterHookedMethod(param: MethodHookParam) {
                 try {
