@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.R
 import com.example.dynamicisland.model.LiveActivityModel
+import com.example.dynamicisland.model.LocalIslandTheme
 
 @Composable
 fun DynamicIslandView.LinkInterceptMid(link: LiveActivityModel.LinkIntercept) {
@@ -47,7 +48,7 @@ fun DynamicIslandView.LinkInterceptMid(link: LiveActivityModel.LinkIntercept) {
     ) {
         Box(
             modifier = Modifier
-                .size(theme.batIconSize + 4.dp)
+                .width(theme.batIconSize + 4.dp).height(theme.batIconSize + 4.dp)
                 .background(accentColor.copy(alpha = 0.12f), CircleShape)
                 .border(1.dp, accentColor.copy(alpha = 0.30f), CircleShape),
             contentAlignment = Alignment.Center

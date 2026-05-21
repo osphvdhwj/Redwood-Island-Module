@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.R
 import com.example.dynamicisland.model.LiveActivityModel
+import com.example.dynamicisland.model.LocalIslandTheme
 
 @Composable
 fun DynamicIslandView.NavigationMid(model: LiveActivityModel.Navigation) {
@@ -34,7 +35,7 @@ fun DynamicIslandView.NavigationMid(model: LiveActivityModel.Navigation) {
     ) {
         Box(
             modifier = Modifier
-                .size(theme.batIconSize + 4.dp)
+                .width(theme.batIconSize + 4.dp).height(theme.batIconSize + 4.dp)
                 .background(accent.copy(alpha = 0.15f), CircleShape)
                 .border(1.dp, accent.copy(alpha = 0.40f), CircleShape),
             contentAlignment = Alignment.Center
@@ -51,7 +52,7 @@ fun DynamicIslandView.NavigationMid(model: LiveActivityModel.Navigation) {
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = model.destination,
+                text = "Navigation",
                 color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
@@ -59,16 +60,15 @@ fun DynamicIslandView.NavigationMid(model: LiveActivityModel.Navigation) {
                 overflow = TextOverflow.Ellipsis
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                val directionInfo = getDirectionInfo(model.direction)
                 Icon(
-                    painter = directionInfo.painter,
+                    painter = painterResource(R.drawable.ic_play_vector), // Generic direction icon
                     contentDescription = null,
                     tint = accent,
                     modifier = Modifier.size(14.dp)
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = directionInfo.label,
+                    text = model.instruction,
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 12.sp,
                     maxLines = 1
@@ -80,29 +80,11 @@ fun DynamicIslandView.NavigationMid(model: LiveActivityModel.Navigation) {
 
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = model.distance,
+                text = "${model.distance}m",
                 color = Color.White,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.ExtraBold
             )
-            Text(
-                text = model.eta,
-                color = accent,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
         }
-    }
-}
-
-private data class DirectionInfo(val painter: androidx.compose.ui.graphics.painter.Painter, val label: String)
-
-@Composable
-private fun getDirectionInfo(direction: String): DirectionInfo {
-    return when (direction.uppercase()) {
-        "LEFT" -> DirectionInfo(painterResource(R.drawable.ic_prev_vector), "Turn Left")
-        "RIGHT" -> DirectionInfo(painterResource(R.drawable.ic_next_vector), "Turn Right")
-        "STRAIGHT" -> DirectionInfo(painterResource(R.drawable.ic_play_vector), "Straight")
-        else -> DirectionInfo(painterResource(R.drawable.ic_map_vector), "Continue")
     }
 }

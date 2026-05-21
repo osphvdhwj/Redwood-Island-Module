@@ -427,13 +427,9 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                             when (s) {
                                 IslandState.TYPE_3_MAX -> { 
                                     when (model) { 
-                                        is LiveActivityModel.Dashboard -> IslandDashboardMax(
-                                            dashboardModel = model,
-                                            currentMedia = activeMedia,
-                                            onSliderDrag = { type, pct -> 
-                                                if (type == "VOL") onVolumeDrag?.invoke(pct.toInt()) else onBrightnessDrag?.invoke(pct.toInt()) 
-                                            },
-                                            onQsClick = { tileSpec -> onQsTileClick?.invoke(tileSpec) }
+                                        is LiveActivityModel.Dashboard -> DashboardMax(
+                                            model = model,
+                                            controller = view.controller!!
                                         )
                                         is LiveActivityModel.Music -> MusicMax(model) 
                                         is LiveActivityModel.Charging -> ChargingMax(model)

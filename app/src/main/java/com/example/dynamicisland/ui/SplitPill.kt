@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.R
 import com.example.dynamicisland.ipc.IslandState
 import com.example.dynamicisland.model.LiveActivityModel
+import com.example.dynamicisland.model.LocalIslandTheme
 
 @Composable
 fun DynamicIslandView.SplitPill(model: LiveActivityModel, onClick: () -> Unit) {

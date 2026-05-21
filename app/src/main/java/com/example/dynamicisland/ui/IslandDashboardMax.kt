@@ -30,12 +30,12 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.R
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.manager.IslandController
+import com.example.dynamicisland.model.LocalIslandTheme
 
 @Composable
 fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controller: IslandController) {
     val context = LocalContext.current
     val theme = LocalIslandTheme.current
-    val settings = controller.settingsState
 
     Column(
         modifier = Modifier
@@ -54,7 +54,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
-            IconButton(onClick = { onSettingsClick?.invoke() }) {
+            IconButton(onClick = { /* Action handled by onGestureEvent if needed */ }) {
                 Icon(Icons.Default.Settings, null, tint = Color.White)
             }
         }
@@ -69,8 +69,8 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
             DashboardTile(
                 modifier = Modifier.weight(1f),
                 title = "Volume",
-                value = "${(controller.currentHardware?.volume ?: 0)}%",
-                icon = painterResource(R.drawable.ic_play_vector), // Placeholder for Volume
+                value = "${hardwareVolume.intValue}%",
+                icon = painterResource(R.drawable.ic_play_vector), // Placeholder
                 color = Color(0xFF4FC3F7)
             ) {
                 // Volume adjust
@@ -79,7 +79,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                 modifier = Modifier.weight(1f),
                 title = "Brightness",
                 value = "Auto",
-                icon = Icons.Default.Search, // Placeholder for Brightness
+                icon = Icons.Default.Search, // Placeholder
                 color = Color(0xFFFFD54F)
             ) {
                 // Brightness adjust
@@ -102,7 +102,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Info, null, tint = Color.LightGray, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("${controller.currentHardware?.cpuTempCelsius?.toInt() ?: 0}°C", color = Color.White, fontSize = 14.sp)
+                    Text("${gamingFps.floatValue.toInt()} FPS", color = Color.White, fontSize = 14.sp)
                 }
             }
             Box(
@@ -114,7 +114,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(painterResource(R.drawable.ic_battery_full_vector), null, tint = Color.White, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("${controller.currentHardware?.batteryLevel ?: 0}%", color = Color.White, fontSize = 14.sp)
+                    Text("${globalBatteryLevel.intValue}%", color = Color.White, fontSize = 14.sp)
                 }
             }
         }
@@ -122,7 +122,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
         Spacer(Modifier.height(16.dp))
 
         // Media Mini Controller (if playing)
-        val media = controller.mediaManager.currentMedia.collectAsState().value
+        val media = activeModel.value as? LiveActivityModel.Music
         if (media != null) {
             Box(
                 modifier = Modifier
@@ -138,16 +138,16 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                         Text(media.artist, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, maxLines = 1)
                     }
                     Row {
-                        IconButton(onClick = { controller.mediaManager.sendMediaCommand("PREV") }) {
+                        IconButton(onClick = { onPrevClick?.invoke() }) {
                             Icon(painterResource(R.drawable.ic_prev_vector), null, tint = Color.White, modifier = Modifier.size(24.dp))
                         }
-                        IconButton(onClick = { controller.mediaManager.sendMediaCommand(if (media.isPlaying) "PAUSE" else "PLAY") }) {
+                        IconButton(onClick = { onPlayPauseClick?.invoke() }) {
                             Icon(
                                 painter = if (media.isPlaying) painterResource(R.drawable.ic_pause_vector) else painterResource(R.drawable.ic_play_vector),
                                 null, tint = Color.White, modifier = Modifier.size(32.dp)
                             )
                         }
-                        IconButton(onClick = { controller.mediaManager.sendMediaCommand("NEXT") }) {
+                        IconButton(onClick = { onNextClick?.invoke() }) {
                             Icon(painterResource(R.drawable.ic_next_vector), null, tint = Color.White, modifier = Modifier.size(24.dp))
                         }
                     }
@@ -174,7 +174,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f)
         ) {
-            items(model.activeTiles) { tile ->
+            items(qsTiles) { tile ->
                 QSCircleTile(tile, onQsTileClick)
             }
         }
@@ -216,11 +216,11 @@ fun DashboardTile(
 
 @Composable
 fun QSCircleTile(tileSpec: String, onClick: ((String) -> Unit)?) {
-    val (icon, label) = when (tileSpec) {
+    val (icon, label) = when (tileSpec.lowercase()) {
         "wifi" -> painterResource(R.drawable.ic_wifi_vector) to "Wi-Fi"
         "bluetooth" -> painterResource(R.drawable.ic_bluetooth_vector) to "BT"
         "torch" -> painterResource(R.drawable.ic_torch_vector) to "Torch"
-        "airplane" -> Icons.Default.Send to "Air" // Placeholder
+        "airplane" -> Icons.Default.Send to "Air" 
         "location" -> Icons.Default.Place to "GPS"
         else -> Icons.Default.Settings to "Sys"
     }
