@@ -1,6 +1,8 @@
 // File: app/src/main/java/com/example/dynamicisland/ui/ConfigScreens.kt
 package com.example.dynamicisland.ui
 
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+
 import androidx.compose.material.icons.filled.Settings
 import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.*

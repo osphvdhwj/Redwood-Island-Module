@@ -1,5 +1,8 @@
 package com.example.dynamicisland.ui
 
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.border
+
 import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*

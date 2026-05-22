@@ -1,5 +1,10 @@
 package com.example.dynamicisland.ui
 
+import com.example.dynamicisland.gesture.IslandGesture
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+
 import android.content.Context
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*

@@ -1,5 +1,8 @@
 package com.example.dynamicisland.ui
 
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*

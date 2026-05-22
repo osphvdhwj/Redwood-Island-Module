@@ -1,5 +1,7 @@
 package com.example.dynamicisland.ui
 
+import androidx.compose.ui.unit.sp
+
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.hook.ContinuityCameraScanner
 import com.example.dynamicisland.settings.SettingsState
