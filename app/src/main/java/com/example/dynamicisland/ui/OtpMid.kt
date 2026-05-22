@@ -1,7 +1,6 @@
 package com.example.dynamicisland.ui
 
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.Icons
 
 import android.content.ClipData
 import android.content.ClipboardManager
