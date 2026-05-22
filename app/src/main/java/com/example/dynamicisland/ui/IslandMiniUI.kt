@@ -170,7 +170,7 @@ private fun MiniLinkView(link: LiveActivityModel.LinkIntercept) {
                 )
             } else {
                 Icon(
-                    painter = painterResource(R.drawable.ic_sync_vector),
+                    imageVector = IconProvider.getIcon(IconProvider.LogicalIcon.LINK, LocalIconPack.current),
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(20.dp)
@@ -206,7 +206,7 @@ private fun MiniOtpView(otp: LiveActivityModel.Otp) {
         horizontalArrangement = Arrangement.Center
     ) {
         Icon(
-            Icons.Default.Lock,
+            imageVector = IconProvider.getIcon(IconProvider.LogicalIcon.LOCK, LocalIconPack.current),
             contentDescription = null,
             tint = Color(0xFF00E676),
             modifier = Modifier.size(16.dp)
@@ -232,7 +232,7 @@ private fun MiniNotificationView(general: LiveActivityModel.General) {
         horizontalArrangement = Arrangement.Center
     ) {
         Icon(
-            Icons.Default.Notifications,
+            imageVector = IconProvider.getIcon(IconProvider.LogicalIcon.ALARM, LocalIconPack.current),
             contentDescription = null,
             tint = Color.White,
             modifier = Modifier.size(16.dp)

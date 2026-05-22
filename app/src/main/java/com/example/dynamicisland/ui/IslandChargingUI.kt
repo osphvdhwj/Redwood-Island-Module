@@ -45,8 +45,9 @@ fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) {
         islandState = islandState.value,
         iconContent = {
             Box(modifier = Modifier.fillMaxSize().background(batteryColor.copy(alpha = if (charging.isPluggedIn || isLow) glowAlpha else 0.1f), CircleShape).blur(if (charging.isPluggedIn || isLow) 12.dp else 0.dp))
+            val logicalIcon = if (charging.isPluggedIn) IconProvider.LogicalIcon.BATTERY_CHARGING else if (isLow) IconProvider.LogicalIcon.BATTERY_LOW else IconProvider.LogicalIcon.BATTERY_FULL
             Icon(
-                painter = if (charging.isPluggedIn) painterResource(R.drawable.ic_charging_vector) else if (isLow) painterResource(R.drawable.ic_battery_alert_vector) else painterResource(R.drawable.ic_battery_full_vector),
+                imageVector = IconProvider.getIcon(logicalIcon, LocalIconPack.current),
                 contentDescription = null,
                 tint = batteryColor,
                 modifier = Modifier.size(theme.batIconSize * 0.65f)
@@ -95,8 +96,8 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
         }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            val painter = if (model.isPluggedIn) painterResource(R.drawable.ic_charging_vector) else if (isLow) painterResource(R.drawable.ic_battery_alert_vector) else painterResource(R.drawable.ic_battery_full_vector)
-            Icon(painter = painter, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+            val logicalIcon = if (model.isPluggedIn) IconProvider.LogicalIcon.BATTERY_CHARGING else if (isLow) IconProvider.LogicalIcon.BATTERY_LOW else IconProvider.LogicalIcon.BATTERY_FULL
+            Icon(imageVector = IconProvider.getIcon(logicalIcon, LocalIconPack.current), contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
             Text(text = "${model.level}%", color = color, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
         }
     }
@@ -150,7 +151,7 @@ fun DynamicIslandView.ChargingMax(charging: LiveActivityModel.Charging) {
             Box(contentAlignment = Alignment.Center) {
                 Box(modifier = Modifier.size(48.dp).background(batteryColor.copy(alpha = 0.2f), CircleShape).blur(12.dp))
                 Icon(
-                    painter = painterResource(R.drawable.ic_charging_vector),
+                    imageVector = IconProvider.getIcon(IconProvider.LogicalIcon.BATTERY_CHARGING, LocalIconPack.current),
                     contentDescription = "Charging",
                     tint = batteryColor,
                     modifier = Modifier.size(40.dp)
@@ -202,7 +203,7 @@ fun LiquidBatteryCanvas(level: Int, color: Color, isCharging: Boolean) {
                 }
             }
             if (isCharging) {
-                Icon(painter = painterResource(R.drawable.ic_add_vector), contentDescription=null, tint=Color.Black.copy(alpha=0.6f), modifier = Modifier.align(Alignment.Center).size(16.dp))
+                Icon(imageVector = IconProvider.getIcon(IconProvider.LogicalIcon.ADD, LocalIconPack.current), contentDescription=null, tint=Color.Black.copy(alpha=0.6f), modifier = Modifier.align(Alignment.Center).size(16.dp))
             }
         }
         Box(modifier = Modifier.width(4.dp).height(10.dp).background(Color.White.copy(alpha=0.3f), RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp)))

@@ -114,8 +114,8 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        val painter = if (isBluetooth) painterResource(R.drawable.ic_bluetooth_vector) else painterResource(R.drawable.ic_phone_vector)
-                        Icon(painter, contentDescription = null, tint = dynamicTextColor, modifier = Modifier.size(15.dp))
+                        val logicalIcon = if (isBluetooth) IconProvider.LogicalIcon.BLUETOOTH else IconProvider.LogicalIcon.PHONE
+                        Icon(IconProvider.getIcon(logicalIcon, LocalIconPack.current), contentDescription = null, tint = dynamicTextColor, modifier = Modifier.size(15.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(audioLabel, color = dynamicTextColor, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                     }
@@ -171,7 +171,7 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
 
                 music.customActions.find { it.action.contains("heart", true) || it.action.contains("like", true) }?.let { action ->
                     InteractiveIconButton(
-                        icon = if (localIsLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        logicalIcon = IconProvider.LogicalIcon.HEART,
                         tint = if (localIsLiked) Color(0xFFFF2D55) else Color.White.copy(0.7f),
                         baseSize = 40.dp
                     ) { 
@@ -209,18 +209,18 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 music.customActions.find { it.action.contains("shuffle", true) }?.let { action ->
-                    InteractiveIconButton(painter = painterResource(R.drawable.ic_shuffle_vector), tint = if (localIsShuffled) dominantColor else Color.White.copy(0.4f), baseSize = 36.dp) { localIsShuffled = !localIsShuffled; onCustomMediaAction?.invoke(action.action) }
+                    InteractiveIconButton(logicalIcon = IconProvider.LogicalIcon.SHUFFLE, tint = if (localIsShuffled) dominantColor else Color.White.copy(0.4f), baseSize = 36.dp) { localIsShuffled = !localIsShuffled; onCustomMediaAction?.invoke(action.action) }
                 } ?: Spacer(Modifier.width(36.dp))
 
-                InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, tint = Color.White, baseSize = 48.dp) { onPrevClick?.invoke() }
+                InteractiveIconButton(logicalIcon = IconProvider.LogicalIcon.PREV, tint = Color.White, baseSize = 48.dp) { onPrevClick?.invoke() }
 
-                val playPainter = if (music.isPlaying) painterResource(R.drawable.ic_pause_vector) else painterResource(R.drawable.ic_play_vector)
-                InteractiveIconButton(painter = playPainter, tint = Color.White, baseSize = 64.dp, bgAlpha = 0.15f) { onPlayPauseClick?.invoke() }
+                val playIcon = if (music.isPlaying) IconProvider.LogicalIcon.PAUSE else IconProvider.LogicalIcon.PLAY
+                InteractiveIconButton(logicalIcon = playIcon, tint = Color.White, baseSize = 64.dp, bgAlpha = 0.15f) { onPlayPauseClick?.invoke() }
 
-                InteractiveIconButton(icon = Icons.AutoMirrored.Filled.ArrowForward, tint = Color.White, baseSize = 48.dp) { onNextClick?.invoke() }
+                InteractiveIconButton(logicalIcon = IconProvider.LogicalIcon.NEXT, tint = Color.White, baseSize = 48.dp) { onNextClick?.invoke() }
 
                 music.customActions.find { it.action.contains("repeat", true) }?.let { action ->
-                    InteractiveIconButton(painter = painterResource(R.drawable.ic_sync_vector), tint = if (localRepeatMode > 0) dominantColor else Color.White.copy(0.4f), baseSize = 36.dp) { localRepeatMode = (localRepeatMode + 1) % 3; onCustomMediaAction?.invoke(action.action) }
+                    InteractiveIconButton(logicalIcon = IconProvider.LogicalIcon.SYNC, tint = if (localRepeatMode > 0) dominantColor else Color.White.copy(0.4f), baseSize = 36.dp) { localRepeatMode = (localRepeatMode + 1) % 3; onCustomMediaAction?.invoke(action.action) }
                 } ?: Spacer(Modifier.width(36.dp))
             }
         }

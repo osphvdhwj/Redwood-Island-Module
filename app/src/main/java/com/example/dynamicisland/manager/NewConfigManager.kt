@@ -151,6 +151,7 @@ object NewConfigManager {
             "enable_timers" to prefs.getBoolean("enable_timers", true),
             "rotate_cube" to prefs.getBoolean("rotate_cube", true),
             "glass_mode" to prefs.getBoolean("glass_mode", true),
+            "icon_pack" to (prefs.getString("icon_pack", "MATERIAL_YOU") ?: "MATERIAL_YOU"),
             "spring_damping" to prefs.getFloat("spring_damping", 0.85f),
             "spring_stiffness" to prefs.getFloat("spring_stiffness", 400f),
             "idle_swipe_action" to (prefs.getString("idle_swipe_action", "BRIGHTNESS")

@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.Color
 
 class SettingsManager(context: Context) {
     private val prefs: SharedPreferences =
-        context.getSharedPreferences("dynamic_island_prefs", Context.MODE_PRIVATE)
+        context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
 
     enum class SettingKey {
         // === Appearance ===
@@ -52,7 +52,7 @@ class SettingsManager(context: Context) {
 
         // === Android Ecosystem ===
         MATERIAL_YOU_DYNAMIC_CONTRAST, QUICK_SETTINGS_TILE,
-        DIGITAL_WELLBEING_INTEGRATION, ROOT_ADB_FEATURES,
+        DIGITAL_WELLBEING_INTEGRATION, ROOT_ADB_FEATURES, ICON_PACK,
 
         // === Accessibility ===
         TALKBACK_INTEGRATION, ONE_HAND_MODE,
@@ -139,6 +139,7 @@ class SettingsManager(context: Context) {
     fun resetAll() = prefs.edit().clear().apply()
 
     fun getSettingsState(): SettingsState {
+        val iconPackName = prefs.getString("icon_pack", "MATERIAL_YOU") ?: "MATERIAL_YOU"
         return SettingsState(
             islandEnabled = getBoolean(SettingKey.ISLAND_ENABLED, true),
             bpmPulse = getBoolean(SettingKey.BPM_PULSE, true),
@@ -146,7 +147,8 @@ class SettingsManager(context: Context) {
             proximityWake = getBoolean(SettingKey.PROXIMITY_WAKE, false),
             talkbackIntegration = getBoolean(SettingKey.TALKBACK_INTEGRATION, true),
             islandStreaks = getBoolean(SettingKey.ISLAND_STREAKS, true),
-            achievementsEnabled = getBoolean(SettingKey.ACHIEVEMENTS_ENABLED, true)
+            achievementsEnabled = getBoolean(SettingKey.ACHIEVEMENTS_ENABLED, true),
+            iconPack = IconPack.fromString(iconPackName)
         )
     }
 }

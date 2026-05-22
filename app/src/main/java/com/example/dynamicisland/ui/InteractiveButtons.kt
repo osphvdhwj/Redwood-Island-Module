@@ -24,6 +24,12 @@ import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.delay
 
 @Composable
+fun InteractiveIconButton(logicalIcon: IconProvider.LogicalIcon, tint: Color, baseSize: Dp, bgAlpha: Float = 0f, onClick: () -> Unit) {
+    val icon = IconProvider.getIcon(logicalIcon, LocalIconPack.current)
+    InteractiveIconButtonContent(icon = icon, painter = null, tint = tint, baseSize = baseSize, bgAlpha = bgAlpha, onClick = onClick)
+}
+
+@Composable
 fun InteractiveIconButton(icon: ImageVector, tint: Color, baseSize: Dp, bgAlpha: Float = 0f, onClick: () -> Unit) {
     InteractiveIconButtonContent(icon = icon, painter = null, tint = tint, baseSize = baseSize, bgAlpha = bgAlpha, onClick = onClick)
 }

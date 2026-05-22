@@ -35,7 +35,7 @@ import com.example.dynamicisland.ipc.IslandState
 import androidx.compose.ui.layout.boundsInWindow
 
 @Composable
-fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.compose.ui.unit.Dp, borderColor: Color) {
+fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.compose.ui.unit.Dp, borderColor: Color, xOffset: Float) {
     val view = this
     AnimatedVisibility(
         visible = state == IslandState.TYPE_SPLIT,
@@ -43,7 +43,7 @@ fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.c
         exit = scaleOut() + fadeOut()
     ) {
         val sModel = splitModel.value
-        
+
         val splitBg = when {
             sModel is LiveActivityModel.Charging && sModel.isPluggedIn -> Color.Green.copy(alpha = 0.2f)
             sModel is LiveActivityModel.Charging && sModel.level <= 20 -> Color.Red.copy(alpha = 0.2f)
@@ -51,8 +51,9 @@ fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.c
         }
 
         Row {
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(xOffset.dp))
             Box(
+
                 modifier = Modifier 
                     .size(animatedHeight) 
                     .onGloballyPositioned { coordinates ->

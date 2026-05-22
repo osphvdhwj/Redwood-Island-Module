@@ -93,6 +93,7 @@ data class SettingsState(
     val quickSettingsTile: Boolean = true,
     val digitalWellbeingIntegration: Boolean = false,
     val rootAdbFeatures: Boolean = false,
+    val iconPack: IconPack = IconPack.MaterialYou,
 
     // === Accessibility ===
     val talkbackIntegration: Boolean = true,
@@ -164,4 +165,3 @@ data class SettingsState(
 
 enum class DesignLanguage { MATERIAL_YOU, APPLE_LIQUID_GLASS }
 enum class AnimationSpeed { SLOW, NORMAL, FAST }
-enum class IconPack { CUPERTINO_GLASS, MATERIAL_YOU, AMOLED_CYBERPUNK }

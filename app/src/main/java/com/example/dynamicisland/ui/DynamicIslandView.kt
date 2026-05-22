@@ -210,6 +210,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             MaterialTheme(colorScheme = darkColorScheme()) {
                 CompositionLocalProvider(
                     LocalIslandTheme provides activeTheme.value,
+                    LocalIconPack provides settings.iconPack,
                     androidx.compose.ui.platform.LocalContext provides moduleContext
                 ) {
                     val scope = rememberCoroutineScope()

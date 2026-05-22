@@ -92,23 +92,38 @@ fun EdgeLightUI(isActive: Boolean) {
     }
 }
 
+import com.example.dynamicisland.ui.animations.IslandUiState
+import com.example.dynamicisland.ui.animations.updateIslandTransition
+
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun DynamicIslandView.IslandUI(state: IslandState) {
     val view = this
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    val isEffectivelyHidden = state == IslandState.HIDDEN || isLandscape
+    
+    val settings = view.controller?.settingsState ?: com.example.dynamicisland.settings.SettingsState()
+    val isCyberpunk = settings.iconPack is IconPack.AmoledCyberpunk
 
-    val islandScale by animateFloatAsState(
-        targetValue = if (isEffectivelyHidden) 0f else 1f,
-        animationSpec = if (isEffectivelyHidden) tween(350, easing = FastOutLinearInEasing) else IslandPhysics.springFloat,
-        label = "blackhole_scale"
+    val uiState = when (state) {
+        IslandState.HIDDEN -> IslandUiState.HIDDEN
+        IslandState.TYPE_0_RING -> IslandUiState.NOTIFICATION_RING
+        IslandState.TYPE_1_MINI, IslandState.TYPE_2_MID, IslandState.TYPE_CUBE -> IslandUiState.COMPACT
+        IslandState.TYPE_3_MAX -> IslandUiState.MAX_PILL
+        IslandState.TYPE_SPLIT -> IslandUiState.SPLIT_PILL
+    }
+
+    val animValues = updateIslandTransition(
+        targetState = uiState,
+        isCyberpunk = isCyberpunk,
+        miniWidth = if (state == IslandState.TYPE_2_MID) midW.value else if (state == IslandState.TYPE_CUBE) cubeW.value else miniW.value,
+        miniHeight = if (state == IslandState.TYPE_2_MID) midH.value else if (state == IslandState.TYPE_CUBE) cubeH.value else miniH.value,
+        maxWidth = maxW.value,
+        maxHeight = if (activeModel.value is LiveActivityModel.Music) (maxH.value * 0.70f) else maxH.value,
+        ringWidth = ringW.value,
+        ringHeight = ringH.value
     )
 
-    // FIXED: Using shared physics tokens
-    val settings = view.controller?.settingsState ?: com.example.dynamicisland.settings.SettingsState()
-    
     val haptic = LocalHapticFeedback.current
     var isSquished by remember { mutableStateOf(false) }
     val touchScale by animateFloatAsState(
@@ -121,81 +136,43 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     val screenWidthDp = configuration.screenWidthDp.toFloat()
     val maxSafeWidth = (screenWidthDp - 16f).coerceAtLeast(minSafeWidth)
 
-    val rawTargetWidth = when (state) { 
-        IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniW.value
-        IslandState.TYPE_2_MID -> midW.value
-        IslandState.TYPE_3_MAX -> maxW.value
-        IslandState.TYPE_CUBE -> cubeW.value
-        else -> ringW.value 
-    }
-    val targetWidth = rawTargetWidth.coerceIn(minSafeWidth, maxSafeWidth)
-    
-    val model = activeModel.value
-    val splitModelValue = splitModel.value
-    val activeMedia = (splitModelValue as? LiveActivityModel.Music) ?: (model as? LiveActivityModel.Music)
-
-    val targetHeight = when (state) { 
-        IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniH.value
-        IslandState.TYPE_2_MID -> midH.value
-        IslandState.TYPE_3_MAX -> if (model is LiveActivityModel.Music) (maxH.value * 0.70f) else maxH.value
-        IslandState.TYPE_CUBE -> cubeH.value
-        else -> ringH.value 
-    }
-    val targetX = when (state) { 
+    val animatedWidth = animValues.width.coerceIn(minSafeWidth.dp, maxSafeWidth.dp)
+    val animatedHeight = animValues.height
+    val animatedRadius = animValues.cornerRadius
+    val offsetX = when (state) {
         IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value
         IslandState.TYPE_2_MID -> midX.value
         IslandState.TYPE_3_MAX -> maxX.value
         IslandState.TYPE_CUBE -> cubeX.value
-        else -> ringX.value 
+        else -> ringX.value
     }
-    val targetY = when (state) { 
+    val offsetY = when (state) {
         IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value
         IslandState.TYPE_2_MID -> midY.value
         IslandState.TYPE_3_MAX -> maxY.value
         IslandState.TYPE_CUBE -> cubeY.value
-        else -> ringY.value 
+        else -> ringY.value
     }
 
-    val animatedWidth by animateDpAsState(targetWidth.dp, IslandPhysics.springDp, label = "width")
-    val animatedHeight by animateDpAsState(targetHeight.dp, IslandPhysics.springDp, label = "height")
-    val radTarget = when (state) { 
-        IslandState.TYPE_3_MAX -> 42.dp
-        IslandState.TYPE_2_MID -> 16.dp
-        IslandState.TYPE_CUBE -> 24.dp
-        else -> (targetHeight / 2).dp 
-    }
-    val animatedRadius by animateDpAsState(radTarget, IslandPhysics.springDp, label = "rad")
+    val islandScale = animValues.scale
+    val islandAlpha = animValues.alpha
+
+    val model = activeModel.value
     
-    val offsetX by animateFloatAsState(targetX, IslandPhysics.springFloat, label = "x")
-    val offsetY by animateFloatAsState(targetY, IslandPhysics.springFloat, label = "y")
-    val islandAlpha by animateFloatAsState(
-        targetValue = if (isEffectivelyHidden) 0f else 1f,
-        animationSpec = tween(300),
-        label = "blackhole_alpha"
-    )
-
-    // True black AMOLED background
-    val baseBgColor = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else {
-        if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) {
-            Color(model.dominantColor).copy(alpha = 0.85f)
-        } else {
-            Color.Black // True AMOLED Black
-        }
-    }
     val bgColor by animateColorAsState(
-        targetValue = baseBgColor,
-        animationSpec = when {
-            state == IslandState.TYPE_3_MAX -> tween(400, easing = FastOutSlowInEasing)
-            state == IslandState.TYPE_0_RING -> tween(250, easing = LinearOutSlowInEasing)
-            else -> spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+        targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else {
+            if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) {
+                Color(model.dominantColor).copy(alpha = 0.85f)
+            } else {
+                Color.Black // True AMOLED Black
+            }
         },
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
         label = "bgColor"
     )
-    val borderColor by animateColorAsState(
-        targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else Color(0xFF00FFFF).copy(alpha = 0.8f), // Vivid Neon Cyan Edge Accents
-        animationSpec = tween(600),
-        label = "borderColor"
-    )
+
+    val borderColor = animValues.borderColor.copy(alpha = 0.8f)
+
     
     // particle burst
     var particleTrigger by remember { mutableStateOf(0L) }
@@ -531,7 +508,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                 if (state == IslandState.TYPE_0_RING) { RingUI(model) }
             }
         }
-        SplitCubeUI(state, animatedHeight, borderColor)
+        SplitCubeUI(state, animatedHeight, borderColor, animValues.xOffset)
     }
 }
 
