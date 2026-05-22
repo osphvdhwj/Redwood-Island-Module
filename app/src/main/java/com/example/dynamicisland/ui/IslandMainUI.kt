@@ -49,6 +49,8 @@ import kotlin.math.sin
 import kotlin.random.Random
 import com.example.dynamicisland.ipc.IslandState
 import com.example.dynamicisland.gesture.IslandGesture
+import com.example.dynamicisland.ui.animations.IslandUiState
+import com.example.dynamicisland.ui.animations.updateIslandTransition
 import androidx.compose.foundation.Canvas
 
 @Composable
@@ -91,9 +93,6 @@ fun EdgeLightUI(isActive: Boolean) {
         )
     }
 }
-
-import com.example.dynamicisland.ui.animations.IslandUiState
-import com.example.dynamicisland.ui.animations.updateIslandTransition
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -415,6 +414,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                         is LiveActivityModel.OngoingTask     -> OngoingTaskMid(model)
                                         is LiveActivityModel.ExternalActivity -> ExternalActivityMid(model)
                                         is LiveActivityModel.LinkIntercept   -> LinkInterceptMid(model)
+                                        is LiveActivityModel.Barcode         -> BarcodeMid(model, settings)
                                         is LiveActivityModel.SystemAlert     -> {
                                             if (model.alertType == "OTP_CATCHER") {
                                                 val otpModel = LiveActivityModel.Otp(code = model.message)
@@ -424,8 +424,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                         }
                                         is LiveActivityModel.General         -> {
                                             when {
-                                                model.id == "sys_translation"  -> TranslationGeneralMid(model)
-                                                model.id == "sys_barcode"      -> BarcodeGeneralMid(model)
+                                                model.id == "sys_translation"  -> TranslationMid(model)
                                                 model.id == "sys_navigation"
                                                     || (model.type == ActivityType.MESSAGE
                                                         && model.accentColor == android.graphics.Color.parseColor("#34A853"))
@@ -513,10 +512,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
 }
 
 private data class Particle(
-    val angle: Float,
-    val speed: Float,
-    val birthTime: Long
-)
     val angle: Float,
     val speed: Float,
     val birthTime: Long
