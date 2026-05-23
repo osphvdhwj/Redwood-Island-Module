@@ -1,40 +1,27 @@
-// File: app/src/main/java/com/example/dynamicisland/ui/ConfigActivity.kt
 package com.example.dynamicisland.ui
-
-import com.example.dynamicisland.R
-import com.example.dynamicisland.manager.*
-import com.example.dynamicisland.model.*
 
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.example.dynamicisland.ui.components.FloatingNavBar
+import com.example.dynamicisland.ui.components.NavItemData
+import com.example.dynamicisland.ui.design.IslandColors
+import com.example.dynamicisland.ui.design.RedwoodDesignSystem
+import com.example.dynamicisland.ui.screens.*
 import dagger.hilt.android.AndroidEntryPoint
-
-private val AmoledCyanColorScheme = darkColorScheme(
-    primary = Color(0xFF00FFFF), // Neon Cyan
-    onPrimary = Color.Black,
-    primaryContainer = Color(0xFF008B8B),
-    onPrimaryContainer = Color.White,
-    secondary = Color(0xFF00FFFF),
-    onSecondary = Color.Black,
-    secondaryContainer = Color(0xFF004040),
-    onSecondaryContainer = Color.White,
-    background = Color.Black, // True AMOLED Black
-    onBackground = Color.White,
-    surface = Color.Black,
-    onSurface = Color.White,
-    surfaceVariant = Color(0xFF121212), // Slightly elevated true black
-    onSurfaceVariant = Color.White,
-    outline = Color(0xFF00FFFF)
-)
 
 @AndroidEntryPoint
 class ConfigActivity : ComponentActivity() {
@@ -43,59 +30,145 @@ class ConfigActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
 
-        // Use ComposeView directly – no need for the missing activity-compose dependency
         val composeView = ComposeView(this).apply {
             setContent {
-                MaterialTheme(colorScheme = AmoledCyanColorScheme) {
-                    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                        ConfigScreenNav(prefs)
-                    }
+                MaterialTheme(
+                    colorScheme = darkColorScheme(
+                        background = IslandColors.background,
+                        surface = IslandColors.surface,
+                        primary = IslandColors.accentCyan
+                    ),
+                    typography = RedwoodDesignSystem.typography
+                ) {
+                    ConfigScreenNav(prefs)
                 }
             }
         }
         setContentView(composeView)
     }
+}
 
-    @Composable
-    fun ConfigScreenNav(prefs: android.content.SharedPreferences) {
-        var selectedNav by remember { mutableIntStateOf(0) }
+@Composable
+fun ConfigScreenNav(prefs: android.content.SharedPreferences) {
+    var selectedNav by remember { mutableIntStateOf(0) }
+    
+    val navItems = listOf(
+        NavItemData("Layout", Icons.Default.Build),
+        NavItemData("Appearance", Icons.Default.Palette),
+        NavItemData("Smart", Icons.Default.Star),
+        NavItemData("Shortcuts", Icons.Default.Apps),
+        NavItemData("System", Icons.Default.Settings)
+    )
 
-        Scaffold(
-            bottomBar = {
-                NavigationBar(
-                    containerColor = Color.Black,
-                    contentColor = Color(0xFF00FFFF)
-                ) {
-                    NavigationBarItem(
-                        selected = selectedNav == 0, onClick = { selectedNav = 0 }, icon = { Icon(Icons.Default.Build, null) }, label = { Text("Layout") },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.Black, selectedTextColor = Color(0xFF00FFFF), indicatorColor = Color(0xFF00FFFF), unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray)
-                    )
-                    NavigationBarItem(
-                        selected = selectedNav == 1, onClick = { selectedNav = 1 }, icon = { Icon(Icons.Default.Create, null) }, label = { Text("Theme") },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.Black, selectedTextColor = Color(0xFF00FFFF), indicatorColor = Color(0xFF00FFFF), unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray)
-                    )
-                    NavigationBarItem(
-                        selected = selectedNav == 2, onClick = { selectedNav = 2 }, icon = { Icon(Icons.Default.List, null) }, label = { Text("Dashboard") },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.Black, selectedTextColor = Color(0xFF00FFFF), indicatorColor = Color(0xFF00FFFF), unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray)
-                    )
-                    NavigationBarItem(
-                        selected = selectedNav == 3, onClick = { selectedNav = 3 }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Features") },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.Black, selectedTextColor = Color(0xFF00FFFF), indicatorColor = Color(0xFF00FFFF), unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray)
-                    )
-                    NavigationBarItem(
-                        selected = selectedNav == 4, onClick = { selectedNav = 4 }, icon = { Icon(Icons.Default.Notifications, null) }, label = { Text("Gestures") },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.Black, selectedTextColor = Color(0xFF00FFFF), indicatorColor = Color(0xFF00FFFF), unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray)
-                    )
+    Scaffold(
+        containerColor = Color.Black,
+        bottomBar = {
+            FloatingNavBar(
+                items = navItems,
+                selectedIndex = selectedNav,
+                onItemSelected = { selectedNav = it },
+                onFabClick = { /* Can be used for a Quick Enable/Disable toggle */ }
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                HeroHeader()
+                
+                Box(modifier = Modifier.weight(1f)) {
+                    when (selectedNav) {
+                        0 -> LayoutScreen(prefs)
+                        1 -> AppearanceScreen(prefs)
+                        2 -> IntelligenceTab(prefs)
+                        3 -> InteractionsTab(prefs)
+                        4 -> SystemScreen(prefs)
+                    }
                 }
             }
-        ) { paddingValues ->
-            Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
-                when (selectedNav) {
-                    0 -> LayoutScreen(prefs)
-                    1 -> ThemeScreen(prefs)
-                    2 -> DashboardScreen(prefs)
-                    3 -> FeaturesScreen(prefs)
-                    4 -> GesturesScreen(prefs)
+        }
+    }
+}
+
+@Composable
+fun IntelligenceTab(prefs: android.content.SharedPreferences) {
+    var selectedSubTab by remember { mutableIntStateOf(0) }
+    Column {
+        TabRow(
+            selectedTabIndex = selectedSubTab,
+            containerColor = Color.Transparent,
+            contentColor = IslandColors.accentCyan,
+            divider = {}
+        ) {
+            Tab(selected = selectedSubTab == 0, onClick = { selectedSubTab = 0 }, text = { Text("AI & Detection") })
+            Tab(selected = selectedSubTab == 1, onClick = { selectedSubTab = 1 }, text = { Text("Continuity") })
+        }
+        when (selectedSubTab) {
+            0 -> IntelligenceScreen(prefs)
+            1 -> ContinuityScreen(prefs)
+        }
+    }
+}
+
+@Composable
+fun InteractionsTab(prefs: android.content.SharedPreferences) {
+    var selectedSubTab by remember { mutableIntStateOf(0) }
+    Column {
+        TabRow(
+            selectedTabIndex = selectedSubTab,
+            containerColor = Color.Transparent,
+            contentColor = IslandColors.accentCyan,
+            divider = {}
+        ) {
+            Tab(selected = selectedSubTab == 0, onClick = { selectedSubTab = 0 }, text = { Text("Pins & Tiles") })
+            Tab(selected = selectedSubTab == 1, onClick = { selectedSubTab = 1 }, text = { Text("Gestures") })
+        }
+        when (selectedSubTab) {
+            0 -> PinsTilesScreen(prefs)
+            1 -> GesturesScreen(prefs)
+        }
+    }
+}
+
+@Composable
+fun HeroHeader() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(100.dp)
+            .background(Brush.verticalGradient(listOf(Color(0xFF001A33), Color.Black))),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(bottom = 16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Dynamic Island",
+                    color = IslandColors.textPrimary,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        shadow = androidx.compose.ui.graphics.Shadow(
+                            color = IslandColors.accentCyan,
+                            blurRadius = 24f
+                        )
+                    )
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .background(IslandColors.accentCyan.copy(alpha = 0.1f), androidx.compose.foundation.shape.CircleShape)
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "v3.0",
+                        color = IslandColors.accentCyan,
+                        style = MaterialTheme.typography.labelSmall
+                    )
                 }
             }
         }

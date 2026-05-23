@@ -258,7 +258,12 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                 .shadow(elevation = shadowElevation, shape = RoundedCornerShape(animatedRadius), spotColor = Color.Black)
                 .clip(RoundedCornerShape(animatedRadius))
                 .then(
-                    if (state == IslandState.TYPE_2_MID && model is LiveActivityModel.Music && model.dominantColor != null) {
+                    if (settings.designLanguage == com.example.dynamicisland.settings.DesignLanguage.APPLE_LIQUID_GLASS) {
+                        Modifier.glassBackground(blurRadius = settings.blurIntensity.dp)
+                    } else if (settings.dynamicGradient && model is LiveActivityModel.Music) {
+                        val gradientColors: List<Color> = view.controller?.currentGradientColors ?: listOf(Color.DarkGray, Color.Black)
+                        Modifier.background(Brush.verticalGradient(gradientColors))
+                    } else if (state == IslandState.TYPE_2_MID && model is LiveActivityModel.Music && model.dominantColor != null) {
                         Modifier.background(
                             brush = Brush.verticalGradient(
                                 colors = listOf(

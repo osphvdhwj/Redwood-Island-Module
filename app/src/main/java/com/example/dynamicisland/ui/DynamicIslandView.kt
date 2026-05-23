@@ -194,19 +194,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             val settings = controller?.settingsState ?: SettingsState()
             val shape = getPillShape(settings.pillShape, settings.pillCornerRadius)
 
-            val backgroundModifier = if (settings.designLanguage == DesignLanguage.APPLE_LIQUID_GLASS) {
-                Modifier.glassBackground(blurRadius = settings.blurIntensity.dp)
-            } else if (settings.dynamicGradient && activeModel.value is LiveActivityModel.Music) {
-                val gradientColors: List<Color> = controller?.currentGradientColors ?: listOf(Color.DarkGray, Color.Black)
-                Modifier.background(Brush.verticalGradient(gradientColors))
-            } else {
-                Modifier.background(Color.Black.copy(alpha = 0.85f))
-            }
-
-            val shadowModifier = if (settings.shadowCasting) {
-                Modifier.shadow(16.dp, shape, ambientColor = controller?.currentBrandColor?.copy(alpha = 0.4f) ?: Color.White.copy(alpha = 0.4f))
-            } else Modifier
-
             MaterialTheme(colorScheme = darkColorScheme()) {
                 CompositionLocalProvider(
                     LocalIslandTheme provides activeTheme.value,
@@ -224,9 +211,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                                 scaleX = elasticScale.value
                                 scaleY = elasticScale.value
                             }
-                            .clip(shape)
-                            .then(backgroundModifier)
-                            .then(shadowModifier)
                             .pointerInput(Unit) {
                                 detectVerticalDragGestures(
                                     onDragEnd = {

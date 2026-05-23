@@ -1,3 +1,6 @@
 /app/build/
 /.gradle/
 *.apk
+
+.gemini/
+gha-creds-*.json

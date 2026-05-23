@@ -1,0 +1,245 @@
+package com.example.dynamicisland.ui.design
+
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun IslandPreviewCard(modifier: Modifier = Modifier) {
+    val states = listOf("Music", "Call", "Charging")
+    var currentState by remember { mutableStateOf(states[0]) }
+
+    val pillWidth by animateDpAsState(
+        targetValue = when (currentState) {
+            "Music" -> 220.dp
+            "Call" -> 160.dp
+            "Charging" -> 190.dp
+            else -> 120.dp
+        },
+        animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
+        label = "pillWidth"
+    )
+
+    val pillHeight by animateDpAsState(
+        targetValue = when (currentState) {
+            "Music" -> 44.dp
+            "Call" -> 40.dp
+            "Charging" -> 44.dp
+            else -> 40.dp
+        },
+        animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
+        label = "pillHeight"
+    )
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        // 200.dp Canvas Preview Area
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(Brush.radialGradient(listOf(Color(0xFF0A1628), Color.Black)))
+                .border(1.dp, IslandColors.border, RoundedCornerShape(24.dp))
+        ) {
+            // Realistic Phone Silhouette via Canvas
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val phoneW = 260.dp.toPx()
+                val phoneH = 400.dp.toPx()
+                val phoneT = 24.dp.toPx()
+                val cr = 36.dp.toPx()
+
+                // Outer metallic bezel
+                drawRoundRect(
+                    color = Color(0xFF222222),
+                    topLeft = Offset(size.width / 2 - phoneW / 2, phoneT),
+                    size = Size(phoneW, phoneH),
+                    cornerRadius = CornerRadius(cr, cr),
+                    style = Stroke(width = 4.dp.toPx())
+                )
+                
+                // Inner screen boundary
+                drawRoundRect(
+                    color = Color(0xFF0D0D0D),
+                    topLeft = Offset(size.width / 2 - phoneW / 2 + 10f, phoneT + 10f),
+                    size = Size(phoneW - 20f, phoneH - 20f),
+                    cornerRadius = CornerRadius(cr - 5f, cr - 5f),
+                    style = Stroke(width = 2.dp.toPx())
+                )
+            }
+
+            // Infinite Pulsing Ambient Background Ring
+            val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+            val pulseScale by infiniteTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.3f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1500, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "pulseScale"
+            )
+            val pulseAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.6f,
+                targetValue = 0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1500, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "pulseAlpha"
+            )
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 36.dp)
+                    .width(pillWidth)
+                    .height(pillHeight)
+                    .graphicsLayer {
+                        scaleX = pulseScale
+                        scaleY = pulseScale
+                        alpha = pulseAlpha
+                    }
+                    .border(2.dp, IslandColors.accentCyan, RoundedCornerShape(50))
+            )
+
+            // Dynamic Island Pill (Exact top-center position)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 36.dp)
+                    .width(pillWidth)
+                    .height(pillHeight)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black)
+                    .padding(horizontal = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                // Real content rendering swaps
+                Crossfade(targetState = currentState, label = "pillContent") { state ->
+                    when (state) {
+                        "Music" -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Brush.linearGradient(listOf(IslandColors.accentPurple, IslandColors.accentCyan))),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Cyber Track", color = Color.White, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                }
+                                // Simulated Equalizer Visualizer
+                                Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(3.dp, 12.dp).background(IslandColors.accentCyan, CircleShape))
+                                    Box(modifier = Modifier.size(3.dp, 18.dp).background(IslandColors.accentPurple, CircleShape))
+                                    Box(modifier = Modifier.size(3.dp, 8.dp).background(IslandColors.accentCyan, CircleShape))
+                                }
+                            }
+                        }
+                        "Call" -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Phone, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("0:42", color = Color(0xFF4CAF50), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFF44336)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Phone, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp).graphicsLayer { rotationZ = 135f })
+                                }
+                            }
+                        }
+                        "Charging" -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.BatteryChargingFull, contentDescription = null, tint = IslandColors.accentCyan, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("85% Super Charge", color = IslandColors.accentCyan, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Horizontal LazyRow of state selector chips
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(states) { state ->
+                val isSelected = currentState == state
+                val chipBg = if (isSelected) IslandColors.accentCyan.copy(alpha = 0.15f) else IslandColors.surface
+                val chipBorder = if (isSelected) IslandColors.accentCyan else IslandColors.border
+                val chipTextColor = if (isSelected) IslandColors.accentCyan else IslandColors.textSecondary
+                
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(chipBg)
+                        .border(1.dp, chipBorder, RoundedCornerShape(50))
+                        .clickable { currentState = state }
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = state,
+                        color = chipTextColor,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+        }
+    }
+}
