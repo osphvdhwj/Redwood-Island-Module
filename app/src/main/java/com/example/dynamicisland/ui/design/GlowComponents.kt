@@ -1,5 +1,7 @@
 package com.example.dynamicisland.ui.design
 
+import androidx.compose.animation.core.*
+import androidx.compose.ui.composed
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -167,9 +169,6 @@ fun SectionHeader(
         }
     }
 }
-
-import androidx.compose.animation.core.*
-import androidx.compose.ui.composed
 
 fun Modifier.squishClickable(
     interactionSource: MutableInteractionSource? = null,
