@@ -164,7 +164,7 @@ fun ThemeSlider(
             onValueChange = onValueChange,
             valueRange = valueRange,
             colors = SliderDefaults.colors(
-                thumbColor = IslandColors.primary,
+                thumbColor = IslandColors.accentCyan,
                 activeTrackColor = IslandColors.accentCyan,
                 inactiveTrackColor = IslandColors.surfaceVariant
             )
@@ -223,7 +223,7 @@ fun PrecisionSlider(
                 valueRange = valueRange,
                 modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                 colors = SliderDefaults.colors(
-                    thumbColor = IslandColors.primary,
+                    thumbColor = IslandColors.accentCyan,
                     activeTrackColor = IslandColors.accentCyan,
                     inactiveTrackColor = IslandColors.surfaceVariant
                 )

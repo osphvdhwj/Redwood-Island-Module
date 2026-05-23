@@ -20,7 +20,7 @@ import kotlin.random.Random
 fun RingPill(
     modifier: Modifier = Modifier,
     hasActiveBackgroundEvent: Boolean = false,
-    accentColor: Color = IslandTheme.colors.accentDefault
+    accentColor: Color = com.example.dynamicisland.ui.design.IslandColors.accentCyan
 ) {
     // Subtle breathing animation for the ring
     val infiniteTransition = rememberInfiniteTransition(label = "ring_breathe")
@@ -36,7 +36,7 @@ fun RingPill(
 
     PillSurface(
         modifier = modifier.size(width = 100.dp, height = 32.dp), // Adjust to your physical cutout size
-        shape = IslandTheme.shapes.ring,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
         backgroundColor = Color.Black,
         interactive = true
     ) {

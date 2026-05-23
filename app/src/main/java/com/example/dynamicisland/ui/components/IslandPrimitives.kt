@@ -22,6 +22,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+import com.example.dynamicisland.ui.design.IslandColors
+
 /**
  * The core physical container for all Island states.
  * Handles background blur, dynamic borders, shadows, and the "Squish" touch physics.
@@ -30,8 +32,8 @@ import androidx.compose.ui.unit.dp
 fun PillSurface(
     modifier: Modifier = Modifier,
     shape: RoundedCornerShape,
-    backgroundColor: Color = IslandTheme.colors.background,
-    borderColor: Color = IslandTheme.colors.border,
+    backgroundColor: Color = IslandColors.background,
+    borderColor: Color = IslandColors.border,
     shadowElevation: Dp = 16.dp,
     interactive: Boolean = true,
     content: @Composable BoxScope.() -> Unit

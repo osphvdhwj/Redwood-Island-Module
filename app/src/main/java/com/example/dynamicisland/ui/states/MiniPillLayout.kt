@@ -17,7 +17,7 @@ fun MiniPill(
         modifier = modifier
             .height(40.dp)
             .widthIn(min = 180.dp), // Dynamic width based on content
-        shape = IslandTheme.shapes.mini,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
         shadowElevation = 8.dp
     ) {
         Row(

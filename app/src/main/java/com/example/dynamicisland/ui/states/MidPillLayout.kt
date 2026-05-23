@@ -19,8 +19,8 @@ fun MidPill(
         modifier = modifier
             .fillMaxWidth(0.9f) // 90% of screen width
             .height(72.dp),     // Standard Mid height
-        shape = IslandTheme.shapes.mid,
-        backgroundColor = dynamicBackgroundColor ?: IslandTheme.colors.background,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        backgroundColor = dynamicBackgroundColor ?: com.example.dynamicisland.ui.design.IslandColors.background,
         shadowElevation = 16.dp,
         content = content
     )
