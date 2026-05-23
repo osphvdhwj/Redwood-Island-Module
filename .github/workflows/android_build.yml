@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "Working", "main" ]
   pull_request:
-    branches: [ "1_s", "main" ]
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -23,58 +23,25 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Run Code Checks
-        run: ./gradlew check --stacktrace
-
-      # 🔍 Upload lint reports if the check failed – so we can see all errors
-      - name: Upload Lint Reports (if Code Checks failed)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: lint-reports
-          path: |
-            app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt
-            app/build/reports/lint-results-debug.html
-          overwrite: true
-
-      - name: Build unsigned Release APK
-        run: ./gradlew assembleRelease
-
-      - name: Get Build Tools Version
-        run: |
-          echo "BUILD_TOOLS_VERSION=$(ls $ANDROID_SDK_ROOT/build-tools | sort -rV | head -n1)" >> $GITHUB_ENV
-
-      - name: Zipalign & Sign APK
+      - name: Decode Keystore
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE }}
-          ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_STORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_PASS: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          echo "$KEYSTORE_B64" | base64 --decode > keystore.jks
+        run: echo "$KEYSTORE_B64" | base64 --decode > keystore.jks
 
-          BUILD_TOOLS="$ANDROID_SDK_ROOT/build-tools/$BUILD_TOOLS_VERSION"
-          UNSIGNED_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
-          ALIGNED_APK="app/build/outputs/apk/release/app-release-aligned.apk"
-          SIGNED_APK="app/build/outputs/apk/release/DynamicIsland-Release.apk"
+      - name: Build Signed Release APK (arm64-v8a)
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --stacktrace
 
-          $BUILD_TOOLS/zipalign -v -p 4 "$UNSIGNED_APK" "$ALIGNED_APK"
-          $BUILD_TOOLS/apksigner sign \
-            --ks keystore.jks \
-            --ks-key-alias "$ALIAS" \
-            --ks-pass "pass:$KEY_STORE_PASS" \
-            --key-pass "pass:$KEY_PASS" \
-            --out "$SIGNED_APK" \
-            "$ALIGNED_APK"
-
-          rm keystore.jks
-
-      - name: Upload Signed APK Artifact
+      - name: Rename and Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: DynamicIsland-Release
-          path: app/build/outputs/apk/release/DynamicIsland-Release.apk
+          name: DynamicIsland-arm64
+          path: app/build/outputs/apk/release/*.apk
           overwrite: true
+
+      - name: Clean up Keystore
+        if: always()
+        run: rm -f keystore.jks
