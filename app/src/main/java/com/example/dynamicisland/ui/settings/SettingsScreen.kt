@@ -5,7 +5,23 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -35,6 +51,36 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.settings.*
 import com.example.dynamicisland.settings.SettingsManager.SettingKey
 import kotlinx.coroutines.delay
+
+@Composable
+fun AppSelectorDialog(
+    title: String,
+    currentSelection: Set<String>,
+    onSelectionChanged: (Set<String>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text("App selection dialog") },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("OK") } }
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun GestureActionChips(selectedAction: String, onSelect: (String) -> Unit) {
+    val actions = listOf("dismiss", "next_track", "previous_track", "toggle_play_pause", "none")
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        actions.forEach { action ->
+            FilterChip(
+                selected = selectedAction == action,
+                onClick = { onSelect(action) },
+                label = { Text(action.replace('_', ' ').replaceFirstChar(Char::uppercase)) }
+            )
+        }
+    }
+}
 
 /**
  * Premium Dynamic Island Settings Screen
