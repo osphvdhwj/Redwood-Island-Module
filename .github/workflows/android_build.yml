@@ -23,25 +23,12 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Decode Keystore
-        env:
-          KEYSTORE_B64: ${{ secrets.KEYSTORE }}
-        run: echo "$KEYSTORE_B64" | base64 --decode > keystore.jks
+      - name: Build Debug APK (arm64-v8a)
+        run: ./gradlew assembleDebug --stacktrace
 
-      - name: Build Signed Release APK (arm64-v8a)
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --stacktrace
-
-      - name: Rename and Upload APK
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: DynamicIsland-arm64
-          path: app/build/outputs/apk/release/*.apk
+          name: DynamicIsland-Debug-arm64
+          path: app/build/outputs/apk/debug/*.apk
           overwrite: true
-
-      - name: Clean up Keystore
-        if: always()
-        run: rm -f keystore.jks
