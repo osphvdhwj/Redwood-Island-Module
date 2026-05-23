@@ -397,6 +397,7 @@ object SystemUIA15Hooks {
                                 putExtra("title", title)
                                 putExtra("text", text)
                                 putExtra("pkg", pkg)
+                                putExtra("notification", notif)
                             }
                         )
                     }
@@ -404,14 +405,13 @@ object SystemUIA15Hooks {
             }
         }
 
-        IslandHookEngine.hookAllMethodsByName(
-            "com.android.systemui.statusbar.notification.NotificationEntryManager",
-            lpparam.classLoader, "addNotification", callback
-        )
-        IslandHookEngine.hookAllMethodsByName(
-            "com.android.systemui.statusbar.notification.collection.NotifCollection",
-            lpparam.classLoader, "onNotificationPosted", callback
-        )
+        // 🚨 Android 15+ Resilience: Try multiple candidates for notification entry points
+        IslandHookEngine.hookFirstMatch(lpparam.classLoader, listOf(
+            "com.android.systemui.statusbar.notification.collection.NotifCollection" to "dispatchPostNotification",
+            "com.android.systemui.statusbar.notification.collection.NotifCollection" to "onNotificationPosted",
+            "com.android.systemui.statusbar.notification.NotificationEntryManager" to "addNotification",
+            "com.android.systemui.statusbar.policy.HeadsUpManager" to "showNotification"
+        ), callback)
     }
 
     private fun hookMediaStates(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -426,13 +426,16 @@ object SystemUIA15Hooks {
             }
         }
 
-        IslandHookEngine.hookAllMethodsByName(
-            "com.android.systemui.media.MediaDataManager",
-            lpparam.classLoader, "onMediaDataLoaded", mediaCallback
-        )
-        IslandHookEngine.hookAllMethodsByName(
-            "com.android.systemui.statusbar.NotificationMediaManager",
-            lpparam.classLoader, "onPlaybackStateChanged", mediaCallback
-        )
+        // 🚨 Android 15+ Resilience: Try multiple candidates for MediaDataManager
+        IslandHookEngine.hookFirstMatch(lpparam.classLoader, listOf(
+            "com.android.systemui.media.controls.pipeline.MediaDataManager" to "onMediaDataLoaded",
+            "com.android.systemui.media.controls.domain.pipeline.MediaDataManager" to "onMediaDataLoaded",
+            "com.android.systemui.media.MediaDataManager" to "onMediaDataLoaded"
+        ), mediaCallback)
+
+        IslandHookEngine.hookFirstMatch(lpparam.classLoader, listOf(
+            "com.android.systemui.statusbar.NotificationMediaManager" to "updatePlaybackState",
+            "com.android.systemui.statusbar.NotificationMediaManager" to "onPlaybackStateChanged"
+        ), mediaCallback)
     }
 }

@@ -25,6 +25,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -66,6 +69,46 @@ fun PullToRefreshContainer(onRefresh: () -> Unit, content: @Composable () -> Uni
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val scope = rememberCoroutineScope()
     
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                // If dragging up and we have a positive offset, consume the scroll to hide indicator
+                return if (available.y < 0 && dragOffset > 0) {
+                    val consumed = if (dragOffset + available.y >= 0) available.y else -dragOffset
+                    dragOffset += consumed
+                    androidx.compose.ui.geometry.Offset(0f, consumed)
+                } else {
+                    androidx.compose.ui.geometry.Offset.Zero
+                }
+            }
+
+            override fun onPostScroll(
+                consumed: androidx.compose.ui.geometry.Offset,
+                available: androidx.compose.ui.geometry.Offset,
+                source: NestedScrollSource
+            ): androidx.compose.ui.geometry.Offset {
+                // If dragging down and there's available scroll (at the top), increase indicator offset
+                return if (available.y > 0 && source == NestedScrollSource.UserInput) {
+                    dragOffset += available.y * 0.5f
+                    androidx.compose.ui.geometry.Offset(0f, available.y)
+                } else {
+                    androidx.compose.ui.geometry.Offset.Zero
+                }
+            }
+
+            override suspend fun onPreFling(available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
+                if (dragOffset > 150f && !isRefreshing) {
+                    isRefreshing = true
+                    onRefresh()
+                    delay(1000)
+                    isRefreshing = false
+                }
+                dragOffset = 0f
+                return androidx.compose.ui.unit.Velocity.Zero
+            }
+        }
+    }
+
     val animatedOffset by animateFloatAsState(
         targetValue = if (isRefreshing) 100f else dragOffset,
         animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
@@ -75,28 +118,7 @@ fun PullToRefreshContainer(onRefresh: () -> Unit, content: @Composable () -> Uni
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onDragEnd = {
-                        if (dragOffset > 150f && !isRefreshing) {
-                            isRefreshing = true
-                            scope.launch {
-                                onRefresh()
-                                delay(1000)
-                                isRefreshing = false
-                                dragOffset = 0f
-                            }
-                        } else {
-                            dragOffset = 0f
-                        }
-                    },
-                    onDragCancel = { dragOffset = 0f }
-                ) { _, dragAmount ->
-                    if (dragAmount > 0 || dragOffset > 0) {
-                        dragOffset = (dragOffset + dragAmount * 0.5f).coerceIn(0f, 300f)
-                    }
-                }
-            }
+            .nestedScroll(nestedScrollConnection)
     ) {
         // Simple PTR Indicator
         if (animatedOffset > 0f) {

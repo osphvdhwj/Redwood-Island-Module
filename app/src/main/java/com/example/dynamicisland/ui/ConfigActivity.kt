@@ -3,6 +3,7 @@ package com.example.dynamicisland.ui
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -21,13 +22,22 @@ import com.example.dynamicisland.ui.components.NavItemData
 import com.example.dynamicisland.ui.design.IslandColors
 import com.example.dynamicisland.ui.design.RedwoodDesignSystem
 import com.example.dynamicisland.ui.screens.*
+import com.example.dynamicisland.ui.settings.SettingsScreen
+import com.example.dynamicisland.settings.SettingsViewModel
+import com.example.dynamicisland.settings.SettingsManager
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class ConfigActivity : ComponentActivity() {
 
+    @Inject lateinit var settingsManager: SettingsManager
+    private lateinit var settingsViewModel: SettingsViewModel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        settingsViewModel = SettingsViewModel(settingsManager)
         val prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
 
         val composeView = ComposeView(this).apply {
@@ -40,7 +50,7 @@ class ConfigActivity : ComponentActivity() {
                     ),
                     typography = RedwoodDesignSystem.typography
                 ) {
-                    ConfigScreenNav(prefs)
+                    ConfigScreenNav(prefs, settingsViewModel)
                 }
             }
         }
@@ -49,7 +59,7 @@ class ConfigActivity : ComponentActivity() {
 }
 
 @Composable
-fun ConfigScreenNav(prefs: android.content.SharedPreferences) {
+fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel: SettingsViewModel) {
     var selectedNav by remember { mutableIntStateOf(0) }
     
     val navItems = listOf(
@@ -77,7 +87,7 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences) {
                 .padding(paddingValues)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                HeroHeader()
+                if (selectedNav != 4) HeroHeader()
                 
                 Box(modifier = Modifier.weight(1f)) {
                     when (selectedNav) {
@@ -85,7 +95,7 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences) {
                         1 -> AppearanceScreen(prefs)
                         2 -> IntelligenceTab(prefs)
                         3 -> InteractionsTab(prefs)
-                        4 -> SystemScreen(prefs)
+                        4 -> SettingsScreen(settingsViewModel)
                     }
                 }
             }

@@ -277,6 +277,20 @@ class IslandController @Inject constructor(
                     }
                 }
                 "com.example.dynamicisland.APP_CHANGED" -> { topAppPackage = intent.getStringExtra("pkg") ?: ""; evaluatePriority() }
+                "com.example.dynamicisland.NOTIFICATION_CAUGHT" -> {
+                    val pkg = intent.getStringExtra("pkg") ?: ""
+                    val notif = if (android.os.Build.VERSION.SDK_INT >= 33) {
+                        intent.getParcelableExtra("notification", android.app.Notification::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getParcelableExtra("notification")
+                    }
+                    if (notif != null) notificationManager.processIncomingNotification(pkg, notif)
+                }
+                "com.example.dynamicisland.MEDIA_STATE_CHANGED" -> {
+                    // Force refresh media state
+                    mediaManager.isMediaEnabled = mediaManager.isMediaEnabled 
+                }
                 "com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT" -> {
                     val progress = intent.getIntExtra("progress", -1)
                     val progressMax = intent.getIntExtra("progressMax", -1)
@@ -555,6 +569,13 @@ class IslandController @Inject constructor(
             currentActiveModel = _lastActiveModel,
             currentVisualState = _lastIslandState
         )
+
+        // 🛑 PERFORMANCE GUARD: Only update if the state or models have actually changed.
+        if (result.islandState == _lastIslandState &&
+            result.activeModel == _lastActiveModel &&
+            result.splitModel == _lastSplitModel) {
+            return
+        }
 
         userForceCollapsed = result.userForceCollapsed
         _lastIslandState = result.islandState

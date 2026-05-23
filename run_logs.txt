@@ -1,0 +1,778 @@
+build	UNKNOWN STEP	﻿2026-05-23T09:00:50.4053847Z Current runner version: '2.334.0'
+build	UNKNOWN STEP	2026-05-23T09:00:50.4078564Z ##[group]Runner Image Provisioner
+build	UNKNOWN STEP	2026-05-23T09:00:50.4079863Z Hosted Compute Agent
+build	UNKNOWN STEP	2026-05-23T09:00:50.4080483Z Version: 20260213.493
+build	UNKNOWN STEP	2026-05-23T09:00:50.4081171Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+build	UNKNOWN STEP	2026-05-23T09:00:50.4081898Z Build Date: 2026-02-13T00:28:41Z
+build	UNKNOWN STEP	2026-05-23T09:00:50.4082542Z Worker ID: {274c069e-43b9-4abd-b746-75e745feeb5b}
+build	UNKNOWN STEP	2026-05-23T09:00:50.4083324Z Azure Region: centralus
+build	UNKNOWN STEP	2026-05-23T09:00:50.4083881Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:50.4085253Z ##[group]Operating System
+build	UNKNOWN STEP	2026-05-23T09:00:50.4086010Z Ubuntu
+build	UNKNOWN STEP	2026-05-23T09:00:50.4086502Z 24.04.4
+build	UNKNOWN STEP	2026-05-23T09:00:50.4087010Z LTS
+build	UNKNOWN STEP	2026-05-23T09:00:50.4087497Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:50.4088023Z ##[group]Runner Image
+build	UNKNOWN STEP	2026-05-23T09:00:50.4088677Z Image: ubuntu-24.04
+build	UNKNOWN STEP	2026-05-23T09:00:50.4089241Z Version: 20260518.149.1
+build	UNKNOWN STEP	2026-05-23T09:00:50.4091384Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260518.149/images/ubuntu/Ubuntu2404-Readme.md
+build	UNKNOWN STEP	2026-05-23T09:00:50.4092928Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260518.149
+build	UNKNOWN STEP	2026-05-23T09:00:50.4093859Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:50.4095056Z ##[group]GITHUB_TOKEN Permissions
+build	UNKNOWN STEP	2026-05-23T09:00:50.4097164Z Contents: read
+build	UNKNOWN STEP	2026-05-23T09:00:50.4097850Z Metadata: read
+build	UNKNOWN STEP	2026-05-23T09:00:50.4098398Z Packages: read
+build	UNKNOWN STEP	2026-05-23T09:00:50.4098910Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:50.4101758Z Secret source: Actions
+build	UNKNOWN STEP	2026-05-23T09:00:50.4102817Z Prepare workflow directory
+build	UNKNOWN STEP	2026-05-23T09:00:50.4434459Z Prepare all required actions
+build	UNKNOWN STEP	2026-05-23T09:00:50.4473552Z Getting action download info
+build	UNKNOWN STEP	2026-05-23T09:00:50.8935684Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+build	UNKNOWN STEP	2026-05-23T09:00:51.0425078Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+build	UNKNOWN STEP	2026-05-23T09:00:51.7175690Z Download action repository 'gradle/actions@v3' (SHA:d9c87d481d55275bb5441eef3fe0e46805f9ef70)
+build	UNKNOWN STEP	2026-05-23T09:00:52.6098644Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+build	UNKNOWN STEP	2026-05-23T09:00:52.8888619Z Complete job name: build
+build	UNKNOWN STEP	2026-05-23T09:00:52.9768135Z ##[group]Run actions/checkout@v4
+build	UNKNOWN STEP	2026-05-23T09:00:52.9769440Z with:
+build	UNKNOWN STEP	2026-05-23T09:00:52.9770524Z   repository: osphvdhwj/Redwood-Island-Module
+build	UNKNOWN STEP	2026-05-23T09:00:52.9771892Z   token: ***
+build	UNKNOWN STEP	2026-05-23T09:00:52.9772666Z   ssh-strict: true
+build	UNKNOWN STEP	2026-05-23T09:00:52.9773452Z   ssh-user: git
+build	UNKNOWN STEP	2026-05-23T09:00:52.9774273Z   persist-credentials: true
+build	UNKNOWN STEP	2026-05-23T09:00:52.9775180Z   clean: true
+build	UNKNOWN STEP	2026-05-23T09:00:52.9775996Z   sparse-checkout-cone-mode: true
+build	UNKNOWN STEP	2026-05-23T09:00:52.9776979Z   fetch-depth: 1
+build	UNKNOWN STEP	2026-05-23T09:00:52.9777778Z   fetch-tags: false
+build	UNKNOWN STEP	2026-05-23T09:00:52.9778599Z   show-progress: true
+build	UNKNOWN STEP	2026-05-23T09:00:52.9779422Z   lfs: false
+build	UNKNOWN STEP	2026-05-23T09:00:52.9780397Z   submodules: false
+build	UNKNOWN STEP	2026-05-23T09:00:52.9781260Z   set-safe-directory: true
+build	UNKNOWN STEP	2026-05-23T09:00:52.9782448Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:53.0892005Z Syncing repository: osphvdhwj/Redwood-Island-Module
+build	UNKNOWN STEP	2026-05-23T09:00:53.0894735Z ##[group]Getting Git version info
+build	UNKNOWN STEP	2026-05-23T09:00:53.0896358Z Working directory is '/home/runner/work/Redwood-Island-Module/Redwood-Island-Module'
+build	UNKNOWN STEP	2026-05-23T09:00:53.0898542Z [command]/usr/bin/git version
+build	UNKNOWN STEP	2026-05-23T09:00:53.0975348Z git version 2.54.0
+build	UNKNOWN STEP	2026-05-23T09:00:53.1001913Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:53.1023486Z Temporarily overriding HOME='/home/runner/work/_temp/a9473b37-7492-4e24-82bb-07ccc1aa11c0' before making global git config changes
+build	UNKNOWN STEP	2026-05-23T09:00:53.1027058Z Adding repository directory to the temporary git global config as a safe directory
+build	UNKNOWN STEP	2026-05-23T09:00:53.1030985Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Redwood-Island-Module/Redwood-Island-Module
+build	UNKNOWN STEP	2026-05-23T09:00:53.1075009Z Deleting the contents of '/home/runner/work/Redwood-Island-Module/Redwood-Island-Module'
+build	UNKNOWN STEP	2026-05-23T09:00:53.1078210Z ##[group]Initializing the repository
+build	UNKNOWN STEP	2026-05-23T09:00:53.1082711Z [command]/usr/bin/git init /home/runner/work/Redwood-Island-Module/Redwood-Island-Module
+build	UNKNOWN STEP	2026-05-23T09:00:53.1185848Z hint: Using 'master' as the name for the initial branch. This default branch name
+build	UNKNOWN STEP	2026-05-23T09:00:53.1188772Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+build	UNKNOWN STEP	2026-05-23T09:00:53.1190930Z hint: to use in all of your new repositories, which will suppress this warning,
+build	UNKNOWN STEP	2026-05-23T09:00:53.1192951Z hint: call:
+build	UNKNOWN STEP	2026-05-23T09:00:53.1194137Z hint:
+build	UNKNOWN STEP	2026-05-23T09:00:53.1195778Z hint: 	git config --global init.defaultBranch <name>
+build	UNKNOWN STEP	2026-05-23T09:00:53.1197125Z hint:
+build	UNKNOWN STEP	2026-05-23T09:00:53.1198527Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+build	UNKNOWN STEP	2026-05-23T09:00:53.1200464Z hint: 'development'. The just-created branch can be renamed via this command:
+build	UNKNOWN STEP	2026-05-23T09:00:53.1201869Z hint:
+build	UNKNOWN STEP	2026-05-23T09:00:53.1202727Z hint: 	git branch -m <name>
+build	UNKNOWN STEP	2026-05-23T09:00:53.1203939Z hint:
+build	UNKNOWN STEP	2026-05-23T09:00:53.1205131Z hint: Disable this message with "git config set advice.defaultBranchName false"
+build	UNKNOWN STEP	2026-05-23T09:00:53.1207388Z Initialized empty Git repository in /home/runner/work/Redwood-Island-Module/Redwood-Island-Module/.git/
+build	UNKNOWN STEP	2026-05-23T09:00:53.1211178Z [command]/usr/bin/git remote add origin https://github.com/osphvdhwj/Redwood-Island-Module
+build	UNKNOWN STEP	2026-05-23T09:00:53.1313766Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:53.1315948Z ##[group]Disabling automatic garbage collection
+build	UNKNOWN STEP	2026-05-23T09:00:53.1317588Z [command]/usr/bin/git config --local gc.auto 0
+build	UNKNOWN STEP	2026-05-23T09:00:53.1321033Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:53.1322322Z ##[group]Setting up auth
+build	UNKNOWN STEP	2026-05-23T09:00:53.1324064Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build	UNKNOWN STEP	2026-05-23T09:00:53.1328266Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build	UNKNOWN STEP	2026-05-23T09:00:53.1699138Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build	UNKNOWN STEP	2026-05-23T09:00:53.1732990Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build	UNKNOWN STEP	2026-05-23T09:00:53.1944169Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build	UNKNOWN STEP	2026-05-23T09:00:53.1976025Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build	UNKNOWN STEP	2026-05-23T09:00:53.2190916Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+build	UNKNOWN STEP	2026-05-23T09:00:53.2223826Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:53.2225233Z ##[group]Fetching the repository
+build	UNKNOWN STEP	2026-05-23T09:00:53.2232962Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +c444fd99962281a48910925e1837c2f80166dba0:refs/remotes/origin/main
+build	UNKNOWN STEP	2026-05-23T09:00:53.7931490Z From https://github.com/osphvdhwj/Redwood-Island-Module
+build	UNKNOWN STEP	2026-05-23T09:00:53.7934354Z  * [new ref]         c444fd99962281a48910925e1837c2f80166dba0 -> origin/main
+build	UNKNOWN STEP	2026-05-23T09:00:53.7970416Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:53.7972142Z ##[group]Determining the checkout info
+build	UNKNOWN STEP	2026-05-23T09:00:53.7973693Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:53.7977393Z [command]/usr/bin/git sparse-checkout disable
+build	UNKNOWN STEP	2026-05-23T09:00:53.8023501Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+build	UNKNOWN STEP	2026-05-23T09:00:53.8050047Z ##[group]Checking out the ref
+build	UNKNOWN STEP	2026-05-23T09:00:53.8053352Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+build	UNKNOWN STEP	2026-05-23T09:00:53.8240678Z Switched to a new branch 'main'
+build	UNKNOWN STEP	2026-05-23T09:00:53.8243939Z branch 'main' set up to track 'origin/main'.
+build	UNKNOWN STEP	2026-05-23T09:00:53.8252179Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:53.8287982Z [command]/usr/bin/git log -1 --format=%H
+build	UNKNOWN STEP	2026-05-23T09:00:53.8309178Z c444fd99962281a48910925e1837c2f80166dba0
+build	UNKNOWN STEP	2026-05-23T09:00:53.8655124Z ##[group]Run actions/setup-java@v4
+build	UNKNOWN STEP	2026-05-23T09:00:53.8656393Z with:
+build	UNKNOWN STEP	2026-05-23T09:00:53.8657332Z   java-version: 17
+build	UNKNOWN STEP	2026-05-23T09:00:53.8658137Z   distribution: temurin
+build	UNKNOWN STEP	2026-05-23T09:00:53.8658966Z   java-package: jdk
+build	UNKNOWN STEP	2026-05-23T09:00:53.8660067Z   check-latest: false
+build	UNKNOWN STEP	2026-05-23T09:00:53.8660915Z   server-id: github
+build	UNKNOWN STEP	2026-05-23T09:00:53.8661734Z   server-username: GITHUB_ACTOR
+build	UNKNOWN STEP	2026-05-23T09:00:53.8662720Z   server-password: GITHUB_TOKEN
+build	UNKNOWN STEP	2026-05-23T09:00:53.8663664Z   overwrite-settings: true
+build	UNKNOWN STEP	2026-05-23T09:00:53.8664548Z   job-status: success
+build	UNKNOWN STEP	2026-05-23T09:00:53.8665600Z   token: ***
+build	UNKNOWN STEP	2026-05-23T09:00:53.8666344Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:54.0705595Z ##[group]Installed distributions
+build	UNKNOWN STEP	2026-05-23T09:00:54.0767138Z Resolved Java 17.0.19+10 from tool-cache
+build	UNKNOWN STEP	2026-05-23T09:00:54.0768504Z Setting Java 17.0.19+10 as the default
+build	UNKNOWN STEP	2026-05-23T09:00:54.0781780Z Creating toolchains.xml for JDK version 17 from temurin
+build	UNKNOWN STEP	2026-05-23T09:00:54.0857022Z Writing to /home/runner/.m2/toolchains.xml
+build	UNKNOWN STEP	2026-05-23T09:00:54.0857931Z 
+build	UNKNOWN STEP	2026-05-23T09:00:54.0858438Z Java configuration:
+build	UNKNOWN STEP	2026-05-23T09:00:54.0859875Z   Distribution: temurin
+build	UNKNOWN STEP	2026-05-23T09:00:54.0861063Z   Version: 17.0.19+10
+build	UNKNOWN STEP	2026-05-23T09:00:54.0862495Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+build	UNKNOWN STEP	2026-05-23T09:00:54.0863475Z 
+build	UNKNOWN STEP	2026-05-23T09:00:54.0864649Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:54.0880255Z Creating settings.xml with server-id: github
+build	UNKNOWN STEP	2026-05-23T09:00:54.0883824Z Writing to /home/runner/.m2/settings.xml
+build	UNKNOWN STEP	2026-05-23T09:00:54.1159108Z ##[group]Run gradle/actions/setup-gradle@v3
+build	UNKNOWN STEP	2026-05-23T09:00:54.1160045Z with:
+build	UNKNOWN STEP	2026-05-23T09:00:54.1160661Z   cache-disabled: false
+build	UNKNOWN STEP	2026-05-23T09:00:54.1161328Z   cache-read-only: false
+build	UNKNOWN STEP	2026-05-23T09:00:54.1161994Z   cache-write-only: false
+build	UNKNOWN STEP	2026-05-23T09:00:54.1162688Z   cache-overwrite-existing: false
+build	UNKNOWN STEP	2026-05-23T09:00:54.1163447Z   gradle-home-cache-includes: caches
+build	UNKNOWN STEP	notifications
+build	UNKNOWN STEP	
+build	UNKNOWN STEP	2026-05-23T09:00:54.1164233Z   gradle-home-cache-cleanup: false
+build	UNKNOWN STEP	2026-05-23T09:00:54.1164938Z   add-job-summary: always
+build	UNKNOWN STEP	2026-05-23T09:00:54.1165632Z   add-job-summary-as-pr-comment: never
+build	UNKNOWN STEP	2026-05-23T09:00:54.1166355Z   dependency-graph: disabled
+build	UNKNOWN STEP	2026-05-23T09:00:54.1167086Z   dependency-graph-continue-on-failure: true
+build	UNKNOWN STEP	2026-05-23T09:00:54.1167817Z   build-scan-publish: false
+build	UNKNOWN STEP	2026-05-23T09:00:54.1168514Z   validate-wrappers: false
+build	UNKNOWN STEP	2026-05-23T09:00:54.1169195Z   generate-job-summary: true
+build	UNKNOWN STEP	2026-05-23T09:00:54.1170021Z   gradle-home-cache-strict-match: false
+build	UNKNOWN STEP	2026-05-23T09:00:54.1170784Z   workflow-job-context: null
+build	UNKNOWN STEP	2026-05-23T09:00:54.1171649Z   github-token: ***
+build	UNKNOWN STEP	2026-05-23T09:00:54.1172260Z env:
+build	UNKNOWN STEP	2026-05-23T09:00:54.1173005Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+build	UNKNOWN STEP	2026-05-23T09:00:54.1173989Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+build	UNKNOWN STEP	2026-05-23T09:00:54.1174819Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:55.9864993Z Merged default JDK locations into /home/runner/.m2/toolchains.xml
+build	UNKNOWN STEP	2026-05-23T09:00:55.9867918Z ##[group]Restore Gradle state from cache
+build	UNKNOWN STEP	2026-05-23T09:00:56.0965323Z ##[warning]Failed to restore gradle-home-v1|Linux|build[cf940f3ebadc02090f040e056cc1a147]-c444fd99962281a48910925e1837c2f80166dba0: Error: Cache service responded with 400
+build	UNKNOWN STEP	2026-05-23T09:00:56.1018656Z Gradle User Home cache not found. Will initialize empty.
+build	UNKNOWN STEP	2026-05-23T09:00:56.1019759Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:56.1135724Z ##[group]Run chmod +x gradlew
+build	UNKNOWN STEP	2026-05-23T09:00:56.1136051Z ^[[36;1mchmod +x gradlew^[[0m
+build	UNKNOWN STEP	2026-05-23T09:00:56.1172917Z shell: /usr/bin/bash -e {0}
+build	UNKNOWN STEP	2026-05-23T09:00:56.1173184Z env:
+build	UNKNOWN STEP	2026-05-23T09:00:56.1173487Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+build	UNKNOWN STEP	2026-05-23T09:00:56.1173994Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+build	UNKNOWN STEP	2026-05-23T09:00:56.1174410Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+build	UNKNOWN STEP	2026-05-23T09:00:56.1174711Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+build	UNKNOWN STEP	2026-05-23T09:00:56.1174988Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+build	UNKNOWN STEP	2026-05-23T09:00:56.1175417Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+build	UNKNOWN STEP	2026-05-23T09:00:56.1175909Z   DEVELOCITY_AUTO_INJECTION_CUSTOM_VALUE: gradle-actions
+build	UNKNOWN STEP	2026-05-23T09:00:56.1176425Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+build	UNKNOWN STEP	2026-05-23T09:00:56.1176673Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:56.1296415Z ##[group]Run ./gradlew check --stacktrace
+build	UNKNOWN STEP	2026-05-23T09:00:56.1296753Z ^[[36;1m./gradlew check --stacktrace^[[0m
+build	UNKNOWN STEP	2026-05-23T09:00:56.1326993Z shell: /usr/bin/bash -e {0}
+build	UNKNOWN STEP	2026-05-23T09:00:56.1327243Z env:
+build	UNKNOWN STEP	2026-05-23T09:00:56.1327546Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+build	UNKNOWN STEP	2026-05-23T09:00:56.1328029Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+build	UNKNOWN STEP	2026-05-23T09:00:56.1328433Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+build	UNKNOWN STEP	2026-05-23T09:00:56.1328730Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+build	UNKNOWN STEP	2026-05-23T09:00:56.1329016Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+build	UNKNOWN STEP	2026-05-23T09:00:56.1329426Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+build	UNKNOWN STEP	2026-05-23T09:00:56.1330186Z   DEVELOCITY_AUTO_INJECTION_CUSTOM_VALUE: gradle-actions
+build	UNKNOWN STEP	2026-05-23T09:00:56.1330518Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+build	UNKNOWN STEP	2026-05-23T09:00:56.1330825Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:00:56.7356418Z Downloading https://services.gradle.org/distributions/gradle-8.11.1-bin.zip
+build	UNKNOWN STEP	2026-05-23T09:00:59.6005744Z .............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%.............100%
+build	UNKNOWN STEP	2026-05-23T09:01:01.0103470Z 
+build	UNKNOWN STEP	2026-05-23T09:01:01.0105611Z Welcome to Gradle 8.11.1!
+build	UNKNOWN STEP	2026-05-23T09:01:01.0117913Z 
+build	UNKNOWN STEP	2026-05-23T09:01:01.0119997Z Here are the highlights of this release:
+build	UNKNOWN STEP	2026-05-23T09:01:01.0121095Z  - Parallel load and store for Configuration Cache
+build	UNKNOWN STEP	2026-05-23T09:01:01.0121989Z  - Java compilation errors at the end of the build output
+build	UNKNOWN STEP	2026-05-23T09:01:01.0122850Z  - Consolidated report for warnings and deprecations
+build	UNKNOWN STEP	2026-05-23T09:01:01.0123582Z 
+build	UNKNOWN STEP	2026-05-23T09:01:01.0124256Z For more details see https://docs.gradle.org/8.11.1/release-notes.html
+build	UNKNOWN STEP	2026-05-23T09:01:01.0124796Z 
+build	UNKNOWN STEP	2026-05-23T09:01:01.1094022Z Starting a Gradle Daemon (subsequent builds will be faster)
+build	UNKNOWN STEP	2026-05-23T09:01:04.0111500Z Calculating task graph as no cached configuration is available for tasks: check
+build	UNKNOWN STEP	2026-05-23T09:02:43.0143441Z > Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+build	UNKNOWN STEP	2026-05-23T09:02:43.0209484Z > Task :app:preBuild UP-TO-DATE
+build	UNKNOWN STEP	2026-05-23T09:02:43.0240192Z > Task :app:preDebugBuild UP-TO-DATE
+build	UNKNOWN STEP	2026-05-23T09:02:43.0243256Z > Task :app:buildKotlinToolingMetadata
+build	UNKNOWN STEP	2026-05-23T09:02:43.1105070Z > Task :app:generateDebugResValues
+build	UNKNOWN STEP	2026-05-23T09:02:43.1150481Z > Task :app:generateDebugBuildConfig
+build	UNKNOWN STEP	2026-05-23T09:02:43.1180360Z > Task :app:generateDebugResources
+build	UNKNOWN STEP	2026-05-23T09:02:43.1180978Z > Task :app:createDebugCompatibleScreenManifests
+build	UNKNOWN STEP	2026-05-23T09:02:43.2094184Z > Task :app:packageDebugResources
+build	UNKNOWN STEP	2026-05-23T09:02:47.5146899Z > Task :app:mapDebugSourceSetPaths
+build	UNKNOWN STEP	2026-05-23T09:02:47.5149318Z > Task :app:extractDeepLinksDebug
+build	UNKNOWN STEP	2026-05-23T09:02:47.6130768Z > Task :app:checkDebugAarMetadata
+build	UNKNOWN STEP	2026-05-23T09:02:47.7122946Z > Task :app:parseDebugLocalResources
+build	UNKNOWN STEP	2026-05-23T09:02:47.7140521Z > Task :app:preDebugAndroidTestBuild SKIPPED
+build	UNKNOWN STEP	2026-05-23T09:02:47.8121147Z > Task :app:generateDebugAndroidTestResValues FROM-CACHE
+build	UNKNOWN STEP	2026-05-23T09:02:47.8180236Z > Task :app:extractProguardFiles
+build	UNKNOWN STEP	2026-05-23T09:02:47.8227328Z > Task :app:preDebugUnitTestBuild UP-TO-DATE
+build	UNKNOWN STEP	2026-05-23T09:02:48.4092899Z > Task :app:javaPreCompileDebugUnitTest
+build	UNKNOWN STEP	2026-05-23T09:02:48.4160350Z > Task :app:preReleaseBuild UP-TO-DATE
+build	UNKNOWN STEP	2026-05-23T09:02:48.4200489Z > Task :app:generateReleaseBuildConfig
+build	UNKNOWN STEP	2026-05-23T09:02:48.4230288Z > Task :app:javaPreCompileDebug FROM-CACHE
+build	UNKNOWN STEP	2026-05-23T09:02:48.4290248Z > Task :app:generateReleaseResValues FROM-CACHE
+build	UNKNOWN STEP	2026-05-23T09:02:48.4319968Z 
+build	UNKNOWN STEP	2026-05-23T09:02:48.4360133Z > Task :app:processDebugMainManifest
+build	UNKNOWN STEP	2026-05-23T09:02:48.4361348Z /home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/AndroidManifest.xml:22:5-139:19 Warning:
+build	UNKNOWN STEP	2026-05-23T09:02:48.4390758Z 	application@android:name was tagged at AndroidManifest.xml:22 to replace other declarations but no other declaration present
+build	UNKNOWN STEP	2026-05-23T09:02:48.4419886Z 
+build	UNKNOWN STEP	2026-05-23T09:02:48.4450116Z > Task :app:mapReleaseSourceSetPaths
+build	UNKNOWN STEP	2026-05-23T09:02:48.4470622Z > Task :app:generateReleaseResources
+build	UNKNOWN STEP	2026-05-23T09:02:48.4510129Z > Task :app:checkReleaseAarMetadata
+build	UNKNOWN STEP	2026-05-23T09:02:48.5130882Z > Task :app:packageReleaseResources
+build	UNKNOWN STEP	2026-05-23T09:02:48.5152820Z > Task :app:parseReleaseLocalResources FROM-CACHE
+build	UNKNOWN STEP	2026-05-23T09:02:48.5157561Z > Task :app:createReleaseCompatibleScreenManifests
+build	UNKNOWN STEP	2026-05-23T09:02:48.5158315Z > Task :app:extractDeepLinksRelease FROM-CACHE
+build	UNKNOWN STEP	2026-05-23T09:02:48.6140725Z > Task :app:processDebugManifest
+build	UNKNOWN STEP	2026-05-23T09:02:48.6170387Z > Task :app:processDebugManifestForPackage
+build	UNKNOWN STEP	2026-05-23T09:02:48.7120683Z > Task :app:javaPreCompileRelease FROM-CACHE
+build	UNKNOWN STEP	2026-05-23T09:02:48.7150298Z > Task :app:preReleaseUnitTestBuild UP-TO-DATE
+build	UNKNOWN STEP	2026-05-23T09:02:48.7180403Z > Task :app:javaPreCompileReleaseUnitTest FROM-CACHE
+build	UNKNOWN STEP	2026-05-23T09:02:48.7210083Z 
+build	UNKNOWN STEP	2026-05-23T09:02:48.7250214Z > Task :app:processReleaseMainManifest
+build	UNKNOWN STEP	2026-05-23T09:02:48.7280596Z /home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/AndroidManifest.xml:22:5-139:19 Warning:
+build	UNKNOWN STEP	2026-05-23T09:02:48.7310774Z 	application@android:name was tagged at AndroidManifest.xml:22 to replace other declarations but no other declaration present
+build	UNKNOWN STEP	2026-05-23T09:02:48.7339981Z 
+build	UNKNOWN STEP	2026-05-23T09:02:48.7370173Z > Task :app:processReleaseManifest
+build	UNKNOWN STEP	2026-05-23T09:02:48.7400244Z > Task :app:processReleaseManifestForPackage
+build	UNKNOWN STEP	2026-05-23T09:02:51.3099501Z > Task :app:mergeDebugResources
+build	UNKNOWN STEP	2026-05-23T09:02:51.8106980Z > Task :app:mergeReleaseResources
+build	UNKNOWN STEP	2026-05-23T09:02:52.5098887Z > Task :app:processDebugResources
+build	UNKNOWN STEP	2026-05-23T09:02:52.5160314Z > Task :app:processReleaseResources
+build	UNKNOWN STEP	2026-05-23T09:03:21.5092640Z 
+build	UNKNOWN STEP	2026-05-23T09:03:21.5105831Z > Task :app:kaptGenerateStubsDebugKotlin
+build	UNKNOWN STEP	2026-05-23T09:03:21.5106835Z w: Kapt currently doesn't support language version 2.0+. Falling back to 1.9.
+build	UNKNOWN STEP	2026-05-23T09:03:21.5114386Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/design/GlowComponents.kt:169:2 imports are only allowed in the beginning of file
+build	UNKNOWN STEP	2026-05-23T09:03:21.7141705Z e: file:///home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/src/main/java/com/example/dynamicisland/ui/design/GlowComponents.kt:169:2 imports are only allowed in the beginning of file
+build	UNKNOWN STEP	2026-05-23T09:03:21.7143110Z 
+build	UNKNOWN STEP	2026-05-23T09:03:21.7194772Z > Task :app:kaptGenerateStubsDebugKotlin FAILED
+build	UNKNOWN STEP	2026-05-23T09:03:21.7220067Z 
+build	UNKNOWN STEP	2026-05-23T09:03:21.7280315Z > Task :app:kaptGenerateStubsReleaseKotlin FAILED
+build	UNKNOWN STEP	2026-05-23T09:03:21.7295734Z w: Kapt currently doesn't support language version 2.0+. Falling back to 1.9.
+build	UNKNOWN STEP	2026-05-23T09:03:21.8150193Z 
+build	UNKNOWN STEP	2026-05-23T09:03:21.8200827Z FAILURE: Build completed with 2 failures.
+build	UNKNOWN STEP	2026-05-23T09:03:21.8238943Z 
+build	UNKNOWN STEP	2026-05-23T09:03:21.8350456Z 1: Task failed with an exception.
+build	UNKNOWN STEP	2026-05-23T09:03:21.8410236Z -----------
+build	UNKNOWN STEP	2026-05-23T09:03:21.8440257Z * What went wrong:
+build	UNKNOWN STEP	2026-05-23T09:03:21.8500377Z Execution failed for task ':app:kaptGenerateStubsReleaseKotlin'.
+build	UNKNOWN STEP	2026-05-23T09:03:21.8551097Z > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+build	UNKNOWN STEP	2026-05-23T09:03:21.8590125Z    > Compilation error. See log for more details
+build	UNKNOWN STEP	2026-05-23T09:03:21.8639960Z 
+build	UNKNOWN STEP	2026-05-23T09:03:21.8670296Z * Try:
+build	UNKNOWN STEP	2026-05-23T09:03:21.8700306Z > Run with --info or --debug option to get more log output.
+build	UNKNOWN STEP	2026-05-23T09:03:21.8710421Z > Run with --scan to get full insights.
+build	UNKNOWN STEP	2026-05-23T09:03:21.8760658Z > Get more help at https://help.gradle.org.
+build	UNKNOWN STEP	2026-05-23T09:03:21.8779979Z 
+build	UNKNOWN STEP	2026-05-23T09:03:21.8814140Z * Exception is:
+build	UNKNOWN STEP	2026-05-23T09:03:21.8840708Z org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:kaptGenerateStubsReleaseKotlin'.
+build	UNKNOWN STEP	2026-05-23T09:03:21.8855334Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:130)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8870413Z 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:293)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8872494Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:128)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8874147Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8875784Z 	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8877494Z 	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8879184Z 	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8880994Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8882510Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8884006Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8885388Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8886762Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8888391Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8890605Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8910640Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8940739Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8970725Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	UNKNOWN STEP	2026-05-23T09:03:21.8993967Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9020850Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9050684Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9061183Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9080827Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9120857Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9181046Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9240320Z 37 actionable tasks: 30 executed, 7 from cache
+build	UNKNOWN STEP	2026-05-23T09:03:21.9253881Z 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9254839Z Configuration cache entry stored.
+build	UNKNOWN STEP	2026-05-23T09:03:21.9280829Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9311035Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9340631Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9342201Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9369979Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9400664Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9409158Z Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionException: A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+build	UNKNOWN STEP	2026-05-23T09:03:21.9411750Z 	at org.gradle.workers.internal.DefaultWorkerExecutor$WorkItemExecution.waitForCompletion(DefaultWorkerExecutor.java:287)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9413471Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.lambda$waitForItemsAndGatherFailures$2(DefaultAsyncWorkTracker.java:130)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9414685Z 	at org.gradle.internal.Factories$1.create(Factories.java:31)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9415771Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocks(DefaultWorkerLeaseService.java:335)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9417198Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocks(DefaultWorkerLeaseService.java:318)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9418626Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLock(DefaultWorkerLeaseService.java:323)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9420423Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:126)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9422176Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:92)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9423744Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForAll(DefaultAsyncWorkTracker.java:78)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9425239Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForCompletion(DefaultAsyncWorkTracker.java:66)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9426589Z 	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:252)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9427978Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9429569Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9431361Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9433059Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9434649Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9436186Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9437689Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9439076Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:229)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9440574Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:212)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9441795Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:195)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9442965Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:162)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9443974Z 	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:105)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9444946Z 	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:44)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9445839Z 	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9446724Z 	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:56)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9447943Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9450163Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9451650Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9453116Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9457945Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9459254Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9460759Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9461822Z 	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:56)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9462720Z 	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:44)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9463740Z 	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:42)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9465030Z 	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:75)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9466374Z 	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9467755Z 	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:50)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9469366Z 	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:28)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9471227Z 	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:67)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9472761Z 	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:37)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9474355Z 	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:61)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9476031Z 	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:26)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9477742Z 	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:69)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9479469Z 	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:46)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9481175Z 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:40)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9482760Z 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:29)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9484419Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:189)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9485884Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeAndStoreInCache(BuildCacheStep.java:145)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9487376Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$4(BuildCacheStep.java:101)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9488863Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$5(BuildCacheStep.java:101)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9490302Z 	at org.gradle.internal.Try$Success.map(Try.java:175)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9502010Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithCache(BuildCacheStep.java:85)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9503432Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$0(BuildCacheStep.java:74)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9504501Z 	at org.gradle.internal.Either$Left.fold(Either.java:115)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9505457Z 	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9506622Z 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:73)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9507935Z 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:48)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9510005Z 	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:46)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9511554Z 	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:35)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9513130Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:75)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9514614Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:53)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9517661Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:53)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9519082Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:35)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9521030Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9523036Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9525091Z 	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:49)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9527110Z 	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:27)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9529031Z 	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:71)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9531064Z 	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:39)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9532588Z 	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:65)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9533949Z 	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:36)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9535210Z 	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:107)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9536406Z 	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:56)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9538034Z 	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:64)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9540438Z 	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:43)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9542475Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.executeWithNonEmptySources(AbstractSkipEmptyWorkStep.java:125)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9544231Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:56)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9545983Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:36)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9555112Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9557193Z 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9576647Z 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9578407Z 	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:75)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9580177Z 	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:41)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9581911Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$execute$0(AssignMutableWorkspaceStep.java:35)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9583508Z 	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:289)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9585003Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:31)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9587140Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:22)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9588736Z 	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9592043Z 	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9593766Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9595760Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9597818Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9599583Z 	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9601349Z 	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9602672Z 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:48)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9604004Z 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:35)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9605395Z 	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:61)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9607059Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:127)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9630910Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9648967Z 	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9651237Z 	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9653227Z 	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9654953Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9656658Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9658427Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9660210Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9661823Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9663631Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9665605Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9667524Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9669152Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9671171Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9672845Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9674472Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9676094Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9678407Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9680308Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9682431Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9684541Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9686438Z 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9688259Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9690616Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9692515Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9693978Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9695457Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9696964Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9698562Z Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
+build	UNKNOWN STEP	2026-05-23T09:03:21.9700409Z 	at org.jetbrains.kotlin.gradle.tasks.TasksUtilsKt.throwExceptionIfCompilationFailed(tasksUtils.kt:21)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9702039Z 	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.run(GradleKotlinCompilerWork.kt:119)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9704049Z 	at org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction.execute(GradleCompilerRunnerWithWorkers.kt:76)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9705845Z 	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9707165Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:66)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9708572Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:62)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9710260Z 	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9711877Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:62)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9713267Z 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9714325Z 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9715924Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9717977Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9720168Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9721960Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9723681Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9725365Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9727046Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9729150Z 	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9730931Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9732346Z 	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9734096Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:194)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9736038Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:127)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9737925Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:169)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9739317Z 	at org.gradle.internal.Factories$1.create(Factories.java:31)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9740701Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9742229Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9743818Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:132)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9745509Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:164)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9747328Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:133)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9748496Z 	... 2 more
+build	UNKNOWN STEP	2026-05-23T09:03:21.9748830Z 
+build	UNKNOWN STEP	2026-05-23T09:03:21.9749165Z ==============================================================================
+build	UNKNOWN STEP	2026-05-23T09:03:21.9749903Z 
+build	UNKNOWN STEP	2026-05-23T09:03:21.9750205Z 2: Task failed with an exception.
+build	UNKNOWN STEP	2026-05-23T09:03:21.9750716Z -----------
+build	UNKNOWN STEP	2026-05-23T09:03:21.9751149Z * What went wrong:
+build	UNKNOWN STEP	2026-05-23T09:03:21.9751798Z Execution failed for task ':app:kaptGenerateStubsDebugKotlin'.
+build	UNKNOWN STEP	2026-05-23T09:03:21.9753201Z > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+build	UNKNOWN STEP	2026-05-23T09:03:21.9754504Z    > Compilation error. See log for more details
+build	UNKNOWN STEP	2026-05-23T09:03:21.9754994Z 
+build	UNKNOWN STEP	2026-05-23T09:03:21.9755247Z * Try:
+build	UNKNOWN STEP	2026-05-23T09:03:21.9755804Z > Run with --info or --debug option to get more log output.
+build	UNKNOWN STEP	2026-05-23T09:03:21.9756530Z > Run with --scan to get full insights.
+build	UNKNOWN STEP	2026-05-23T09:03:21.9757170Z > Get more help at https://help.gradle.org.
+build	UNKNOWN STEP	2026-05-23T09:03:21.9757654Z 
+build	UNKNOWN STEP	2026-05-23T09:03:21.9757954Z * Exception is:
+build	UNKNOWN STEP	2026-05-23T09:03:21.9758911Z org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:kaptGenerateStubsDebugKotlin'.
+build	UNKNOWN STEP	2026-05-23T09:03:21.9760874Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:130)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9762353Z 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:293)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9763791Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:128)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9765579Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9767376Z 	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9769255Z 	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9771380Z 	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9773081Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9774717Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9776849Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9778474Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9780229Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9782202Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9784340Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9786279Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9787946Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9789557Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9791268Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9792772Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9794314Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9795724Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9797276Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9799128Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9801505Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9803370Z 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9805145Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9807166Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9808943Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9810776Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9812330Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9813806Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9815168Z 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9816474Z 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9817482Z 	at java.base/java.lang.Thread.run(Thread.java:840)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9819363Z Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionException: A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+build	UNKNOWN STEP	2026-05-23T09:03:21.9821985Z 	at org.gradle.workers.internal.DefaultWorkerExecutor$WorkItemExecution.waitForCompletion(DefaultWorkerExecutor.java:287)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9823700Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.lambda$waitForItemsAndGatherFailures$2(DefaultAsyncWorkTracker.java:130)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9825457Z 	at org.gradle.internal.Factories$1.create(Factories.java:31)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9826627Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocks(DefaultWorkerLeaseService.java:335)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9828146Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocks(DefaultWorkerLeaseService.java:318)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9829803Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLock(DefaultWorkerLeaseService.java:323)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9831388Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:126)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9833090Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:92)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9834697Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForAll(DefaultAsyncWorkTracker.java:78)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9836093Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForCompletion(DefaultAsyncWorkTracker.java:66)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9837451Z 	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:252)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9838814Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9840654Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9842222Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9843744Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9845328Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9846972Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9848533Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9850206Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:229)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9851544Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:212)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9853029Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:195)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9854456Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:162)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9855678Z 	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:105)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9856881Z 	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:44)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9857980Z 	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9859134Z 	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:56)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9860997Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9863033Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9864807Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9866323Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9867734Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9869281Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9871109Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9872888Z 	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:56)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9874098Z 	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:44)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9875401Z 	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:42)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9876772Z 	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:75)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9878054Z 	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9879865Z 	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:50)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9881515Z 	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:28)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9883147Z 	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:67)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9884742Z 	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:37)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9886342Z 	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:61)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9888151Z 	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:26)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9890198Z 	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:69)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9892078Z 	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:46)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9893747Z 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:40)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9895249Z 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:29)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9896631Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:189)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9898104Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeAndStoreInCache(BuildCacheStep.java:145)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9899897Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$4(BuildCacheStep.java:101)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9901141Z 	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9902363Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$5(BuildCacheStep.java:101)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9903513Z 	at org.gradle.internal.Try$Success.map(Try.java:175)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9904634Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithCache(BuildCacheStep.java:85)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9905987Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$0(BuildCacheStep.java:74)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9907031Z 	at org.gradle.internal.Either$Left.fold(Either.java:115)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9908065Z 	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9909313Z 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:73)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9910854Z 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:48)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9912127Z 	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:46)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9913728Z 	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:35)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9915228Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:75)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9916658Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:53)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9917820Z 	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9918891Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:53)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9921118Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:35)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9922811Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9924862Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9927001Z 	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:49)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9929069Z 	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:27)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9931351Z 	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:71)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9933314Z 	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:39)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9934924Z 	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:65)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9936236Z 	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:36)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9937571Z 	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:107)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9938748Z 	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:56)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9940647Z 	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:64)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9942801Z 	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:43)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9944863Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.executeWithNonEmptySources(AbstractSkipEmptyWorkStep.java:125)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9946724Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:56)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9948320Z 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:36)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9950449Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9952350Z 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9954120Z 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9955937Z 	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:75)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9957511Z 	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:41)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9959158Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$execute$0(AssignMutableWorkspaceStep.java:35)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9961507Z 	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:289)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9963029Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:31)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9964658Z 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:22)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9967826Z 	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9969458Z 	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9971470Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9973308Z 	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9974963Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9977089Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9978901Z 	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9981556Z 	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9982976Z 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:48)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9984313Z 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:35)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9985780Z 	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:61)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9987518Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:127)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9989888Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9991893Z 	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9993621Z 	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+build	UNKNOWN STEP	2026-05-23T09:03:21.9995332Z 	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0005607Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0007263Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0008944Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0010724Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0012271Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0014004Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0015994Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0017742Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0019254Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0020944Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0021915Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0022722Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0023485Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0024189Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0024975Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0025909Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0027132Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0028150Z 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0029012Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0030332Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0031200Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0031880Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0032584Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0033299Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0033960Z 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0034583Z 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0035058Z 	at java.base/java.lang.Thread.run(Thread.java:840)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0035620Z Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
+build	UNKNOWN STEP	2026-05-23T09:03:22.0036397Z 	at org.jetbrains.kotlin.gradle.tasks.TasksUtilsKt.throwExceptionIfCompilationFailed(tasksUtils.kt:21)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0037133Z 	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.run(GradleKotlinCompilerWork.kt:119)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0038052Z 	at org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction.execute(GradleCompilerRunnerWithWorkers.kt:76)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0038918Z 	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0039794Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:66)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0040657Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:62)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0041359Z 	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0042088Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:62)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0042711Z 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0043200Z 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0043947Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0044958Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0045840Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0046599Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0047368Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0048137Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0048893Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0050032Z 	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0050894Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:59)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0051871Z 	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0052463Z 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0053158Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:194)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0054109Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:127)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0055020Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:169)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0055663Z 	at org.gradle.internal.Factories$1.create(Factories.java:31)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0056193Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0056951Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0057721Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:132)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0058566Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:164)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0059465Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:133)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0060537Z 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0061044Z 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+build	UNKNOWN STEP	2026-05-23T09:03:22.0061378Z 	... 5 more
+build	UNKNOWN STEP	2026-05-23T09:03:22.0061478Z 
+build	UNKNOWN STEP	2026-05-23T09:03:22.0061602Z ==============================================================================
+build	UNKNOWN STEP	2026-05-23T09:03:22.0061810Z 
+build	UNKNOWN STEP	2026-05-23T09:03:22.0061898Z BUILD FAILED in 2m 25s
+build	UNKNOWN STEP	2026-05-23T09:03:22.4321581Z ##[error]Process completed with exit code 1.
+build	UNKNOWN STEP	2026-05-23T09:03:22.4411195Z ##[group]Run actions/upload-artifact@v4
+build	UNKNOWN STEP	2026-05-23T09:03:22.4411612Z with:
+build	UNKNOWN STEP	2026-05-23T09:03:22.4411876Z   name: lint-reports
+build	UNKNOWN STEP	2026-05-23T09:03:22.4412827Z   path: app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt
+build	UNKNOWN STEP	app/build/reports/lint-results-debug.html
+build	UNKNOWN STEP	
+build	UNKNOWN STEP	2026-05-23T09:03:22.4413855Z   overwrite: true
+build	UNKNOWN STEP	2026-05-23T09:03:22.4414147Z   if-no-files-found: warn
+build	UNKNOWN STEP	2026-05-23T09:03:22.4414471Z   compression-level: 6
+build	UNKNOWN STEP	2026-05-23T09:03:22.4414785Z   include-hidden-files: false
+build	UNKNOWN STEP	2026-05-23T09:03:22.4415113Z env:
+build	UNKNOWN STEP	2026-05-23T09:03:22.4415524Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+build	UNKNOWN STEP	2026-05-23T09:03:22.4416234Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+build	UNKNOWN STEP	2026-05-23T09:03:22.4416882Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+build	UNKNOWN STEP	2026-05-23T09:03:22.4417337Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+build	UNKNOWN STEP	2026-05-23T09:03:22.4417802Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+build	UNKNOWN STEP	2026-05-23T09:03:22.4418500Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+build	UNKNOWN STEP	2026-05-23T09:03:22.4419247Z   DEVELOCITY_AUTO_INJECTION_CUSTOM_VALUE: gradle-actions
+build	UNKNOWN STEP	2026-05-23T09:03:22.4420032Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+build	UNKNOWN STEP	2026-05-23T09:03:22.4420410Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:03:22.7048133Z Multiple search paths detected. Calculating the least common ancestor of all paths
+build	UNKNOWN STEP	2026-05-23T09:03:22.7054083Z The least common ancestor is /home/runner/work/Redwood-Island-Module/Redwood-Island-Module/app/build. This will be the root directory of the artifact
+build	UNKNOWN STEP	2026-05-23T09:03:22.7058337Z ##[warning]No files were found with the provided path: app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt
+build	UNKNOWN STEP	app/build/reports/lint-results-debug.html. No artifacts will be uploaded.
+build	UNKNOWN STEP	2026-05-23T09:03:22.7265625Z Post job cleanup.
+build	UNKNOWN STEP	2026-05-23T09:03:22.9600360Z In post-action step
+build	UNKNOWN STEP	2026-05-23T09:03:22.9608656Z Stopping all Gradle daemons before saving Gradle User Home state
+build	UNKNOWN STEP	2026-05-23T09:03:22.9609553Z Stopping Gradle daemons for /home/runner/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1
+build	UNKNOWN STEP	2026-05-23T09:03:22.9627459Z [command]/home/runner/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle --stop
+build	UNKNOWN STEP	2026-05-23T09:03:23.6580871Z Stopping Daemon(s)
+build	UNKNOWN STEP	2026-05-23T09:03:23.6591722Z 1 Daemon stopped
+build	UNKNOWN STEP	2026-05-23T09:03:23.6847937Z ##[group]Caching Gradle state
+build	UNKNOWN STEP	2026-05-23T09:03:23.7008843Z Not saving configuration-cache state, as no encryption key was provided
+build	UNKNOWN STEP	2026-05-23T09:03:23.7077571Z Caching generated-gradle-jars with path '/home/runner/.gradle/caches/8.11.1/generated-gradle-jars/gradle-api-8.11.1.jar' and cache key: gradle-generated-gradle-jars-v1-162ec066fc0a1bae82804bbc69cfff33
+build	UNKNOWN STEP	2026-05-23T09:03:23.7104239Z Caching wrapper-zips with path '/home/runner/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c' and cache key: gradle-wrapper-zips-v1-c3a078940a5ca7b83357239a46024f48
+build	UNKNOWN STEP	2026-05-23T09:03:23.7275534Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	UNKNOWN STEP	2026-05-23T09:03:23.7314679Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	UNKNOWN STEP	2026-05-23T09:03:24.6544627Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches/8.11.1/generated-gradle-jars/gradle-api-8.11.1.jar' and key: gradle-generated-gradle-jars-v1-162ec066fc0a1bae82804bbc69cfff33: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0XG0RagAAAADY7UpOLAwaTYYS0JPa5cdCTVNQMzExMDAwMTA3MDA5AEVkZ2U=
+build	UNKNOWN STEP	2026-05-23T09:03:24.6897000Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c' and key: gradle-wrapper-zips-v1-c3a078940a5ca7b83357239a46024f48: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0XG0RagAAAABIzY4zkUtESKTcCWGafwW4TVNQMzExMDAwMTAxMDI3AEVkZ2U=
+build	UNKNOWN STEP	2026-05-23T09:03:24.7689917Z Caching dependencies with path '/home/runner/.gradle/caches/modules-*/files-*/*/*/*/*' and cache key: gradle-dependencies-v1-82cc5711f2b4797c61b830d6bb8ff8ac
+build	UNKNOWN STEP	2026-05-23T09:03:24.7768855Z Caching instrumented-jars with path '/home/runner/.gradle/caches/jars-*/*/' and cache key: gradle-instrumented-jars-v1-a28e35082f8b33a768a79c3127096ff5
+build	UNKNOWN STEP	2026-05-23T09:03:24.7934192Z Caching kotlin-dsl with path '/home/runner/.gradle/caches/*/kotlin-dsl/accessors/*/
+build	UNKNOWN STEP	2026-05-23T09:03:24.7935500Z /home/runner/.gradle/caches/*/kotlin-dsl/scripts/*/' and cache key: gradle-kotlin-dsl-v1-8ca77bb03547c7b996395972929c4166
+build	UNKNOWN STEP	2026-05-23T09:03:24.7968620Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	UNKNOWN STEP	2026-05-23T09:03:24.8108090Z Caching groovy-dsl with path '/home/runner/.gradle/caches/*/groovy-dsl/*/' and cache key: gradle-groovy-dsl-v1-43680091b3edad6a76d57c45a151865a
+build	UNKNOWN STEP	2026-05-23T09:03:24.8305324Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	UNKNOWN STEP	2026-05-23T09:03:24.8435699Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	UNKNOWN STEP	2026-05-23T09:03:24.8634780Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches/jars-*/*/' and key: gradle-instrumented-jars-v1-a28e35082f8b33a768a79c3127096ff5: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0XG0RagAAAAArkqiuxLkZQrsKiwcW0LeqTVNQMzExMDAwMTA4MDA5AEVkZ2U=
+build	UNKNOWN STEP	2026-05-23T09:03:24.9096541Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches/*/groovy-dsl/*/' and key: gradle-groovy-dsl-v1-43680091b3edad6a76d57c45a151865a: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0XG0RagAAAAB1PoHdYCBcSZNv1lFdIynOTVNQMzExMDAwMTA4MDM3AEVkZ2U=
+build	UNKNOWN STEP	2026-05-23T09:03:24.9627613Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches/*/kotlin-dsl/accessors/*/
+build	UNKNOWN STEP	/home/runner/.gradle/caches/*/kotlin-dsl/scripts/*/' and key: gradle-kotlin-dsl-v1-8ca77bb03547c7b996395972929c4166: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0XG0RagAAAABCOZx5G0eISaQcSdj2Kj9fTVNQMzExMDAwMTA3MDE3AEVkZ2U=
+build	UNKNOWN STEP	2026-05-23T09:03:25.4220707Z Caching transforms with path '/home/runner/.gradle/caches/transforms-4/*/
+build	UNKNOWN STEP	2026-05-23T09:03:25.4221872Z /home/runner/.gradle/caches/*/transforms/*/' and cache key: gradle-transforms-v1-4c79fdf5bd7a5ee94f673822efb0369e
+build	UNKNOWN STEP	2026-05-23T09:03:25.5025410Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	UNKNOWN STEP	2026-05-23T09:03:25.8865895Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	UNKNOWN STEP	2026-05-23T09:03:26.9685705Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches/modules-*/files-*/*/*/*/*' and key: gradle-dependencies-v1-82cc5711f2b4797c61b830d6bb8ff8ac: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0Xm0RagAAAABxKKIPJoOPQrKskLS+XndHTVNQMzExMDAwMTA3MDUxAEVkZ2U=
+build	UNKNOWN STEP	2026-05-23T09:03:28.1445946Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches/transforms-4/*/
+build	UNKNOWN STEP	/home/runner/.gradle/caches/*/transforms/*/' and key: gradle-transforms-v1-4c79fdf5bd7a5ee94f673822efb0369e: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0YG0RagAAAADe+Id6Zn5eSLKx482ikzlaTVNQMzExMDAwMTA0MDM3AEVkZ2U=
+build	UNKNOWN STEP	2026-05-23T09:03:28.8068977Z Caching Gradle User Home with cache key: gradle-home-v1|Linux|build[cf940f3ebadc02090f040e056cc1a147]-c444fd99962281a48910925e1837c2f80166dba0
+build	UNKNOWN STEP	2026-05-23T09:03:28.8151524Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/Redwood-Island-Module/Redwood-Island-Module --files-from manifest.txt --use-compress-program zstdmt
+build	UNKNOWN STEP	2026-05-23T09:03:28.9740907Z ##[warning]Failed to save cache entry with path '/home/runner/.gradle/caches,/home/runner/.gradle/notifications,/home/runner/.gradle/.setup-gradle' and key: gradle-home-v1|Linux|build[cf940f3ebadc02090f040e056cc1a147]-c444fd99962281a48910925e1837c2f80166dba0: Error: <h2>Our services aren't available right now</h2><p>We're working to restore all services as soon as possible. Please check back soon.</p>0YG0RagAAAACT4Jx+mbWiT4yHlm9I8gXXTVNQMzExMDAwMTA4MDMxAEVkZ2U=
+build	UNKNOWN STEP	2026-05-23T09:03:28.9744782Z ##[endgroup]
+build	UNKNOWN STEP	2026-05-23T09:03:28.9745152Z Generating Job Summary
+build	UNKNOWN STEP	2026-05-23T09:03:28.9759486Z Completed post-action step
+build	UNKNOWN STEP	2026-05-23T09:03:28.9943209Z Post job cleanup.
+build	UNKNOWN STEP	2026-05-23T09:03:29.1680835Z Post job cleanup.
+build	UNKNOWN STEP	2026-05-23T09:03:29.2688432Z [command]/usr/bin/git version
+build	UNKNOWN STEP	2026-05-23T09:03:29.2723963Z git version 2.54.0
+build	UNKNOWN STEP	2026-05-23T09:03:29.2766469Z Temporarily overriding HOME='/home/runner/work/_temp/7d4dd1f2-fd84-4f16-9e3a-7a232fd3e14d' before making global git config changes
+build	UNKNOWN STEP	2026-05-23T09:03:29.2767718Z Adding repository directory to the temporary git global config as a safe directory
+build	UNKNOWN STEP	2026-05-23T09:03:29.2779207Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Redwood-Island-Module/Redwood-Island-Module
+build	UNKNOWN STEP	2026-05-23T09:03:29.2812806Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build	UNKNOWN STEP	2026-05-23T09:03:29.2844446Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build	UNKNOWN STEP	2026-05-23T09:03:29.3087629Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build	UNKNOWN STEP	2026-05-23T09:03:29.3113192Z http.https://github.com/.extraheader
+build	UNKNOWN STEP	2026-05-23T09:03:29.3127377Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+build	UNKNOWN STEP	2026-05-23T09:03:29.3159194Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build	UNKNOWN STEP	2026-05-23T09:03:29.3406397Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build	UNKNOWN STEP	2026-05-23T09:03:29.3442885Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build	UNKNOWN STEP	2026-05-23T09:03:29.3761650Z Cleaning up orphan processes
+build	UNKNOWN STEP	2026-05-23T09:03:29.4026178Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-java@v4, actions/upload-artifact@v4, gradle/actions/setup-gradle@v3. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

@@ -10,10 +10,18 @@ class IslandHardwareMonitor(
     var onHardwareUpdate: (LiveActivityModel.HardwareMonitor?) -> Unit
 ) {
     var isScreenOn = true
-        set(value) { field = value; evaluatePolling() }
+        set(value) {
+            if (field == value) return
+            field = value
+            evaluatePolling()
+        }
         
     var isDashboardOpen = false
-        set(value) { field = value; evaluatePolling() }
+        set(value) {
+            if (field == value) return
+            field = value
+            evaluatePolling()
+        }
 
     private var pollJob: Job? = null
 
