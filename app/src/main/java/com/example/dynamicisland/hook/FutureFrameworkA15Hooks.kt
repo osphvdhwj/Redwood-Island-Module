@@ -40,11 +40,19 @@ object FutureFrameworkA15Hooks {
         val className = "com.android.server.audio.AudioService"
         val clazz = XposedHelpers.findClassIfExists(className, lpparam.classLoader) ?: return
 
-        val volumeCallback = object : XC_MethodHook() {
+        XposedBridge.hookAllMethods(clazz, "setStreamVolume", object : XC_MethodHook() {
             override fun afterHookedMethod(param: MethodHookParam) {
                 try {
-                    val streamType = param.args[0] as Int
-                    val index = param.args[1] as Int
+                    // Variants typically have:
+                    // (int streamType, int index, int flags, String callingPackage)
+                    // (int streamType, int index, int flags, String callingPackage, String attributionTag)
+                    // ... etc.
+                    
+                    if (param.args.size < 2) return
+                    
+                    val streamType = param.args[0] as? Int ?: return
+                    val index = param.args[1] as? Int ?: return
+                    
                     val context = getContextFromParam(param) ?: return
                     
                     context.sendBroadcastAsUser(
@@ -57,12 +65,7 @@ object FutureFrameworkA15Hooks {
                     )
                 } catch (_: Throwable) {}
             }
-        }
-
-        XposedHelpers.findAndHookMethod(clazz, "setStreamVolume", 
-            Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, 
-            String::class.java, String::class.java, Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType, 
-            volumeCallback)
+        })
     }
 
     private fun hookBrightnessChanges(lpparam: XC_LoadPackage.LoadPackageParam, userAll: UserHandle) {
