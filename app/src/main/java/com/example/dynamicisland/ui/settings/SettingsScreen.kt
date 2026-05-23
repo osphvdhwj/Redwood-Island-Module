@@ -247,36 +247,36 @@ fun PremiumSearchBar(value: String, onValueChange: (String) -> Unit) {
 fun SettingsCategories(state: SettingsState, viewModel: SettingsViewModel, query: String) {
     val categories = remember(state) {
         listOf(
-            Category("ESSENTIALS", Icons.Default.FlashOn, listOf(
-                SettingItem("Enable Dynamic Island", "Master engine switch", SettingKey.ISLAND_ENABLED, state.islandEnabled),
-                SettingItem("Show on Lockscreen", "Always-on visibility", SettingKey.ISLAND_ON_LOCKSCREEN, state.islandOnLockscreen),
-                SettingItem("Split Pill Mode", "Multitasking support", SettingKey.SPLIT_PILL_ENABLED, state.splitPillEnabled),
-                SettingItem("Haptic Feedback", "Tactile response", SettingKey.HAPTIC_FEEDBACK, state.hapticFeedback)
+            Category("CORE ENGINE", Icons.Default.FlashOn, listOf(
+                SettingItem("Engine Master", "Enable/Disable Dynamic Island", SettingKey.ISLAND_ENABLED, state.islandEnabled),
+                SettingItem("AOD Visibility", "Show on Lockscreen", SettingKey.ISLAND_ON_LOCKSCREEN, state.islandOnLockscreen),
+                SettingItem("Multitasking", "Split Pill Mode support", SettingKey.SPLIT_PILL_ENABLED, state.splitPillEnabled),
+                SettingItem("Tactile Feedback", "System-wide haptics", SettingKey.HAPTIC_FEEDBACK, state.hapticFeedback)
             )),
-            Category("VISUALS", Icons.Default.Palette, listOf(
-                SettingItem("Design Language", "Modern vs Classic", SettingKey.USE_LIQUID_GLASS, state.designLanguage == DesignLanguage.APPLE_LIQUID_GLASS),
-                SettingItem("Dynamic Colors", "Material You sync", SettingKey.DYNAMIC_COLORS, state.dynamicColors),
-                SettingItem("Glow Effect", "Neon aura", SettingKey.GLOW_EFFECT, state.glowEffect),
-                SettingItem("Dot Mode", "Minimalist idle", SettingKey.DOT_MODE, state.dotMode),
-                SettingItem("Elastic Stretch", "Physics-based interaction", SettingKey.ELASTIC_STRETCH, state.elasticStretch)
+            Category("APPEARANCE", Icons.Default.Palette, listOf(
+                SettingItem("Liquid Glass", "Enable premium visuals", SettingKey.USE_LIQUID_GLASS, state.designLanguage == DesignLanguage.APPLE_LIQUID_GLASS),
+                SettingItem("Material Colors", "Sync with system accent", SettingKey.DYNAMIC_COLORS, state.dynamicColors),
+                SettingItem("Elastic Physics", "Squishy liquid animations", SettingKey.ELASTIC_STRETCH, state.elasticStretch),
+                SettingItem("Glow Radiation", "Outer neon aura effect", SettingKey.GLOW_EFFECT, state.glowEffect),
+                SettingItem("Minimalist Dot", "Compact idle state", SettingKey.DOT_MODE, state.dotMode)
             )),
             Category("INTELLIGENCE", Icons.Default.AutoAwesome, listOf(
-                SettingItem("OTP Detection", "Smart code extraction", SettingKey.OTP_DETECTION, state.otpDetection),
-                SettingItem("Link Intercept", "URL smart actions", SettingKey.LINK_INTERCEPT, state.linkIntercept),
-                SettingItem("AI Prediction", "Context-aware UI", SettingKey.PREDICTIVE_ACTIONS, state.predictiveActions),
-                SettingItem("Translation", "Live text conversion", SettingKey.TRANSLATION, state.translation)
+                SettingItem("OTP Smart Copy", "Auto-extract passwords", SettingKey.OTP_DETECTION, state.otpDetection),
+                SettingItem("Link Intercept", "In-line URL smart actions", SettingKey.LINK_INTERCEPT, state.linkIntercept),
+                SettingItem("Predictive UI", "Context-aware behavior", SettingKey.PREDICTIVE_ACTIONS, state.predictiveActions),
+                SettingItem("Live Translate", "Real-time text conversion", SettingKey.TRANSLATION, state.translation)
             )),
-            Category("MEDIA", Icons.Default.MusicNote, listOf(
-                SettingItem("Waveform Seeker", "Visualized playback", SettingKey.WAVEFORM_ENABLED, state.waveformEnabled),
-                SettingItem("Artwork Blur", "Immersive background", SettingKey.MEDIA_ARTWORK_BLUR, state.mediaArtworkBlur),
-                SettingItem("Reactive Ring", "Audio-reactive border", SettingKey.AMBIENT_REACTIVE, state.ambientReactiveRing),
-                SettingItem("BPM Pulse", "Sync with track beat", SettingKey.BPM_PULSE, state.bpmPulse)
+            Category("MEDIA HUB", Icons.Default.MusicNote, listOf(
+                SettingItem("Waveform Seeker", "Visualized playback bar", SettingKey.WAVEFORM_ENABLED, state.waveformEnabled),
+                SettingItem("Artwork Blur", "Immersive media backdrop", SettingKey.MEDIA_ARTWORK_BLUR, state.mediaArtworkBlur),
+                SettingItem("Ambient Ring", "Audio-reactive border", SettingKey.AMBIENT_REACTIVE, state.ambientReactiveRing),
+                SettingItem("Beat Pulse", "Sync island with BPM", SettingKey.BPM_PULSE, state.bpmPulse)
             )),
             Category("ADVANCED LABS", Icons.Default.Science, listOf(
-                SettingItem("Gaming HUD", "FPS & Thermal monitor", SettingKey.GAMING_HUD, state.gamingHud),
-                SettingItem("iOS Padlock", "Face ID unlock style", SettingKey.FACE_ID_PADLOCK, state.faceIDPadlock),
-                SettingItem("Continuity Camera", "Pro cam integration", SettingKey.CONTINUITY_CAMERA_ACTIONS, state.continuityCameraActions),
-                SettingItem("MagSafe Anim", "Custom charging visuals", SettingKey.MAGSAFE_CHARGING_ANIMATION, state.magsafeChargingAnimation)
+                SettingItem("Gaming HUD", "FPS & Thermal monitoring", SettingKey.GAMING_HUD, state.gamingHud),
+                SettingItem("iOS Padlock", "Face ID style unlock", SettingKey.FACE_ID_PADLOCK, state.faceIDPadlock),
+                SettingItem("Continuity Cam", "Pro camera integration", SettingKey.CONTINUITY_CAMERA_ACTIONS, state.continuityCameraActions),
+                SettingItem("MagSafe Anim", "Premium charging visuals", SettingKey.MAGSAFE_CHARGING_ANIMATION, state.magsafeChargingAnimation)
             ))
         )
     }
@@ -385,7 +385,7 @@ fun PremiumSettingToggle(
                 .clip(CircleShape)
                 .background(if (checked) Color.Cyan else Color.White.copy(alpha = 0.1f))
                 .padding(2.dp),
-            contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart
+            contentAlignment = Alignment.CenterStart
         ) {
             val thumbOffset by animateDpAsState(
                 targetValue = if (checked) 22.dp else 0.dp,
@@ -394,7 +394,7 @@ fun PremiumSettingToggle(
             )
             Box(
                 modifier = Modifier
-                    .offset(x = if (checked) 0.dp else thumbOffset) // Simplified logic for demo
+                    .offset(x = thumbOffset)
                     .size(22.dp)
                     .clip(CircleShape)
                     .background(if (checked) Color.Black else Color.Gray)
@@ -433,8 +433,8 @@ fun PremiumSettingSlider(
 fun Modifier.glassCard(cornerRadius: Float): Modifier = this.glassCard(cornerRadius.dp)
 fun Modifier.glassCard(cornerRadius: androidx.compose.ui.unit.Dp): Modifier = this
     .clip(RoundedCornerShape(cornerRadius))
-    .background(Color.White.copy(alpha = 0.05f))
-    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(cornerRadius))
+    .background(Color.White.copy(alpha = 0.15f))
+    .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(cornerRadius))
 
 // ── DATA MODELS ──────────────────────────────────────────────────────────────
 

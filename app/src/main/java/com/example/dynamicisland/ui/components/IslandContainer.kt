@@ -56,12 +56,12 @@ fun IslandContainer(
         else -> 45f
     }
 
-    val targetRadius = when (state.islandState) {
+    val targetRadius = (when (state.islandState) {
         IslandState.TYPE_3_MAX -> 42.dp
         IslandState.TYPE_2_MID -> 16.dp
         IslandState.TYPE_CUBE -> 24.dp
         else -> (targetHeight / 2).dp
-    }
+    }).coerceAtLeast(0.dp)
 
     val animatedWidth by animateDpAsState(targetWidth.dp, dpPhysicsSpec, label = "width")
     val animatedHeight by animateDpAsState(targetHeight.dp, dpPhysicsSpec, label = "height")

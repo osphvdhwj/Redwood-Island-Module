@@ -54,10 +54,11 @@ fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp): Modifier 
     .background(Color.White.copy(alpha = 0.1f))
 
 fun getPillShape(shape: String, cornerRadius: Float): androidx.compose.foundation.shape.RoundedCornerShape {
+    val safeRadius = cornerRadius.coerceAtLeast(0f)
     return when (shape) {
         "capsule" -> androidx.compose.foundation.shape.RoundedCornerShape(50)
-        "squircle" -> androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius / 2)
-        else -> androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius.dp)
+        "squircle" -> androidx.compose.foundation.shape.RoundedCornerShape(safeRadius / 2)
+        else -> androidx.compose.foundation.shape.RoundedCornerShape(safeRadius.dp)
     }
 }
 

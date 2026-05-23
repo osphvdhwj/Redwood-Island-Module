@@ -29,24 +29,28 @@ fun IntelligenceScreen(prefs: SharedPreferences) {
         haptics.medium()
         ConfigManager.broadcastUpdateSingle(context, prefs, "intelligence") 
     }) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            StaggeredItem(0) { 
-                SectionHeader(
-                    title = "Intelligence Hub", 
-                    subtitle = "Smart detection & AI behavior", 
-                    icon = Icons.Default.Star, 
-                    accentColor = IslandColors.accentCyan
-                )
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.padding(16.dp)) {
+                StaggeredItem(0) { 
+                    SectionHeader(
+                        title = "Intelligence Hub", 
+                        subtitle = "Smart detection & AI behavior", 
+                        icon = Icons.Default.Star, 
+                        accentColor = IslandColors.accentCyan
+                    )
+                }
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            StaggeredItem(1) {
+                StaggeredItem(1) {
                 SettingsGroup(
                     title = "Detection Engines", 
                     icon = Icons.Default.Notifications, 
@@ -104,6 +108,7 @@ fun IntelligenceScreen(prefs: SharedPreferences) {
             Spacer(modifier = Modifier.height(100.dp))
         }
     }
+}
 }
 
 @Composable

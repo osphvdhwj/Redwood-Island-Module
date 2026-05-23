@@ -130,7 +130,6 @@ fun Modifier.glassmorphicCard(
                 ),
                 shape = RoundedCornerShape(cornerRadius)
             )
-            .blur(radius = 20.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
     }
 
 /**

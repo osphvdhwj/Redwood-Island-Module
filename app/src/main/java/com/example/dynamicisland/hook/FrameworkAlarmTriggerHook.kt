@@ -54,55 +54,32 @@ object FrameworkAlarmTriggerHook {
 
         // ── Trigger hook ──────────────────────────────────────────────────────
         for (methodName in TRIGGER_METHOD_CANDIDATES) {
-            val clazz = XposedHelpers.findClassIfExists(
+            val count = IslandHookEngine.hookAllMethodsByName(
                 "com.android.server.alarm.AlarmManagerService",
-                lpparam.classLoader
-            ) ?: continue
-
-            // Method signature varies — we hook all overloads that exist
-            try {
-                XposedHelpers.findAndHookMethod(
-                    clazz, methodName,
-                    "com.android.server.alarm.AlarmManagerService.Alarm",
-                    object : de.robv.android.xposed.XC_MethodHook() {
-                        override fun beforeHookedMethod(param: MethodHookParam) {
-                            broadcastTrigger(param, userAll)
-                        }
-                    }
-                )
-                break   // found and hooked — stop trying candidates
-            } catch (_: Throwable) {}
-
-            // Fallback: hook with no parameter types (catches any overload)
-            try {
-                for (method in clazz.declaredMethods) {
-                    if (method.name == methodName) {
-                        de.robv.android.xposed.XposedBridge.hookMethod(
-                            method,
-                            object : de.robv.android.xposed.XC_MethodHook() {
-                                override fun beforeHookedMethod(param: MethodHookParam) {
-                                    broadcastTrigger(param, userAll)
-                                }
-                            }
-                        )
+                lpparam.classLoader,
+                methodName,
+                object : de.robv.android.xposed.XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        broadcastTrigger(param, userAll)
                     }
                 }
-                break
-            } catch (_: Throwable) {}
+            )
+            if (count > 0) break
         }
 
         // ── Cancel/dismiss hook ───────────────────────────────────────────────
         for (methodName in CANCEL_METHOD_CANDIDATES) {
-            try {
-                IslandHookEngine.hookAfter(
-                    "com.android.server.alarm.AlarmManagerService",
-                    lpparam.classLoader,
-                    methodName
-                ) { param ->
-                    broadcastDismissed(param, userAll)
+            val count = IslandHookEngine.hookAllMethodsByName(
+                "com.android.server.alarm.AlarmManagerService",
+                lpparam.classLoader,
+                methodName,
+                object : de.robv.android.xposed.XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        broadcastDismissed(param, userAll)
+                    }
                 }
-                break
-            } catch (_: Throwable) {}
+            )
+            if (count > 0) break
         }
     }
 

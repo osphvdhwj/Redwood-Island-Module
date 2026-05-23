@@ -46,31 +46,31 @@ object SurfaceFlingerHook {
 
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, userAll: UserHandle) {
 
-        // Primary hook: SurfaceFlinger's onMessageReceived is called every vsync
-        IslandHookEngine.hookAfter(
+        // Primary hook: Choreographer.doFrame is called every vsync
+        IslandHookEngine.hookAllMethodsByName(
             "android.view.Choreographer",
             lpparam.classLoader,
             "doFrame",
-            Long::class.javaPrimitiveType ?: Long::class.java
-        ) { param ->
-            val frameTimeNs = param.args[0] as Long
-            recordFrame(frameTimeNs, param, userAll)
-        }
+            object : de.robv.android.xposed.XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val frameTimeNs = param.args[0] as Long
+                    recordFrame(frameTimeNs, param, userAll)
+                }
+            }
+        )
 
         // Fallback: Hook DisplayEventReceiver.onVsync for older AOSP variants
-        try {
-            IslandHookEngine.hookAfter(
-                "android.view.DisplayEventReceiver",
-                lpparam.classLoader,
-                "onVsync",
-                Long::class.javaPrimitiveType ?: Long::class.java,
-                Long::class.javaPrimitiveType ?: Long::class.java,
-                Int::class.javaPrimitiveType ?: Int::class.java
-            ) { param ->
-                val timestampNs = param.args[0] as Long
-                recordFrame(timestampNs, param, userAll)
+        IslandHookEngine.hookAllMethodsByName(
+            "android.view.DisplayEventReceiver",
+            lpparam.classLoader,
+            "onVsync",
+            object : de.robv.android.xposed.XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val timestampNs = param.args[0] as Long
+                    recordFrame(timestampNs, param, userAll)
+                }
             }
-        } catch (_: Throwable) {}
+        )
     }
 
     private fun recordFrame(

@@ -11,39 +11,34 @@ object FrameworkAlarmHook {
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, userAll: UserHandle) {
         
         // Hooks into the core Alarm Manager Service inside the Android Kernel
-        IslandHookEngine.hookAfter(
+        IslandHookEngine.hookAllMethodsByName(
             "com.android.server.alarm.AlarmManagerService",
             lpparam.classLoader,
             "setImpl",
-            Int::class.javaPrimitiveType ?: Int::class.java,
-            Long::class.javaPrimitiveType ?: Long::class.java,
-            Long::class.javaPrimitiveType ?: Long::class.java,
-            Long::class.javaPrimitiveType ?: Long::class.java,
-            android.app.PendingIntent::class.java,
-            "android.app.IAlarmListener",
-            String::class.java,
-            Int::class.javaPrimitiveType ?: Int::class.java,
-            android.os.WorkSource::class.java,
-            "android.app.AlarmManager.AlarmClockInfo",
-            Int::class.javaPrimitiveType ?: Int::class.java,
-            String::class.java
-        ) { param ->
-            val triggerTimeMs = param.args[2] as Long
-            val callingPackage = param.args[11] as? String ?: return@hookAfter
-            
-            // Only care about actual clock alarms, not background system syncs
-            val isClockAlarm = param.args[9] != null // AlarmClockInfo is not null
-            
-            if (isClockAlarm && callingPackage != "android") {
-                val mContext = XposedHelpers.callMethod(param.thisObject, "getContext") as? Context ?: return@hookAfter
-                
-                val intent = Intent("com.example.dynamicisland.ALARM_SET").apply {
-                    setPackage("com.android.systemui")
-                    putExtra("triggerTime", triggerTimeMs)
-                    putExtra("pkg", callingPackage)
+            object : de.robv.android.xposed.XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    try {
+                        val triggerTimeMs = param.args.filterIsInstance<Long>().getOrNull(1) ?: return
+                        val callingPackage = param.args.filterIsInstance<String>().lastOrNull() ?: return
+                        
+                        // Detect AlarmClockInfo presence robustly
+                        val isClockAlarm = param.args.any { 
+                            it?.javaClass?.name == "android.app.AlarmManager\$AlarmClockInfo" 
+                        }
+                        
+                        if (isClockAlarm && callingPackage != "android") {
+                            val mContext = XposedHelpers.callMethod(param.thisObject, "getContext") as? Context ?: return
+                            
+                            val intent = Intent("com.example.dynamicisland.ALARM_SET").apply {
+                                setPackage("com.android.systemui")
+                                putExtra("triggerTime", triggerTimeMs)
+                                putExtra("pkg", callingPackage)
+                            }
+                            mContext.sendBroadcastAsUser(intent, userAll)
+                        }
+                    } catch (_: Throwable) {}
                 }
-                mContext.sendBroadcastAsUser(intent, userAll)
             }
-        }
+        )
     }
 }

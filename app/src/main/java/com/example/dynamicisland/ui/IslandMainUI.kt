@@ -139,7 +139,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
 
     val animatedWidth = animValues.width.coerceIn(minSafeWidth.dp, maxSafeWidth.dp)
     val animatedHeight = animValues.height
-    val animatedRadius = animValues.cornerRadius
+    val animatedRadius = animValues.cornerRadius.coerceAtLeast(0.dp)
     val offsetX = when (state) {
         IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value
         IslandState.TYPE_2_MID -> midX.value

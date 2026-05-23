@@ -58,149 +58,152 @@ fun LayoutScreen(prefs: SharedPreferences) {
         haptics.medium()
         ConfigManager.broadcastUpdateSingle(context, prefs, "layout") 
     }) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            StaggeredItem(0) { 
-                IslandPreviewCard(modifier = Modifier.glassmorphicCard(cornerRadius = 28.dp))
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            StaggeredItem(1) {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    itemsIndexed(tabs) { index, title ->
-                        val isSelected = selectedTab == index
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(if (isSelected) IslandColors.accentCyan else IslandColors.surface)
-                                .premiumClickable { 
-                                    haptics.light()
-                                    selectedTab = index 
-                                }
-                                .padding(horizontal = 20.dp, vertical = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = title,
-                                color = if (isSelected) Color.Black else IslandColors.textSecondary,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
-                        }
-                    }
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.padding(16.dp)) {
+                StaggeredItem(0) { 
+                    IslandPreviewCard(modifier = Modifier.glassmorphicCard(cornerRadius = 28.dp))
                 }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
-
-            StaggeredItem(2) {
-                if (currentPrefix == "tweaks") {
-                    SettingsGroup(
-                        title = "Physical Adjustments", 
-                        icon = Icons.Default.Build, 
-                        summary = "Advanced tuning"
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                StaggeredItem(1) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        var offsetY by remember { mutableFloatStateOf(prefs.getFloat("tweak_offset_y", 0f)) }
-                        ThemeSlider(
-                            label = "Y-Axis Offset", 
-                            value = offsetY, 
-                            valueRange = 0f..150f,
-                            onValueChange = {
-                                offsetY = it
-                                ConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("tweak_offset_y", it) }) {
-                                    ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
-                                }
+                        itemsIndexed(tabs) { index, title ->
+                            val isSelected = selectedTab == index
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(if (isSelected) IslandColors.accentCyan else IslandColors.surface)
+                                    .premiumClickable { 
+                                        haptics.light()
+                                        selectedTab = index 
+                                    }
+                                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = title,
+                                    color = if (isSelected) Color.Black else IslandColors.textSecondary,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
                             }
-                        )
-                    }
-                } else {
-                    SettingsGroup(
-                        title = "${tabs[selectedTab]} Geometry", 
-                        icon = Icons.Default.Build, 
-                        summary = "Size & Position"
-                    ) {
-                        FeatureSwitch(
-                            title = "Expand Upwards", 
-                            description = "Flip expansion direction", 
-                            checked = expandUpwards, 
-                            onCheckedChange = { 
-                                haptics.toggleOn()
-                                expandUpwards = it
-                                ConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("expand_upwards", it) }) {
-                                    ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
-                                }
-                            }, 
-                            accentColor = IslandColors.accentCyan
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            PrecisionSlider(
-                                label = "Width", 
-                                value = w, 
-                                valueRange = 10f..400f, 
-                                onValueChange = { 
-                                    w = it
-                                    ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
-                                }
-                            )
-                            PrecisionSlider(
-                                label = "Height", 
-                                value = h, 
-                                valueRange = 10f..400f, 
-                                onValueChange = { 
-                                    h = it
-                                    ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
-                                }
-                            )
-                            PrecisionSlider(
-                                label = "X Position", 
-                                value = x, 
-                                valueRange = -200f..200f, 
-                                onValueChange = { 
-                                    x = it
-                                    ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
-                                }
-                            )
-                            PrecisionSlider(
-                                label = "Y Position", 
-                                value = y, 
-                                valueRange = -100f..200f, 
-                                onValueChange = { 
-                                    y = it
-                                    ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
-                                }
-                            )
                         }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
 
-                        if (currentPrefix == "ring") {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            PrecisionSlider(
-                                label = "Ring Thickness", 
-                                value = ringT, 
-                                valueRange = 1f..20f, 
-                                onValueChange = { 
-                                    ringT = it
-                                    ConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("ring_thickness", ringT) }) {
+                StaggeredItem(2) {
+                    if (currentPrefix == "tweaks") {
+                        SettingsGroup(
+                            title = "Physical Adjustments", 
+                            icon = Icons.Default.Build, 
+                            summary = "Advanced tuning"
+                        ) {
+                            var offsetY by remember { mutableFloatStateOf(prefs.getFloat("tweak_offset_y", 0f)) }
+                            ThemeSlider(
+                                label = "Y-Axis Offset", 
+                                value = offsetY, 
+                                valueRange = 0f..150f,
+                                onValueChange = {
+                                    offsetY = it
+                                    ConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("tweak_offset_y", it) }) {
                                         ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
                                     }
                                 }
                             )
                         }
+                    } else {
+                        SettingsGroup(
+                            title = "${tabs[selectedTab]} Geometry", 
+                            icon = Icons.Default.Build, 
+                            summary = "Size & Position"
+                        ) {
+                            FeatureSwitch(
+                                title = "Expand Upwards", 
+                                description = "Flip expansion direction", 
+                                checked = expandUpwards, 
+                                onCheckedChange = { 
+                                    haptics.toggleOn()
+                                    expandUpwards = it
+                                    ConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("expand_upwards", it) }) {
+                                        ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                                    }
+                                }, 
+                                accentColor = IslandColors.accentCyan
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                PrecisionSlider(
+                                    label = "Width", 
+                                    value = w, 
+                                    valueRange = 10f..400f, 
+                                    onValueChange = { 
+                                        w = it
+                                        ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                                    }
+                                )
+                                PrecisionSlider(
+                                    label = "Height", 
+                                    value = h, 
+                                    valueRange = 10f..400f, 
+                                    onValueChange = { 
+                                        h = it
+                                        ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                                    }
+                                )
+                                PrecisionSlider(
+                                    label = "X Position", 
+                                    value = x, 
+                                    valueRange = -200f..200f, 
+                                    onValueChange = { 
+                                        x = it
+                                        ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                                    }
+                                )
+                                PrecisionSlider(
+                                    label = "Y Position", 
+                                    value = y, 
+                                    valueRange = -100f..200f, 
+                                    onValueChange = { 
+                                        y = it
+                                        ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                                    }
+                                )
+                            }
+
+                            if (currentPrefix == "ring") {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                PrecisionSlider(
+                                    label = "Ring Thickness", 
+                                    value = ringT, 
+                                    valueRange = 1f..20f, 
+                                    onValueChange = { 
+                                        ringT = it
+                                        ConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("ring_thickness", ringT) }) {
+                                            ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
+                
+                Spacer(modifier = Modifier.height(100.dp))
             }
-            
-            Spacer(modifier = Modifier.height(100.dp))
         }
     }
 }

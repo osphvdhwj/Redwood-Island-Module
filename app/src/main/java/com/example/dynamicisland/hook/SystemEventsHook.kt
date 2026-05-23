@@ -33,7 +33,7 @@ object SystemEventsHook {
         var hooked = false
 
         // ── Strategy A: ATMS setResumedActivityUncheckLocked ─────────────────
-        // Works on CrDroid / Infinity X //For Infinity X A15
+        // Works on most AOSP variants
         val atmsCallback = object : XC_MethodHook() {
             override fun afterHookedMethod(param: MethodHookParam) {
                 try {
@@ -52,79 +52,51 @@ object SystemEventsHook {
             }
         }
 
-        val atmsCandidates = listOf(
-            "com.android.server.wm.ActivityTaskManagerService" to "setResumedActivityUncheckLocked",
-            "com.android.server.am.ActivityManagerService"     to "setResumedActivityUncheckLocked",
-            "com.android.server.wm.ActivityRecord"             to "onResumeActivityItem",
+        val atmsClasses = listOf(
+            "com.android.server.wm.ActivityTaskManagerService",
+            "com.android.server.am.ActivityManagerService"
         )
+        val atmsMethods = listOf("setResumedActivityUncheckLocked", "setResumedActivity")
 
-        for ((cls, method) in atmsCandidates) {
-            val clazz = XposedHelpers.findClassIfExists(cls, lpparam.classLoader) ?: continue
-            try {
-                val unhooks = XposedBridge.hookAllMethods(clazz, method, atmsCallback)
-                if (unhooks.isNotEmpty()) {
-                    XposedBridge.log("$TAG ✅: App transitions hooked via $cls.$method")
+        for (cls in atmsClasses) {
+            for (method in atmsMethods) {
+                val count = IslandHookEngine.hookAllMethodsByName(cls, lpparam.classLoader, method, atmsCallback)
+                if (count > 0) {
                     hooked = true
                     break
                 }
-            } catch (e: Throwable) {
-                XposedBridge.log("$TAG ⚠️: $cls.$method — ${e.message}")
             }
+            if (hooked) break
         }
 
-        // ── Strategy B: TaskStackChangeListener.onTaskMovedToFront ───────────
-        // Confirmed on Evolution X Android 15 from TaskStackChangeListener.smali
-        // onTaskMovedToFront(RunningTaskInfo) → extracts packageName from topActivity
-        val taskStackCandidates = listOf(
-            "com.android.systemui.shared.system.TaskStackChangeListener",
-            "com.android.server.wm.TaskChangeNotificationController",
-            "android.app.ITaskStackListener",
-        )
-
+        // ── Strategy B: TaskChangeNotificationController.notifyTaskMovedToFront ──
+        // This is a reliable point in System Server to catch app swaps
         val taskStackCallback = object : XC_MethodHook() {
             override fun afterHookedMethod(param: MethodHookParam) {
                 try {
-                    val taskInfo = param.args.firstOrNull() ?: return
+                    val taskId = param.args.firstOrNull() as? Int ?: return
+                    val atm = param.thisObject
+                    val task = XposedHelpers.callMethod(atm, "getTask", taskId) ?: return
+                    val pkg = XposedHelpers.getObjectField(task, "realActivity")
+                        ?.let { XposedHelpers.callMethod(it, "getPackageName") as? String } ?: return
 
-                    // Extract package from RunningTaskInfo.topActivity (ComponentName)
-                    val pkg = try {
-                        val topActivity = XposedHelpers.getObjectField(taskInfo, "topActivity")
-                        XposedHelpers.callMethod(topActivity, "getPackageName") as? String
-                    } catch (_: Throwable) {
-                        // Fallback: try baseActivity
-                        try {
-                            val baseActivity = XposedHelpers.getObjectField(taskInfo, "baseActivity")
-                            XposedHelpers.callMethod(baseActivity, "getPackageName") as? String
-                        } catch (_: Throwable) { null }
-                    } ?: return
-
-                    val ctx = try {
-                        android.app.AndroidAppHelper.currentApplication()
-                    } catch (_: Throwable) { null } ?: return
-
+                    val ctx = getContext(param) ?: return
                     broadcastAppChange(ctx, pkg, userAll)
                 } catch (_: Throwable) {}
             }
         }
 
-        for (cls in taskStackCandidates) {
-            val clazz = XposedHelpers.findClassIfExists(cls, lpparam.classLoader) ?: continue
-            try {
-                // Hook the RunningTaskInfo overload confirmed in smali line 146
-                val unhooks = XposedBridge.hookAllMethods(
-                    clazz, "onTaskMovedToFront", taskStackCallback
-                )
-                if (unhooks.isNotEmpty()) {
-                    XposedBridge.log("$TAG ✅: App transitions hooked via $cls.onTaskMovedToFront")
-                    hooked = true
-                    break
-                }
-            } catch (e: Throwable) {
-                XposedBridge.log("$TAG ⚠️: $cls.onTaskMovedToFront — ${e.message}")
-            }
+        if (!hooked) {
+            val count = IslandHookEngine.hookAllMethodsByName(
+                "com.android.server.wm.TaskChangeNotificationController",
+                lpparam.classLoader,
+                "notifyTaskMovedToFront",
+                taskStackCallback
+            )
+            if (count > 0) hooked = true
         }
 
-        // ── Strategy C: scan fallback ─────────────────────────────────────────
+        // ── Strategy C: fallback scan ─────────────────────────────────────────
         if (!hooked) {
             XposedBridge.log("$TAG ⚠️: All app transition strategies failed — scanning ATMS")
             IslandHookEngine.scanAndHook(
@@ -258,12 +230,15 @@ object SystemEventsHook {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private fun getContext(param: XC_MethodHook.MethodHookParam): Context? {
-        return try {
-            XposedHelpers.getObjectField(param.thisObject, "mContext") as? Context
-        } catch (_: Throwable) {
+        val candidates = listOf("mContext", "context", "mBase")
+        for (field in candidates) {
             try {
-                android.app.AndroidAppHelper.currentApplication()
-            } catch (_: Throwable) { null }
+                val ctx = XposedHelpers.getObjectField(param.thisObject, field) as? Context
+                if (ctx != null) return ctx
+            } catch (_: Throwable) {}
         }
+        return try {
+            android.app.AndroidAppHelper.currentApplication()
+        } catch (_: Throwable) { null }
     }
 }
