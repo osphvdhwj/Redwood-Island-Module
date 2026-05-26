@@ -35,8 +35,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import dagger.hilt.android.qualifiers.ApplicationContext
 
-import com.example.dynamicisland.ui.state.IslandEventBus
-import com.example.dynamicisland.ui.state.IslandIntent
+import com.example.dynamicisland.ui.mvi.IslandEventBus
+import com.example.dynamicisland.ui.mvi.IslandIntent
 
 @Singleton
 class IslandController @Inject constructor(
@@ -645,7 +645,7 @@ class IslandController @Inject constructor(
         }
     }
 
-    fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams): android.view.View {
+    fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams?): android.view.View {
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
         val view = DynamicIslandView(context, moduleContext)
         view.id = android.view.View.generateViewId()

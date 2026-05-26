@@ -15,7 +15,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.ipc.IslandState
-import com.example.dynamicisland.ui.state.IslandUiState
+import com.example.dynamicisland.ui.mvi.IslandUiState
 
 /**
  * The base container for the Dynamic Island.

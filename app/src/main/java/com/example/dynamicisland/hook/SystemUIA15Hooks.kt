@@ -3,11 +3,25 @@ package com.example.dynamicisland.hook
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
+import android.widget.FrameLayout
+import com.example.dynamicisland.manager.IslandController
+import com.example.dynamicisland.manager.IslandHardwareMonitor
+import com.example.dynamicisland.manager.IslandMediaManager
+import com.example.dynamicisland.manager.IslandHapticsManager
+import com.example.dynamicisland.manager.IslandNetworkMonitor
+import com.example.dynamicisland.settings.SettingsManager
+import com.example.dynamicisland.ui.mvi.IslandEventBus
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XC_MethodReplacement
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 /**
  * Consolidated SystemUI Hooks for Android 15 (A15)
@@ -56,15 +70,15 @@ object SystemUIA15Hooks {
             XposedBridge.hookAllMethods(clazz, "onAttachedToWindow", object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
                     if (injected) return
-                    val root = param.thisObject as? android.view.ViewGroup ?: return
+                    val root = param.thisObject as? ViewGroup ?: return
                     val context = root.context
                     
                     XposedBridge.log("DynamicIsland ✅: Injecting into $cls native hierarchy")
                     
                     try {
-                        val settingsManager = com.example.dynamicisland.settings.SettingsManager(context)
-                        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
-                        val mediaManager = com.example.dynamicisland.manager.IslandMediaManager(
+                        val settingsManager = SettingsManager(context)
+                        val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+                        val mediaManager = IslandMediaManager(
                             context = context,
                             scope = scope,
                             onMediaChanged = {},
@@ -73,15 +87,15 @@ object SystemUIA15Hooks {
                             onPauseFadeRequested = {},
                             onUncollapseRequested = {}
                         )
-                        val hardwareMonitor = com.example.dynamicisland.manager.IslandHardwareMonitor(
-                            scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default + kotlinx.coroutines.SupervisorJob()),
+                        val hardwareMonitor = IslandHardwareMonitor(
+                            scope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
                             onHardwareUpdate = {}
                         )
-                        val eventBus = com.example.dynamicisland.ui.state.IslandEventBus()
-                        val hapticsManager = com.example.dynamicisland.manager.IslandHapticsManager(context, settingsManager)
-                        val networkMonitor = com.example.dynamicisland.manager.IslandNetworkMonitor()
+                        val eventBus = IslandEventBus()
+                        val hapticsManager = IslandHapticsManager(context, settingsManager)
+                        val networkMonitor = IslandNetworkMonitor()
                         
-                        val controller = com.example.dynamicisland.manager.IslandController(
+                        val controller = IslandController(
                             context, 
                             settingsManager, 
                             mediaManager, 
@@ -92,13 +106,13 @@ object SystemUIA15Hooks {
                         )
 
                         val islandView = controller.createIslandView(
-                            context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager,
-                            null // No specific WindowManager params needed for child view
+                            context.getSystemService(Context.WINDOW_SERVICE) as WindowManager,
+                            null
                         )
 
-                        val lp = android.widget.FrameLayout.LayoutParams(
-                            android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                            android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+                        val lp = FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.MATCH_PARENT
                         )
                         
                         root.addView(islandView, lp)
@@ -143,33 +157,70 @@ object SystemUIA15Hooks {
         }
     }
 
-    private fun hookEdgeLighting(classLoader: ClassLoader) {
-        try {
-            IslandHookEngine.hookAllConstructorsSafe(
-                "com.android.systemui.statusbar.notification.row.wrapper.NotificationCompactHeadsUpTemplateViewWrapper",
-                classLoader,
-                object : XC_MethodHook() {
+    private fun hookQSTileHost(lpparam: XC_LoadPackage.LoadPackageParam) {
+        val qsClasses = listOf(
+            "com.android.systemui.qs.QSTileHost",
+            "com.android.systemui.qs.tileimpl.QSTileHost"
+        )
+        for (cls in qsClasses) {
+            val clazz = XposedHelpers.findClassIfExists(cls, lpparam.classLoader) ?: continue
+            try {
+                XposedBridge.hookAllConstructors(clazz, object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
-                        try {
-                            val view = XposedHelpers.getObjectField(param.thisObject, "mView") as? android.view.View
-                                ?: return
-
-                            val drawable = android.graphics.drawable.GradientDrawable().apply {
-                                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                                cornerRadius = 48f
-                                setColor(android.graphics.Color.TRANSPARENT)
-                                setStroke(4, android.graphics.Color.parseColor("#00FFFF"))
-                            }
-                            view.foreground = drawable
-                        } catch (e: Throwable) {
-                            XposedBridge.log("DynamicIsland-CurrentRom ❌: Edge lighting application failed — ${e.message}")
-                        }
+                        SystemUIContextKeeper.qsTileHost = param.thisObject
+                        XposedBridge.log("$TAG ✅: QSTileHost captured via $cls")
                     }
-                }
-            )
-            XposedBridge.log("$TAG ✅: Edge lighting hook applied")
+                })
+                break
+            } catch (e: Throwable) {
+                XposedBridge.log("$TAG ⚠️: QSTileHost hook failed for $cls: ${e.message}")
+            }
+        }
+    }
+
+    private fun suppressClipboardOverlay(lpparam: XC_LoadPackage.LoadPackageParam) {
+        val clazz = XposedHelpers.findClassIfExists(
+            "com.android.systemui.clipboardoverlay.ClipboardListener", lpparam.classLoader
+        ) ?: return
+        try {
+            XposedHelpers.findAndHookMethod(clazz, "start", object : XC_MethodReplacement() {
+                override fun replaceHookedMethod(param: MethodHookParam): Any? = null
+            })
+            XposedBridge.log("$TAG ✅: ClipboardListener suppressed")
         } catch (e: Throwable) {
-            XposedBridge.log("DynamicIsland-CurrentRom ❌: hookEdgeLighting setup failed — ${e.message}")
+            XposedBridge.log("$TAG ⚠️: ClipboardListener suppress failed: ${e.message}")
+        }
+    }
+
+    private fun suppressScreenshotNative(lpparam: XC_LoadPackage.LoadPackageParam) {
+        val candidates = listOf(
+            "com.android.systemui.screenshot.ScreenshotController" to "showScreenshotDropInUI",
+            "com.android.systemui.screenshot.ScreenshotController" to "handleImageAsShared",
+        )
+        for ((cls, method) in candidates) {
+            val clazz = XposedHelpers.findClassIfExists(cls, lpparam.classLoader) ?: continue
+            try {
+                XposedBridge.hookAllMethods(clazz, method, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val result = param.args.firstOrNull() ?: return
+                        val uri = try {
+                            XposedHelpers.getObjectField(result, "uri")?.toString() ?: ""
+                        } catch (_: Throwable) { "" }
+                        
+                        val context = android.app.AndroidAppHelper.currentApplication()
+                        context?.sendBroadcast(
+                            Intent("com.example.dynamicisland.SCREENSHOT_CAUGHT").apply {
+                                setPackage("com.android.systemui")
+                                putExtra("uri", uri)
+                            }
+                        )
+                        param.result = null
+                    }
+                })
+                XposedBridge.log("$TAG ✅: Screenshot suppressed via $cls.$method")
+            } catch (e: Throwable) {
+                XposedBridge.log("$TAG ⚠️: Screenshot suppress $cls.$method failed: ${e.message}")
+            }
         }
     }
 
@@ -187,7 +238,7 @@ object SystemUIA15Hooks {
                 isPanelExpanded = isCurrentlyExpanded
                 
                 val context: Context? = try {
-                    val mView = XposedHelpers.getObjectField(param.thisObject, "mView") as? android.view.View
+                    val mView = XposedHelpers.getObjectField(param.thisObject, "mView") as? View
                     mView?.context
                 } catch (_: Throwable) {
                     null
