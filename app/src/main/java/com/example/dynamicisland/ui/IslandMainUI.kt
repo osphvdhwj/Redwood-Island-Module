@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -54,6 +55,8 @@ import com.example.dynamicisland.gesture.IslandGesture
 import com.example.dynamicisland.ui.animations.IslandUiState
 import com.example.dynamicisland.ui.animations.updateIslandTransition
 import androidx.compose.foundation.Canvas
+
+import com.example.dynamicisland.performance.metaballFluid
 
 @Composable
 fun PrivacyDotUI(op: String?) {
@@ -407,7 +410,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .com.example.dynamicisland.performance.metaballFluid(
+                                    .metaballFluid(
                                         pill1 = mainPillRect,
                                         pill2Center = splitCenter,
                                         pill2Radius = with(density) { (animatedHeight / 2).toPx() },

@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.manager.ConfigManager
 import com.example.dynamicisland.ui.components.*
 import com.example.dynamicisland.ui.design.*
-import com.example.dynamicisland.ui.settings.GestureActionChips
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

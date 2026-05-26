@@ -5,11 +5,16 @@ import android.content.ClipboardManager
 import android.widget.Toast
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.text.style.TextOverflow
 import com.example.dynamicisland.gesture.IslandGesture
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
 import android.content.Context
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -109,7 +114,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    androidx.compose.foundation.lazy.items(stashItems) { item ->
+                    items(stashItems) { item ->
                         StashItemCard(item)
                     }
                 }
