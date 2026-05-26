@@ -205,20 +205,20 @@ fun AudioReactiveWavyBar(
 
         val scrubberRadius = if (isDragging) 7f else 4.5f
         val animatedScrubberRadius by Animatable(scrubberRadius).let { anim ->
-            // Can't use Animatable inside Canvas directly; use the dragBoost as proxy
-            val r = lerp(4.5f, 7f, dragBoost)
+            // Can't use Animatable inside Canvas directly; use the currentDragBoost as proxy
+            val r = lerp(4.5f, 7f, currentDragBoost)
             mutableFloatStateOf(r)
         }
 
         drawCircle(
             color = Color.White,
-            radius = lerp(4.5f, 7f, dragBoost),
+            radius = lerp(4.5f, 7f, currentDragBoost),
             center = Offset(activeWidth, midY)
         )
         // Inner dot for tactile feel
         drawCircle(
             color = color.copy(alpha = 0.6f),
-            radius = lerp(2f, 3.5f, dragBoost),
+            radius = lerp(2f, 3.5f, currentDragBoost),
             center = Offset(activeWidth, midY)
         )
     }

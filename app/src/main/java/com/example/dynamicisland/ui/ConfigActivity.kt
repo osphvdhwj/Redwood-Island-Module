@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -90,15 +92,15 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
                 if (selectedNav != 4) HeroHeader()
                 
                 Box(modifier = Modifier.weight(1f)) {
-                    AnimatedContent(
+                    AnimatedContent<Int>(
                         targetState = selectedNav,
                         transitionSpec = {
                             if (targetState > initialState) {
-                                (slideInHorizontally { it } + fadeIn()) togetherWith
-                                (slideOutHorizontally { -it } + fadeOut())
+                                (slideInHorizontally(initialOffsetX = { fullWidth -> fullWidth }) + fadeIn()) togetherWith
+                                (slideOutHorizontally(targetOffsetX = { fullWidth -> -fullWidth }) + fadeOut())
                             } else {
-                                (slideInHorizontally { -it } + fadeIn()) togetherWith
-                                (slideOutHorizontally { it } + fadeOut())
+                                (slideInHorizontally(initialOffsetX = { fullWidth -> -fullWidth }) + fadeIn()) togetherWith
+                                (slideOutHorizontally(targetOffsetX = { fullWidth -> fullWidth }) + fadeOut())
                             }.using(SizeTransform(clip = false))
                         },
                         label = "TabTransition"

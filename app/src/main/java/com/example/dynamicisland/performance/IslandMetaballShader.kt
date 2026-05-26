@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -49,7 +50,7 @@ private const val METABALL_AGSL = """
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 fun Modifier.metaballFluid(
     pill1: android.graphics.Rect,
-    pill2Center: android.graphics.Offset,
+    pill2Center: Offset,
     pill2Radius: Float,
     blobiness: Float = 0.4f,
     color: Color = Color.Black
