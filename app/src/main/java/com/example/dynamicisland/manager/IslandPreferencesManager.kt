@@ -67,6 +67,7 @@ object IslandPreferencesManager {
                     // 🚀 FIX: Check if this intent actually carries live data. If not, it's just a file-reload ping.
                     if (!intent.hasExtra("theme_button_size") && !intent.hasExtra("prefix")) {
                         load(view)
+                        view.onGestureSettingsUpdated?.invoke(null)
                         return
                     }
 

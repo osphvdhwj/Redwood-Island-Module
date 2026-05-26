@@ -127,15 +127,6 @@
             </intent-filter>
         </service>
 
-        <service
-            android:name=".system.window.IslandWindowService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Overlay window management for Dynamic Island UI."/>
-        </service>
-
     </application>
 
     <!-- Required so SystemUI can resolve contact photo URIs -->

@@ -12,7 +12,6 @@ import android.widget.FrameLayout
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -50,7 +49,6 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp): Modifier = this
-    .blur(blurRadius)
     .background(Color.White.copy(alpha = 0.1f))
 
 fun getPillShape(shape: String, cornerRadius: Float): androidx.compose.foundation.shape.RoundedCornerShape {
@@ -113,6 +111,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     val splitModel = mutableStateOf<LiveActivityModel?>(null)
 
     var onVolumeDrag: ((Int) -> Unit)? = null
+    var onStreamVolumeDrag: ((Int, Int) -> Unit)? = null
     var onBrightnessDrag: ((Int) -> Unit)? = null
     var onAutoBrightnessToggle: (() -> Unit)? = null
     var onRingerToggle: (() -> Unit)? = null
@@ -150,17 +149,18 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     }
 
     val activePrivacyOp = mutableStateOf<String?>(null)
+    val metaballTearProgress = Animatable(0f)
 
     val elasticScale = Animatable(1f)
 
     private var flowJob: Job? = null
+    private var prefsCleanup: (() -> Unit)? = null
     val mainPillRect = android.graphics.Rect()
     val splitCubeRect = android.graphics.Rect()
     val insetsUpdateFlow = MutableSharedFlow<Unit>(replay = 1, onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST)
     private var insetsListenerProxy: Any? = null
 
     val composeView = ComposeView(context)
-    private val prefsReceiver = IslandPreferencesManager.getReceiver(this)
 
     private val appChangeReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
@@ -179,7 +179,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     init {
         setBackgroundColor(android.graphics.Color.TRANSPARENT)
-        IslandPreferencesManager.load(this)
+        IslandPreferencesManagerV2.load(this, context)
         savedStateRegistryController.performRestore(Bundle())
         lifecycleRegistry.currentState = Lifecycle.State.RESUMED
 
@@ -193,6 +193,16 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
         composeView.setContent {
             val settings = controller?.settingsState ?: SettingsState()
+            val stateVal = islandState.value
+
+            LaunchedEffect(stateVal) {
+                if (stateVal == IslandState.TYPE_SPLIT) {
+                    metaballTearProgress.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 400f))
+                } else {
+                    metaballTearProgress.snapTo(0f)
+                }
+            }
+
             val shape = getPillShape(settings.pillShape, settings.pillCornerRadius)
 
             MaterialTheme(colorScheme = darkColorScheme()) {
@@ -211,23 +221,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             .graphicsLayer {
                                 scaleX = elasticScale.value
                                 scaleY = elasticScale.value
-                            }
-                            .pointerInput(Unit) {
-                                detectVerticalDragGestures(
-                                    onDragEnd = {
-                                        scope.launch { elasticScale.animateTo(1f, spring()) }
-                                        localPullOffset.floatValue = 0f
-                                    },
-                                    onDragCancel = { scope.launch { elasticScale.snapTo(1f) } }
-                                ) { _, dragAmount ->
-                                    localPullOffset.floatValue =
-                                        (localPullOffset.floatValue + dragAmount).coerceIn(-50f, 100f)
-            
-                                    // THE FIX: Use scope.launch and snapTo() instead of "="
-                                    scope.launch {
-                                        elasticScale.snapTo(1f + localPullOffset.floatValue * 0.002f)
-                                    }
-                                }
                             }
                     ) {
                         dynamicIslandView.IslandUI(islandState.value)
@@ -252,6 +245,33 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        
+        setOnDragListener { _, event ->
+            when (event.action) {
+                android.view.DragEvent.ACTION_DRAG_ENTERED -> {
+                    // Provide visual feedback (squish slightly)
+                    CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
+                        elasticScale.animateTo(1.05f, spring())
+                    }
+                    true
+                }
+                android.view.DragEvent.ACTION_DRAG_EXITED, android.view.DragEvent.ACTION_DRAG_ENDED -> {
+                    CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
+                        elasticScale.animateTo(1f, spring())
+                    }
+                    true
+                }
+                android.view.DragEvent.ACTION_DROP -> {
+                    controller?.swallowClipData(event.clipData)
+                    CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
+                        elasticScale.animateTo(1f, spring())
+                    }
+                    true
+                }
+                else -> true
+            }
+        }
+
         try {
             val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
             if (insetsListenerProxy == null) {
@@ -286,13 +306,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             }
         }
 
+        prefsCleanup = IslandPreferencesManagerV2.startWatching(this, context)
+
         val securePermission = "com.redwood.permission.SECURE_IPC"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(prefsReceiver, IntentFilter("com.example.dynamicisland.RELOAD_PREFS"), securePermission, null, Context.RECEIVER_EXPORTED)
             context.registerReceiver(appChangeReceiver, IntentFilter("com.example.dynamicisland.APP_CHANGED"), Context.RECEIVER_EXPORTED)
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
-            context.registerReceiver(prefsReceiver, IntentFilter("com.example.dynamicisland.RELOAD_PREFS"), securePermission, null)
             context.registerReceiver(appChangeReceiver, IntentFilter("com.example.dynamicisland.APP_CHANGED"))
         }
         context.registerReceiver(screenReceiver, IntentFilter().apply { addAction(Intent.ACTION_SCREEN_ON); addAction(Intent.ACTION_SCREEN_OFF) })
@@ -310,7 +330,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         } catch (_: Exception) {}
         flowJob?.cancel()
         flowJob = null
-        try { context.unregisterReceiver(prefsReceiver) } catch (_: Exception) {}
+        prefsCleanup?.invoke()
+        prefsCleanup = null
         try { context.unregisterReceiver(appChangeReceiver) } catch (_: Exception) {}
         try { context.unregisterReceiver(screenReceiver) } catch (_: Exception) {}
         BatteryPlugin.stop(context)

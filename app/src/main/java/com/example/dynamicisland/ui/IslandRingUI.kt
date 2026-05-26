@@ -27,30 +27,6 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
 
     if (shouldShowRing) {
         val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
-        val progress = if (isMedia) {
-            (currentMediaPos.longValue.toFloat() / safeDur)
-        } else {
-            globalBatteryLevel.intValue / 100f
-        }
-
-        val batteryLevel = globalBatteryLevel.intValue
-        val baseColor = when {
-            isMedia -> musicModel?.dominantColor?.let { Color(it) } ?: Color.White
-            globalIsCharging.value -> Color(0xFF00FF00)
-            else -> when {
-                batteryLevel <= 5  -> Color(0xFFFF0000)
-                batteryLevel <= 10 -> Color(0xFFFF3333)
-                batteryLevel <= 40 -> Color(0xFFFFA500)
-                batteryLevel <= 60 -> Color(0xFFFFFF00)
-                else              -> Color(0xFF006400)
-            }
-        }
-
-        val ringColor = if (hasUnseenNotif.value && !isMedia && !globalIsCharging.value) {
-            Color(pendingNotifColor.intValue)
-        } else baseColor
-
-        val progressColor = baseColor
 
         val notifPulse by rememberInfiniteTransition(label = "notif_pulse").animateFloat(
             initialValue  = if (hasUnseenNotif.value) 0.4f else 1f,
@@ -73,19 +49,41 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
             label = "scale"
         )
 
-        // BPM pulse removed to avoid undefined `bpm` variable
-        val combinedScale = breathScale
-
+        // 🚀 DEFERRED LAYOUT READS: We use graphicsLayer for scale so it doesn't trigger recomposition.
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    scaleX = combinedScale
-                    scaleY = combinedScale
+                    scaleX = breathScale
+                    scaleY = breathScale
                 },
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp)) {
+                // 🚀 DRAW PHASE READS: Calculate visual logic here to avoid CPU-heavy recompositions.
+                val currentProgress = if (isMedia) {
+                    (currentMediaPos.longValue.toFloat() / safeDur)
+                } else {
+                    globalBatteryLevel.intValue / 100f
+                }
+
+                val currentBatteryLevel = globalBatteryLevel.intValue
+                val baseColor = when {
+                    isMedia -> musicModel?.dominantColor?.let { Color(it) } ?: Color.White
+                    globalIsCharging.value -> Color(0xFF00FF00)
+                    else -> when {
+                        currentBatteryLevel <= 5  -> Color(0xFFFF0000)
+                        currentBatteryLevel <= 10 -> Color(0xFFFF3333)
+                        currentBatteryLevel <= 40 -> Color(0xFFFFA500)
+                        currentBatteryLevel <= 60 -> Color(0xFFFFFF00)
+                        else              -> Color(0xFF006400)
+                    }
+                }
+
+                val currentRingColor = if (hasUnseenNotif.value && !isMedia && !globalIsCharging.value) {
+                    Color(pendingNotifColor.intValue)
+                } else baseColor
+
                 val strokeW = ringThickness.value.dp.toPx()
                 val inset = strokeW / 2
                 val arcSize = androidx.compose.ui.geometry.Size(
@@ -93,14 +91,14 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
                     size.height - strokeW
                 )
                 val arcTopLeft = Offset(inset, inset)
-                val progressPercent = progress.coerceIn(0f, 1f)
+                val progressPercent = currentProgress.coerceIn(0f, 1f)
                 val centerPx = Offset(size.width / 2, size.height / 2)
                 val arcRadius = (size.width - strokeW) / 2
 
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            ringColor.copy(alpha = 0.12f),
+                            currentRingColor.copy(alpha = 0.12f * notifPulse),
                             Color.Transparent
                         )
                     ),
@@ -119,7 +117,7 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
 
                 if (progressPercent > 0.01f) {
                     drawArc(
-                        color = progressColor,
+                        color = baseColor, // progressColor
                         startAngle = -90f,
                         sweepAngle = 360f * progressPercent,
                         useCenter = false,

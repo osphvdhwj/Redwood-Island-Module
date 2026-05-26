@@ -189,6 +189,7 @@ class SettingsViewModel(private val settingsManager: SettingsManager) {
             }
         }
         loadAllSettings()  // refresh state from persistent storage
+        settingsManager.broadcastUpdate()
     }
 
     fun resetAll() {

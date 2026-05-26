@@ -11,11 +11,13 @@ import javax.inject.Singleton
 
 @Singleton
 class IslandHapticsManager @Inject constructor(
-    private val context: Context
+    private val context: Context,
+    private val settingsManager: com.example.dynamicisland.settings.SettingsManager
 ) {
     private var lastHapticState: IslandState = IslandState.HIDDEN
 
     fun triggerTransitionHaptic(newState: IslandState, currentCallState: String?, topAppPackage: String) {
+        if (!settingsManager.getSettingsState().hapticFeedback) return
         if (newState == lastHapticState) return
         val prev = lastHapticState
         lastHapticState = newState
@@ -31,15 +33,27 @@ class IslandHapticsManager @Inject constructor(
     }
 
     fun performCustomHaptic(strength: Int, topAppPackage: String) {
-        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            manager.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        try {
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                manager?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            }
+            
+            if (vibrator == null || !vibrator.hasVibrator()) return
+
+            val timing = longArrayOf(0, (30 * strength).toLong(), 50, (40 * strength).toLong())
+            val amplitudes = intArrayOf(0, (100 * strength).coerceAtMost(255), 0, (150 * strength).coerceAtMost(255))
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && vibrator.hasAmplitudeControl()) {
+                vibrator.vibrate(VibrationEffect.createWaveform(timing, amplitudes, -1))
+            } else {
+                vibrator.vibrate(timing, -1)
+            }
+        } catch (e: Exception) {
+            // Gracefully ignore haptic failures to prevent system-wide crashes
         }
-        val timing = longArrayOf(0, (30 * strength).toLong(), 50, (40 * strength).toLong())
-        val amplitudes = intArrayOf(0, (100 * strength).coerceAtMost(255), 0, (150 * strength).coerceAtMost(255))
-        vibrator.vibrate(VibrationEffect.createWaveform(timing, amplitudes, -1))
     }
 }

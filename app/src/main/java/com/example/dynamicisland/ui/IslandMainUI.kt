@@ -126,6 +126,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     )
 
     val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
     var isSquished by remember { mutableStateOf(false) }
     val touchScale by animateFloatAsState(
         targetValue = if (isSquished) 0.94f else 1f, 
@@ -311,10 +312,19 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                     else if (dragOffsetY < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
                                 }
                                 dragOffsetX = 0f; dragOffsetY = 0f
+                                // Reset elastic scale
+                                scope.launch { elasticScale.animateTo(1f, spring()) }
+                            },
+                            onDragCancel = { 
+                                dragOffsetX = 0f; dragOffsetY = 0f
+                                scope.launch { elasticScale.snapTo(1f) }
                             },
                             onDrag = { change, dragAmount -> 
                                 if (abs(dragAmount.x) > 5f || abs(dragAmount.y) > 5f) { change.consume() }
                                 dragOffsetX += dragAmount.x; dragOffsetY += dragAmount.y 
+                                // Apply elastic scale based on vertical drag
+                                val newScale = (elasticScale.value + dragAmount.y * 0.001f).coerceIn(0.85f, 1.15f)
+                                scope.launch { elasticScale.snapTo(newScale) }
                             }
                         )
                     }
@@ -381,6 +391,32 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                         label = "bottomPadding"
                     )
                     Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
+                        
+                        // Metaball Shader Overlay (Android 13+)
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU && 
+                            state == IslandState.TYPE_SPLIT && metaballTearProgress.value > 0.01f) {
+                            
+                            val density = LocalDensity.current
+                            val splitCenter = with(density) {
+                                androidx.compose.ui.geometry.Offset(
+                                    x = (animValues.width / 2 + animValues.xOffset.dp).toPx(),
+                                    y = (animValues.height / 2).toPx()
+                                )
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .com.example.dynamicisland.performance.metaballFluid(
+                                        pill1 = mainPillRect,
+                                        pill2Center = splitCenter,
+                                        pill2Radius = with(density) { (animatedHeight / 2).toPx() },
+                                        blobiness = 0.5f * (1f - metaballTearProgress.value),
+                                        color = Color.Black
+                                    )
+                            )
+                        }
+
                         AnimatedContent(
                             targetState = state,
                             transitionSpec = {
@@ -408,6 +444,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                         )
                                         is LiveActivityModel.Music -> MusicMax(model) 
                                         is LiveActivityModel.Charging -> ChargingMax(model)
+                                        is LiveActivityModel.VolumeMixer -> VolumeMixerMax(model)
                                         else -> {} 
                                     } 
                                 }

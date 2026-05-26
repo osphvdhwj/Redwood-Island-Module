@@ -74,18 +74,27 @@ class IslandController @Inject constructor(
 
     // 3. The engine that turns features on/off based on settings
     private fun applySettings(state: com.example.dynamicisland.settings.SettingsState) {
+        // Global Enable/Disable
+        if (!state.islandEnabled) {
+            _lastIslandState = IslandState.HIDDEN
+            eventBus.emit(IslandIntent.SyncState(IslandState.HIDDEN, null, null))
+        }
+
         // Feature 199: Wire up the managers based on toggles
+        mediaManager.isMediaEnabled = state.mediaArtworkBlur || state.waveformEnabled || state.nowPlaying
+        isChargingEnabled = state.magsafeChargingAnimation || state.batteryAwareAnimation
+        isAlertsEnabled = state.otpDetection || state.linkIntercept || state.barcode || state.translation
+        isTimersEnabled = state.timerIntegration
+        hideInLandscape = state.dataSaver || state.gamingHud // suppress in games if needed
         
+        idleSwipeAction = state.swipeLeftAction.uppercase()
+        longPressAction = state.swipeRightAction.uppercase() // mapping as placeholder
+
         // Audio & Visualizers
         if (state.bpmPulse || state.ambientReactiveRing) {
             audioBeatDetector.start()
         } else {
             audioBeatDetector.stop()
-        }
-
-        // Gamification
-        if (state.islandStreaks || state.achievementsEnabled) {
-            // achievementManager is initialized in its constructor
         }
 
         // Accessibility
@@ -101,12 +110,8 @@ class IslandController @Inject constructor(
         } else {
             proximityWakeManager.stop()
         }
-
-        // Haptics
-        // You can update a global haptics configuration here if needed
-
-        // Re-evaluate current island priority based on new settings (e.g. if notifications were just disabled)
-        // IslandPriorityEngine.evaluateCurrentState(...)
+        
+        evaluatePriority()
     }
     
     private var pendingNotificationColor: Int = android.graphics.Color.WHITE
@@ -119,6 +124,27 @@ class IslandController @Inject constructor(
     private fun performCustomHaptic(context: Context, strength: Int, topAppPackage: String) {
         hapticsManager.performCustomHaptic(strength, topAppPackage)
     }
+
+    fun swallowClipData(clipData: android.content.ClipData) {
+        scope.launch {
+            val saved = storageManager.swallowDroppedData(clipData)
+            if (saved) {
+                postTransientNotification(
+                    LiveActivityModel.General(
+                        id = "sys_stash", 
+                        type = ActivityType.MESSAGE, 
+                        title = "Item Stashed", 
+                        dataText = "Added to Island Archive",
+                        accentColor = android.graphics.Color.parseColor("#4CAF50")
+                    ), 
+                    3000L
+                )
+            }
+        }
+    }
+
+    val stashHistory: StateFlow<List<com.example.dynamicisland.manager.StashedItem>> 
+        get() = storageManager.stashHistory
 
     private val storageManager = IslandStorageManager(context)
     private val clipboardManager = IslandClipboardManager(context, scope) { copiedText ->
@@ -543,6 +569,22 @@ class IslandController @Inject constructor(
                         ), 3000L
                     )
                 }
+                "com.example.dynamicisland.SHOW_VOLUME_MIXER" -> {
+                    val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                    val mixer = LiveActivityModel.VolumeMixer(
+                        mediaLevel = (am.getStreamVolume(AudioManager.STREAM_MUSIC) * 100 / am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)).coerceIn(0, 100),
+                        ringLevel  = (am.getStreamVolume(AudioManager.STREAM_RING)  * 100 / am.getStreamMaxVolume(AudioManager.STREAM_RING)).coerceIn(0, 100),
+                        alarmLevel = (am.getStreamVolume(AudioManager.STREAM_ALARM) * 100 / am.getStreamMaxVolume(AudioManager.STREAM_ALARM)).coerceIn(0, 100),
+                        systemLevel = (am.getStreamVolume(AudioManager.STREAM_SYSTEM) * 100 / am.getStreamMaxVolume(AudioManager.STREAM_SYSTEM)).coerceIn(0, 100)
+                    )
+                    
+                    _lastActiveModel = mixer
+                    _lastIslandState = IslandState.TYPE_3_MAX
+                    eventBus.emit(IslandIntent.SyncState(IslandState.TYPE_3_MAX, mixer, _lastSplitModel))
+                    
+                    // Reset auto-collapse timer so the mixer stays visible for a few seconds
+                    resetAutoCollapseTimer()
+                }
             }
         }
     }
@@ -554,6 +596,12 @@ class IslandController @Inject constructor(
     }
 
     private fun evaluatePriority() {
+        if (!settingsState.islandEnabled) {
+            _lastIslandState = IslandState.HIDDEN
+            eventBus.emit(IslandIntent.SyncState(IslandState.HIDDEN, null, null))
+            return
+        }
+
         val result = IslandPriorityEngine.evaluatePriority(
             context = context,
             windowManager = windowManager,
@@ -618,6 +666,7 @@ class IslandController @Inject constructor(
         }
 
         view.onVolumeDrag = { pct -> hardwareManager.setSystemVolume(pct, view) }
+        view.onStreamVolumeDrag = { streamType, pct -> hardwareManager.setStreamVolume(streamType, pct) }
         view.onBrightnessDrag = { pct -> hardwareManager.setSystemBrightness(pct, view) }
         view.onMicToggle = { hardwareManager.toggleMicMute() }
         view.onSpeakerToggle = { hardwareManager.toggleSpeakerphone() }
@@ -643,15 +692,8 @@ class IslandController @Inject constructor(
 
         view.onGestureSettingsUpdated = { payload ->
             try {
+                loadAndApplySettings()
                 val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
-                mediaManager.isMediaEnabled = prefs.getBoolean("enable_media", true)
-                isChargingEnabled = prefs.getBoolean("enable_charging", true)
-                isAlertsEnabled = prefs.getBoolean("enable_alerts", true)
-                isTimersEnabled = prefs.getBoolean("enable_timers", true)
-
-                hideInLandscape = prefs.getBoolean("hide_landscape", false)
-                idleSwipeAction = prefs.getString("idle_swipe_action", "BRIGHTNESS") ?: "BRIGHTNESS"
-                longPressAction = prefs.getString("long_press_action", "SCREENSHOT") ?: "SCREENSHOT"
 
                 if (payload != null && payload.length < 5000) {
                     val json = JSONObject(payload)
@@ -687,7 +729,12 @@ class IslandController @Inject constructor(
             }
 
             if (actionName == null) {
-                actionName = if (gesture.name == "SINGLE_TAP") "EXPAND" else "NONE"
+                actionName = when (gesture.name) {
+                    "SINGLE_TAP" -> "EXPAND"
+                    "SWIPE_UP" -> "COLLAPSE"
+                    "SWIPE_DOWN" -> "EXPAND"
+                    else -> "NONE"
+                }
             }
 
             if (gesture.name.startsWith("QS_CLICK_")) {
@@ -858,6 +905,8 @@ class IslandController @Inject constructor(
     }
 
     init {
+        loadAndApplySettings()
+
         hardwareMonitor.onHardwareUpdate = { newHw ->
             currentHardware = newHw; evaluatePriority()
         }
@@ -967,6 +1016,7 @@ class IslandController @Inject constructor(
             addAction(FutureFrameworkA15Hooks.ACTION_FUTURE_PRIVACY_INDICATOR)
             addAction(FutureFrameworkA15Hooks.ACTION_FUTURE_BIOMETRIC_AUTH)
             addAction(FutureFrameworkA15Hooks.ACTION_FUTURE_USB_STATE)
+            addAction("com.example.dynamicisland.SHOW_VOLUME_MIXER")
         }
 
         val securePermission = "com.redwood.permission.SECURE_IPC"

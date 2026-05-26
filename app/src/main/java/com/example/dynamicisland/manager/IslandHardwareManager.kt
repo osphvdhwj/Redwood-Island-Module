@@ -110,6 +110,14 @@ class IslandHardwareManager(
         } catch (e: Throwable) {}
     }
 
+    fun setStreamVolume(streamType: Int, percent: Int) {
+        try {
+            val maxVolume = audioManager.getStreamMaxVolume(streamType)
+            val targetVolume = ((percent.toFloat() / 100f) * maxVolume).toInt()
+            audioManager.setStreamVolume(streamType, targetVolume, 0)
+        } catch (e: Throwable) {}
+    }
+
     fun toggleMicMute() {
         try { audioManager.isMicrophoneMute = !audioManager.isMicrophoneMute } catch (e: Throwable) {}
     }

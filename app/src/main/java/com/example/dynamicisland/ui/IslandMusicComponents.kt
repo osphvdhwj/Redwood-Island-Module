@@ -44,10 +44,10 @@ fun IsolatedCircularProgress(durationMs: Long, posProvider: () -> Long, color: C
 @Composable
 fun InteractiveWavyMediaBar(durationMs: Long, posProvider: () -> Long, isPlaying: Boolean, color: Color, trackColor: Color, onSeek: (Long) -> Unit, modifier: Modifier = Modifier) {
     val haptic = LocalHapticFeedback.current
-    var localPos by remember { mutableLongStateOf(posProvider()) }
+    val localPosState = remember { mutableLongStateOf(posProvider()) }
     
     LaunchedEffect(Unit) { 
-        while(isActive) { delay(50); if (!isDraggingMedia) localPos = posProvider() } 
+        while(isActive) { delay(50); if (!isDraggingMedia) localPosState.longValue = posProvider() } 
     }
     
     val safeDuration = if (durationMs <= 0L) 1f else durationMs.toFloat()
@@ -73,8 +73,9 @@ fun InteractiveWavyMediaBar(durationMs: Long, posProvider: () -> Long, isPlaying
         // This ensures the Compose Compiler ONLY redraws the canvas, saving massive CPU power.
         val currentAmplitude = amplitudeState.value
         val currentPhaseShift = phaseShiftState.value
+        val currentPos = localPosState.longValue
         
-        val currentProgress = (localPos / safeDuration).coerceIn(0f, 1f)
+        val currentProgress = (currentPos / safeDuration).coerceIn(0f, 1f)
         val displayProgress = if (isDraggingMedia) dragProgress else currentProgress
 
         val midY = size.height / 2

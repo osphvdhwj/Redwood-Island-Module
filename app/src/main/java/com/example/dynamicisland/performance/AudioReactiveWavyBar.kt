@@ -57,8 +57,8 @@ fun AudioReactiveWavyBar(
     var isDragging by remember { mutableStateOf(false) }
     var dragProgress by remember { mutableFloatStateOf(0f) }
 
-    // Collect real frequency bands from the analyzer, fall back to zeros if unavailable
-    val frequencyBands by (analyzer?.frequencyBands
+    // Collect real frequency bands from the analyzer
+    val frequencyBandsState = (analyzer?.frequencyBands
         ?: kotlinx.coroutines.flow.MutableStateFlow(FloatArray(AudioReactiveAnalyzer.BAND_COUNT) { 0f }))
         .collectAsState()
 
@@ -72,7 +72,7 @@ fun AudioReactiveWavyBar(
 
     // When dragging, boost all bands to max so the waveform reacts visually
     // to the scrubbing gesture. Animate smoothly between normal and drag states.
-    val dragBoost by animateFloatAsState(
+    val dragBoostState = animateFloatAsState(
         targetValue = if (isDragging) 1f else 0f,
         animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
         label = "drag_boost"
@@ -113,6 +113,10 @@ fun AudioReactiveWavyBar(
         val canvasWidth = size.width
         val canvasHeight = size.height
 
+        // 🚀 DEFERRED STATE READS: Value reads happen here in the Draw Scope.
+        val currentFrequencyBands = frequencyBandsState.value
+        val currentDragBoost = dragBoostState.value
+
         // Maximum amplitude in pixels — half the canvas height minus a small margin
         val maxAmplitudePx = (canvasHeight / 2f) * 0.88f
 
@@ -135,9 +139,9 @@ fun AudioReactiveWavyBar(
         // ── Blend band amplitudes with drag boost ─────────────────────────────
 
         for (i in 0 until AudioReactiveAnalyzer.BAND_COUNT) {
-            val realBand = frequencyBands.getOrElse(i) { 0f }
+            val realBand = currentFrequencyBands.getOrElse(i) { 0f }
             // During drag: lerp toward 1.0; at rest: use real band value
-            splineBuffer[i] = lerp(realBand, 1f, dragBoost)
+            splineBuffer[i] = lerp(realBand, 1f, currentDragBoost)
         }
 
         // ── Draw played waveform (left of scrubber) ────────────────────────────

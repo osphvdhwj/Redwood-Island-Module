@@ -90,12 +90,26 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
                 if (selectedNav != 4) HeroHeader()
                 
                 Box(modifier = Modifier.weight(1f)) {
-                    when (selectedNav) {
-                        0 -> LayoutScreen(prefs)
-                        1 -> AppearanceScreen(prefs)
-                        2 -> IntelligenceTab(prefs)
-                        3 -> InteractionsTab(prefs)
-                        4 -> SettingsScreen(settingsViewModel)
+                    AnimatedContent(
+                        targetState = selectedNav,
+                        transitionSpec = {
+                            if (targetState > initialState) {
+                                (slideInHorizontally { it } + fadeIn()) togetherWith
+                                (slideOutHorizontally { -it } + fadeOut())
+                            } else {
+                                (slideInHorizontally { -it } + fadeIn()) togetherWith
+                                (slideOutHorizontally { it } + fadeOut())
+                            }.using(SizeTransform(clip = false))
+                        },
+                        label = "TabTransition"
+                    ) { navIndex ->
+                        when (navIndex) {
+                            0 -> LayoutScreen(prefs)
+                            1 -> AppearanceScreen(prefs)
+                            2 -> IntelligenceTab(prefs)
+                            3 -> InteractionsTab(prefs)
+                            4 -> SettingsScreen(settingsViewModel)
+                        }
                     }
                 }
             }
@@ -145,11 +159,27 @@ fun InteractionsTab(prefs: android.content.SharedPreferences) {
 
 @Composable
 fun HeroHeader() {
+    val infiniteTransition = rememberInfiniteTransition(label = "header_anim")
+    val gradientOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "gradient"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(100.dp)
-            .background(Brush.verticalGradient(listOf(Color(0xFF001A33), Color.Black))),
+            .background(
+                Brush.verticalGradient(
+                    0f to Color(0xFF001A33).copy(alpha = 0.5f + 0.5f * gradientOffset),
+                    1f to Color.Black
+                )
+            ),
         contentAlignment = Alignment.BottomCenter
     ) {
         Column(
@@ -164,7 +194,7 @@ fun HeroHeader() {
                         fontWeight = FontWeight.Bold,
                         shadow = androidx.compose.ui.graphics.Shadow(
                             color = IslandColors.accentCyan,
-                            blurRadius = 24f
+                            blurRadius = 12f
                         )
                     )
                 )

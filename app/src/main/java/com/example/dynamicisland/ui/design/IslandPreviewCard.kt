@@ -36,6 +36,18 @@ import androidx.compose.ui.unit.dp
 fun IslandPreviewCard(modifier: Modifier = Modifier) {
     val states = listOf("Music", "Call", "Charging")
     var currentState by remember { mutableStateOf(states[0]) }
+    var isAutoPlaying by remember { mutableStateOf(true) }
+
+    LaunchedEffect(isAutoPlaying) {
+        if (isAutoPlaying) {
+            while (true) {
+                kotlinx.coroutines.delay(5000)
+                val currentIndex = states.indexOf(currentState)
+                val nextIndex = (currentIndex + 1) % states.size
+                currentState = states[nextIndex]
+            }
+        }
+    }
 
     val pillWidth by animateDpAsState(
         targetValue = when (currentState) {
@@ -228,7 +240,10 @@ fun IslandPreviewCard(modifier: Modifier = Modifier) {
                         .clip(RoundedCornerShape(50))
                         .background(chipBg)
                         .border(1.dp, chipBorder, RoundedCornerShape(50))
-                        .clickable { currentState = state }
+                        .clickable { 
+                            currentState = state 
+                            isAutoPlaying = false
+                        }
                         .padding(horizontal = 20.dp, vertical = 10.dp),
                     contentAlignment = Alignment.Center
                 ) {

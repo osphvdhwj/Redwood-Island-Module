@@ -147,6 +147,18 @@ sealed class LiveActivityModel {
         override val isSensitive: Boolean = false
     ) : LiveActivityModel()
 
+    data class VolumeMixer(
+        val mediaLevel: Int,
+        val ringLevel: Int,
+        val alarmLevel: Int,
+        val systemLevel: Int,
+        override val id: String = "sys_volume_mixer",
+        override val type: ActivityType = ActivityType.HARDWARE,
+        override val isTransient: Boolean = true,
+        override val isCritical: Boolean = false,
+        override val isSensitive: Boolean = false
+    ) : LiveActivityModel()
+
     data class OngoingTask(
         override val id: String = "ongoing_task",
         override val type: ActivityType = ActivityType.ONGOING_TASK,

@@ -1,5 +1,10 @@
 package com.example.dynamicisland.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.widget.Toast
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import com.example.dynamicisland.gesture.IslandGesture
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
@@ -40,6 +45,7 @@ import com.example.dynamicisland.model.LocalIslandTheme
 @Composable
 fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controller: IslandController) {
     val theme = LocalIslandTheme.current
+    val stashItems by controller.stashHistory.collectAsState()
 
     Column(
         modifier = Modifier
@@ -95,7 +101,22 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
             )
         }
 
-        // --- Section 2: Media Mini (Cinematic) ---
+        // --- Section 2: Island Stash (Productivity) ---
+        if (stashItems.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Island Stash", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    androidx.compose.foundation.lazy.items(stashItems) { item ->
+                        StashItemCard(item)
+                    }
+                }
+            }
+        }
+
+        // --- Section 3: Media Mini (Cinematic) ---
         val media = activeModel.value as? LiveActivityModel.Music
         if (media != null) {
             Box(
@@ -159,6 +180,93 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
             }
         }
     }
+}
+
+@Composable
+fun DynamicIslandView.StashItemCard(item: com.example.dynamicisland.manager.StashedItem) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+
+    Box(
+        modifier = Modifier
+            .size(width = 120.dp, height = 72.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White.copy(alpha = 0.08f))
+            .squishClickable {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                handleStashClick(context, item)
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        shareStashItem(context, item)
+                    }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(8.dp)
+        ) {
+            val icon = when (item.type) {
+                com.example.dynamicisland.manager.StashType.TEXT -> Icons.Default.Edit
+                com.example.dynamicisland.manager.StashType.IMAGE -> Icons.Default.Image
+                com.example.dynamicisland.manager.StashType.FILE -> Icons.Default.Build
+            }
+            Icon(icon, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = if (item.type == com.example.dynamicisland.manager.StashType.TEXT) item.content else item.id,
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                textAlign = TextAlign.Center,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+private fun handleStashClick(context: android.content.Context, item: com.example.dynamicisland.manager.StashedItem) {
+    if (item.type == com.example.dynamicisland.manager.StashType.TEXT) {
+        val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("Stashed Text", item.content))
+        android.widget.Toast.makeText(context, "Copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
+    } else {
+        try {
+            val file = java.io.File(item.content)
+            val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, context.contentResolver.getType(uri))
+                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(context, "Cannot open file", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
+private fun shareStashItem(context: android.content.Context, item: com.example.dynamicisland.manager.StashedItem) {
+    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        if (item.type == com.example.dynamicisland.manager.StashType.TEXT) {
+            type = "text/plain"
+            putExtra(android.content.Intent.EXTRA_TEXT, item.content)
+        } else {
+            val file = java.io.File(item.content)
+            val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+            type = context.contentResolver.getType(uri)
+            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(android.content.Intent.createChooser(intent, "Share Stashed Item").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
 }
 
 @Composable

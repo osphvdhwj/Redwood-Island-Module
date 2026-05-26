@@ -39,7 +39,7 @@ data class RedwoodColors(
     val accentCyan: Color = Color(0xFF00E5FF),
     val accentPurple: Color = Color(0xFF7C4DFF),
     val textPrimary: Color = Color(0xFFFFFFFF),
-    val textSecondary: Color = Color(0x8CFFFFFF),
+    val textSecondary: Color = Color(0xB3FFFFFF), // Increased from 0x8C
     val error: Color = Color(0xFFFF4D4D),
     val success: Color = Color(0xFF00E676)
 )
@@ -54,7 +54,7 @@ object IslandColors {
     val accentCyan = Color(0xFF00E5FF)
     val accentPurple = Color(0xFF7C4DFF)
     val textPrimary = Color(0xFFFFFFFF)
-    val textSecondary = Color(0x8CFFFFFF)
+    val textSecondary = Color(0xB3FFFFFF) // Increased from 0x8C
 }
 
 object RedwoodDesignSystem {
@@ -120,7 +120,7 @@ fun Modifier.glassmorphicCard(
                 } else Modifier
             )
             .clip(RoundedCornerShape(cornerRadius))
-            .background(colors.surface.copy(alpha = 0.75f))
+            .background(colors.surface.copy(alpha = 0.88f))
             .border(
                 width = 1.dp,
                 brush = Brush.linearGradient(
