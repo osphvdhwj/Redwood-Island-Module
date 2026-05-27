@@ -82,6 +82,11 @@ class IslandController @Inject constructor(
 
         // Feature 199: Wire up the managers based on toggles
         mediaManager.isMediaEnabled = state.mediaArtworkBlur || state.waveformEnabled || state.nowPlaying
+        mediaManager.userMusicApp = state.roleMusicApp.takeIf { it.isNotEmpty() }
+        mediaManager.userVideoApp = state.roleVideoApp.takeIf { it.isNotEmpty() }
+        
+        callManager.userCallingApp = state.roleCallingApp.takeIf { it.isNotEmpty() }
+        
         isChargingEnabled = state.magsafeChargingAnimation || state.batteryAwareAnimation
         isAlertsEnabled = state.otpDetection || state.linkIntercept || state.barcode || state.translation
         isTimersEnabled = state.timerIntegration
@@ -311,7 +316,16 @@ class IslandController @Inject constructor(
                         postTransientNotification(LiveActivityModel.General(id = "sys_alarm", type = ActivityType.ALARM, title = "Alarm Set", dataText = "Ringing at $timeStr", accentColor = android.graphics.Color.CYAN), 3500L)
                     }
                 }
-                "com.example.dynamicisland.APP_CHANGED" -> { topAppPackage = intent.getStringExtra("pkg") ?: ""; evaluatePriority() }
+                "com.example.dynamicisland.APP_CHANGED" -> { 
+                    topAppPackage = intent.getStringExtra("pkg") ?: ""
+                    if (topAppPackage.isNotEmpty() && topAppPackage == settingsState.roleGameLauncher) {
+                         currentHardware = LiveActivityModel.HardwareMonitor(
+                             id = "hw_monitor", type = ActivityType.HARDWARE,
+                             cpuTempCelsius = 0f, cpuFreqMhz = 0, isGamingModeOn = true
+                         )
+                    }
+                    evaluatePriority() 
+                }
                 "com.example.dynamicisland.NOTIFICATION_CAUGHT" -> {
                     val pkg = intent.getStringExtra("pkg") ?: ""
                     val notif = if (android.os.Build.VERSION.SDK_INT >= 33) {

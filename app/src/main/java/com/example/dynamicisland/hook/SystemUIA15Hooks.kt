@@ -110,12 +110,19 @@ object SystemUIA15Hooks {
                             null
                         )
 
+                        val sidebarView = com.example.dynamicisland.ui.SidebarView(context)
+
                         val lp = FrameLayout.LayoutParams(
                             FrameLayout.LayoutParams.MATCH_PARENT,
                             FrameLayout.LayoutParams.MATCH_PARENT
                         )
                         
                         root.addView(islandView, lp)
+                        root.addView(sidebarView, FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            android.view.Gravity.END
+                        ))
                         injected = true
                     } catch (e: Exception) {
                         XposedBridge.log("DynamicIsland ❌: Native injection failed — ${e.message}")

@@ -64,6 +64,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.AppPickerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Transparent" />
+
         <receiver
             android:name=".BootReceiver"
             android:exported="true">

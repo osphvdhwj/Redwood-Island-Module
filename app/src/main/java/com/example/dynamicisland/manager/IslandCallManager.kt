@@ -15,6 +15,7 @@ class IslandCallManager(
     private val onCallStateChanged: (LiveActivityModel.Call?) -> Unit
 ) {
     private var currentCall: LiveActivityModel.Call? = null
+    var userCallingApp: String? = null
     
     // 🎛️ NEW: Listens to our highly-efficient Framework Hook instead of Polling!
     private val callReceiver = object : BroadcastReceiver() {
@@ -22,16 +23,24 @@ class IslandCallManager(
             if (intent.action == "com.example.dynamicisland.CALL_STATE_CHANGED") {
                 val state = intent.getStringExtra("state") ?: return
                 val caller = intent.getStringExtra("caller") ?: "Unknown Caller"
+                val source = intent.getStringExtra("pkg")?.let {
+                    when {
+                        it.contains("whatsapp") -> "WhatsApp"
+                        it.contains("telegram") -> "Telegram"
+                        it == userCallingApp -> "Default"
+                        else -> null
+                    }
+                } ?: if (userCallingApp != null) "Default" else null
                 
                 when (state) {
                     "RINGING" -> {
-                        currentCall = LiveActivityModel.Call(state = "RINGING", callerName = caller, startTime = 0L)
+                        currentCall = LiveActivityModel.Call(state = "RINGING", callerName = caller, startTime = 0L, sourceApp = source)
                         onCallStateChanged(currentCall)
                     }
                     "ONGOING" -> {
                         // Only reset start time if it wasn't already ongoing
                         val startTime = if (currentCall?.state == "ONGOING") currentCall!!.startTime else System.currentTimeMillis()
-                        currentCall = LiveActivityModel.Call(state = "ONGOING", callerName = caller, startTime = startTime)
+                        currentCall = LiveActivityModel.Call(state = "ONGOING", callerName = caller, startTime = startTime, sourceApp = source)
                         onCallStateChanged(currentCall)
                     }
                     "DISCONNECTED" -> {

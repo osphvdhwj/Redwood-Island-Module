@@ -157,7 +157,12 @@ object NewConfigManager {
             "idle_swipe_action" to (prefs.getString("idle_swipe_action", "BRIGHTNESS")
                 ?: "BRIGHTNESS"),
             "long_press_action" to (prefs.getString("long_press_action", "SCREENSHOT")
-                ?: "SCREENSHOT")
+                ?: "SCREENSHOT"),
+            "role_calling_app" to (prefs.getString("role_calling_app", "") ?: ""),
+            "role_music_app" to (prefs.getString("role_music_app", "") ?: ""),
+            "role_video_app" to (prefs.getString("role_video_app", "") ?: ""),
+            "role_notes_app" to (prefs.getString("role_notes_app", "") ?: ""),
+            "role_game_launcher" to (prefs.getString("role_game_launcher", "") ?: "")
         )
     }
 

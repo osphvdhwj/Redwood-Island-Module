@@ -58,7 +58,6 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- Header: Title & Quick Settings Entry ---
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -68,14 +67,27 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                 Text("Smart Dashboard", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
                 Text("System Vitals & Controls", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(Color.White.copy(alpha = 0.1f), CircleShape)
-                    .squishClickable { onGestureEvent?.invoke(IslandGesture.LONG_PRESS) },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Settings, null, tint = Color.White, modifier = Modifier.size(20.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                        .squishClickable { 
+                            controller.postTransientNotification(com.example.dynamicisland.model.LiveActivityModel.QuickNote(), -1)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Edit, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                }
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                        .squishClickable { onGestureEvent?.invoke(IslandGesture.LONG_PRESS) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Settings, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                }
             }
         }
 

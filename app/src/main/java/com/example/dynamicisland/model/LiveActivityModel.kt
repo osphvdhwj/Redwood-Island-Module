@@ -49,7 +49,8 @@ sealed class LiveActivityModel {
         override val isSensitive: Boolean = true,
         val callerName: String = "Unknown Caller",
         val state: String = "ONGOING",                     // RINGING, ONGOING, ENDED
-        val startTime: Long = System.currentTimeMillis()
+        val startTime: Long = System.currentTimeMillis(),
+        val sourceApp: String? = null // e.g., "WhatsApp", "Telegram"
     ) : LiveActivityModel()
 
     data class Music(
@@ -223,7 +224,8 @@ sealed class LiveActivityModel {
         override val id: String = "sys_nav",
         override val type: ActivityType = ActivityType.NAVIGATION,   // use new constant
         val instruction: String,                    // "Turn left in 200m"
-        val distance: Int,                          // meters
+        val distance: String,                       // "200m", "1.5km", etc
+        val nextTurnIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
         override val isTransient: Boolean = false,
         override val isCritical: Boolean = false,
         override val isSensitive: Boolean = false
@@ -354,6 +356,16 @@ sealed class LiveActivityModel {
         override val isCritical: Boolean = false,
         override val isSensitive: Boolean = false
     ) : LiveActivityModel()
+
+    // Notes Integration
+    data class QuickNote(
+        override val id: String = "sys_quicknote",
+        override val type: ActivityType = ActivityType.MESSAGE,
+        override val isTransient: Boolean = false,
+        override val isCritical: Boolean = false,
+        override val isSensitive: Boolean = false
+    ) : LiveActivityModel()
+
     // Smart Notification Engine
     data class NotificationStack(
         override val id: String,

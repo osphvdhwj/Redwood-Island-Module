@@ -160,7 +160,14 @@ data class SettingsState(
     val continuityCameraActions: Boolean = true,
 
     // === Focus & DND ===
-    val focusModePill: Boolean = true
+    val focusModePill: Boolean = true,
+
+    // === App Roles ===
+    val roleCallingApp: String = "",
+    val roleMusicApp: String = "",
+    val roleVideoApp: String = "",
+    val roleNotesApp: String = "",
+    val roleGameLauncher: String = ""
 )
 
 enum class DesignLanguage { MATERIAL_YOU, APPLE_LIQUID_GLASS }

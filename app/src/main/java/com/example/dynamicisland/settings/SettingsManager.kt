@@ -108,7 +108,10 @@ class SettingsManager(private val context: Context) {
         CONTINUITY_CAMERA_ACTIONS,
 
         // === Focus & DND ===
-        FOCUS_MODE_PILL
+        FOCUS_MODE_PILL,
+
+        // === App Roles ===
+        ROLE_CALLING_APP, ROLE_MUSIC_APP, ROLE_VIDEO_APP, ROLE_NOTES_APP, ROLE_GAME_LAUNCHER
     }
 
     // Type-safe getters and setters
@@ -307,7 +310,14 @@ class SettingsManager(private val context: Context) {
             continuityCameraActions = getBoolean(SettingKey.CONTINUITY_CAMERA_ACTIONS, true),
 
             // Focus & DND
-            focusModePill = getBoolean(SettingKey.FOCUS_MODE_PILL, true)
+            focusModePill = getBoolean(SettingKey.FOCUS_MODE_PILL, true),
+
+            // App Roles
+            roleCallingApp = getString(SettingKey.ROLE_CALLING_APP, "") ?: "",
+            roleMusicApp = getString(SettingKey.ROLE_MUSIC_APP, "") ?: "",
+            roleVideoApp = getString(SettingKey.ROLE_VIDEO_APP, "") ?: "",
+            roleNotesApp = getString(SettingKey.ROLE_NOTES_APP, "") ?: "",
+            roleGameLauncher = getString(SettingKey.ROLE_GAME_LAUNCHER, "") ?: ""
         )
     }
 }

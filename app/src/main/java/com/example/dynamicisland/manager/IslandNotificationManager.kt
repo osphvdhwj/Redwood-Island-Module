@@ -1,6 +1,8 @@
 package com.example.dynamicisland.manager
 import com.example.dynamicisland.model.*
 import com.example.dynamicisland.ui.DynamicIslandView
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 
 import android.app.Notification
 import android.content.Context
@@ -12,7 +14,7 @@ class IslandNotificationManager(
     private val context: Context,
     private val scope: CoroutineScope,
     private val onProgressCaught: (LiveActivityModel.OngoingTask) -> Unit,
-    private val onNavigationCaught: (LiveActivityModel.General) -> Unit,
+    private val onNavigationCaught: (LiveActivityModel.Navigation) -> Unit,
     private val onNotificationStackCaught: (LiveActivityModel.NotificationStack) -> Unit
 ) {
     private val notificationMap = mutableMapOf<String, MutableList<SimpleNotification>>()

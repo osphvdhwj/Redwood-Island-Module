@@ -146,18 +146,21 @@ fun IntelligenceTab(prefs: android.content.SharedPreferences) {
 fun InteractionsTab(prefs: android.content.SharedPreferences) {
     var selectedSubTab by remember { mutableIntStateOf(0) }
     Column {
-        TabRow(
+        ScrollableTabRow(
             selectedTabIndex = selectedSubTab,
             containerColor = Color.Transparent,
             contentColor = IslandColors.accentCyan,
-            divider = {}
+            divider = {},
+            edgePadding = 16.dp
         ) {
-            Tab(selected = selectedSubTab == 0, onClick = { selectedSubTab = 0 }, text = { Text("Pins & Tiles") })
-            Tab(selected = selectedSubTab == 1, onClick = { selectedSubTab = 1 }, text = { Text("Gestures") })
+            Tab(selected = selectedSubTab == 0, onClick = { selectedSubTab = 0 }, text = { Text("App Roles") })
+            Tab(selected = selectedSubTab == 1, onClick = { selectedSubTab = 1 }, text = { Text("Pins & Tiles") })
+            Tab(selected = selectedSubTab == 2, onClick = { selectedSubTab = 2 }, text = { Text("Gestures") })
         }
         when (selectedSubTab) {
-            0 -> PinsTilesScreen(prefs)
-            1 -> GesturesScreen(prefs)
+            0 -> AppRolesScreen(prefs)
+            1 -> PinsTilesScreen(prefs)
+            2 -> GesturesScreen(prefs)
         }
     }
 }

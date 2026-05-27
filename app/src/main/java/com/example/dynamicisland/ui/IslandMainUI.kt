@@ -449,6 +449,10 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                         is LiveActivityModel.Charging -> ChargingMax(model)
                                         is LiveActivityModel.VolumeMixer -> VolumeMixerMax(model)
                                         is LiveActivityModel.NotificationStack -> NotificationStackMax(model)
+                                        is LiveActivityModel.QuickNote -> NoteEditorMax(
+                                            targetNotesApp = view.controller?.settingsState?.roleNotesApp,
+                                            onSave = { view.controller?.evaluatePriority() }
+                                        )
                                         else -> {} 
                                     } 
                                 }
