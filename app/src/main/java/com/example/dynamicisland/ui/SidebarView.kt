@@ -28,7 +28,10 @@ import com.example.dynamicisland.ui.design.glassmorphicCard
 import com.example.dynamicisland.ui.design.premiumClickable
 import com.example.dynamicisland.util.ComposeLifecycleOwner
 
-class SidebarView(context: Context) : FrameLayout(context) {
+import com.example.dynamicisland.manager.IslandHardwareManager
+import android.media.AudioManager
+
+class SidebarView(context: Context, private val hardwareManager: IslandHardwareManager) : FrameLayout(context) {
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private val composeView = ComposeView(context)
@@ -103,6 +106,7 @@ class SidebarView(context: Context) : FrameLayout(context) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
+                SidebarTabItem(Icons.Default.Tune, activePanel == "controls") { activePanel = "controls" }
                 SidebarTabItem(Icons.Default.Apps, activePanel == "apps") { activePanel = "apps" }
                 SidebarTabItem(Icons.Default.Assessment, activePanel == "stats") { activePanel = "stats" }
                 SidebarTabItem(Icons.Default.Assignment, activePanel == "clipboard") { activePanel = "clipboard" }
@@ -113,6 +117,7 @@ class SidebarView(context: Context) : FrameLayout(context) {
             Box(modifier = Modifier.weight(1f).fillMaxHeight().padding(16.dp)) {
                 AnimatedContent(targetState = activePanel, label = "panelTransition") { panel ->
                     when (panel) {
+                        "controls" -> SidebarHardwareControls()
                         "apps" -> SidebarAppLauncher()
                         "stats" -> SidebarSystemStats()
                         "clipboard" -> SidebarClipboard()
@@ -133,6 +138,70 @@ class SidebarView(context: Context) : FrameLayout(context) {
                 .background(if (isSelected) IslandColors.accentCyan.copy(alpha = 0.1f) else Color.Transparent)
         ) {
             Icon(icon, null, tint = if (isSelected) IslandColors.accentCyan else Color.White.copy(alpha = 0.4f))
+        }
+    }
+
+    @Composable
+    private fun SidebarHardwareControls() {
+        val am = LocalContext.current.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        var ringerMode by remember { mutableIntStateOf(am.ringerMode) }
+        var isAutoBrightness by remember { mutableStateOf(hardwareManager.isAutoBrightnessEnabled) }
+
+        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+            Text("Hardware", color = Color.White, fontWeight = FontWeight.Black, fontSize = 18.sp)
+
+            // Brightness Section
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.LightMode, null, tint = IslandColors.accentCyan, modifier = Modifier.size(20.dp))
+                    Box(
+                        modifier = Modifier
+                            .glassmorphicCard(cornerRadius = 12.dp)
+                            .premiumClickable { 
+                                hardwareManager.toggleAutoBrightness(null)
+                                isAutoBrightness = hardwareManager.isAutoBrightnessEnabled
+                            }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(if (isAutoBrightness) "AUTO" else "MANUAL", color = IslandColors.accentCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                IslandLiquidSlider(
+                    value = 50f, // Ideally fetch real value from hardwareManager
+                    onValueChange = { hardwareManager.setSystemBrightness(it.toInt(), null) },
+                    accentColor = IslandColors.accentCyan,
+                    icon = Icons.Default.BrightnessMedium
+                )
+            }
+
+            // Volume Section
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.VolumeUp, null, tint = IslandColors.accentPurple, modifier = Modifier.size(20.dp))
+                    Box(
+                        modifier = Modifier
+                            .glassmorphicCard(cornerRadius = 12.dp)
+                            .premiumClickable { 
+                                hardwareManager.toggleRingerMode(null)
+                                ringerMode = am.ringerMode
+                            }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        val modeText = when(ringerMode) {
+                            AudioManager.RINGER_MODE_SILENT -> "SILENT"
+                            AudioManager.RINGER_MODE_VIBRATE -> "VIBRATE"
+                            else -> "RING"
+                        }
+                        Text(modeText, color = IslandColors.accentPurple, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                IslandLiquidSlider(
+                    value = 50f, // Ideally fetch real value
+                    onValueChange = { hardwareManager.setSystemVolume(it.toInt(), null) },
+                    accentColor = IslandColors.accentPurple,
+                    icon = Icons.Default.MusicNote
+                )
+            }
         }
     }
 

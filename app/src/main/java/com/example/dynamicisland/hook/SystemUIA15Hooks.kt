@@ -110,7 +110,7 @@ object SystemUIA15Hooks {
                             null
                         )
 
-                        val sidebarView = com.example.dynamicisland.ui.SidebarView(context)
+                        val sidebarView = com.example.dynamicisland.ui.SidebarView(context, hardwareMonitor)
 
                         val lp = FrameLayout.LayoutParams(
                             FrameLayout.LayoutParams.MATCH_PARENT,
