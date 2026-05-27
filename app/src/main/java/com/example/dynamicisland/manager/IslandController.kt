@@ -86,6 +86,10 @@ class IslandController @Inject constructor(
         isAlertsEnabled = state.otpDetection || state.linkIntercept || state.barcode || state.translation
         isTimersEnabled = state.timerIntegration
         hideInLandscape = state.dataSaver || state.gamingHud // suppress in games if needed
+
+        // Ecosystem Features
+        val isAppleEcosystemEnabled = state.airpodsPopup || state.faceIdPadlock
+        // ... hook additional triggers if needed ...
         
         idleSwipeAction = state.swipeLeftAction.uppercase()
         longPressAction = state.swipeRightAction.uppercase() // mapping as placeholder

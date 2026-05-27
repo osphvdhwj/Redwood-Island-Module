@@ -18,6 +18,9 @@ import com.example.dynamicisland.settings.SettingsManager.SettingKey
 import com.example.dynamicisland.ui.components.*
 import com.example.dynamicisland.ui.design.*
 
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContinuityScreen(prefs: SharedPreferences) {
@@ -36,9 +39,9 @@ fun ContinuityScreen(prefs: SharedPreferences) {
         ) {
             StaggeredItem(0) { 
                 SectionHeader(
-                    title = "Continuity & Ambient", 
-                    subtitle = "Ecosystem & background experiences", 
-                    icon = Icons.Default.Home, 
+                    title = "Ecosystem Continuity", 
+                    subtitle = "Cross-device & background services", 
+                    icon = Icons.Default.Hub, 
                     accentColor = IslandColors.accentCyan
                 )
             }
@@ -47,14 +50,28 @@ fun ContinuityScreen(prefs: SharedPreferences) {
 
             StaggeredItem(1) {
                 SettingsGroup(
-                    title = "Cross-Device", 
-                    icon = Icons.Default.Home, 
-                    summary = "Clipboard & Accessories"
+                    title = "Apple Ecosystem", 
+                    icon = Icons.Default.Apple, 
+                    summary = "AirPods & iOS logic"
                 ) {
-                    ContinuityToggle("Clipboard Sync", "Sync text between devices", SettingKey.CLIPBOARD_SYNC, prefs, haptics)
-                    ContinuityToggle("AirPods Pop-up", "Apple-style connection card", SettingKey.AIRPODS_POPUP, prefs, haptics)
-                    ContinuityToggle("Wear OS Remote", "Control Island from watch", SettingKey.WEAR_OS_REMOTE, prefs, haptics)
-                    ContinuityToggle("Universal Control", "Mouse & Keyboard sharing", SettingKey.UNIVERSAL_CONTROL, prefs, haptics)
+                    ContinuityToggle(
+                        "AirPods Pop-up", 
+                        "Simulates the Apple AirPods connection card in the Dynamic Island when headphones are detected.", 
+                        Icons.Default.Headset,
+                        SettingKey.AIRPODS_POPUP, prefs, haptics
+                    )
+                    ContinuityToggle(
+                        "Face ID Padlock", 
+                        "Shows a smoothiOS-style padlock animation in the pill when biometric authentication is triggered.", 
+                        Icons.Default.Lock,
+                        SettingKey.FACE_ID_PADLOCK, prefs, haptics
+                    )
+                    ContinuityToggle(
+                        "MagSafe Charging", 
+                        "Displays the circular MagSafe charging ring and percentage when a power source is connected.", 
+                        Icons.Default.ChargingStation,
+                        SettingKey.MAGSAFE_CHARGING_ANIMATION, prefs, haptics
+                    )
                 }
             }
 
@@ -62,14 +79,22 @@ fun ContinuityScreen(prefs: SharedPreferences) {
 
             StaggeredItem(2) {
                 SettingsGroup(
-                    title = "iOS-Inspired", 
-                    icon = Icons.Default.Phone, 
-                    summary = "Classic interactions"
+                    title = "Network Continuity", 
+                    icon = Icons.Default.NetworkCheck, 
+                    summary = "Remote & Sync"
                 ) {
-                    ContinuityToggle("Live Activities API", "Enable third-party tracking", SettingKey.LIVE_ACTIVITIES_API, prefs, haptics)
-                    ContinuityToggle("Face ID Padlock", "Unlock animation in island", SettingKey.FACE_ID_PADLOCK, prefs, haptics)
-                    ContinuityToggle("MagSafe Animation", "Ring charging effect", SettingKey.MAGSAFE_CHARGING_ANIMATION, prefs, haptics)
-                    ContinuityToggle("Always-On Companion", "Minimal island on AOD", SettingKey.ALWAYS_ON_DISPLAY_COMPANION, prefs, haptics)
+                    ContinuityToggle(
+                        "Clipboard Sync", 
+                        "Instantly syncs copied text to the Island of your other logged-in devices.", 
+                        Icons.Default.Assignment,
+                        SettingKey.CLIPBOARD_SYNC, prefs, haptics
+                    )
+                    ContinuityToggle(
+                        "Wear OS Remote", 
+                        "Allows your smartwatch to trigger Island actions like 'Next Track' or 'Expand'.", 
+                        Icons.Default.Watch,
+                        SettingKey.WEAR_OS_REMOTE, prefs, haptics
+                    )
                 }
             }
 
@@ -77,14 +102,28 @@ fun ContinuityScreen(prefs: SharedPreferences) {
 
             StaggeredItem(3) {
                 SettingsGroup(
-                    title = "Media & Audio", 
-                    icon = Icons.Default.PlayArrow, 
-                    summary = "Ambient listening"
+                    title = "Ambient Media", 
+                    icon = Icons.Default.MusicNote, 
+                    summary = "Background Listening"
                 ) {
-                    ContinuityToggle("Artwork Blur", "Pill background follows music", SettingKey.MEDIA_ARTWORK_BLUR, prefs, haptics)
-                    ContinuityToggle("Now Playing", "Ambient song recognition", SettingKey.NOW_PLAYING, prefs, haptics)
-                    ContinuityToggle("Waveform Seeker", "Visualized seeker bar", SettingKey.WAVEFORM_ENABLED, prefs, haptics)
-                    ContinuityToggle("Live Caption", "Speech-to-text overlay", SettingKey.LIVE_CAPTION, prefs, haptics)
+                    ContinuityToggle(
+                        "Artwork Backdrop", 
+                        "The Island's background color dynamically blurs to match the current music's album art.", 
+                        Icons.Default.Brush,
+                        SettingKey.MEDIA_ARTWORK_BLUR, prefs, haptics
+                    )
+                    ContinuityToggle(
+                        "Now Playing AI", 
+                        "Continuously listens for ambient music and shows the track title in a small 'Ring' state.", 
+                        Icons.Default.Hearing,
+                        SettingKey.NOW_PLAYING, prefs, haptics
+                    )
+                    ContinuityToggle(
+                        "Waveform Visualizer", 
+                        "Adds an audio-reactive wavy seeker bar inside the 'Mid' and 'Max' expanded states.", 
+                        Icons.Default.Waves,
+                        SettingKey.WAVEFORM_ENABLED, prefs, haptics
+                    )
                 }
             }
 
@@ -97,6 +136,7 @@ fun ContinuityScreen(prefs: SharedPreferences) {
 private fun ContinuityToggle(
     title: String,
     description: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     key: SettingKey,
     prefs: SharedPreferences,
     haptics: HapticManager
@@ -104,17 +144,21 @@ private fun ContinuityToggle(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var checked by remember { mutableStateOf(prefs.getBoolean(key.name, true)) }
-    FeatureSwitch(
-        title = title, 
-        description = description, 
-        checked = checked, 
-        onCheckedChange = { 
-            if (it) haptics.toggleOn() else haptics.toggleOff()
-            checked = it
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean(key.name, it) }) {
-                NewConfigManager.broadcastUpdateSingle(context, prefs, "continuity")
-            }
-        },
-        accentColor = IslandColors.accentCyan
-    )
+    
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        FeatureSwitch(
+            title = title, 
+            description = description, 
+            checked = checked, 
+            onCheckedChange = { 
+                if (it) haptics.toggleOn() else haptics.toggleOff()
+                checked = it
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean(key.name, it) }) {
+                    NewConfigManager.broadcastUpdateSingle(context, prefs, "continuity")
+                }
+            },
+            accentColor = IslandColors.accentCyan,
+            icon = icon
+        )
+    }
 }

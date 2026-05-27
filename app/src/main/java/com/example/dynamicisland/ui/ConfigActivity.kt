@@ -115,6 +115,9 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
                     }
                 }
             }
+            
+            // Floating Visual Aid overlay
+            LiveVisualAid()
         }
     }
 }

@@ -19,6 +19,9 @@ import com.example.dynamicisland.settings.SettingsManager.SettingKey
 import com.example.dynamicisland.ui.components.*
 import com.example.dynamicisland.ui.design.*
 
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IntelligenceScreen(prefs: SharedPreferences) {
@@ -33,9 +36,9 @@ fun IntelligenceScreen(prefs: SharedPreferences) {
             Box(modifier = Modifier.padding(16.dp)) {
                 StaggeredItem(0) { 
                     SectionHeader(
-                        title = "Intelligence Hub", 
-                        subtitle = "Smart detection & AI behavior", 
-                        icon = Icons.Default.Star, 
+                        title = "Redwood Intelligence", 
+                        subtitle = "Context-aware island behavior", 
+                        icon = Icons.Default.AutoAwesome, 
                         accentColor = IslandColors.accentCyan
                     )
                 }
@@ -48,73 +51,120 @@ fun IntelligenceScreen(prefs: SharedPreferences) {
                     .padding(horizontal = 16.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                Spacer(modifier = Modifier.height(8.dp))
-
                 StaggeredItem(1) {
-                SettingsGroup(
-                    title = "Detection Engines", 
-                    icon = Icons.Default.Notifications, 
-                    summary = "Contextual triggers"
-                ) {
-                    DetectionToggle("OTP Detection", "Auto-copy one-time passwords", SettingKey.OTP_DETECTION, prefs, haptics)
-                    DetectionToggle("Link Intercept", "Inline URL actions", SettingKey.LINK_INTERCEPT, prefs, haptics)
-                    DetectionToggle("Barcode Scanner", "Identify codes in view", SettingKey.BARCODE, prefs, haptics)
-                    DetectionToggle("Navigation", "Turn-by-turn guidance", SettingKey.NAVIGATION, prefs, haptics)
+                    SettingsGroup(
+                        title = "Smart Detection", 
+                        icon = Icons.Default.Search, 
+                        summary = "Active System Hooks"
+                    ) {
+                        DetectionToggle(
+                            title = "OTP Auto-Capture", 
+                            description = "Instantly captures verification codes from SMS and displays them in the Island for one-tap copying.", 
+                            icon = Icons.Default.VpnKey,
+                            key = SettingKey.OTP_DETECTION, 
+                            prefs = prefs, 
+                            haptics = haptics
+                        )
+                        DetectionToggle(
+                            title = "Link Interceptor", 
+                            description = "Detects URLs in clipboard or notifications and provides quick 'Open' or 'Share' actions directly in the pill.", 
+                            icon = Icons.Default.Link,
+                            key = SettingKey.LINK_INTERCEPT, 
+                            prefs = prefs, 
+                            haptics = haptics
+                        )
+                        DetectionToggle(
+                            title = "Real-time Barcode", 
+                            description = "When the camera is active, the Island will automatically show a snippet of any detected QR codes or barcodes.", 
+                            icon = Icons.Default.QrCodeScanner,
+                            key = SettingKey.BARCODE, 
+                            prefs = prefs, 
+                            haptics = haptics
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            StaggeredItem(2) {
-                SettingsGroup(
-                    title = "Smart Overlays", 
-                    icon = Icons.Default.Star, 
-                    summary = "Real-time data"
-                ) {
-                    DetectionToggle("Translation", "Live text translation", SettingKey.TRANSLATION, prefs, haptics)
-                    DetectionToggle("Gaming HUD", "FPS & Temperature metrics", SettingKey.GAMING_HUD, prefs, haptics)
-                    DetectionToggle("App Prediction", "Suggest actions based on usage", SettingKey.APP_PREDICTION_SUGGESTION, prefs, haptics)
+                StaggeredItem(2) {
+                    SettingsGroup(
+                        title = "AI Assistance", 
+                        icon = Icons.Default.Memory, 
+                        summary = "Predictive Overlays"
+                    ) {
+                        DetectionToggle(
+                            title = "Live Translation", 
+                            description = "Translates foreign text on screen in real-time and flows the result into a 'Mid' state pill.", 
+                            icon = Icons.Default.Translate,
+                            key = SettingKey.TRANSLATION, 
+                            prefs = prefs, 
+                            haptics = haptics
+                        )
+                        DetectionToggle(
+                            title = "App Predictions", 
+                            description = "Analyzes your usage patterns to suggest the most likely next app in the Island Dock.", 
+                            icon = Icons.Default.Psychology,
+                            key = SettingKey.APP_PREDICTION_SUGGESTION, 
+                            prefs = prefs, 
+                            haptics = haptics
+                        )
+                        DetectionToggle(
+                            title = "Contextual Logic", 
+                            description = "Dynamically changes Island priority based on what you're doing (e.g., prioritization of maps during navigation).", 
+                            icon = Icons.Default.DynamicFeed,
+                            key = SettingKey.CONTEXTUAL_SUGGESTIONS, 
+                            prefs = prefs, 
+                            haptics = haptics
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            StaggeredItem(3) {
-                SettingsGroup(
-                    title = "Prediction & AI", 
-                    icon = Icons.Default.Info, 
-                    summary = "Adaptive learning"
-                ) {
-                    DetectionToggle("Predictive Actions", "Pre-load likely apps", SettingKey.PREDICTIVE_ACTIONS, prefs, haptics)
-                    DetectionToggle("Contextual Suggestions", "Smart shortcuts", SettingKey.CONTEXTUAL_SUGGESTIONS, prefs, haptics)
-                    DetectionToggle("Gesture Learning", "Refines on your usage", SettingKey.GESTURE_LEARNING, prefs, haptics)
+                StaggeredItem(3) {
+                    SettingsGroup(
+                        title = "Advanced Labs", 
+                        icon = Icons.Default.Science, 
+                        summary = "Experimental Triggers"
+                    ) {
+                        DetectionToggle(
+                            title = "Gaming Telemetry", 
+                            description = "Displays FPS, CPU temperature, and network latency when a full-screen game is detected.", 
+                            icon = Icons.Default.Gamepad,
+                            key = SettingKey.GAMING_HUD, 
+                            prefs = prefs, 
+                            haptics = haptics
+                        )
+                        DetectionToggle(
+                            title = "AR Vision", 
+                            description = "Uses depth data to make the Island appear as if it's floating above the screen content.", 
+                            icon = Icons.Default.Layers,
+                            key = SettingKey.AR_ISLAND, 
+                            prefs = prefs, 
+                            haptics = haptics
+                        )
+                        DetectionToggle(
+                            title = "Morse Input", 
+                            description = "Experimental long-press gesture to input text via Morse code directly into the Island.", 
+                            icon = Icons.Default.Toll,
+                            key = SettingKey.MORSE_CODE_INPUT, 
+                            prefs = prefs, 
+                            haptics = haptics
+                        )
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(100.dp))
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            StaggeredItem(4) {
-                SettingsGroup(
-                    title = "Experimental Labs", 
-                    icon = Icons.Default.Build, 
-                    summary = "Cutting-edge features"
-                ) {
-                    DetectionToggle("AR Island", "Visual depth effects", SettingKey.AR_ISLAND, prefs, haptics)
-                    DetectionToggle("Morse Code Input", "Type with long-press", SettingKey.MORSE_CODE_INPUT, prefs, haptics)
-                    DetectionToggle("Crypto Ticker", "Live price scrolling", SettingKey.CRYPTO_STOCK_TICKER, prefs, haptics)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(100.dp))
         }
     }
-}
 }
 
 @Composable
 private fun DetectionToggle(
     title: String,
     description: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     key: SettingKey,
     prefs: SharedPreferences,
     haptics: HapticManager
@@ -122,17 +172,21 @@ private fun DetectionToggle(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var checked by remember { mutableStateOf(prefs.getBoolean(key.name, true)) }
-    FeatureSwitch(
-        title = title, 
-        description = description, 
-        checked = checked, 
-        onCheckedChange = { 
-            if (it) haptics.toggleOn() else haptics.toggleOff()
-            checked = it
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean(key.name, it) }) {
-                NewConfigManager.broadcastUpdateSingle(context, prefs, "intelligence")
-            }
-        },
-        accentColor = IslandColors.accentCyan
-    )
+    
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        FeatureSwitch(
+            title = title, 
+            description = description, 
+            checked = checked, 
+            onCheckedChange = { 
+                if (it) haptics.toggleOn() else haptics.toggleOff()
+                checked = it
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean(key.name, it) }) {
+                    NewConfigManager.broadcastUpdateSingle(context, prefs, "intelligence")
+                }
+            },
+            accentColor = IslandColors.accentCyan,
+            icon = icon
+        )
+    }
 }
