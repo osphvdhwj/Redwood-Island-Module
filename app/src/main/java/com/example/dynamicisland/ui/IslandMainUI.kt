@@ -448,6 +448,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                         is LiveActivityModel.Music -> MusicMax(model) 
                                         is LiveActivityModel.Charging -> ChargingMax(model)
                                         is LiveActivityModel.VolumeMixer -> VolumeMixerMax(model)
+                                        is LiveActivityModel.NotificationStack -> NotificationStackMax(model)
                                         else -> {} 
                                     } 
                                 }
@@ -504,6 +505,20 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                             is LiveActivityModel.General -> GeneralMini(model)
                                             is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model)
                                             is LiveActivityModel.RealityPill -> RealityPillMini(model)
+                                            is LiveActivityModel.NotificationStack -> {
+                                                if (model.totalCount > 1) {
+                                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                                        Text(
+                                                            text = "+${model.totalCount}",
+                                                            color = Color.White,
+                                                            fontSize = 11.sp,
+                                                            fontWeight = FontWeight.Black
+                                                        )
+                                                    }
+                                                } else {
+                                                    GeneralMini(LiveActivityModel.General(id = model.id, title = model.notifications.firstOrNull()?.title ?: "", dataText = model.notifications.firstOrNull()?.text ?: ""))
+                                                }
+                                            }
                                             else -> {} 
                                         } 
                                     }

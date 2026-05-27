@@ -354,9 +354,36 @@ sealed class LiveActivityModel {
         override val isCritical: Boolean = false,
         override val isSensitive: Boolean = false
     ) : LiveActivityModel()
+    // Smart Notification Engine
+    data class NotificationStack(
+        override val id: String,
+        override val type: ActivityType = ActivityType.MESSAGE,
+        val pkgName: String,
+        val notifications: List<SimpleNotification>,
+        val totalCount: Int,
+        val accentColor: Int = android.graphics.Color.WHITE,
+        override val isTransient: Boolean = false,
+        override val isCritical: Boolean = false,
+        override val isSensitive: Boolean = false
+    ) : LiveActivityModel()
 }
 
 // ==================== Supporting Types ====================
+
+data class SimpleNotification(
+    val id: String,
+    val title: String,
+    val text: String,
+    val timestamp: Long,
+    val avatar: Bitmap? = null,
+    val remoteActions: List<RemoteNotificationAction> = emptyList()
+)
+
+data class RemoteNotificationAction(
+    val title: String,
+    val actionIntent: android.app.PendingIntent?,
+    val isReply: Boolean = false
+)
 
 data class CustomMediaAction(
     val action: String,            // "like", "dislike", "share"

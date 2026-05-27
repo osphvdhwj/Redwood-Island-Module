@@ -179,6 +179,11 @@ class IslandController @Inject constructor(
         },
         onNavigationCaught = { navModel ->
             postTransientNotification(navModel, 5000L)
+        },
+        onNotificationStackCaught = { stackModel ->
+            _lastActiveModel = stackModel
+            if (_lastIslandState == IslandState.TYPE_0_RING) _lastIslandState = IslandState.TYPE_1_MINI
+            evaluatePriority()
         }
     )
 
