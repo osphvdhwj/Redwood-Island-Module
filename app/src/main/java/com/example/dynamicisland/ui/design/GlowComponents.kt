@@ -170,29 +170,6 @@ fun SectionHeader(
     }
 }
 
-fun Modifier.squishClickable(
-    interactionSource: MutableInteractionSource? = null,
-    onClick: () -> Unit
-): Modifier = composed {
-    val actualInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
-    val isPressed by actualInteractionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
-        label = "squishClickableScale"
-    )
-    this
-        .graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-        }
-        .clickable(
-            interactionSource = actualInteractionSource,
-            indication = null,
-            onClick = onClick
-        )
-}
-
 @Composable
 fun SkeletonLoader(modifier: Modifier = Modifier, cornerRadius: Dp = 16.dp) {
     val infiniteTransition = rememberInfiniteTransition(label = "skeleton")

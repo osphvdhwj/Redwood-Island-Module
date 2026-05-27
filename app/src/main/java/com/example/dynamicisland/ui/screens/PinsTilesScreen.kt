@@ -186,8 +186,7 @@ fun AppPinSlot(index: Int, prefs: SharedPreferences, installedApps: List<Pair<St
         Box(
             modifier = Modifier
                 .size(60.dp)
-                .clip(CircleShape)
-                .background(IslandColors.surface)
+                .glassmorphicCard(cornerRadius = 30.dp)
                 .border(2.dp, if (hasApp) IslandColors.accentCyan else IslandColors.border, CircleShape)
                 .premiumClickable { 
                     haptics.light()

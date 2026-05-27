@@ -33,13 +33,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun IslandPreviewCard(modifier: Modifier = Modifier) {
+fun IslandPreviewCard(
+    modifier: Modifier = Modifier,
+    liveWidth: Float = 0f,
+    liveHeight: Float = 0f,
+    liveX: Float = 0f,
+    liveY: Float = 0f,
+    liveRingT: Float = 6f,
+    isLivePreview: Boolean = false,
+    previewState: String = "",
+    expandUpwards: Boolean = false
+) {
     val states = listOf("Music", "Call", "Charging")
     var currentState by remember { mutableStateOf(states[0]) }
     var isAutoPlaying by remember { mutableStateOf(true) }
 
-    LaunchedEffect(isAutoPlaying) {
-        if (isAutoPlaying) {
+    LaunchedEffect(isAutoPlaying, isLivePreview) {
+        if (isAutoPlaying && !isLivePreview) {
             while (true) {
                 kotlinx.coroutines.delay(5000)
                 val currentIndex = states.indexOf(currentState)
@@ -50,7 +60,7 @@ fun IslandPreviewCard(modifier: Modifier = Modifier) {
     }
 
     val pillWidth by animateDpAsState(
-        targetValue = when (currentState) {
+        targetValue = if (isLivePreview) liveWidth.dp else when (currentState) {
             "Music" -> 220.dp
             "Call" -> 160.dp
             "Charging" -> 190.dp
@@ -61,7 +71,7 @@ fun IslandPreviewCard(modifier: Modifier = Modifier) {
     )
 
     val pillHeight by animateDpAsState(
-        targetValue = when (currentState) {
+        targetValue = if (isLivePreview) liveHeight.dp else when (currentState) {
             "Music" -> 44.dp
             "Call" -> 40.dp
             "Charging" -> 44.dp
@@ -69,6 +79,18 @@ fun IslandPreviewCard(modifier: Modifier = Modifier) {
         },
         animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
         label = "pillHeight"
+    )
+
+    val pillOffsetX by animateDpAsState(
+        targetValue = if (isLivePreview) liveX.dp else 0.dp,
+        animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
+        label = "pillOffsetX"
+    )
+
+    val pillOffsetY by animateDpAsState(
+        targetValue = if (isLivePreview) liveY.dp else 48.dp,
+        animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
+        label = "pillOffsetY"
     )
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -107,55 +129,65 @@ fun IslandPreviewCard(modifier: Modifier = Modifier) {
                 )
             }
 
-            // Infinite Pulsing Ambient Background Ring
-            val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-            val pulseScale by infiniteTransition.animateFloat(
-                initialValue = 1f,
-                targetValue = 1.3f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(1500, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Restart
-                ),
-                label = "pulseScale"
-            )
-            val pulseAlpha by infiniteTransition.animateFloat(
-                initialValue = 0.6f,
-                targetValue = 0f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(1500, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Restart
-                ),
-                label = "pulseAlpha"
-            )
+            if (!isLivePreview) {
+                // Infinite Pulsing Ambient Background Ring
+                val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+                val pulseScale by infiniteTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = 1.3f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1500, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Restart
+                    ),
+                    label = "pulseScale"
+                )
+                val pulseAlpha by infiniteTransition.animateFloat(
+                    initialValue = 0.6f,
+                    targetValue = 0f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1500, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Restart
+                    ),
+                    label = "pulseAlpha"
+                )
 
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .offset(x = pillOffsetX, y = pillOffsetY)
+                        .width(pillWidth)
+                        .height(pillHeight)
+                        .graphicsLayer {
+                            scaleX = pulseScale
+                            scaleY = pulseScale
+                            alpha = pulseAlpha
+                        }
+                        .border(2.dp, IslandColors.accentCyan, RoundedCornerShape(50))
+                )
+            }
+
+            val alignment = if (expandUpwards) Alignment.BottomCenter else Alignment.TopCenter
+
+            // Dynamic Island Pill
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 36.dp)
-                    .width(pillWidth)
-                    .height(pillHeight)
-                    .graphicsLayer {
-                        scaleX = pulseScale
-                        scaleY = pulseScale
-                        alpha = pulseAlpha
-                    }
-                    .border(2.dp, IslandColors.accentCyan, RoundedCornerShape(50))
-            )
-
-            // Dynamic Island Pill (Exact top-center position)
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 36.dp)
+                    .offset(x = pillOffsetX, y = pillOffsetY)
                     .width(pillWidth)
                     .height(pillHeight)
                     .clip(RoundedCornerShape(50))
                     .background(Color.Black)
-                    .padding(horizontal = 12.dp),
-                contentAlignment = Alignment.Center
+                    .then(
+                        if (isLivePreview && previewState == "ring") {
+                            Modifier.border(liveRingT.dp, IslandColors.accentCyan, RoundedCornerShape(50))
+                        } else Modifier
+                    )
+                    .padding(horizontal = if (isLivePreview) 0.dp else 12.dp),
+                contentAlignment = alignment
             ) {
-                // Real content rendering swaps
-                Crossfade(targetState = currentState, label = "pillContent") { state ->
+                if (!isLivePreview) {
+                    // Real content rendering swaps
+                    Crossfade(targetState = currentState, label = "pillContent") { state ->
                     when (state) {
                         "Music" -> {
                             Row(
@@ -222,37 +254,39 @@ fun IslandPreviewCard(modifier: Modifier = Modifier) {
             }
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Horizontal LazyRow of state selector chips
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            items(states) { state ->
-                val isSelected = currentState == state
-                val chipBg = if (isSelected) IslandColors.accentCyan.copy(alpha = 0.15f) else IslandColors.surface
-                val chipBorder = if (isSelected) IslandColors.accentCyan else IslandColors.border
-                val chipTextColor = if (isSelected) IslandColors.accentCyan else IslandColors.textSecondary
-                
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(chipBg)
-                        .border(1.dp, chipBorder, RoundedCornerShape(50))
-                        .clickable { 
-                            currentState = state 
-                            isAutoPlaying = false
-                        }
-                        .padding(horizontal = 20.dp, vertical = 10.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = state,
-                        color = chipTextColor,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                    )
+        if (!isLivePreview) {
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Horizontal LazyRow of state selector chips
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(states) { state ->
+                    val isSelected = currentState == state
+                    val chipBg = if (isSelected) IslandColors.accentCyan.copy(alpha = 0.15f) else IslandColors.surface
+                    val chipBorder = if (isSelected) IslandColors.accentCyan else IslandColors.border
+                    val chipTextColor = if (isSelected) IslandColors.accentCyan else IslandColors.textSecondary
+                    
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(chipBg)
+                            .border(1.dp, chipBorder, RoundedCornerShape(50))
+                            .clickable { 
+                                currentState = state 
+                                isAutoPlaying = false
+                            }
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = state,
+                            color = chipTextColor,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
                 }
             }
         }

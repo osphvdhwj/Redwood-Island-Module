@@ -61,7 +61,17 @@ fun LayoutScreen(prefs: SharedPreferences) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.padding(16.dp)) {
                 StaggeredItem(0) { 
-                    IslandPreviewCard(modifier = Modifier.glassmorphicCard(cornerRadius = 28.dp))
+                    IslandPreviewCard(
+                        modifier = Modifier.glassmorphicCard(cornerRadius = 28.dp),
+                        liveWidth = w,
+                        liveHeight = h,
+                        liveX = x,
+                        liveY = y,
+                        liveRingT = ringT,
+                        isLivePreview = currentPrefix != "tweaks",
+                        previewState = currentPrefix,
+                        expandUpwards = expandUpwards
+                    )
                 }
             }
             

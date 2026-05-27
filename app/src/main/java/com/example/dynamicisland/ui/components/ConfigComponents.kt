@@ -156,7 +156,7 @@ fun ThemeSlider(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF1E1E1E))
+            .background(Color.White.copy(alpha = 0.03f))
             .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(16.dp))
             .padding(16.dp)
     ) {
@@ -207,7 +207,7 @@ fun PrecisionSlider(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF1E1E1E))
+            .background(Color.White.copy(alpha = 0.03f))
             .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(16.dp))
             .padding(16.dp)
     ) {
@@ -277,7 +277,7 @@ fun FeatureSwitch(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF1E1E1E))
+            .background(Color.White.copy(alpha = 0.03f))
             .squishClickable { onCheckedChange(!checked) }
     ) {
         if (accentColor != null) {
@@ -447,6 +447,8 @@ fun GestureDropdown(
     }
 }
 
+import com.example.dynamicisland.ui.design.glassmorphicCard
+
 @Composable
 fun SettingsGroup(
     title: String,
@@ -465,13 +467,7 @@ fun SettingsGroup(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF161616))
-            .border(
-                1.dp,
-                Brush.linearGradient(listOf(IslandColors.border, Color.Transparent)),
-                RoundedCornerShape(20.dp)
-            )
+            .glassmorphicCard(cornerRadius = 24.dp)
             .padding(16.dp)
     ) {
         Row(

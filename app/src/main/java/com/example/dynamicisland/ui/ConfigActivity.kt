@@ -162,52 +162,86 @@ fun InteractionsTab(prefs: android.content.SharedPreferences) {
 @Composable
 fun HeroHeader() {
     val infiniteTransition = rememberInfiniteTransition(label = "header_anim")
-    val gradientOffset by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
+    
+    val orb1X by infiniteTransition.animateFloat(
+        initialValue = -100f,
+        targetValue = 200f,
         animationSpec = infiniteRepeatable(
-            animation = tween(4000, easing = LinearEasing),
+            animation = tween(8000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "gradient"
+        label = "orb1x"
+    )
+    
+    val orb2X by infiniteTransition.animateFloat(
+        initialValue = 300f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(10000, easing = LinearOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "orb2x"
     )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp)
-            .background(
-                Brush.verticalGradient(
-                    0f to Color(0xFF001A33).copy(alpha = 0.5f + 0.5f * gradientOffset),
-                    1f to Color.Black
-                )
-            ),
+            .height(140.dp)
+            .background(Color(0xFF060606)),
         contentAlignment = Alignment.BottomCenter
     ) {
+        // Floating Orbs
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(
+                color = IslandColors.accentCyan.copy(alpha = 0.3f),
+                radius = 120f,
+                center = androidx.compose.ui.geometry.Offset(orb1X, size.height * 0.3f)
+            )
+            drawCircle(
+                color = IslandColors.accentPurple.copy(alpha = 0.3f),
+                radius = 150f,
+                center = androidx.compose.ui.geometry.Offset(orb2X, size.height * 0.7f)
+            )
+        }
+
+        // Frosted Glass overlay
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.4f))
+                .border(
+                    width = 1.dp,
+                    brush = Brush.verticalGradient(listOf(Color.White.copy(0.1f), Color.Transparent)),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                )
+        )
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 24.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Dynamic Island",
+                    text = "Redwood Engine",
                     color = IslandColors.textPrimary,
                     style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.5.sp,
                         shadow = androidx.compose.ui.graphics.Shadow(
-                            color = IslandColors.accentCyan,
-                            blurRadius = 12f
+                            color = IslandColors.accentCyan.copy(alpha = 0.5f),
+                            blurRadius = 20f
                         )
                     )
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
+                        .border(1.dp, IslandColors.accentCyan.copy(alpha=0.5f), androidx.compose.foundation.shape.CircleShape)
                         .background(IslandColors.accentCyan.copy(alpha = 0.1f), androidx.compose.foundation.shape.CircleShape)
                         .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = "v3.0",
+                        text = "PRO",
                         color = IslandColors.accentCyan,
                         style = MaterialTheme.typography.labelSmall
                     )
