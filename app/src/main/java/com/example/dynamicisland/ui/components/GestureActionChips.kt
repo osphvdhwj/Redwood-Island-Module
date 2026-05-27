@@ -20,23 +20,34 @@ import com.example.dynamicisland.ui.design.premiumClickable
 @Composable
 fun GestureActionChips(
     selectedAction: String,
+    inUseActions: List<String>,
     onSelect: (String) -> Unit
 ) {
-    val actions = listOf("none", "dismiss", "next_track", "previous_track", "toggle_play_pause", "expand")
+    val allActions = listOf("none", "dismiss", "expand", "next_track", "previous_track", "toggle_play_pause")
+    
+    // Sort actions: selected first, then unused, then in-use (dimmed)
+    val sortedActions = allActions.sortedWith(compareBy(
+        { it != selectedAction },
+        { it in inUseActions && it != selectedAction },
+        { allActions.indexOf(it) }
+    ))
     
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        items(actions) { action ->
+        items(sortedActions) { action ->
             val isSelected = selectedAction == action
+            val isInUse = action in inUseActions && !isSelected
+            val alphaMod = if (isInUse) 0.3f else 1f
+            
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
                     .background(if (isSelected) IslandColors.accentCyan.copy(alpha = 0.2f) else Color.Transparent)
                     .border(
                         1.dp, 
-                        if (isSelected) IslandColors.accentCyan else IslandColors.textSecondary.copy(alpha = 0.3f),
+                        if (isSelected) IslandColors.accentCyan else IslandColors.textSecondary.copy(alpha = 0.3f * alphaMod),
                         RoundedCornerShape(12.dp)
                     )
                     .premiumClickable { onSelect(action) }
@@ -45,7 +56,7 @@ fun GestureActionChips(
             ) {
                 Text(
                     text = action.replace("_", " ").capitalize(),
-                    color = if (isSelected) IslandColors.accentCyan else IslandColors.textSecondary,
+                    color = if (isSelected) IslandColors.accentCyan else IslandColors.textSecondary.copy(alpha = alphaMod),
                     fontSize = 12.sp
                 )
             }

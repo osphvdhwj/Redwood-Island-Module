@@ -103,30 +103,62 @@ fun IslandPreviewCard(
                 .background(Brush.radialGradient(listOf(Color(0xFF0A1628), Color.Black)))
                 .border(1.dp, IslandColors.border, RoundedCornerShape(24.dp))
         ) {
-            // Realistic Phone Silhouette via Canvas
+            // Background Canvas (Phone Silhouette or 1:1 Screen Preview)
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val phoneW = 260.dp.toPx()
-                val phoneH = 400.dp.toPx()
-                val phoneT = 24.dp.toPx()
-                val cr = 36.dp.toPx()
+                if (isLivePreview) {
+                    // 1:1 Scale Screen Preview
+                    val punchHoleRadius = 8.dp.toPx()
+                    // Typical centered punch-hole camera position
+                    val punchHoleY = 32.dp.toPx()
+                    
+                    // Draw a simulated camera cutout (punch hole)
+                    drawCircle(
+                        color = Color.Black,
+                        radius = punchHoleRadius,
+                        center = Offset(size.width / 2f, punchHoleY)
+                    )
+                    
+                    // Subtle inner shadow to make the punch hole look like hardware
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.1f),
+                        radius = punchHoleRadius,
+                        center = Offset(size.width / 2f, punchHoleY),
+                        style = Stroke(width = 1.dp.toPx())
+                    )
+                    
+                    // Draw a subtle border to represent the edges of the device screen
+                    drawRoundRect(
+                        color = Color.Black.copy(alpha = 0.5f),
+                        topLeft = Offset(0f, 0f),
+                        size = Size(size.width, size.height),
+                        cornerRadius = CornerRadius(24.dp.toPx(), 24.dp.toPx()),
+                        style = Stroke(width = 6.dp.toPx())
+                    )
+                } else {
+                    // Miniature Realistic Phone Silhouette
+                    val phoneW = 260.dp.toPx()
+                    val phoneH = 400.dp.toPx()
+                    val phoneT = 24.dp.toPx()
+                    val cr = 36.dp.toPx()
 
-                // Outer metallic bezel
-                drawRoundRect(
-                    color = Color(0xFF222222),
-                    topLeft = Offset(size.width / 2 - phoneW / 2, phoneT),
-                    size = Size(phoneW, phoneH),
-                    cornerRadius = CornerRadius(cr, cr),
-                    style = Stroke(width = 4.dp.toPx())
-                )
-                
-                // Inner screen boundary
-                drawRoundRect(
-                    color = Color(0xFF0D0D0D),
-                    topLeft = Offset(size.width / 2 - phoneW / 2 + 10f, phoneT + 10f),
-                    size = Size(phoneW - 20f, phoneH - 20f),
-                    cornerRadius = CornerRadius(cr - 5f, cr - 5f),
-                    style = Stroke(width = 2.dp.toPx())
-                )
+                    // Outer metallic bezel
+                    drawRoundRect(
+                        color = Color(0xFF222222),
+                        topLeft = Offset(size.width / 2 - phoneW / 2, phoneT),
+                        size = Size(phoneW, phoneH),
+                        cornerRadius = CornerRadius(cr, cr),
+                        style = Stroke(width = 4.dp.toPx())
+                    )
+                    
+                    // Inner screen boundary
+                    drawRoundRect(
+                        color = Color(0xFF0D0D0D),
+                        topLeft = Offset(size.width / 2 - phoneW / 2 + 10f, phoneT + 10f),
+                        size = Size(phoneW - 20f, phoneH - 20f),
+                        cornerRadius = CornerRadius(cr - 5f, cr - 5f),
+                        style = Stroke(width = 2.dp.toPx())
+                    )
+                }
             }
 
             if (!isLivePreview) {
@@ -176,7 +208,7 @@ fun IslandPreviewCard(
                     .width(pillWidth)
                     .height(pillHeight)
                     .clip(RoundedCornerShape(50))
-                    .background(Color.Black)
+                    .background(if (isLivePreview && previewState == "ring") Color.Transparent else Color.Black)
                     .then(
                         if (isLivePreview && previewState == "ring") {
                             Modifier.border(liveRingT.dp, IslandColors.accentCyan, RoundedCornerShape(50))

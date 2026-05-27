@@ -84,15 +84,36 @@ fun GesturesScreen(prefs: SharedPreferences) {
 
             StaggeredItem(2) {
                 val stateKey = stateKeys[selectedTab]
+                
+                // Calculate which actions are already assigned to *other* gestures in this state
+                val allGestureKeys = listOf(
+                    "${stateKey}_single_tap",
+                    "${stateKey}_double_tap",
+                    "${stateKey}_long_press",
+                    "${stateKey}_swipe_left",
+                    "${stateKey}_swipe_right",
+                    "${stateKey}_swipe_up",
+                    "${stateKey}_swipe_down"
+                )
+                
+                val currentAssignments = remember(selectedTab, prefs.all) {
+                    allGestureKeys.mapNotNull { key -> 
+                        prefs.getString(key, "none")?.takeIf { it != "none" } 
+                    }
+                }
+
                 SettingsGroup(
                     title = "${tabs[selectedTab]} State Actions", 
                     icon = Icons.Default.TouchApp, 
                     summary = "Swipes & Taps"
                 ) {
-                    GestureSelector("Swipe Left", "${stateKey}_swipe_left", prefs, haptics)
-                    GestureSelector("Swipe Right", "${stateKey}_swipe_right", prefs, haptics)
-                    GestureSelector("Long Press", "${stateKey}_long_press", prefs, haptics)
-                    GestureSelector("Double Tap", "${stateKey}_double_tap", prefs, haptics)
+                    GestureSelector("Single Tap", "${stateKey}_single_tap", prefs, haptics, currentAssignments)
+                    GestureSelector("Double Tap", "${stateKey}_double_tap", prefs, haptics, currentAssignments)
+                    GestureSelector("Long Press", "${stateKey}_long_press", prefs, haptics, currentAssignments)
+                    GestureSelector("Swipe Left", "${stateKey}_swipe_left", prefs, haptics, currentAssignments)
+                    GestureSelector("Swipe Right", "${stateKey}_swipe_right", prefs, haptics, currentAssignments)
+                    GestureSelector("Swipe Up", "${stateKey}_swipe_up", prefs, haptics, currentAssignments)
+                    GestureSelector("Swipe Down", "${stateKey}_swipe_down", prefs, haptics, currentAssignments)
                 }
             }
             
@@ -106,10 +127,11 @@ private fun GestureSelector(
     label: String,
     prefsKey: String,
     prefs: SharedPreferences,
-    haptics: HapticManager
+    haptics: HapticManager,
+    inUseActions: List<String>
 ) {
-    val actions = listOf("dismiss", "next_track", "previous_track", "toggle_play_pause", "expand", "none")
     var selectedAction by remember { mutableStateOf(prefs.getString(prefsKey, "none") ?: "none") }
+    var pendingOverrideAction by remember { mutableStateOf<String?>(null) }
     
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Text(
@@ -121,11 +143,68 @@ private fun GestureSelector(
         
         GestureActionChips(
             selectedAction = selectedAction,
+            inUseActions = inUseActions,
             onSelect = { action ->
                 haptics.light()
-                selectedAction = action
-                prefs.edit().putString(prefsKey, action).apply()
+                if (action in inUseActions && action != selectedAction && action != "none") {
+                    // Action is already in use by another gesture, prompt for override
+                    pendingOverrideAction = action
+                    haptics.heavy()
+                } else {
+                    selectedAction = action
+                    prefs.edit().putString(prefsKey, action).apply()
+                }
+            }
+        )
+    }
+
+    if (pendingOverrideAction != null) {
+        AlertDialog(
+            onDismissRequest = { pendingOverrideAction = null },
+            title = { Text("Override Action?", color = IslandColors.textPrimary) },
+            text = { 
+                Text(
+                    "The action '${pendingOverrideAction?.replace("_", " ")?.capitalize()}' is already assigned to another gesture in this state. Do you want to reassign it here?",
+                    color = IslandColors.textSecondary
+                ) 
+            },
+            containerColor = IslandColors.surface,
+            confirmButton = {
+                TextButton(onClick = {
+                    val actionToOverride = pendingOverrideAction!!
+                    
+                    // Find the previous gesture that had this action and set it to 'none'
+                    val allGestureKeys = listOf(
+                        "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_single_tap",
+                        "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_double_tap",
+                        "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_long_press",
+                        "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_swipe_left",
+                        "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_swipe_right",
+                        "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_swipe_up",
+                        "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_swipe_down"
+                    )
+                    
+                    allGestureKeys.forEach { key ->
+                        if (key != prefsKey && prefs.getString(key, "none") == actionToOverride) {
+                            prefs.edit().putString(key, "none").apply()
+                        }
+                    }
+
+                    selectedAction = actionToOverride
+                    prefs.edit().putString(prefsKey, actionToOverride).apply()
+                    pendingOverrideAction = null
+                    haptics.medium()
+                }) {
+                    Text("Reassign", color = IslandColors.accentCyan, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingOverrideAction = null }) {
+                    Text("Cancel", color = IslandColors.textSecondary)
+                }
             }
         )
     }
 }
+
+private fun String.capitalize() = this.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
