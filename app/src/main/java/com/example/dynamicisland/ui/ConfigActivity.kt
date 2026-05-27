@@ -41,6 +41,13 @@ class ConfigActivity : ComponentActivity() {
         enableEdgeToEdge()
         settingsViewModel = SettingsViewModel(settingsManager)
         val prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+        
+        val hasCompletedSetup = prefs.getBoolean("has_completed_setup", false)
+        if (!hasCompletedSetup) {
+            startActivity(android.content.Intent(this, com.example.dynamicisland.ui.setup.SetupActivity::class.java))
+            finish()
+            return
+        }
 
         val composeView = ComposeView(this).apply {
             setContent {

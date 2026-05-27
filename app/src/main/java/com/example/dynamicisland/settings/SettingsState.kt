@@ -167,8 +167,16 @@ data class SettingsState(
     val roleMusicApp: String = "",
     val roleVideoApp: String = "",
     val roleNotesApp: String = "",
-    val roleGameLauncher: String = ""
+    val roleGameLauncher: String = "",
+
+    // === Styles ===
+    val callStyle: CallStyle = CallStyle.IOS,
+    val chargingStyle: ChargingStyle = ChargingStyle.RING,
+    val batteryStyle: BatteryStyle = BatteryStyle.PILL
 )
 
 enum class DesignLanguage { MATERIAL_YOU, APPLE_LIQUID_GLASS }
 enum class AnimationSpeed { SLOW, NORMAL, FAST }
+enum class CallStyle { IOS, MINIMAL, MODERN }
+enum class ChargingStyle { RING, WAVE, CUBE }
+enum class BatteryStyle { PILL, GAUGE, DIGITAL }

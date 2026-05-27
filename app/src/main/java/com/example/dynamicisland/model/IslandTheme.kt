@@ -7,6 +7,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dynamicisland.settings.CallStyle
+import com.example.dynamicisland.settings.ChargingStyle
+import com.example.dynamicisland.settings.BatteryStyle
 
 data class IslandTheme(
     // Original UI Properties
@@ -44,7 +47,9 @@ data class IslandTheme(
 
     // Premium Features
     val hapticStrength: Int = 1, 
-    val chargingStyle: String = "CUBE", 
+    val chargingStyle: ChargingStyle = ChargingStyle.RING, 
+    val callStyle: CallStyle = CallStyle.IOS,
+    val batteryStyle: BatteryStyle = BatteryStyle.PILL,
     val blurIntensity: Dp = 16.dp,
     val hideOnLandscape: Boolean = false,
 

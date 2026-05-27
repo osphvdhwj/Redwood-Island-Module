@@ -156,6 +156,8 @@ object IslandPreferencesManagerV2 {
             key == "spring_damping"   ||
             key == "spring_stiffness" ||
             key == "charging_style"   ||
+            key == "call_style"       ||
+            key == "battery_style"    ||
             key == "blur_intensity"   -> {
                 view.activeTheme.value = buildThemeFromClient(client)
             }
@@ -203,7 +205,9 @@ object IslandPreferencesManagerV2 {
             alertTitleSize   = client.getFloat("theme_alert_title", 16f).sp,
             alertMsgSize     = client.getFloat("theme_alert_msg", 14f).sp,
             hapticStrength   = client.getInt("haptic_strength", 1),
-            chargingStyle    = client.getString("charging_style", "CUBE"),
+            chargingStyle    = com.example.dynamicisland.settings.ChargingStyle.valueOf(client.getString("charging_style", "RING") ?: "RING"),
+            callStyle        = com.example.dynamicisland.settings.CallStyle.valueOf(client.getString("call_style", "IOS") ?: "IOS"),
+            batteryStyle     = com.example.dynamicisland.settings.BatteryStyle.valueOf(client.getString("battery_style", "PILL") ?: "PILL"),
             blurIntensity    = client.getFloat("blur_intensity", 16f).dp,
             hideOnLandscape  = client.getBoolean("hide_landscape", false),
             isGlassmorphism  = client.getBoolean("glass_mode", true),

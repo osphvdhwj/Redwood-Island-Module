@@ -48,6 +48,10 @@ fun AppearanceScreen(prefs: SharedPreferences) {
     var damping by remember { mutableFloatStateOf(prefs.getFloat("spring_damping", 0.85f)) }
     var glowEffect by remember { mutableStateOf(prefs.getBoolean("glow_effect", true)) }
     var elasticStretch by remember { mutableStateOf(prefs.getBoolean("elastic_stretch", true)) }
+    
+    var callStyle by remember { mutableStateOf(com.example.dynamicisland.settings.CallStyle.valueOf(prefs.getString("call_style", "IOS") ?: "IOS")) }
+    var chargingStyle by remember { mutableStateOf(com.example.dynamicisland.settings.ChargingStyle.valueOf(prefs.getString("charging_style", "RING") ?: "RING")) }
+    var batteryStyle by remember { mutableStateOf(com.example.dynamicisland.settings.BatteryStyle.valueOf(prefs.getString("battery_style", "PILL") ?: "PILL")) }
 
     PullToRefreshContainer(onRefresh = { 
         haptics.medium()
@@ -70,6 +74,40 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 StaggeredItem(1) {
+                    SettingsGroup(
+                        title = "Component Styles",
+                        icon = Icons.Default.Build,
+                        summary = "Individual app UIs"
+                    ) {
+                        StyleSelector("Call Style", callStyle.name, listOf("IOS", "MINIMAL", "MODERN")) { newStyle ->
+                            haptics.light()
+                            callStyle = com.example.dynamicisland.settings.CallStyle.valueOf(newStyle)
+                            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("call_style", newStyle) }) {
+                                NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                            }
+                        }
+                        
+                        StyleSelector("Charging Animation", chargingStyle.name, listOf("RING", "WAVE", "CUBE")) { newStyle ->
+                            haptics.light()
+                            chargingStyle = com.example.dynamicisland.settings.ChargingStyle.valueOf(newStyle)
+                            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("charging_style", newStyle) }) {
+                                NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                            }
+                        }
+
+                        StyleSelector("Battery Vital", batteryStyle.name, listOf("PILL", "GAUGE", "DIGITAL")) { newStyle ->
+                            haptics.light()
+                            batteryStyle = com.example.dynamicisland.settings.BatteryStyle.valueOf(newStyle)
+                            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("battery_style", newStyle) }) {
+                                NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                StaggeredItem(2) {
                 SettingsGroup(
                     title = "Design Language", 
                     icon = Icons.Default.Palette, 
@@ -325,5 +363,35 @@ fun DesignChip(
             style = MaterialTheme.typography.labelLarge,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
         )
+    }
+}
+
+@Composable
+fun StyleSelector(
+    label: String,
+    selectedStyle: String,
+    options: List<String>,
+    onSelect: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Text(
+            text = label,
+            color = IslandColors.textPrimary,
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            options.forEach { style ->
+                DesignChip(
+                    label = style.lowercase().replaceFirstChar { it.uppercase() },
+                    selected = selectedStyle == style,
+                    onClick = { onSelect(style) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
     }
 }

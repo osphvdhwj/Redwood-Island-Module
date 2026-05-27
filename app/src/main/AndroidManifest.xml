@@ -69,6 +69,11 @@
             android:exported="false"
             android:theme="@style/Theme.Transparent" />
 
+        <activity
+            android:name=".ui.setup.SetupActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
+
         <receiver
             android:name=".BootReceiver"
             android:exported="true">

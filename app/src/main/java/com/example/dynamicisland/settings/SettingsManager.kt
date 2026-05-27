@@ -111,7 +111,10 @@ class SettingsManager(private val context: Context) {
         FOCUS_MODE_PILL,
 
         // === App Roles ===
-        ROLE_CALLING_APP, ROLE_MUSIC_APP, ROLE_VIDEO_APP, ROLE_NOTES_APP, ROLE_GAME_LAUNCHER
+        ROLE_CALLING_APP, ROLE_MUSIC_APP, ROLE_VIDEO_APP, ROLE_NOTES_APP, ROLE_GAME_LAUNCHER,
+
+        // === Styles ===
+        CALL_STYLE, CHARGING_STYLE, BATTERY_STYLE
     }
 
     // Type-safe getters and setters
@@ -317,7 +320,12 @@ class SettingsManager(private val context: Context) {
             roleMusicApp = getString(SettingKey.ROLE_MUSIC_APP, "") ?: "",
             roleVideoApp = getString(SettingKey.ROLE_VIDEO_APP, "") ?: "",
             roleNotesApp = getString(SettingKey.ROLE_NOTES_APP, "") ?: "",
-            roleGameLauncher = getString(SettingKey.ROLE_GAME_LAUNCHER, "") ?: ""
+            roleGameLauncher = getString(SettingKey.ROLE_GAME_LAUNCHER, "") ?: "",
+
+            // Styles
+            callStyle = CallStyle.valueOf(getString(SettingKey.CALL_STYLE, "IOS") ?: "IOS"),
+            chargingStyle = ChargingStyle.valueOf(getString(SettingKey.CHARGING_STYLE, "RING") ?: "RING"),
+            batteryStyle = BatteryStyle.valueOf(getString(SettingKey.BATTERY_STYLE, "PILL") ?: "PILL")
         )
     }
 }
