@@ -70,28 +70,37 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
     
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         when (theme.chargingStyle) {
-            "APPLE" -> {
-                val fillProgress by animateFloatAsState(targetValue = model.level / 100f, animationSpec = tween(1500), label = "fill")
-                Canvas(modifier = Modifier.size(54.dp)) {
-                    drawArc(color = Color.White.copy(alpha=0.1f), startAngle = 0f, sweepAngle = 360f, useCenter = false, style = androidx.compose.ui.graphics.drawscope.Stroke(10f))
-                    drawArc(color = color, startAngle = -90f, sweepAngle = 360f * fillProgress, useCenter = false, style = androidx.compose.ui.graphics.drawscope.Stroke(10f, cap = androidx.compose.ui.graphics.StrokeCap.Round))
-                }
-            }
-            "HYPEROS" -> {
-                val glowAlpha by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 0.6f, animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse), label = "glow")
-                Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(20.dp).background(Brush.verticalGradient(listOf(Color.Transparent, color.copy(alpha = glowAlpha)))))
-            }
-            else -> {
-                val pulseScale by infiniteTransition.animateFloat(initialValue = 0.85f, targetValue = 1.15f, animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Reverse), label = "scale")
+            com.example.dynamicisland.settings.ChargingStyle.RING -> {
                 val spinAngle by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart), label = "spin")
                 if (model.isPluggedIn || isLow) { 
-                    Box(modifier = Modifier.size(54.dp).graphicsLayer { rotationZ = spinAngle; scaleX = pulseScale; scaleY = pulseScale }) {
+                    Box(modifier = Modifier.size(54.dp).graphicsLayer { rotationZ = spinAngle }) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val brush = Brush.sweepGradient(0f to Color.Transparent, 0.5f to color.copy(alpha=0.5f), 1f to Color.Transparent)
                             drawCircle(brush = brush, radius = size.width/2, style = androidx.compose.ui.graphics.drawscope.Stroke(12f))
                         }
                     }
                 }
+            }
+            com.example.dynamicisland.settings.ChargingStyle.WAVE -> {
+                val waveOffset by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 1f, animationSpec = infiniteRepeatable(tween(2000, easing = LinearEasing), RepeatMode.Restart), label = "wave")
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val path = androidx.compose.ui.graphics.Path()
+                    val h = size.height
+                    val w = size.width
+                    path.moveTo(0f, h)
+                    for (i in 0..w.toInt()) {
+                        val y = h - (model.level / 100f * h) + sin((i.toFloat() / w * 2 * Math.PI + waveOffset * 2 * Math.PI).toDouble()).toFloat() * 5f
+                        path.lineTo(i.toFloat(), y)
+                    }
+                    path.lineTo(w, h)
+                    path.close()
+                    drawPath(path, color.copy(alpha = 0.3f))
+                }
+            }
+            com.example.dynamicisland.settings.ChargingStyle.CUBE -> {
+                // Classic solid block pulse
+                val pulseScale by infiniteTransition.animateFloat(initialValue = 0.9f, targetValue = 1.1f, animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse), label = "pulse")
+                Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }.background(color.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).border(2.dp, color, RoundedCornerShape(12.dp)))
             }
         }
 

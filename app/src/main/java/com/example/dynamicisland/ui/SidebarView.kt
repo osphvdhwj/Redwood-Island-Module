@@ -166,11 +166,11 @@ class SidebarView(context: Context, private val hardwareManager: IslandHardwareM
                         Text(if (isAutoBrightness) "AUTO" else "MANUAL", color = IslandColors.accentCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-                IslandLiquidSlider(
+                VerticalLiquidSlider(
                     value = 50f, // Ideally fetch real value from hardwareManager
                     onValueChange = { hardwareManager.setSystemBrightness(it.toInt(), null) },
-                    accentColor = IslandColors.accentCyan,
-                    icon = Icons.Default.BrightnessMedium
+                    activeColor = IslandColors.accentCyan,
+                    iconRes = android.R.drawable.ic_menu_compass // Placeholder
                 )
             }
 
@@ -195,11 +195,11 @@ class SidebarView(context: Context, private val hardwareManager: IslandHardwareM
                         Text(modeText, color = IslandColors.accentPurple, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-                IslandLiquidSlider(
+                VerticalLiquidSlider(
                     value = 50f, // Ideally fetch real value
                     onValueChange = { hardwareManager.setSystemVolume(it.toInt(), null) },
-                    accentColor = IslandColors.accentPurple,
-                    icon = Icons.Default.MusicNote
+                    activeColor = IslandColors.accentPurple,
+                    iconRes = android.R.drawable.ic_lock_silent_mode_off // Placeholder
                 )
             }
         }

@@ -22,8 +22,9 @@ import kotlin.math.sin
 @Composable
 fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
     val musicModel = model as? LiveActivityModel.Music
+    val weatherModel = model as? LiveActivityModel.WeatherMood
     val isMedia = musicModel != null && musicModel.isPlaying
-    val shouldShowRing = isMedia || globalIsCharging.value || true
+    val shouldShowRing = isMedia || globalIsCharging.value || weatherModel != null || true
 
     if (shouldShowRing) {
         val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
@@ -71,6 +72,7 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
                 val baseColor = when {
                     isMedia -> musicModel?.dominantColor?.let { Color(it) } ?: Color.White
                     globalIsCharging.value -> Color(0xFF00FF00)
+                    weatherModel != null -> Color(weatherModel.color)
                     else -> when {
                         currentBatteryLevel <= 5  -> Color(0xFFFF0000)
                         currentBatteryLevel <= 10 -> Color(0xFFFF3333)

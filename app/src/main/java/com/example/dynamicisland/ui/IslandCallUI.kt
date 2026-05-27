@@ -35,81 +35,46 @@ import com.example.dynamicisland.ipc.IslandState
 
 @Composable
 fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
+    val theme = LocalIslandTheme.current
     val isRinging = model.state == "RINGING"
 
-    val infiniteTransition = rememberInfiniteTransition(label="ring")
-    val rippleScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.10f,
-        animationSpec = infiniteRepeatable(
-            tween(600, easing = FastOutSlowInEasing),
-            RepeatMode.Reverse
-        ), label = "ripple"
-    )
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.2f,
-        targetValue = 0.6f,
-        animationSpec = infiniteRepeatable(
-            tween(800, easing = LinearOutSlowInEasing),
-            RepeatMode.Reverse
-        ), label = "glow"
-    )
-
-    val bgColor = if (isRinging) {
-        Brush.horizontalGradient(listOf(Color(0xFF34C759), Color(0xFF248A3D)))
-    } else {
-        Brush.horizontalGradient(listOf(Color(0xFF30D158), Color(0xFF34C759)))
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
-            .graphicsLayer {
-                val s = if (isRinging) rippleScale else 1f
-                scaleX = s; scaleY = s
+    when (theme.callStyle) {
+        com.example.dynamicisland.settings.CallStyle.MINIMAL -> {
+            // Tiny dot + Timer
+            Row(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(modifier = Modifier.size(8.dp).background(Color(0xFF34C759), CircleShape))
+                if (!isRinging) {
+                    IsolatedTimerText(startTime = model.startTime, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                } else {
+                    Text("Call", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
             }
-            .background(bgColor, RoundedCornerShape(50))
-            .squishClickable {
-                if (isRinging) onOpenCallUI?.invoke() else setState(IslandState.TYPE_2_MID)
+        }
+        else -> {
+            // IOS and MODERN style logic (Original)
+            val infiniteTransition = rememberInfiniteTransition(label="ring")
+...
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        val s = if (isRinging) rippleScale else 1f
+                        scaleX = s; scaleY = s
+                    }
+                    .background(bgColor, RoundedCornerShape(50))
+                    .squishClickable {
+                        if (isRinging) onOpenCallUI?.invoke() else setState(IslandState.TYPE_2_MID)
+                    }
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+...
             }
-            .padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        val phoneRotation by infiniteTransition.animateFloat(
-            initialValue = -15f,
-            targetValue = 15f,
-            animationSpec = infiniteRepeatable(
-                tween(200, easing = LinearEasing),
-                RepeatMode.Reverse
-            ), label = "rotation"
-        )
-
-        Icon(
-            Icons.Default.Phone,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier
-                .size(15.dp)
-                .graphicsLayer { rotationZ = if (isRinging) phoneRotation else 0f }
-        )
-
-        if (isRinging) {
-            Text(
-                text = model.callerName.ifEmpty { "Incoming Call" },
-                color = Color.White,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Black,
-                maxLines = 1,
-                modifier = Modifier.weight(1f)
-            )
-        } else {
-            IsolatedTimerText(
-                startTime = model.startTime,
-                color = Color.White,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
         }
     }
 }

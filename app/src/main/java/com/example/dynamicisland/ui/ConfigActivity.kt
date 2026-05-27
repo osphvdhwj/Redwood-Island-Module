@@ -19,10 +19,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import android.os.PowerManager
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.example.dynamicisland.ui.components.FloatingNavBar
 import com.example.dynamicisland.ui.components.NavItemData
 import com.example.dynamicisland.ui.design.IslandColors
 import com.example.dynamicisland.ui.design.RedwoodDesignSystem
+import com.example.dynamicisland.ui.design.glassmorphicCard
+import com.example.dynamicisland.ui.design.premiumClickable
 import com.example.dynamicisland.ui.screens.*
 import com.example.dynamicisland.ui.settings.SettingsScreen
 import com.example.dynamicisland.settings.SettingsViewModel
@@ -59,12 +71,103 @@ class ConfigActivity : ComponentActivity() {
                     ),
                     typography = RedwoodDesignSystem.typography
                 ) {
-                    ConfigScreenNav(prefs, settingsViewModel)
+                    PermissionGuard {
+                        ConfigScreenNav(prefs, settingsViewModel)
+                    }
                 }
             }
         }
         setContentView(composeView)
     }
+}
+
+@Composable
+fun PermissionGuard(content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    var isOverlayMissing by remember { mutableStateOf(!Settings.canDrawOverlays(context)) }
+    var isNotificationMissing by remember { mutableStateOf(!isNotificationListenerEnabled(context)) }
+    var isAccessibilityMissing by remember { mutableStateOf(!isAccessibilityServiceEnabled(context)) }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isOverlayMissing = !Settings.canDrawOverlays(context)
+                isNotificationMissing = !isNotificationListenerEnabled(context)
+                isAccessibilityMissing = !isAccessibilityServiceEnabled(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val isAnyCriticalMissing = isOverlayMissing || isNotificationMissing || isAccessibilityMissing
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        content()
+
+        if (isAnyCriticalMissing) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.92f))
+                    .premiumClickable(enabled = false) {}, // Intercept all touches
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(32.dp)
+                        .glassmorphicCard(cornerRadius = 24.dp)
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.GppMaybe, 
+                        null, 
+                        tint = Color.Red, 
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "Permission Shield", 
+                        color = Color.White, 
+                        fontSize = 22.sp, 
+                        fontWeight = FontWeight.Black
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Critical system permissions were not granted or have been revoked. The Island cannot function without them.",
+                        color = Color.White.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center,
+                        lineHeight = 20.sp
+                    )
+                    Spacer(Modifier.height(32.dp))
+                    
+                    Button(
+                        onClick = {
+                            val intent = Intent(context, com.example.dynamicisland.ui.setup.SetupActivity::class.java)
+                            context.startActivity(intent)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = IslandColors.accentCyan),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    ) {
+                        Text("Fix Permissions", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun isNotificationListenerEnabled(context: Context): Boolean {
+    return NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
+}
+
+private fun isAccessibilityServiceEnabled(context: Context): Boolean {
+    val expectedId = "${context.packageName}/com.example.dynamicisland.accessibility.IslandAccessibilityService"
+    val enabledServices = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+    return enabledServices?.contains(expectedId) == true
 }
 
 @Composable

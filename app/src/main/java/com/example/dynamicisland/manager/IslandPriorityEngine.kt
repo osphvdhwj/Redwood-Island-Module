@@ -23,6 +23,7 @@ object IslandPriorityEngine {
         activeExternalActivity: LiveActivityModel.ExternalActivity? = null,
         currentMedia: LiveActivityModel.Music?,
         currentHardware: LiveActivityModel.HardwareMonitor?,
+        currentWeather: LiveActivityModel.WeatherMood? = null,
         isMediaEnabled: Boolean,
         userForceCollapsed: Boolean,
         currentActiveModel: LiveActivityModel?,
@@ -90,7 +91,12 @@ object IslandPriorityEngine {
             return PriorityResult(IslandState.HIDDEN, currentActiveModel, null, true)
         }
 
-        // 9. DEFAULT IDLE (Camera Cutout Ring)
+        // 9. 🌤️ WEATHER (Ambient Mood)
+        if (currentWeather != null) {
+            return PriorityResult(IslandState.TYPE_0_RING, currentWeather, null, true)
+        }
+
+        // 10. DEFAULT IDLE (Camera Cutout Ring)
         return PriorityResult(IslandState.TYPE_0_RING, null, null, true)
     }
 }

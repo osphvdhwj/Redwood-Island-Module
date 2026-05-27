@@ -198,6 +198,9 @@ class IslandController @Inject constructor(
 
     private val hardwareManager = IslandHardwareManager(context, audioManager, scope)
     private val actionManager = IslandActionManager(context, scope)
+    private val weatherManager = IslandWeatherManager(context, scope) { newWeather ->
+        currentWeather = newWeather; evaluatePriority()
+    }
     private val callManager = IslandCallManager(context, audioManager) { newCall ->
         currentCall = newCall; evaluatePriority()
     }
@@ -216,6 +219,7 @@ class IslandController @Inject constructor(
 
     private var currentCall: LiveActivityModel.Call? = null
     private var currentMedia: LiveActivityModel.Music? = null
+    private var currentWeather: LiveActivityModel.WeatherMood? = null
     var currentHardware: LiveActivityModel.HardwareMonitor? = null
     private var transientModel: LiveActivityModel? = null
 
@@ -635,6 +639,7 @@ class IslandController @Inject constructor(
             activeExternalActivity = activeExternalActivities.values.firstOrNull(),
             currentMedia = currentMedia,
             currentHardware = currentHardware,
+            currentWeather = currentWeather,
             isMediaEnabled = mediaManager.isMediaEnabled,
             userForceCollapsed = userForceCollapsed,
             currentActiveModel = _lastActiveModel,
@@ -929,6 +934,7 @@ class IslandController @Inject constructor(
 
     init {
         loadAndApplySettings()
+        weatherManager.startPolling()
 
         hardwareMonitor.onHardwareUpdate = { newHw ->
             currentHardware = newHw; evaluatePriority()
