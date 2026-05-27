@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.dynamicisland.manager.ConfigManager
+import com.example.dynamicisland.manager.NewConfigManager
 import com.example.dynamicisland.ui.components.*
 import com.example.dynamicisland.ui.design.*
 import kotlinx.coroutines.launch
@@ -46,17 +46,17 @@ fun LayoutScreen(prefs: SharedPreferences) {
 
     LaunchedEffect(selectedTab) {
         if (currentPrefix != "tweaks") {
-            w = prefs.getFloat("${currentPrefix}_w", ConfigManager.getDefaultWidth(currentPrefix))
-            h = prefs.getFloat("${currentPrefix}_h", ConfigManager.getDefaultHeight(currentPrefix))
+            w = prefs.getFloat("${currentPrefix}_w", NewConfigManager.getDefaultWidth(currentPrefix))
+            h = prefs.getFloat("${currentPrefix}_h", NewConfigManager.getDefaultHeight(currentPrefix))
             x = prefs.getFloat("${currentPrefix}_x", 0f)
             y = prefs.getFloat("${currentPrefix}_y", 48f)
-            ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+            NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
         }
     }
 
     PullToRefreshContainer(onRefresh = { 
         haptics.medium()
-        ConfigManager.broadcastUpdateSingle(context, prefs, "layout") 
+        NewConfigManager.broadcastUpdateSingle(context, prefs, "layout") 
     }) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.padding(16.dp)) {
@@ -127,8 +127,8 @@ fun LayoutScreen(prefs: SharedPreferences) {
                                 valueRange = 0f..150f,
                                 onValueChange = {
                                     offsetY = it
-                                    ConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("tweak_offset_y", it) }) {
-                                        ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                                    NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("tweak_offset_y", it) }) {
+                                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
                                     }
                                 }
                             )
@@ -146,8 +146,8 @@ fun LayoutScreen(prefs: SharedPreferences) {
                                 onCheckedChange = { 
                                     haptics.toggleOn()
                                     expandUpwards = it
-                                    ConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("expand_upwards", it) }) {
-                                        ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                                    NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("expand_upwards", it) }) {
+                                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
                                     }
                                 }, 
                                 accentColor = IslandColors.accentCyan
@@ -162,7 +162,7 @@ fun LayoutScreen(prefs: SharedPreferences) {
                                     valueRange = 10f..400f, 
                                     onValueChange = { 
                                         w = it
-                                        ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
                                     }
                                 )
                                 PrecisionSlider(
@@ -171,7 +171,7 @@ fun LayoutScreen(prefs: SharedPreferences) {
                                     valueRange = 10f..400f, 
                                     onValueChange = { 
                                         h = it
-                                        ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
                                     }
                                 )
                                 PrecisionSlider(
@@ -180,7 +180,7 @@ fun LayoutScreen(prefs: SharedPreferences) {
                                     valueRange = -200f..200f, 
                                     onValueChange = { 
                                         x = it
-                                        ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
                                     }
                                 )
                                 PrecisionSlider(
@@ -189,7 +189,7 @@ fun LayoutScreen(prefs: SharedPreferences) {
                                     valueRange = -100f..200f, 
                                     onValueChange = { 
                                         y = it
-                                        ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
                                     }
                                 )
                             }
@@ -202,8 +202,8 @@ fun LayoutScreen(prefs: SharedPreferences) {
                                     valueRange = 1f..20f, 
                                     onValueChange = { 
                                         ringT = it
-                                        ConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("ring_thickness", ringT) }) {
-                                            ConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                                        NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("ring_thickness", ringT) }) {
+                                            NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
                                         }
                                     }
                                 )

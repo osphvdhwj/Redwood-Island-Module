@@ -14,7 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.dynamicisland.manager.ConfigManager
+import com.example.dynamicisland.manager.NewConfigManager
 import com.example.dynamicisland.settings.SettingsManager.SettingKey
 import com.example.dynamicisland.ui.components.*
 import com.example.dynamicisland.ui.design.*
@@ -27,7 +27,7 @@ fun SystemScreen(prefs: SharedPreferences) {
 
     PullToRefreshContainer(onRefresh = { 
         haptics.medium()
-        ConfigManager.broadcastUpdateSingle(context, prefs, "system") 
+        NewConfigManager.broadcastUpdateSingle(context, prefs, "system") 
     }) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.padding(16.dp)) {

@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.dynamicisland.manager.ConfigManager
+import com.example.dynamicisland.manager.NewConfigManager
 import com.example.dynamicisland.ui.components.*
 import com.example.dynamicisland.ui.design.*
 
@@ -37,7 +37,7 @@ fun GesturesScreen(prefs: SharedPreferences) {
 
     PullToRefreshContainer(onRefresh = { 
         haptics.medium()
-        ConfigManager.sendGestureUpdate(context, prefs) 
+        NewConfigManager.sendGestureUpdate(context, prefs) 
     }) {
         Column(
             modifier = Modifier
@@ -130,6 +130,8 @@ private fun GestureSelector(
     haptics: HapticManager,
     inUseActions: List<String>
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var selectedAction by remember { mutableStateOf(prefs.getString(prefsKey, "none") ?: "none") }
     var pendingOverrideAction by remember { mutableStateOf<String?>(null) }
     
@@ -152,7 +154,9 @@ private fun GestureSelector(
                     haptics.heavy()
                 } else {
                     selectedAction = action
-                    prefs.edit().putString(prefsKey, action).apply()
+                    NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString(prefsKey, action) }) {
+                        NewConfigManager.sendGestureUpdate(context, prefs)
+                    }
                 }
             }
         )
@@ -184,14 +188,18 @@ private fun GestureSelector(
                         "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_swipe_down"
                     )
                     
-                    allGestureKeys.forEach { key ->
-                        if (key != prefsKey && prefs.getString(key, "none") == actionToOverride) {
-                            prefs.edit().putString(key, "none").apply()
+                    NewConfigManager.commitAndBroadcast(prefs, scope, context, {
+                        allGestureKeys.forEach { key ->
+                            if (key != prefsKey && prefs.getString(key, "none") == actionToOverride) {
+                                putString(key, "none")
+                            }
                         }
+                        putString(prefsKey, actionToOverride)
+                    }) {
+                        NewConfigManager.sendGestureUpdate(context, prefs)
                     }
 
                     selectedAction = actionToOverride
-                    prefs.edit().putString(prefsKey, actionToOverride).apply()
                     pendingOverrideAction = null
                     haptics.medium()
                 }) {

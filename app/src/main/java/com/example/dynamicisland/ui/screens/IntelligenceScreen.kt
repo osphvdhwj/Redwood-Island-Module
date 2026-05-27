@@ -14,7 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.dynamicisland.manager.ConfigManager
+import com.example.dynamicisland.manager.NewConfigManager
 import com.example.dynamicisland.settings.SettingsManager.SettingKey
 import com.example.dynamicisland.ui.components.*
 import com.example.dynamicisland.ui.design.*
@@ -27,7 +27,7 @@ fun IntelligenceScreen(prefs: SharedPreferences) {
 
     PullToRefreshContainer(onRefresh = { 
         haptics.medium()
-        ConfigManager.broadcastUpdateSingle(context, prefs, "intelligence") 
+        NewConfigManager.broadcastUpdateSingle(context, prefs, "intelligence") 
     }) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.padding(16.dp)) {
@@ -119,6 +119,8 @@ private fun DetectionToggle(
     prefs: SharedPreferences,
     haptics: HapticManager
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var checked by remember { mutableStateOf(prefs.getBoolean(key.name, true)) }
     FeatureSwitch(
         title = title, 
@@ -127,7 +129,9 @@ private fun DetectionToggle(
         onCheckedChange = { 
             if (it) haptics.toggleOn() else haptics.toggleOff()
             checked = it
-            prefs.edit().putBoolean(key.name, it).apply()
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean(key.name, it) }) {
+                NewConfigManager.broadcastUpdateSingle(context, prefs, "intelligence")
+            }
         },
         accentColor = IslandColors.accentCyan
     )

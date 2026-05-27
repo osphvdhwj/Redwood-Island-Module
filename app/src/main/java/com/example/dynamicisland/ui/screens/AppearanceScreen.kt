@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.dynamicisland.manager.ConfigManager
+import com.example.dynamicisland.manager.NewConfigManager
 import com.example.dynamicisland.settings.DesignLanguage
 import com.example.dynamicisland.ui.components.*
 import com.example.dynamicisland.ui.design.*
@@ -51,7 +51,7 @@ fun AppearanceScreen(prefs: SharedPreferences) {
 
     PullToRefreshContainer(onRefresh = { 
         haptics.medium()
-        ConfigManager.broadcastUpdateSingle(context, prefs, "theme") 
+        NewConfigManager.broadcastUpdateSingle(context, prefs, "theme") 
     }) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.padding(16.dp)) {
@@ -85,8 +85,9 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                             onClick = { 
                                 haptics.light()
                                 designLanguage = DesignLanguage.MATERIAL_YOU
-                                prefs.edit().putString("design_language", "MATERIAL_YOU").apply()
-                                ConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("design_language", "MATERIAL_YOU") }) {
+                                    NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                                }
                             },
                             modifier = Modifier.weight(1f)
                         )
@@ -96,8 +97,9 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                             onClick = { 
                                 haptics.light()
                                 designLanguage = DesignLanguage.APPLE_LIQUID_GLASS
-                                prefs.edit().putString("design_language", "APPLE_LIQUID_GLASS").apply()
-                                ConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("design_language", "APPLE_LIQUID_GLASS") }) {
+                                    NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                                }
                             },
                             modifier = Modifier.weight(1f)
                         )
@@ -111,8 +113,9 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                             onCheckedChange = { 
                                 haptics.toggleOn()
                                 dynamicColors = it
-                                prefs.edit().putBoolean("dynamic_colors", it).apply()
-                                ConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("dynamic_colors", it) }) {
+                                    NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                                }
                             }, 
                             accentColor = IslandColors.accentCyan
                         )
@@ -125,8 +128,8 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                         onCheckedChange = { 
                             haptics.toggleOn()
                             glassMode = it
-                            ConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("glass_mode", it) }) {
-                                ConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("glass_mode", it) }) {
+                                NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
                             }
                         }, 
                         accentColor = IslandColors.accentCyan
@@ -148,8 +151,9 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                         valueRange = 5f..40f,
                         onValueChange = { 
                             blurIntensity = it
-                            prefs.edit().putFloat("blur_intensity", it).apply()
-                            ConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("blur_intensity", it) }) {
+                                NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                            }
                         }
                     )
 
@@ -160,8 +164,9 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                         onCheckedChange = { 
                             haptics.toggleOn()
                             glowEffect = it
-                            prefs.edit().putBoolean("glow_effect", it).apply()
-                            ConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("glow_effect", it) }) {
+                                NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                            }
                         }, 
                         accentColor = IslandColors.accentPurple
                     )
@@ -173,8 +178,9 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                         onCheckedChange = { 
                             haptics.toggleOn()
                             elasticStretch = it
-                            prefs.edit().putBoolean("elastic_stretch", it).apply()
-                            ConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("elastic_stretch", it) }) {
+                                NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                            }
                         }, 
                         accentColor = IslandColors.accentPurple
                     )
@@ -200,8 +206,9 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                                 onClick = { 
                                     haptics.light()
                                     pillShape = shape
-                                    prefs.edit().putString("pill_shape", shape).apply()
-                                    ConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                                    NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("pill_shape", shape) }) {
+                                        NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                                    }
                                 },
                                 modifier = Modifier.weight(1f)
                             )
@@ -214,8 +221,9 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                         valueRange = 8f..200f,
                         onValueChange = { 
                             cornerRadius = it
-                            prefs.edit().putFloat("pill_corner_radius", it).apply()
-                            ConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("pill_corner_radius", it) }) {
+                                NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                            }
                         }
                     )
                 }
@@ -270,8 +278,8 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                         valueRange = 0.1f..1.0f,
                         onValueChange = { 
                             damping = it
-                            ConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("spring_damping", it) }) {
-                                ConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("spring_damping", it) }) {
+                                NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
                             }
                         }
                     )
@@ -282,8 +290,8 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                         valueRange = 50f..1000f,
                         onValueChange = { 
                             stiffness = it
-                            ConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("spring_stiffness", it) }) {
-                                ConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("spring_stiffness", it) }) {
+                                NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
                             }
                         }
                     )

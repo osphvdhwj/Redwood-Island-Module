@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.dynamicisland.manager.ConfigManager
+import com.example.dynamicisland.manager.NewConfigManager
 import com.example.dynamicisland.ui.components.*
 import com.example.dynamicisland.ui.design.*
 import kotlinx.coroutines.Dispatchers
@@ -161,14 +161,14 @@ fun TileSlot(index: Int, prefs: SharedPreferences, dynamicQSTiles: List<Pair<Str
                 selectedLabel = "Empty"
                 expanded = false
                 prefs.edit().putString("qs_tile_label_$index", "Empty").putString("qs_tile_spec_$index", "empty").apply()
-                ConfigManager.broadcastUpdateSingle(context, prefs, "dashboard")
+                NewConfigManager.broadcastUpdateSingle(context, prefs, "dashboard")
             })
             dynamicQSTiles.forEach { tile ->
                 DropdownMenuItem(text = { Text(tile.second) }, onClick = {
                     selectedLabel = tile.second
                     expanded = false
                     prefs.edit().putString("qs_tile_label_$index", tile.second).putString("qs_tile_spec_$index", tile.first).apply()
-                    ConfigManager.broadcastUpdateSingle(context, prefs, "dashboard")
+                    NewConfigManager.broadcastUpdateSingle(context, prefs, "dashboard")
                 })
             }
         }
@@ -208,12 +208,12 @@ fun AppPinSlot(index: Int, prefs: SharedPreferences, installedApps: List<Pair<St
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 DropdownMenuItem(text = { Text("None") }, onClick = {
                     selectedAppPkg = ""; expanded = false
-                    ConfigManager.commitAndBroadcast(prefs, scope, context, { putString("pinned_app_$index", "") }) { ConfigManager.broadcastUpdateSingle(context, prefs, "dashboard") }
+                    NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("pinned_app_$index", "") }) { NewConfigManager.broadcastUpdateSingle(context, prefs, "dashboard") }
                 })
                 installedApps.forEach { pair ->
                     DropdownMenuItem(text = { Text(pair.first) }, onClick = {
                         selectedAppPkg = pair.second; expanded = false
-                        ConfigManager.commitAndBroadcast(prefs, scope, context, { putString("pinned_app_$index", pair.second) }) { ConfigManager.broadcastUpdateSingle(context, prefs, "dashboard") }
+                        NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("pinned_app_$index", pair.second) }) { NewConfigManager.broadcastUpdateSingle(context, prefs, "dashboard") }
                     })
                 }
             }
