@@ -14,6 +14,11 @@ import com.example.dynamicisland.settings.SettingsManager.SettingKey
 import com.example.dynamicisland.settings.SettingsViewModel
 import com.example.dynamicisland.ui.components.*
 import com.example.dynamicisland.ui.design.*
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.example.dynamicisland.manager.ConfigBackupManager
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -22,6 +27,26 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     val state = viewModel.state
     val context = LocalContext.current
     val haptics = rememberHapticManager()
+    val scope = rememberCoroutineScope()
+    val prefs = context.getSharedPreferences("island_prefs", android.content.Context.MODE_PRIVATE)
+
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                val success = ConfigBackupManager.exportConfig(context, prefs, uri)
+                Toast.makeText(context, if (success) "Configuration Exported" else "Export Failed", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                val success = ConfigBackupManager.importConfig(context, prefs, uri)
+                Toast.makeText(context, if (success) "Configuration Imported! Restarting Engine..." else "Import Failed", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     PullToRefreshContainer(onRefresh = { 
         haptics.medium()
@@ -190,14 +215,35 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 Spacer(modifier = Modifier.height(24.dp))
 
                 StaggeredItem(4) {
-                    NeonButton(
-                        text = "Reset All Settings",
-                        onClick = {
-                            haptics.heavy()
-                            viewModel.resetAll()
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
+                            NeonButton(
+                                text = "Export Config",
+                                onClick = {
+                                    haptics.medium()
+                                    exportLauncher.launch("redwood_config.json")
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                            NeonButton(
+                                text = "Import Config",
+                                onClick = {
+                                    haptics.medium()
+                                    importLauncher.launch(arrayOf("application/json"))
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        NeonButton(
+                            text = "Reset All Settings",
+                            onClick = {
+                                haptics.heavy()
+                                viewModel.resetAll()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(100.dp))
