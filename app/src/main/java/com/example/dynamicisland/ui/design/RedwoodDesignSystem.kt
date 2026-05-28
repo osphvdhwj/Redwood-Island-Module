@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -92,6 +93,23 @@ object RedwoodDesignSystem {
     )
 }
 
+@Composable
+fun RedwoodDesignSystem(content: @Composable () -> Unit) {
+    CompositionLocalProvider(
+        LocalRedwoodColors provides RedwoodColors()
+    ) {
+        MaterialTheme(
+            colorScheme = darkColorScheme(
+                background = IslandColors.background,
+                surface = IslandColors.surface,
+                primary = IslandColors.accentCyan
+            ),
+            typography = RedwoodDesignSystem.typography,
+            content = content
+        )
+    }
+}
+
 /**
  * Modern Glassmorphism modifier.
  * Applies background blur, semi-transparent background, and a subtle glow border.
@@ -136,13 +154,14 @@ fun Modifier.glassmorphicCard(
  * Premium squish effect for interactive elements.
  */
 fun Modifier.premiumClickable(
+    enabled: Boolean = true,
     interactionSource: MutableInteractionSource? = null,
     onClick: () -> Unit
 ): Modifier = composed {
     val actualInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
     val isPressed by actualInteractionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.96f else 1f,
+        targetValue = if (isPressed && enabled) 0.96f else 1f,
         animationSpec = spring(dampingRatio = 0.75f, stiffness = 400f),
         label = "premiumClickableScale"
     )
@@ -153,6 +172,7 @@ fun Modifier.premiumClickable(
             scaleY = scale
         }
         .clickable(
+            enabled = enabled,
             interactionSource = actualInteractionSource,
             indication = null,
             onClick = onClick

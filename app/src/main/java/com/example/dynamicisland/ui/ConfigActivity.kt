@@ -17,8 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Canvas
-import androidx.compose.ui.foundation.Canvas
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -75,14 +75,7 @@ class ConfigActivity : ComponentActivity() {
 
         val composeView = ComposeView(this).apply {
             setContent {
-                MaterialTheme(
-                    colorScheme = darkColorScheme(
-                        background = IslandColors.background,
-                        surface = IslandColors.surface,
-                        primary = IslandColors.accentCyan
-                    ),
-                    typography = RedwoodDesignSystem.typography
-                ) {
+                RedwoodDesignSystem {
                     PermissionGuard {
                         ConfigScreenNav(prefs, settingsViewModel)
                     }
@@ -355,7 +348,7 @@ fun HeroHeader() {
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Black,
                         letterSpacing = 0.5.sp,
-                        shadow = androidx.compose.ui.graphics.Shadow(
+                        shadow = Shadow(
                             color = IslandColors.accentCyan.copy(alpha = 0.5f),
                             blurRadius = 20f
                         )
@@ -364,8 +357,8 @@ fun HeroHeader() {
                 Spacer(modifier = Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
-                        .border(1.dp, IslandColors.accentCyan.copy(alpha=0.5f), androidx.compose.foundation.shape.CircleShape)
-                        .background(IslandColors.accentCyan.copy(alpha = 0.1f), androidx.compose.foundation.shape.CircleShape)
+                        .border(1.dp, IslandColors.accentCyan.copy(alpha=0.5f), CircleShape)
+                        .background(IslandColors.accentCyan.copy(alpha = 0.1f), CircleShape)
                         .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(

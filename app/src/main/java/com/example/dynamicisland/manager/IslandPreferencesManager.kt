@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.sp
 import de.robv.android.xposed.XSharedPreferences
 import com.example.dynamicisland.model.*
 import com.example.dynamicisland.ui.DynamicIslandView
+import com.example.dynamicisland.settings.ChargingStyle
 
 object IslandPreferencesManager {
 
@@ -49,7 +50,7 @@ object IslandPreferencesManager {
                 alertTitleSize = pref.getFloat("theme_alert_title", 16f).sp,
                 alertMsgSize = pref.getFloat("theme_alert_msg", 14f).sp,
                 hapticStrength = pref.getInt("haptic_strength", 1),
-                chargingStyle = pref.getString("charging_style", "CUBE") ?: "CUBE",
+                chargingStyle = try { ChargingStyle.valueOf(pref.getString("charging_style", "CUBE") ?: "CUBE") } catch (e: Exception) { ChargingStyle.CUBE },
                 blurIntensity = pref.getFloat("blur_intensity", 16f).dp,
                 hideOnLandscape = pref.getBoolean("hide_landscape", false),
                 isGlassmorphism = pref.getBoolean("glass_mode", true),
@@ -104,7 +105,7 @@ object IslandPreferencesManager {
                             alertTitleSize = intent.getFloatExtra("theme_alert_title", 16f).sp,
                             alertMsgSize = intent.getFloatExtra("theme_alert_msg", 14f).sp,
                             hapticStrength = intent.getIntExtra("haptic_strength", 1),
-                            chargingStyle = intent.getStringExtra("charging_style") ?: "CUBE",
+                            chargingStyle = try { ChargingStyle.valueOf(intent.getStringExtra("charging_style") ?: "CUBE") } catch (e: Exception) { ChargingStyle.CUBE },
                             blurIntensity = intent.getFloatExtra("blur_intensity", 16f).dp,
                             hideOnLandscape = intent.getBooleanExtra("hide_landscape", false),
                             isGlassmorphism = intent.getBooleanExtra("glass_mode", true),
