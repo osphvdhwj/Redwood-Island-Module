@@ -31,6 +31,17 @@ import com.example.dynamicisland.util.ComposeLifecycleOwner
 import com.example.dynamicisland.manager.IslandHardwareManager
 import android.media.AudioManager
 
+import android.widget.FrameLayout
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.shape.CircleShape
+import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import com.example.dynamicisland.ui.VerticalLiquidSlider
+
 class SidebarView(context: Context, private val hardwareManager: IslandHardwareManager) : FrameLayout(context) {
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager

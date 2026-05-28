@@ -30,7 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import kotlin.math.pow
+import kotlin.math.cos
+import kotlin.math.sin
 
 @Composable
 fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) {

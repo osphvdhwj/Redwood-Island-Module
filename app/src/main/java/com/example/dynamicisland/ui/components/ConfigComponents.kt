@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.ui.design.IslandColors
 import com.example.dynamicisland.ui.design.glassmorphicCard
 import com.example.dynamicisland.ui.design.glowBorder
-import com.example.dynamicisland.ui.design.squishClickable
+import com.example.dynamicisland.ui.squishClickable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -272,7 +272,8 @@ fun FeatureSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    accentColor: Color? = null
+    accentColor: Color? = null,
+    icon: ImageVector? = null
 ) {
     Row(
         modifier = modifier
@@ -289,61 +290,73 @@ fun FeatureSwitch(
                     .background(accentColor)
             )
         }
-        Column(
+        Row(
             modifier = Modifier
                 .weight(1f)
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(text = title, color = IslandColors.textPrimary, style = MaterialTheme.typography.titleMedium)
-                
-                val thumbOffset by animateDpAsState(
-                    targetValue = if (checked) 24.dp else 2.dp,
-                    animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
-                    label = "thumbOffset"
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor ?: IslandColors.accentCyan,
+                    modifier = Modifier.size(24.dp)
                 )
-                
-                val trackBrush = if (checked) Brush.horizontalGradient(
-                    colors = listOf(IslandColors.accentCyan, IslandColors.accentCyan.copy(alpha = 0.6f))
-                ) else SolidColor(IslandColors.surfaceVariant)
-
-                val glowModifier = if (checked) Modifier.glowBorder(IslandColors.accentCyan, 50.dp, 12.dp, 0.dp) else Modifier
-
-                Box(
-                    modifier = Modifier
-                        .width(52.dp)
-                        .height(28.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(brush = trackBrush)
-                        .then(glowModifier)
-                        .padding(2.dp),
-                    contentAlignment = Alignment.CenterStart
+                Spacer(Modifier.width(16.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    Text(text = title, color = IslandColors.textPrimary, style = MaterialTheme.typography.titleMedium)
+                    
+                    val thumbOffset by animateDpAsState(
+                        targetValue = if (checked) 24.dp else 2.dp,
+                        animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
+                        label = "thumbOffset"
+                    )
+                    
+                    val trackBrush = if (checked) Brush.horizontalGradient(
+                        colors = listOf(IslandColors.accentCyan, IslandColors.accentCyan.copy(alpha = 0.6f))
+                    ) else SolidColor(IslandColors.surfaceVariant)
+
+                    val glowModifier = if (checked) Modifier.glowBorder(IslandColors.accentCyan, 50.dp, 12.dp, 0.dp) else Modifier
+
                     Box(
                         modifier = Modifier
-                            .offset(x = thumbOffset)
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
+                            .width(52.dp)
+                            .height(28.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(brush = trackBrush)
+                            .then(glowModifier)
+                            .padding(2.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = thumbOffset)
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                        )
+                    }
+                }
+                
+                AnimatedVisibility(
+                    visible = checked,
+                    enter = fadeIn(animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f)) + expandVertically(animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f)),
+                    exit = fadeOut(animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f)) + shrinkVertically(animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f))
+                ) {
+                    Text(
+                        text = description,
+                        color = IslandColors.textSecondary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                 }
-            }
-            
-            AnimatedVisibility(
-                visible = checked,
-                enter = fadeIn(animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f)) + expandVertically(animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f)),
-                exit = fadeOut(animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f)) + shrinkVertically(animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f))
-            ) {
-                Text(
-                    text = description,
-                    color = IslandColors.textSecondary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
             }
         }
     }

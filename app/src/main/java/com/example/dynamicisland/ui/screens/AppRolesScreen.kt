@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.manager.NewConfigManager
 import com.example.dynamicisland.ui.AppPickerActivity
-import com.example.dynamicisland.ui.components.SectionHeader
+import com.example.dynamicisland.ui.design.SectionHeader
 import com.example.dynamicisland.ui.components.StaggeredItem
 import com.example.dynamicisland.ui.design.IslandColors
 import com.example.dynamicisland.ui.design.glassmorphicCard

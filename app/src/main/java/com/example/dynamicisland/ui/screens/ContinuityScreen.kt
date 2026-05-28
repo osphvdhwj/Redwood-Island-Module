@@ -51,7 +51,7 @@ fun ContinuityScreen(prefs: SharedPreferences) {
             StaggeredItem(1) {
                 SettingsGroup(
                     title = "Apple Ecosystem", 
-                    icon = Icons.Default.Apple, 
+                    icon = Icons.Default.Devices, 
                     summary = "AirPods & iOS logic"
                 ) {
                     ContinuityToggle(

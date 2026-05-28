@@ -93,7 +93,7 @@ class IslandController @Inject constructor(
         hideInLandscape = state.dataSaver || state.gamingHud // suppress in games if needed
 
         // Ecosystem Features
-        val isAppleEcosystemEnabled = state.airpodsPopup || state.faceIdPadlock
+        val isAppleEcosystemEnabled = state.airpodsPopup || state.faceIDPadlock
         // ... hook additional triggers if needed ...
         
         idleSwipeAction = state.swipeLeftAction.uppercase()
@@ -622,7 +622,7 @@ class IslandController @Inject constructor(
         override fun onTrimMemory(level: Int) { if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) iconCache.evictAll() }
     }
 
-    private fun evaluatePriority() {
+    internal fun evaluatePriority() {
         if (!settingsState.islandEnabled) {
             _lastIslandState = IslandState.HIDDEN
             eventBus.emit(IslandIntent.SyncState(IslandState.HIDDEN, null, null))
@@ -905,7 +905,7 @@ class IslandController @Inject constructor(
         scope.launch { delay(50); _lastIslandState = current; evaluatePriority() }
     }
 
-    private fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
+    internal fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
         if (!model.isCritical && topAppPackage.isNotEmpty()) {
             val profile = PerAppProfileManager
                 .getProfile(topAppPackage)

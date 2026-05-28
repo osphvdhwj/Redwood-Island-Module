@@ -9,6 +9,7 @@ import android.content.Context
 import android.os.Bundle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class IslandNotificationManager(
     private val context: Context,
@@ -31,11 +32,13 @@ class IslandNotificationManager(
                 val icon = extras.getParcelable<android.graphics.drawable.Icon>(Notification.EXTRA_LARGE_ICON)
                 if (icon != null) {
                     val drawable = icon.loadDrawable(context)
-                    val bitmap = android.graphics.Bitmap.createBitmap(drawable.intrinsicWidth, drawable.drawable.intrinsicHeight, android.graphics.Bitmap.Config.ARGB_8888)
-                    val canvas = android.graphics.Canvas(bitmap)
-                    drawable.setBounds(0, 0, canvas.width, canvas.height)
-                    drawable.draw(canvas)
-                    bitmap
+                    if (drawable != null) {
+                        val bitmap = android.graphics.Bitmap.createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight, android.graphics.Bitmap.Config.ARGB_8888)
+                        val canvas = android.graphics.Canvas(bitmap)
+                        drawable.setBounds(0, 0, canvas.width, canvas.height)
+                        drawable.draw(canvas)
+                        bitmap
+                    } else null
                 } else null
             } catch (e: Exception) { null }
 
@@ -56,14 +59,11 @@ class IslandNotificationManager(
 
             // 🗺️ FEATURE 1: The Navigation Hijacker (Google Maps)
             if (packageName == "com.google.android.apps.maps") {
-                val subText = extras.getString(Notification.EXTRA_SUB_TEXT) ?: ""
                 if (title.isNotEmpty() && text.isNotEmpty()) {
-                    val navModel = LiveActivityModel.General(
+                    val navModel = LiveActivityModel.Navigation(
                         id = "sys_navigation",
-                        type = ActivityType.MESSAGE,
-                        title = title,
-                        dataText = text,
-                        accentColor = android.graphics.Color.parseColor("#34A853"),
+                        instruction = text, // e.g., "Turn Left on Main St"
+                        distance = title,    // e.g., "In 500 ft"
                         isCritical = true
                     )
                     onNavigationCaught(navModel)
