@@ -63,7 +63,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         SettingsSwitch(
             title = "AOD Visibility", 
             description = "Show on Lockscreen", 
-            icon = Icons.Default.LockScreen,
+            icon = Icons.Default.Lock,
             checked = state.islandOnLockscreen, 
             onCheckedChange = { viewModel.updateSetting(SettingKey.ISLAND_ON_LOCKSCREEN, it) }
         )

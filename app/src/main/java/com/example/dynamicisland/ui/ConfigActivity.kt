@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.dynamicisland.ui.components.LiveVisualAid
 import com.example.dynamicisland.ui.design.IslandColors
 import com.example.dynamicisland.ui.design.RedwoodTheme

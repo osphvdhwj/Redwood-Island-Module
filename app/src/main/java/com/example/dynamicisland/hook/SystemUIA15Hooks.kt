@@ -178,7 +178,7 @@ class SystemUIA15Hooks {
                             val listener = param.args[0] ?: return
                             XposedBridge.log("$TAG: Intercepting MediaDataManager Listener")
 
-                            IslandHookEngine.hookAllMethodsByName(listener.javaClass, lpparam.classLoader, "onMediaDataLoaded", object : XC_MethodHook() {
+                            IslandHookEngine.hookAllMethodsByName(listener.javaClass.name, lpparam.classLoader, "onMediaDataLoaded", object : XC_MethodHook() {
                                 override fun afterHookedMethod(innerParam: MethodHookParam) {
                                     // Typically: onMediaDataLoaded(key, oldKey, data, immediately, ...)
                                     val data = innerParam.args.find { it?.javaClass?.name?.contains("MediaData") == true } ?: return
