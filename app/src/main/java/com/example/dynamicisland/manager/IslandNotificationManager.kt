@@ -55,13 +55,35 @@ class IslandNotificationManager(
             )
 
             // 🗺️ FEATURE 1: The Navigation Hijacker (Google Maps)
-...
-                onNavigationCaught(navModel)
-                return@launch
+            if (packageName == "com.google.android.apps.maps") {
+                val subText = extras.getString(Notification.EXTRA_SUB_TEXT) ?: ""
+                if (title.isNotEmpty() && text.isNotEmpty()) {
+                    val navModel = LiveActivityModel.General(
+                        id = "sys_navigation",
+                        type = ActivityType.MESSAGE,
+                        title = title,
+                        dataText = text,
+                        accentColor = android.graphics.Color.parseColor("#34A853"),
+                        isCritical = true
+                    )
+                    onNavigationCaught(navModel)
+                    return@launch
+                }
             }
 
             // ⬇️ FEATURE 2: Global Progress
-...
+            val progress = extras.getInt(Notification.EXTRA_PROGRESS, -1)
+            val progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, -1)
+            
+            if (progress >= 0 && progressMax > 0) {
+                val progressModel = LiveActivityModel.OngoingTask(
+                    id = "sys_progress_$packageName",
+                    pkgName = packageName,
+                    title = title.ifEmpty { "Downloading..." },
+                    text = text,
+                    progress = progress,
+                    progressMax = progressMax
+                )
                 onProgressCaught(progressModel)
                 return@launch
             }

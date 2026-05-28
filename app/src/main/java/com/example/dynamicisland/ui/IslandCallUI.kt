@@ -57,7 +57,29 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
         else -> {
             // IOS and MODERN style logic (Original)
             val infiniteTransition = rememberInfiniteTransition(label="ring")
-...
+            val rippleScale by infiniteTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.10f,
+                animationSpec = infiniteRepeatable(
+                    tween(600, easing = FastOutSlowInEasing),
+                    RepeatMode.Reverse
+                ), label = "ripple"
+            )
+            val glowAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.2f,
+                targetValue = 0.6f,
+                animationSpec = infiniteRepeatable(
+                    tween(800, easing = LinearOutSlowInEasing),
+                    RepeatMode.Reverse
+                ), label = "glow"
+            )
+
+            val bgColor = if (isRinging) {
+                Brush.horizontalGradient(listOf(Color(0xFF34C759), Color(0xFF248A3D)))
+            } else {
+                Brush.horizontalGradient(listOf(Color(0xFF30D158), Color(0xFF34C759)))
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -73,7 +95,41 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-...
+                val phoneRotation by infiniteTransition.animateFloat(
+                    initialValue = -15f,
+                    targetValue = 15f,
+                    animationSpec = infiniteRepeatable(
+                        tween(200, easing = LinearEasing),
+                        RepeatMode.Reverse
+                    ), label = "rotation"
+                )
+
+                Icon(
+                    Icons.Default.Phone,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(15.dp)
+                        .graphicsLayer { rotationZ = if (isRinging) phoneRotation else 0f }
+                )
+
+                if (isRinging) {
+                    Text(
+                        text = model.callerName.ifEmpty { "Incoming Call" },
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    IsolatedTimerText(
+                        startTime = model.startTime,
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
             }
         }
     }

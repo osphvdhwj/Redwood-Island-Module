@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.ui.design.IslandColors
+import com.example.dynamicisland.ui.design.glassmorphicCard
 import com.example.dynamicisland.ui.design.glowBorder
 import com.example.dynamicisland.ui.design.squishClickable
 import kotlinx.coroutines.delay
@@ -446,8 +447,6 @@ fun GestureDropdown(
         }
     }
 }
-
-import com.example.dynamicisland.ui.design.glassmorphicCard
 
 @Composable
 fun SettingsGroup(
