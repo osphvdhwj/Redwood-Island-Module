@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.ui.design.RedwoodDesignSystem
 import com.example.dynamicisland.ui.design.RedwoodTheme
+import com.google.accompanist.drawablepainter.rememberDrawablePainter
 
 class AppPickerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

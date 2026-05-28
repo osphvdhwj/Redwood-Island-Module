@@ -33,6 +33,7 @@ import com.example.dynamicisland.ui.components.FloatingNavBar
 import com.example.dynamicisland.ui.components.NavItemData
 import com.example.dynamicisland.ui.design.IslandColors
 import com.example.dynamicisland.ui.design.RedwoodDesignSystem
+import com.example.dynamicisland.ui.design.RedwoodTheme
 import com.example.dynamicisland.ui.design.glassmorphicCard
 import com.example.dynamicisland.ui.design.premiumClickable
 import com.example.dynamicisland.ui.screens.*
