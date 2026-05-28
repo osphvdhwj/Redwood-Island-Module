@@ -38,6 +38,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.example.dynamicisland.ui.ConfigActivity
 import com.example.dynamicisland.ui.design.IslandColors
 import com.example.dynamicisland.ui.design.RedwoodDesignSystem
+import com.example.dynamicisland.ui.design.RedwoodTheme
 import com.example.dynamicisland.ui.design.glassmorphicCard
 import com.example.dynamicisland.ui.design.premiumClickable
 import kotlinx.coroutines.launch
@@ -46,7 +47,7 @@ class SetupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            RedwoodDesignSystem {
+            RedwoodTheme {
                 SetupScreen()
             }
         }

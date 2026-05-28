@@ -75,7 +75,7 @@ class ConfigActivity : ComponentActivity() {
 
         val composeView = ComposeView(this).apply {
             setContent {
-                RedwoodDesignSystem {
+                RedwoodTheme {
                     PermissionGuard {
                         ConfigScreenNav(prefs, settingsViewModel)
                     }
@@ -316,12 +316,12 @@ fun HeroHeader() {
             drawCircle(
                 color = IslandColors.accentCyan.copy(alpha = 0.3f),
                 radius = 120f,
-                center = androidx.compose.ui.geometry.Offset(orb1X, size.height * 0.3f)
+                center = androidx.compose.ui.geometry.Offset(orb1X, this.size.height * 0.3f)
             )
             drawCircle(
                 color = IslandColors.accentPurple.copy(alpha = 0.3f),
                 radius = 150f,
-                center = androidx.compose.ui.geometry.Offset(orb2X, size.height * 0.7f)
+                center = androidx.compose.ui.geometry.Offset(orb2X, this.size.height * 0.7f)
             )
         }
 

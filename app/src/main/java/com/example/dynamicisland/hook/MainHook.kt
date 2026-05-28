@@ -114,7 +114,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     private fun hookSystemUIProcess(lpparam: XC_LoadPackage.LoadPackageParam) {
         log("Applying SystemUI-process hooks (Consolidated A15)")
-        SystemUIA15Hooks.apply(lpparam)
+        SystemUIA15Hooks.init(lpparam)
     }
 
     // ── Intent resolver process ───────────────────────────────────────────────

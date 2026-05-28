@@ -10,6 +10,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*
+import com.example.dynamicisland.settings.SettingsManager
 import com.example.dynamicisland.ui.mvi.IslandEventBus
 import de.robv.android.xposed.*
 import de.robv.android.xposed.callbacks.XC_LoadPackage
@@ -46,18 +47,15 @@ class SystemUIA15Hooks {
             val context = root.context
 
             Handler(Looper.getMainLooper()).postDelayed({
-                if (injected) return
+                if (injected) return@postDelayed
                 
                 try {
                     val eventBus = IslandEventBus()
                     val settingsManager = SettingsManager(context)
-                    val hapticsManager = IslandHapticsManager(context)
-                    val networkMonitor = IslandNetworkMonitor(context, scope)
-                    
+                    val hapticsManager = IslandHapticsManager(context, settingsManager)
+                    val networkMonitor = IslandNetworkMonitor()
                     val mediaManager = IslandMediaManager(context, scope)
-                    val hardwareMonitor = IslandHardwareMonitor(scope) { model ->
-                        controller?.onHardwareUpdate(model)
-                    }
+                    val hardwareMonitor = IslandHardwareMonitor(scope)
 
                     // Create the singleton controller
                     controller = IslandController(

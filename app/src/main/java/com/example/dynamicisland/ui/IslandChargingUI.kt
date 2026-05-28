@@ -92,7 +92,7 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
                     val w = size.width
                     path.moveTo(0f, h)
                     for (i in 0..w.toInt()) {
-                        val y = h - (model.level / 100f * h) + sin(i.toFloat() / w * 2 * PI.toFloat() + waveOffset * 2 * PI.toFloat()) * 5f
+                        val y = h - (model.level / 100f * h) + sin((i.toFloat() / w * 2 * PI.toFloat() + waveOffset * 2 * PI.toFloat()).toDouble()).toFloat() * 5f
                         path.lineTo(i.toFloat(), y)
                     }
                     path.lineTo(w, h)
@@ -137,7 +137,7 @@ fun DynamicIslandView.ChargingMax(charging: LiveActivityModel.Charging) {
         while (displayedLevel < target) {
             val elapsed = System.currentTimeMillis() - startTime
             val progress = (elapsed.toFloat() / duration).coerceIn(0f, 1f)
-            val eased = 1f - (1f - progress).pow(3)
+            val eased = 1f - (1f - progress).pow(3f)
             displayedLevel = (eased * target).toInt()
             kotlinx.coroutines.delay(16)
         }

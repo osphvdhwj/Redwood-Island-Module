@@ -94,7 +94,7 @@ object RedwoodDesignSystem {
 }
 
 @Composable
-fun RedwoodDesignSystem(content: @Composable () -> Unit) {
+fun RedwoodTheme(content: @Composable () -> Unit) {
     CompositionLocalProvider(
         LocalRedwoodColors provides RedwoodColors()
     ) {

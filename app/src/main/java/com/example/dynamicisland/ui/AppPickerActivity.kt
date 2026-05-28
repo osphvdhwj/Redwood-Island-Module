@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.ui.design.RedwoodDesignSystem
-import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import com.example.dynamicisland.ui.design.RedwoodTheme
 
 class AppPickerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,7 +32,7 @@ class AppPickerActivity : ComponentActivity() {
             .sortedBy { it.loadLabel(packageManager).toString() }
 
         setContent {
-            RedwoodDesignSystem {
+            RedwoodTheme {
                 Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
                     Text(
                         "Select an Application",
