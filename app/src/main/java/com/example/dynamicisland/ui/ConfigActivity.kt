@@ -14,14 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.border
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -29,10 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.ui.components.LiveVisualAid
-import com.example.dynamicisland.ui.components.FloatingNavBar
-import com.example.dynamicisland.ui.components.NavItemData
 import com.example.dynamicisland.ui.design.IslandColors
-import com.example.dynamicisland.ui.design.RedwoodDesignSystem
 import com.example.dynamicisland.ui.design.RedwoodTheme
 import com.example.dynamicisland.ui.design.glassmorphicCard
 import com.example.dynamicisland.ui.design.premiumClickable
@@ -42,15 +32,8 @@ import com.example.dynamicisland.settings.SettingsViewModel
 import com.example.dynamicisland.settings.SettingsManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import android.app.Activity
 import android.content.Intent
-import android.net.Uri
-import android.os.PowerManager
 import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -69,7 +52,7 @@ class ConfigActivity : ComponentActivity() {
         
         val hasCompletedSetup = prefs.getBoolean("has_completed_setup", false)
         if (!hasCompletedSetup) {
-            startActivity(android.content.Intent(this, com.example.dynamicisland.ui.setup.SetupActivity::class.java))
+            startActivity(Intent(this, com.example.dynamicisland.ui.setup.SetupActivity::class.java))
             finish()
             return
         }
@@ -176,6 +159,8 @@ private fun isAccessibilityServiceEnabled(context: Context): Boolean {
     return enabledServices?.contains(expectedId) == true
 }
 
+data class NavItemData(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+
 @Composable
 fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel: SettingsViewModel) {
     var selectedNav by remember { mutableIntStateOf(0) }
@@ -189,14 +174,17 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
     )
 
     Scaffold(
-        containerColor = Color.Black,
         bottomBar = {
-            FloatingNavBar(
-                items = navItems,
-                selectedIndex = selectedNav,
-                onItemSelected = { selectedNav = it },
-                onFabClick = { /* Can be used for a Quick Enable/Disable toggle */ }
-            )
+            NavigationBar {
+                navItems.forEachIndexed { index, item ->
+                    NavigationBarItem(
+                        icon = { Icon(item.icon, contentDescription = item.title) },
+                        label = { Text(item.title) },
+                        selected = selectedNav == index,
+                        onClick = { selectedNav = index }
+                    )
+                }
+            }
         }
     ) { paddingValues ->
         Box(
@@ -205,8 +193,6 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
                 .padding(paddingValues)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                if (selectedNav != 4) HeroHeader()
-                
                 Box(modifier = Modifier.weight(1f)) {
                     AnimatedContent<Int>(
                         targetState = selectedNav,
@@ -244,8 +230,6 @@ fun IntelligenceTab(prefs: android.content.SharedPreferences) {
     Column {
         TabRow(
             selectedTabIndex = selectedSubTab,
-            containerColor = Color.Transparent,
-            contentColor = IslandColors.accentCyan,
             divider = {}
         ) {
             Tab(selected = selectedSubTab == 0, onClick = { selectedSubTab = 0 }, text = { Text("AI & Detection") })
@@ -264,8 +248,6 @@ fun InteractionsTab(prefs: android.content.SharedPreferences) {
     Column {
         ScrollableTabRow(
             selectedTabIndex = selectedSubTab,
-            containerColor = Color.Transparent,
-            contentColor = IslandColors.accentCyan,
             divider = {},
             edgePadding = 16.dp
         ) {
@@ -277,98 +259,6 @@ fun InteractionsTab(prefs: android.content.SharedPreferences) {
             0 -> AppRolesScreen(prefs)
             1 -> PinsTilesScreen(prefs)
             2 -> GesturesScreen(prefs)
-        }
-    }
-}
-
-@Composable
-fun HeroHeader() {
-    val infiniteTransition = rememberInfiniteTransition(label = "header_anim")
-    
-    val orb1X by infiniteTransition.animateFloat(
-        initialValue = -100f,
-        targetValue = 200f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(8000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "orb1x"
-    )
-    
-    val orb2X by infiniteTransition.animateFloat(
-        initialValue = 300f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(10000, easing = LinearOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "orb2x"
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(140.dp)
-            .background(Color(0xFF060606)),
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        // Floating Orbs
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            drawCircle(
-                color = IslandColors.accentCyan.copy(alpha = 0.3f),
-                radius = 120f,
-                center = androidx.compose.ui.geometry.Offset(orb1X, this.size.height * 0.3f)
-            )
-            drawCircle(
-                color = IslandColors.accentPurple.copy(alpha = 0.3f),
-                radius = 150f,
-                center = androidx.compose.ui.geometry.Offset(orb2X, this.size.height * 0.7f)
-            )
-        }
-
-        // Frosted Glass overlay
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.4f))
-                .border(
-                    width = 1.dp,
-                    brush = Brush.verticalGradient(listOf(Color.White.copy(0.1f), Color.Transparent)),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
-                )
-        )
-
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(bottom = 24.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Redwood Engine",
-                    color = IslandColors.textPrimary,
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 0.5.sp,
-                        shadow = Shadow(
-                            color = IslandColors.accentCyan.copy(alpha = 0.5f),
-                            blurRadius = 20f
-                        )
-                    )
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Box(
-                    modifier = Modifier
-                        .border(1.dp, IslandColors.accentCyan.copy(alpha=0.5f), CircleShape)
-                        .background(IslandColors.accentCyan.copy(alpha = 0.1f), CircleShape)
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = "PRO",
-                        color = IslandColors.accentCyan,
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
-            }
         }
     }
 }

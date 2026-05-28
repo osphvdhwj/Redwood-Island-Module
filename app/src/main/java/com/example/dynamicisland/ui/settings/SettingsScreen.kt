@@ -1,5 +1,9 @@
 package com.example.dynamicisland.ui.settings
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -10,23 +14,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.dynamicisland.manager.ConfigBackupManager
 import com.example.dynamicisland.settings.SettingsManager.SettingKey
 import com.example.dynamicisland.settings.SettingsViewModel
-import com.example.dynamicisland.ui.components.*
-import com.example.dynamicisland.ui.design.*
-import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import com.example.dynamicisland.manager.ConfigBackupManager
+import com.example.dynamicisland.ui.components.SettingsCategoryHeader
+import com.example.dynamicisland.ui.components.SettingsSwitch
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel) {
     val state = viewModel.state
     val context = LocalContext.current
-    val haptics = rememberHapticManager()
     val scope = rememberCoroutineScope()
     val prefs = context.getSharedPreferences("island_prefs", android.content.Context.MODE_PRIVATE)
 
@@ -48,223 +46,139 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         }
     }
 
-    PullToRefreshContainer(onRefresh = { 
-        haptics.medium()
-        // No-op for now, could reload state
-    }) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.padding(16.dp)) {
-                StaggeredItem(0) { 
-                    SectionHeader(
-                        title = "System Configuration", 
-                        subtitle = "Global island controls", 
-                        icon = Icons.Default.Settings, 
-                        accentColor = IslandColors.accentCyan
-                    )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        SettingsCategoryHeader("Core Engine")
+        
+        SettingsSwitch(
+            title = "Engine Master", 
+            description = "Enable/Disable Dynamic Island", 
+            icon = Icons.Default.PowerSettingsNew,
+            checked = state.islandEnabled, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.ISLAND_ENABLED, it) }
+        )
+        SettingsSwitch(
+            title = "AOD Visibility", 
+            description = "Show on Lockscreen", 
+            icon = Icons.Default.LockScreen,
+            checked = state.islandOnLockscreen, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.ISLAND_ON_LOCKSCREEN, it) }
+        )
+        SettingsSwitch(
+            title = "Multitasking", 
+            description = "Split Pill Mode support", 
+            icon = Icons.Default.VerticalSplit,
+            checked = state.splitPillEnabled, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.SPLIT_PILL_ENABLED, it) }
+        )
+        SettingsSwitch(
+            title = "Tactile Feedback", 
+            description = "System-wide haptics", 
+            icon = Icons.Default.Vibration,
+            checked = state.hapticFeedback, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.HAPTIC_FEEDBACK, it) }
+        )
+
+        SettingsCategoryHeader("Media Hub")
+        
+        SettingsSwitch(
+            title = "Waveform Seeker", 
+            description = "Visualized playback bar", 
+            icon = Icons.Default.GraphicEq,
+            checked = state.waveformEnabled, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.WAVEFORM_ENABLED, it) }
+        )
+        SettingsSwitch(
+            title = "Artwork Blur", 
+            description = "Immersive media backdrop", 
+            icon = Icons.Default.Album,
+            checked = state.mediaArtworkBlur, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.MEDIA_ARTWORK_BLUR, it) }
+        )
+        SettingsSwitch(
+            title = "Ambient Ring", 
+            description = "Audio-reactive border", 
+            icon = Icons.Default.BlurCircular,
+            checked = state.ambientReactiveRing, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.AMBIENT_REACTIVE, it) }
+        )
+        SettingsSwitch(
+            title = "Beat Pulse", 
+            description = "Sync island with BPM", 
+            icon = Icons.Default.Hearing,
+            checked = state.bpmPulse, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.BPM_PULSE, it) }
+        )
+
+        SettingsCategoryHeader("Advanced Labs")
+        
+        SettingsSwitch(
+            title = "Gaming HUD", 
+            description = "FPS & Thermal monitoring", 
+            icon = Icons.Default.Gamepad,
+            checked = state.gamingHud, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.GAMING_HUD, it) }
+        )
+        SettingsSwitch(
+            title = "iOS Padlock", 
+            description = "Face ID style unlock", 
+            icon = Icons.Default.LockOpen,
+            checked = state.faceIDPadlock, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.FACE_ID_PADLOCK, it) }
+        )
+        SettingsSwitch(
+            title = "Continuity Cam", 
+            description = "Pro camera integration", 
+            icon = Icons.Default.CameraAlt,
+            checked = state.continuityCameraActions, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.CONTINUITY_CAMERA_ACTIONS, it) }
+        )
+        SettingsSwitch(
+            title = "MagSafe Anim", 
+            description = "Premium charging visuals", 
+            icon = Icons.Default.ChargingStation,
+            checked = state.magsafeChargingAnimation, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.MAGSAFE_CHARGING_ANIMATION, it) }
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+        Divider(modifier = Modifier.padding(horizontal = 24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(horizontal = 24.dp)
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
+                FilledTonalButton(
+                    onClick = { exportLauncher.launch("redwood_config.json") },
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(vertical = 12.dp)
+                ) {
+                    Text("Export Config")
+                }
+                FilledTonalButton(
+                    onClick = { importLauncher.launch(arrayOf("application/json")) },
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(vertical = 12.dp)
+                ) {
+                    Text("Import Config")
                 }
             }
-            
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 16.dp)
-                    .verticalScroll(rememberScrollState())
+
+            Button(
+                onClick = { viewModel.resetAll() },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(vertical = 16.dp)
             ) {
-                Spacer(modifier = Modifier.height(8.dp))
-
-                StaggeredItem(1) {
-                    SettingsGroup(
-                        title = "Core Engine", 
-                        icon = Icons.Default.FlashOn, 
-                        summary = "Master toggles"
-                    ) {
-                        PremiumSettingToggle(
-                            title = "Engine Master", 
-                            desc = "Enable/Disable Dynamic Island", 
-                            checked = state.islandEnabled, 
-                            onCheckedChange = { 
-                                if (it) haptics.toggleOn() else haptics.toggleOff()
-                                viewModel.updateSetting(SettingKey.ISLAND_ENABLED, it) 
-                            }
-                        )
-                        PremiumSettingToggle(
-                            title = "AOD Visibility", 
-                            desc = "Show on Lockscreen", 
-                            checked = state.islandOnLockscreen, 
-                            onCheckedChange = { 
-                                if (it) haptics.toggleOn() else haptics.toggleOff()
-                                viewModel.updateSetting(SettingKey.ISLAND_ON_LOCKSCREEN, it) 
-                            }
-                        )
-                        PremiumSettingToggle(
-                            title = "Multitasking", 
-                            desc = "Split Pill Mode support", 
-                            checked = state.splitPillEnabled, 
-                            onCheckedChange = { 
-                                if (it) haptics.toggleOn() else haptics.toggleOff()
-                                viewModel.updateSetting(SettingKey.SPLIT_PILL_ENABLED, it) 
-                            }
-                        )
-                        PremiumSettingToggle(
-                            title = "Tactile Feedback", 
-                            desc = "System-wide haptics", 
-                            checked = state.hapticFeedback, 
-                            onCheckedChange = { 
-                                if (it) haptics.toggleOn() else haptics.toggleOff()
-                                viewModel.updateSetting(SettingKey.HAPTIC_FEEDBACK, it) 
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                StaggeredItem(2) {
-                    SettingsGroup(
-                        title = "Media Hub", 
-                        icon = Icons.Default.MusicNote, 
-                        summary = "Audio reactivity"
-                    ) {
-                        PremiumSettingToggle(
-                            title = "Waveform Seeker", 
-                            desc = "Visualized playback bar", 
-                            checked = state.waveformEnabled, 
-                            onCheckedChange = { 
-                                if (it) haptics.toggleOn() else haptics.toggleOff()
-                                viewModel.updateSetting(SettingKey.WAVEFORM_ENABLED, it) 
-                            }
-                        )
-                        PremiumSettingToggle(
-                            title = "Artwork Blur", 
-                            desc = "Immersive media backdrop", 
-                            checked = state.mediaArtworkBlur, 
-                            onCheckedChange = { 
-                                if (it) haptics.toggleOn() else haptics.toggleOff()
-                                viewModel.updateSetting(SettingKey.MEDIA_ARTWORK_BLUR, it) 
-                            }
-                        )
-                        PremiumSettingToggle(
-                            title = "Ambient Ring", 
-                            desc = "Audio-reactive border", 
-                            checked = state.ambientReactiveRing, 
-                            onCheckedChange = { 
-                                if (it) haptics.toggleOn() else haptics.toggleOff()
-                                viewModel.updateSetting(SettingKey.AMBIENT_REACTIVE, it) 
-                            }
-                        )
-                        PremiumSettingToggle(
-                            title = "Beat Pulse", 
-                            desc = "Sync island with BPM", 
-                            checked = state.bpmPulse, 
-                            onCheckedChange = { 
-                                if (it) haptics.toggleOn() else haptics.toggleOff()
-                                viewModel.updateSetting(SettingKey.BPM_PULSE, it) 
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                StaggeredItem(3) {
-                    SettingsGroup(
-                        title = "Advanced Labs", 
-                        icon = Icons.Default.Science, 
-                        summary = "Beta features"
-                    ) {
-                        PremiumSettingToggle(
-                            title = "Gaming HUD", 
-                            desc = "FPS & Thermal monitoring", 
-                            checked = state.gamingHud, 
-                            onCheckedChange = { 
-                                if (it) haptics.toggleOn() else haptics.toggleOff()
-                                viewModel.updateSetting(SettingKey.GAMING_HUD, it) 
-                            }
-                        )
-                        PremiumSettingToggle(
-                            title = "iOS Padlock", 
-                            desc = "Face ID style unlock", 
-                            checked = state.faceIDPadlock, 
-                            onCheckedChange = { 
-                                if (it) haptics.toggleOn() else haptics.toggleOff()
-                                viewModel.updateSetting(SettingKey.FACE_ID_PADLOCK, it) 
-                            }
-                        )
-                        PremiumSettingToggle(
-                            title = "Continuity Cam", 
-                            desc = "Pro camera integration", 
-                            checked = state.continuityCameraActions, 
-                            onCheckedChange = { 
-                                if (it) haptics.toggleOn() else haptics.toggleOff()
-                                viewModel.updateSetting(SettingKey.CONTINUITY_CAMERA_ACTIONS, it) 
-                            }
-                        )
-                        PremiumSettingToggle(
-                            title = "MagSafe Anim", 
-                            desc = "Premium charging visuals", 
-                            checked = state.magsafeChargingAnimation, 
-                            onCheckedChange = { 
-                                if (it) haptics.toggleOn() else haptics.toggleOff()
-                                viewModel.updateSetting(SettingKey.MAGSAFE_CHARGING_ANIMATION, it) 
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                StaggeredItem(4) {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                            NeonButton(
-                                text = "Export Config",
-                                onClick = {
-                                    haptics.medium()
-                                    exportLauncher.launch("redwood_config.json")
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                            NeonButton(
-                                text = "Import Config",
-                                onClick = {
-                                    haptics.medium()
-                                    importLauncher.launch(arrayOf("application/json"))
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        NeonButton(
-                            text = "Reset All Settings",
-                            onClick = {
-                                haptics.heavy()
-                                viewModel.resetAll()
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(100.dp))
+                Text("Reset All Settings")
             }
         }
-    }
-}
 
-@Composable
-private fun PremiumSettingToggle(
-    title: String,
-    desc: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    // Re-use FeatureSwitch to match the aesthetic of the rest of the app
-    FeatureSwitch(
-        title = title,
-        description = desc,
-        checked = checked,
-        onCheckedChange = onCheckedChange,
-        accentColor = IslandColors.accentCyan
-    )
+        Spacer(modifier = Modifier.height(100.dp))
+    }
 }

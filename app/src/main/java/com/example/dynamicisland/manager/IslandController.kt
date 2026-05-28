@@ -167,7 +167,7 @@ class IslandController @Inject constructor(
         }
     }
 
-    private val notificationManager = IslandNotificationManager(context, scope,
+    internal val notificationManager = IslandNotificationManager(context, scope,
         onProgressCaught = { progressModel ->
             networkMonitor.startMonitoring(scope) { speedStr ->
                 val current = _lastActiveModel
