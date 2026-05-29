@@ -31,13 +31,15 @@ class SystemUIA15Hooks {
         private var controller: IslandController? = null
         private var injected = false
         private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+        
+        private var flashlightController: Any? = null
 
         fun init(lpparam: XC_LoadPackage.LoadPackageParam) {
             if (lpparam.packageName != "com.android.systemui") return
             
-            XposedBridge.log("$TAG: 🚀 Initializing Modern SystemUI Hooks (Direct Target Mode)...")
+            XposedBridge.log("$TAG: 🚀 Initializing Pro-Grade SystemUI Integration...")
 
-            // ── 1. Core UI Injection Point ────────────────────────────────────
+            // ── 1. Core UI Injection ──────────────────────────────────────────
             try {
                 XposedHelpers.findAndHookMethod(
                     "com.android.systemui.statusbar.phone.PhoneStatusBarView",
@@ -53,7 +55,10 @@ class SystemUIA15Hooks {
                 XposedBridge.log("$TAG ⚠️: PhoneStatusBarView hook failed: ${e.message}")
             }
 
-            // ── 2. Native Data Pipelines ──────────────────────────────────────
+            // ── 2. Hardware Controller Hooks (System Feel) ────────────────────
+            hookHardwareControllers(lpparam)
+
+            // ── 3. Native Data Pipelines ──────────────────────────────────────
             hookNotifPipeline(lpparam)
             hookMediaPipeline(lpparam)
         }
@@ -61,7 +66,7 @@ class SystemUIA15Hooks {
         private fun injectIsland(root: FrameLayout, source: String) {
             if (injected) return
             val context = root.context
-            XposedBridge.log("$TAG: Injecting Island Overlay from $source")
+            XposedBridge.log("$TAG: System-level injection starting from $source")
 
             Handler(Looper.getMainLooper()).postDelayed({
                 if (injected) return@postDelayed
@@ -97,25 +102,71 @@ class SystemUIA15Hooks {
                             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                         }
                         
-                        var current: android.view.ViewParent? = root
-                        repeat(5) {
-                            (current as? ViewGroup)?.let {
-                                it.clipChildren = false
-                                it.clipToPadding = false
-                            }
-                            current = current?.parent
-                        }
+                        // Aggressive recursive un-clipping
+                        unclipRecursive(root)
                         
                         root.addView(islandView, lp)
                         islandView.bringToFront()
                         
                         injected = true
-                        XposedBridge.log("$TAG ✅: Island injected successfully into $source")
+                        XposedBridge.log("$TAG ✅: Pro-Grade Island active in SystemUI hierarchy")
                     }
                 } catch (e: Throwable) {
                     XposedBridge.log("$TAG ❌: Native injection failed — ${e.message}")
                 }
-            }, 1500)
+            }, 1000)
+        }
+
+        private fun unclipRecursive(view: View?) {
+            var current = view
+            repeat(8) {
+                (current as? ViewGroup)?.let {
+                    it.clipChildren = false
+                    it.clipToPadding = false
+                }
+                current = current?.parent as? View
+            }
+        }
+
+        private fun hookHardwareControllers(lpparam: XC_LoadPackage.LoadPackageParam) {
+            // Hook FlashlightController to sync state and grab instance
+            try {
+                val flashlightClass = "com.android.systemui.statusbar.policy.FlashlightControllerImpl"
+                IslandHookEngine.hookAllMethodsByName(flashlightClass, lpparam.classLoader, "onTorchModeChanged", object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        flashlightController = param.thisObject
+                        val enabled = param.args.getOrNull(0) as? Boolean ?: return
+                        XposedBridge.log("$TAG: System Flashlight changed -> $enabled")
+                        controller?.postTransientNotification(
+                            LiveActivityModel.General(
+                                id = "sys_torch", type = ActivityType.HARDWARE,
+                                title = if (enabled) "Flashlight On" else "Flashlight Off",
+                                dataText = if (enabled) "System torch is active" else "Torch disabled",
+                                accentColor = if (enabled) android.graphics.Color.YELLOW else android.graphics.Color.GRAY
+                            ), 2500L
+                        )
+                    }
+                })
+            } catch (e: Throwable) {
+                XposedBridge.log("$TAG ⚠️: Flashlight hook failed")
+            }
+
+            // Hook VolumeDialogController for zero-latency volume sync
+            try {
+                val volumeClass = "com.android.systemui.volume.VolumeDialogControllerImpl"
+                IslandHookEngine.hookAllMethodsByName(volumeClass, lpparam.classLoader, "onVolumeChangedW", object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        // Signature: onVolumeChangedW(int stream, int flags)
+                        val stream = param.args.getOrNull(0) as? Int ?: return
+                        if (stream == AudioManager.STREAM_MUSIC) {
+                            controller?.islandView?.let { view ->
+                                // Trigger volume update in UI
+                                view.updateHardwareVolume(-1) // Signal to re-read
+                            }
+                        }
+                    }
+                })
+            } catch (e: Throwable) {}
         }
 
         private fun hookNotifPipeline(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -168,13 +219,8 @@ class SystemUIA15Hooks {
         private fun processNativeNotification(entry: Any) {
             try {
                 val sbn = XposedHelpers.callMethod(entry, "getSbn") as android.service.notification.StatusBarNotification
-                controller?.let { ctrl ->
-                    XposedBridge.log("$TAG: Native notification caught from ${sbn.packageName}")
-                    ctrl.notificationManager.processIncomingNotification(sbn.packageName, sbn.notification)
-                }
-            } catch (e: Throwable) {
-                XposedBridge.log("$TAG ❌: processNativeNotification failed — ${e.message}")
-            }
+                controller?.notificationManager?.processIncomingNotification(sbn.packageName, sbn.notification)
+            } catch (e: Throwable) {}
         }
 
         private fun processNativeMedia(mediaData: Any) {
@@ -186,14 +232,10 @@ class SystemUIA15Hooks {
                     val artworkIcon = XposedHelpers.getObjectField(mediaData, "artwork") as? android.graphics.drawable.Icon
                     val isPlaying = XposedHelpers.getBooleanField(mediaData, "isPlaying")
                     
-                    XposedBridge.log("$TAG: Native media caught: $song by $artist (Playing: $isPlaying)")
                     val artworkBmp = artworkIcon?.let { decodeIcon(it, ctrl.context) }
-                    
                     ctrl.mediaManager.updateMediaFromNative(pkg, song.toString(), artist.toString(), artworkBmp, isPlaying)
                 }
-            } catch (e: Throwable) {
-                XposedBridge.log("$TAG ❌: processNativeMedia failed — ${e.message}")
-            }
+            } catch (e: Throwable) {}
         }
 
         private fun decodeIcon(icon: android.graphics.drawable.Icon, context: Context): android.graphics.Bitmap? {
@@ -209,6 +251,16 @@ class SystemUIA15Hooks {
                 drawable.draw(canvas)
                 bitmap
             } catch (e: Exception) { null }
+        }
+        
+        // --- Pro-Grade Direct System Toggles ---
+        fun toggleSystemFlashlight() {
+            flashlightController?.let {
+                try {
+                    val currentState = XposedHelpers.callMethod(it, "isEnabled") as Boolean
+                    XposedHelpers.callMethod(it, "setFlashlight", !currentState)
+                } catch (e: Exception) {}
+            }
         }
     }
 }

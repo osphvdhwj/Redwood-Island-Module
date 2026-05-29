@@ -10,9 +10,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
  * Future-Ready Framework Hooks for Android 15 (A15)
- *
- * This file contains candidate hooks for future features such as volume tracking,
- * brightness monitoring, biometric status, and privacy indicators.
+ * Focuses on zero-latency event interception from the system_server.
  */
 object FutureFrameworkA15Hooks {
 
@@ -20,39 +18,51 @@ object FutureFrameworkA15Hooks {
     const val ACTION_FUTURE_BRIGHTNESS_CHANGED   = "com.example.dynamicisland.FUTURE_BRIGHTNESS"
     const val ACTION_FUTURE_PRIVACY_INDICATOR    = "com.example.dynamicisland.FUTURE_PRIVACY"
     const val ACTION_FUTURE_BIOMETRIC_AUTH       = "com.example.dynamicisland.FUTURE_BIOMETRIC"
-    const val ACTION_FUTURE_USB_STATE            = "com.example.dynamicisland.FUTURE_USB"
+    const val ACTION_FUTURE_TOP_APP_CHANGED      = "com.example.dynamicisland.APP_CHANGED"
 
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, userAll: UserHandle) {
-        // For Future A15
         hookVolumeChanges(lpparam, userAll)
-        // For Future A15
         hookBrightnessChanges(lpparam, userAll)
-        // For Future A15
         hookPrivacyIndicators(lpparam, userAll)
-        // For Future A15
         hookBiometricAuth(lpparam, userAll)
-        // For Future A15
-        hookUsbState(lpparam, userAll)
+        hookTopAppChanges(lpparam, userAll)
+    }
+
+    private fun hookTopAppChanges(lpparam: XC_LoadPackage.LoadPackageParam, userAll: UserHandle) {
+        // Intercept foreground activity changes at the source
+        try {
+            val className = "com.android.server.wm.ActivityRecord"
+            val clazz = XposedHelpers.findClassIfExists(className, lpparam.classLoader) ?: return
+
+            XposedBridge.hookAllMethods(clazz, "onWindowsDrawn", object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    try {
+                        val packageName = XposedHelpers.getObjectField(param.thisObject, "packageName") as? String ?: return
+                        val context = getContextFromParam(param) ?: return
+                        
+                        context.sendBroadcastAsUser(
+                            Intent(ACTION_FUTURE_TOP_APP_CHANGED).apply {
+                                setPackage("com.android.systemui")
+                                putExtra("pkg", packageName)
+                            },
+                            userAll
+                        )
+                    } catch (_: Throwable) {}
+                }
+            })
+        } catch (_: Throwable) {}
     }
 
     private fun hookVolumeChanges(lpparam: XC_LoadPackage.LoadPackageParam, userAll: UserHandle) {
-        // For Future A15 - AudioService volume interception
         val className = "com.android.server.audio.AudioService"
         val clazz = XposedHelpers.findClassIfExists(className, lpparam.classLoader) ?: return
 
         XposedBridge.hookAllMethods(clazz, "setStreamVolume", object : XC_MethodHook() {
             override fun afterHookedMethod(param: MethodHookParam) {
                 try {
-                    // Variants typically have:
-                    // (int streamType, int index, int flags, String callingPackage)
-                    // (int streamType, int index, int flags, String callingPackage, String attributionTag)
-                    // ... etc.
-                    
                     if (param.args.size < 2) return
-                    
                     val streamType = param.args[0] as? Int ?: return
                     val index = param.args[1] as? Int ?: return
-                    
                     val context = getContextFromParam(param) ?: return
                     
                     context.sendBroadcastAsUser(
@@ -69,14 +79,12 @@ object FutureFrameworkA15Hooks {
     }
 
     private fun hookBrightnessChanges(lpparam: XC_LoadPackage.LoadPackageParam, userAll: UserHandle) {
-        // For Future A15 - DisplayManagerService/PowerManagerService
         val className = "com.android.server.display.DisplayPowerController"
         val clazz = XposedHelpers.findClassIfExists(className, lpparam.classLoader) ?: return
 
         XposedBridge.hookAllMethods(clazz, "updatePowerState", object : XC_MethodHook() {
             override fun afterHookedMethod(param: MethodHookParam) {
                 try {
-                    val mBrightnessReason = XposedHelpers.getObjectField(param.thisObject, "mBrightnessReason")
                     val mAppliedBrightness = XposedHelpers.getFloatField(param.thisObject, "mAppliedBrightness")
                     val context = getContextFromParam(param) ?: return
                     
@@ -84,7 +92,6 @@ object FutureFrameworkA15Hooks {
                         Intent(ACTION_FUTURE_BRIGHTNESS_CHANGED).apply {
                             setPackage("com.android.systemui")
                             putExtra("brightness", mAppliedBrightness)
-                            putExtra("reason", mBrightnessReason.toString())
                         },
                         userAll
                     )
@@ -94,7 +101,6 @@ object FutureFrameworkA15Hooks {
     }
 
     private fun hookPrivacyIndicators(lpparam: XC_LoadPackage.LoadPackageParam, userAll: UserHandle) {
-        // For Future A15 - AppOpsService for Mic/Camera usage
         val className = "com.android.server.appop.AppOpsService"
         val clazz = XposedHelpers.findClassIfExists(className, lpparam.classLoader) ?: return
 
@@ -102,10 +108,7 @@ object FutureFrameworkA15Hooks {
             override fun afterHookedMethod(param: MethodHookParam) {
                 try {
                     val code = param.args[0] as Int
-                    val uid = param.args[1] as Int
                     val pkg = param.args[2] as? String ?: ""
-                    
-                    // AppOps codes: 26=CAMERA, 27=RECORD_AUDIO
                     if (code == 26 || code == 27) {
                         val context = getContextFromParam(param) ?: return
                         context.sendBroadcastAsUser(
@@ -113,7 +116,6 @@ object FutureFrameworkA15Hooks {
                                 setPackage("com.android.systemui")
                                 putExtra("op", if (code == 26) "CAMERA" else "MIC")
                                 putExtra("pkg", pkg)
-                                putExtra("uid", uid)
                             },
                             userAll
                         )
@@ -124,7 +126,6 @@ object FutureFrameworkA15Hooks {
     }
 
     private fun hookBiometricAuth(lpparam: XC_LoadPackage.LoadPackageParam, userAll: UserHandle) {
-        // For Future A15 - BiometricService/FingerprintService
         val biometricClasses = listOf(
             "com.android.server.biometrics.sensors.fingerprint.FingerprintService",
             "com.android.server.biometrics.sensors.face.FaceService"
@@ -149,29 +150,6 @@ object FutureFrameworkA15Hooks {
             val clazz = XposedHelpers.findClassIfExists(cls, lpparam.classLoader) ?: continue
             XposedBridge.hookAllMethods(clazz, "onAuthenticationSucceeded", authCallback)
         }
-    }
-
-    private fun hookUsbState(lpparam: XC_LoadPackage.LoadPackageParam, userAll: UserHandle) {
-        // For Future A15 - UsbDeviceManager
-        val className = "com.android.server.usb.UsbDeviceManager"
-        val clazz = XposedHelpers.findClassIfExists(className, lpparam.classLoader) ?: return
-
-        XposedBridge.hookAllMethods(clazz, "updateUsbNotification", object : XC_MethodHook() {
-            override fun afterHookedMethod(param: MethodHookParam) {
-                try {
-                    val mConnected = XposedHelpers.getBooleanField(param.thisObject, "mConnected")
-                    val context = getContextFromParam(param) ?: return
-                    
-                    context.sendBroadcastAsUser(
-                        Intent(ACTION_FUTURE_USB_STATE).apply {
-                            setPackage("com.android.systemui")
-                            putExtra("connected", mConnected)
-                        },
-                        userAll
-                    )
-                } catch (_: Throwable) {}
-            }
-        })
     }
 
     private fun getContextFromParam(param: XC_MethodHook.MethodHookParam): Context? {

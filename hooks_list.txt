@@ -1,0 +1,44 @@
+# Redwood Dynamic Island: System Integration Hook Map
+# ===================================================
+# This file tracks all active and planned hooks used to integrate 
+# the module into the Android SystemUI process.
+
+## 1. Core UI Injection (Active)
+*   **Target:** `com.android.systemui.statusbar.phone.PhoneStatusBarView`
+*   **Method:** `onAttachedToWindow()`
+*   **Purpose:** Injects the DynamicIslandView into the primary Status Bar hierarchy. Ensures 1:1 alignment with system layers.
+
+## 2. Notification Pipeline (Active)
+*   **Target:** `com.android.systemui.statusbar.notification.collection.NotifPipeline`
+*   **Method:** `addCollectionListener()`
+*   **Target (Internal):** `onEntryAdded()`
+*   **Purpose:** Low-latency interception of incoming notifications before they reach the standard shade.
+
+## 3. Media Intelligence (Active)
+*   **Target:** `com.android.systemui.media.controls.domain.pipeline.LegacyMediaDataManagerImpl`
+*   **Method:** `onMediaDataLoaded()`
+*   **Purpose:** Direct capture of song title, artist, album art, and playback state from SystemUI's own media controllers.
+
+## 4. Direct Hardware Control (Active)
+*   **Target:** `com.android.systemui.statusbar.policy.FlashlightControllerImpl`
+*   **Method:** `toggleSystemFlashlight()` & `onTorchModeChanged()`
+*   **Benefit:** Zero-latency torch toggle by talking directly to SystemUI's internal controller instance. No CameraManager overhead.
+
+*   **Target:** `com.android.systemui.volume.VolumeDialogControllerImpl`
+*   **Method:** `onVolumeChangedW()`
+*   **Benefit:** Direct interception of volume key events for real-time Island synchronization.
+
+## 5. Process & Focus Detection (Active)
+*   **Target:** `com.android.server.wm.ActivityRecord` (System Server)
+*   **Method:** `onWindowsDrawn()`
+*   **Benefit:** Instantly detects which app is in focus (for App Roles) at the OS level. Zero broadcast latency.
+
+## 6. Layout & Clipping Hierarchy (Active Logic)
+*   **Logic:** Recursive parent lookup in `PhoneStatusBarView`.
+*   **Action:** Sets `clipChildren = false` and `clipToPadding = false` for the entire Status Bar container chain (up to 8 levels).
+*   **Benefit:** Allows the Island to expand outside the physical bounds of the status bar.
+
+## 7. IPC & Preferences (Native Bridge)
+*   **Target:** `com.example.dynamicisland.ipc.IslandContentProvider`
+*   **Logic:** SystemUI reads preferences directly from the module's provider.
+*   **Security:** Removal of `SECURE_IPC` requirement allows SystemUI (UID 1000) to communicate without permission denial.

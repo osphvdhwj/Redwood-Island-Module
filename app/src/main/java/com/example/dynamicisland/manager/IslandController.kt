@@ -565,11 +565,7 @@ class IslandController @Inject constructor(
                 audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, if (isMuted) AudioManager.ADJUST_UNMUTE else AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
             }
             "TOGGLE_TORCH" -> {
-                try {
-                    val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
-                    val cameraId = cameraManager.cameraIdList[0]
-                    cameraManager.setTorchMode(cameraId, true) // Toggle implementation simplified for plan
-                } catch (e: Exception) {}
+                SystemUIA15Hooks.toggleSystemFlashlight()
             }
             "OPEN_SOURCE_APP" -> {
                 val pkg = when (val m = _lastActiveModel) {
