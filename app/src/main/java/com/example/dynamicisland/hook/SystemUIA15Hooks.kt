@@ -142,7 +142,7 @@ class SystemUIA15Hooks {
                                 object : XC_MethodHook() {
                                     override fun afterHookedMethod(innerParam: MethodHookParam) {
                                         val entry = innerParam.args.firstOrNull() ?: return
-                                        processNativeNotification(entry)
+                                        processNativeNotification(entry, context)
                                     }
                                 }
                             )
@@ -169,7 +169,7 @@ class SystemUIA15Hooks {
                             // MediaData is at index 2
                             val data = param.args.getOrNull(2) ?: return
                             if (data.javaClass.name.contains("MediaData")) {
-                                processNativeMedia(data)
+                                processNativeMedia(data, context)
                             }
                         }
                     }
@@ -179,7 +179,7 @@ class SystemUIA15Hooks {
             }
         }
 
-        private fun processNativeNotification(entry: Any) {
+        private fun processNativeNotification(entry: Any, context: Context) {
             try {
                 // com.android.systemui.statusbar.notification.collection.NotificationEntry
                 val sbn = XposedHelpers.callMethod(entry, "getSbn") as android.service.notification.StatusBarNotification
@@ -195,7 +195,7 @@ class SystemUIA15Hooks {
             }
         }
 
-        private fun processNativeMedia(mediaData: Any) {
+        private fun processNativeMedia(mediaData: Any, context: Context) {
             try {
                 controller?.let { ctrl ->
                     // Field names verified from SystemUI.apk dexdump
@@ -207,7 +207,7 @@ class SystemUIA15Hooks {
                     
                     XposedBridge.log("$TAG: Native media caught: $song by $artist (Playing: $isPlaying)")
 
-                    val artworkBmp = artworkIcon?.let { decodeIcon(it, ctrl.notificationManager.context) }
+                    val artworkBmp = artworkIcon?.let { decodeIcon(it, context) }
                     
                     ctrl.mediaManager.updateMediaFromNative(
                         pkg = pkg,
