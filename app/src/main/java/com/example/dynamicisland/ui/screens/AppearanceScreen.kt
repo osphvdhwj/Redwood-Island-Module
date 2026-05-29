@@ -39,7 +39,14 @@ fun AppearanceScreen(prefs: SharedPreferences) {
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.padding(24.dp)) {
-            IslandPreviewCard(modifier = Modifier.glassmorphicCard(cornerRadius = 28.dp))
+            IslandPreviewCard(
+                modifier = Modifier.glassmorphicCard(cornerRadius = 28.dp),
+                previewState = when {
+                    callStyle != com.example.dynamicisland.settings.CallStyle.IOS -> "call"
+                    chargingStyle != com.example.dynamicisland.settings.ChargingStyle.RING -> "charging"
+                    else -> "music"
+                }
+            )
         }
         
         Column(
@@ -90,6 +97,7 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                     title = "Blur Intensity", 
                     description = "Strength of the background frost effect.",
                     value = blurIntensity, 
+                    defaultValue = 15f,
                     valueRange = 5f..40f,
                     onValueChange = { 
                         blurIntensity = it
@@ -165,6 +173,7 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                 title = "Animation Bounciness", 
                 description = "Higher values increase oscillation.",
                 value = damping, 
+                defaultValue = 0.85f,
                 valueRange = 0.1f..1.0f,
                 onValueChange = { 
                     damping = it
@@ -178,6 +187,7 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                 title = "Animation Speed", 
                 description = "Stiffness of the animation spring.",
                 value = stiffness, 
+                defaultValue = 400f,
                 valueRange = 50f..1000f,
                 onValueChange = { 
                     stiffness = it

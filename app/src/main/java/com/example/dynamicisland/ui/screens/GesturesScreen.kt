@@ -32,12 +32,13 @@ fun GesturesScreen(prefs: SharedPreferences) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        SettingsCategoryHeader("Interaction Matrix")
+        SettingsCategoryHeader("Gesture Configuration")
         
         ScrollableTabRow(
             selectedTabIndex = selectedTab,
             edgePadding = 16.dp,
-            divider = {}
+            divider = {},
+            containerColor = androidx.compose.ui.graphics.Color.Transparent
         ) {
             tabs.forEachIndexed { index, title ->
                 Tab(
@@ -49,32 +50,20 @@ fun GesturesScreen(prefs: SharedPreferences) {
         }
         
         val stateKey = stateKeys[selectedTab]
+        val gestureSuffixes = listOf("single_tap", "double_tap", "long_press", "swipe_left", "swipe_right", "swipe_up", "swipe_down")
         
-        val allGestureKeys = listOf(
-            "${stateKey}_single_tap",
-            "${stateKey}_double_tap",
-            "${stateKey}_long_press",
-            "${stateKey}_swipe_left",
-            "${stateKey}_swipe_right",
-            "${stateKey}_swipe_up",
-            "${stateKey}_swipe_down"
-        )
-        
+        // Re-read current assignments to show occupied status
         val currentAssignments = remember(selectedTab, prefs.all) {
-            allGestureKeys.mapNotNull { key -> 
-                prefs.getString(key, "none")?.takeIf { it != "none" } 
-            }
+            gestureSuffixes.associateWith { suffix -> prefs.getString("${stateKey}_$suffix", "NONE") ?: "NONE" }
         }
 
-        SettingsCategoryHeader("${tabs[selectedTab]} State Actions")
+        SettingsCategoryHeader("${tabs[selectedTab]} Contextual Actions")
         
-        MD3GestureSelector("Single Tap", "${stateKey}_single_tap", prefs, currentAssignments)
-        MD3GestureSelector("Double Tap", "${stateKey}_double_tap", prefs, currentAssignments)
-        MD3GestureSelector("Long Press", "${stateKey}_long_press", prefs, currentAssignments)
-        MD3GestureSelector("Swipe Left", "${stateKey}_swipe_left", prefs, currentAssignments)
-        MD3GestureSelector("Swipe Right", "${stateKey}_swipe_right", prefs, currentAssignments)
-        MD3GestureSelector("Swipe Up", "${stateKey}_swipe_up", prefs, currentAssignments)
-        MD3GestureSelector("Swipe Down", "${stateKey}_swipe_down", prefs, currentAssignments)
+        gestureSuffixes.forEach { suffix ->
+            val label = suffix.replace("_", " ").capitalize()
+            val prefsKey = "${stateKey}_$suffix"
+            MD3GestureSelector(label, prefsKey, prefs, currentAssignments)
+        }
         
         Spacer(modifier = Modifier.height(100.dp))
     }
@@ -85,15 +74,18 @@ private fun MD3GestureSelector(
     label: String,
     prefsKey: String,
     prefs: SharedPreferences,
-    inUseActions: List<String>
+    assignments: Map<String, String>
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var selectedAction by remember { mutableStateOf(prefs.getString(prefsKey, "none") ?: "none") }
-    var pendingOverrideAction by remember { mutableStateOf<String?>(null) }
+    val actualSelectedAction = (assignments[prefsKey] ?: "NONE").uppercase()
+
     var expanded by remember { mutableStateOf(false) }
     
-    val allActions = listOf("none", "dismiss", "expand", "next_track", "previous_track", "toggle_play_pause")
+    val allActions = listOf(
+        "NONE", "COLLAPSE", "EXPAND", "NEXT_TRACK", "PREV_TRACK", "PLAY_PAUSE", 
+        "OPEN_SOURCE_APP", "TOGGLE_TORCH", "MUTE_TOGGLE", "FORCE_DISMISS", "VOLUME_UP", "VOLUME_DOWN", "SCREENSHOT"
+    )
 
     Row(
         modifier = Modifier
@@ -102,18 +94,19 @@ private fun MD3GestureSelector(
             .padding(horizontal = 24.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label, 
-            style = MaterialTheme.typography.bodyLarge, 
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label, 
+                style = MaterialTheme.typography.bodyLarge, 
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
         
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = selectedAction.replace("_", " ").capitalize(),
+                text = actualSelectedAction.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = if (actualSelectedAction == "NONE") MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
             )
             Icon(
                 imageVector = Icons.Default.ArrowDropDown,
@@ -124,74 +117,41 @@ private fun MD3GestureSelector(
         
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             allActions.forEach { action ->
-                val inUse = action in inUseActions && action != selectedAction && action != "none"
+                val isOccupied = assignments.values.count { it.uppercase() == action && action != "NONE" } > 0
+                val isCurrentlyThis = actualSelectedAction == action
+
                 DropdownMenuItem(
                     text = { 
-                        Text(
-                            text = action.replace("_", " ").capitalize(),
-                            color = if (inUse) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                        ) 
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = action.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
+                                color = if (isCurrentlyThis) MaterialTheme.colorScheme.primary 
+                                        else if (isOccupied) MaterialTheme.colorScheme.error 
+                                        else MaterialTheme.colorScheme.onSurface
+                            )
+                            if (isOccupied && !isCurrentlyThis) {
+                                Spacer(Modifier.width(8.dp))
+                                Text("(In Use)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                            }
+                        }
                     },
                     onClick = {
                         expanded = false
-                        if (inUse) {
-                            pendingOverrideAction = action
-                        } else {
-                            selectedAction = action
-                            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString(prefsKey, action) }) {
-                                NewConfigManager.sendGestureUpdate(context, prefs)
+                        NewConfigManager.commitAndBroadcast(prefs, scope, context, {
+                            if (isOccupied && action != "NONE") {
+                                val statePrefix = prefsKey.substringBeforeLast("_")
+                                assignments.filter { it.value.uppercase() == action }.keys.forEach { suffix ->
+                                    putString("${statePrefix}_$suffix", "NONE")
+                                }
                             }
+                            putString(prefsKey, action)
+                        }) {
+                            NewConfigManager.sendGestureUpdate(context, prefs)
                         }
                     }
                 )
             }
         }
-    }
-
-    if (pendingOverrideAction != null) {
-        AlertDialog(
-            onDismissRequest = { pendingOverrideAction = null },
-            title = { Text("Override Action?") },
-            text = { 
-                Text("The action '${pendingOverrideAction?.replace("_", " ")?.capitalize()}' is already assigned to another gesture. Reassign it here?") 
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val actionToOverride = pendingOverrideAction!!
-                    
-                    val allGestureKeys = listOf(
-                        "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_single_tap",
-                        "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_double_tap",
-                        "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_long_press",
-                        "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_swipe_left",
-                        "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_swipe_right",
-                        "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_swipe_up",
-                        "${prefsKey.substringBefore("_swipe").substringBefore("_long").substringBefore("_double").substringBefore("_single")}_swipe_down"
-                    )
-                    
-                    NewConfigManager.commitAndBroadcast(prefs, scope, context, {
-                        allGestureKeys.forEach { key ->
-                            if (key != prefsKey && prefs.getString(key, "none") == actionToOverride) {
-                                putString(key, "none")
-                            }
-                        }
-                        putString(prefsKey, actionToOverride)
-                    }) {
-                        NewConfigManager.sendGestureUpdate(context, prefs)
-                    }
-
-                    selectedAction = actionToOverride
-                    pendingOverrideAction = null
-                }) {
-                    Text("Reassign")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingOverrideAction = null }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 }
 

@@ -82,6 +82,68 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             onCheckedChange = { viewModel.updateSetting(SettingKey.HAPTIC_FEEDBACK, it) }
         )
 
+        SettingsCategoryHeader("Automation & Continuity")
+        
+        SettingsSwitch(
+            title = "OTP Auto-Capture", 
+            description = "Intercept 2FA codes from incoming messages.", 
+            icon = Icons.Default.VpnKey,
+            checked = state.otpDetection, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.OTP_DETECTION, it) }
+        )
+        SettingsSwitch(
+            title = "AirPods Bridge", 
+            description = "iOS-style connection card for AirPods and Beats.", 
+            icon = Icons.Default.Headset,
+            checked = state.airpodsPopup, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.AIRPODS_POPUP, it) }
+        )
+        SettingsSwitch(
+            title = "Navigation HUD", 
+            description = "Native Google Maps instruction ticker.", 
+            icon = Icons.Default.Navigation,
+            checked = state.navigation, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.NAVIGATION, it) }
+        )
+        SettingsSwitch(
+            title = "Face ID Engine", 
+            description = "Unlock animation synced with biometric auth.", 
+            icon = Icons.Default.LockOpen,
+            checked = state.faceIDPadlock, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.FACE_ID_PADLOCK, it) }
+        )
+        SettingsSwitch(
+            title = "MagSafe Charging", 
+            description = "Circular charging ring with haptic pulse.", 
+            icon = Icons.Default.ChargingStation,
+            checked = state.magsafeChargingAnimation, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.MAGSAFE_CHARGING_ANIMATION, it) }
+        )
+
+        SettingsCategoryHeader("Media Hub")
+        
+        SettingsSwitch(
+            title = "Waveform Seeker", 
+            description = "Visualized playback bar for active music.", 
+            icon = Icons.Default.GraphicEq,
+            checked = state.waveformEnabled, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.WAVEFORM_ENABLED, it) }
+        )
+        SettingsSwitch(
+            title = "Artwork Canvas", 
+            description = "Immersive background blur from album art.", 
+            icon = Icons.Default.Album,
+            checked = state.mediaArtworkBlur, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.MEDIA_ARTWORK_BLUR, it) }
+        )
+        SettingsSwitch(
+            title = "Beat Pulse", 
+            description = "Sync Island expansion with audio tempo.", 
+            icon = Icons.Default.Hearing,
+            checked = state.bpmPulse, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.BPM_PULSE, it) }
+        )
+
         SettingsCategoryHeader("Maintenance")
 
         Column(

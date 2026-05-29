@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,13 +38,35 @@ fun AppRolesScreen(prefs: SharedPreferences) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        SettingsCategoryHeader("App Roles")
+        SettingsCategoryHeader("Core System Roles")
         
-        MD3RoleSelector("Calling App", "role_calling_app", prefs, context, scope)
-        MD3RoleSelector("Music App", "role_music_app", prefs, context, scope)
-        MD3RoleSelector("Video App", "role_video_app", prefs, context, scope)
-        MD3RoleSelector("Notes App", "role_notes_app", prefs, context, scope)
-        MD3RoleSelector("Game Launcher", "role_game_launcher", prefs, context, scope)
+        MD3RoleSelector("Default Caller", "role_calling_app", prefs, context, scope)
+        MD3RoleSelector("Primary Music Player", "role_music_app", prefs, context, scope)
+        
+        SettingsCategoryHeader("Productivity & Tools")
+        MD3RoleSelector("Primary Video Player", "role_video_app", prefs, context, scope)
+        MD3RoleSelector("Quick Notes App", "role_notes_app", prefs, context, scope)
+        
+        SettingsCategoryHeader("Gaming Mode")
+        MD3RoleSelector("Main Game Launcher", "role_game_launcher", prefs, context, scope)
+
+        Spacer(Modifier.height(32.dp))
+        
+        Button(
+            onClick = {
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, {
+                    prefs.all.keys.filter { it.startsWith("role_") }.forEach { remove(it) }
+                }) {
+                    NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                }
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth()
+        ) {
+            Icon(Icons.Default.DeleteSweep, null)
+            Spacer(Modifier.width(8.dp))
+            Text("Reset All Roles", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
 
         Spacer(Modifier.height(100.dp))
     }
@@ -73,7 +96,8 @@ private fun MD3RoleSelector(
 
     val pm = context.packageManager
     val appInfo = remember(selectedPkg) {
-        try { pm.getApplicationInfo(selectedPkg, 0) } catch (e: Exception) { null }
+        if (selectedPkg.isEmpty()) null
+        else try { pm.getApplicationInfo(selectedPkg, 0) } catch (e: Exception) { null }
     }
 
     Row(
@@ -90,14 +114,18 @@ private fun MD3RoleSelector(
             Image(
                 painter = rememberDrawablePainter(drawable = appInfo.loadIcon(pm)),
                 contentDescription = null,
-                modifier = Modifier.size(32.dp).clip(CircleShape)
+                modifier = Modifier.size(40.dp).clip(CircleShape)
             )
         } else {
             Surface(
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(40.dp),
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.surfaceVariant
-            ) {}
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("+", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
         
         Spacer(Modifier.width(16.dp))
@@ -109,11 +137,24 @@ private fun MD3RoleSelector(
                 style = MaterialTheme.typography.bodyLarge
             )
             Text(
-                text = appInfo?.loadLabel(pm)?.toString() ?: "Tap to select",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = appInfo?.loadLabel(pm)?.toString() ?: "No app assigned",
+                color = if (appInfo == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 2.dp)
             )
+        }
+
+        if (selectedPkg.isNotEmpty()) {
+            IconButton(onClick = {
+                selectedPkg = ""
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, {
+                    putString(roleKey, "")
+                }) {
+                    NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                }
+            }) {
+                Icon(Icons.Default.RemoveCircleOutline, null, tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
+            }
         }
         
         Icon(

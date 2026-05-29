@@ -103,11 +103,11 @@ object NewConfigManager {
     }
 
     fun getDefaultWidth(prefix: String): Float = when (prefix) {
-        "ring" -> 45f; "mini" -> 180f; "mid" -> 320f; "max" -> 360f; "cube" -> 85f; else -> 0f
+        "ring" -> 48f; "mini" -> 180f; "mid" -> 320f; "max" -> 360f; "cube" -> 85f; else -> 180f
     }
 
     fun getDefaultHeight(prefix: String): Float = when (prefix) {
-        "ring" -> 45f; "mini" -> 36f; "mid" -> 80f; "max" -> 220f; "cube" -> 85f; else -> 0f
+        "ring" -> 48f; "mini" -> 36f; "mid" -> 80f; "max" -> 220f; "cube" -> 85f; else -> 36f
     }
 
     fun migrateFromSharedPreferences(context: Context) {

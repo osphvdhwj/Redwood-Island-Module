@@ -127,8 +127,13 @@ fun SetupScreen() {
                     icon = Icons.Default.BatteryChargingFull,
                     isGranted = hasBattery,
                     onGrant = {
-                        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}"))
-                        batteryLauncher.launch(intent)
+                        try {
+                            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}"))
+                            batteryLauncher.launch(intent)
+                        } catch (e: Exception) {
+                            val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                            batteryLauncher.launch(intent)
+                        }
                     },
                     onNext = { scope.launch { pagerState.animateScrollToPage(5) } }
                 )

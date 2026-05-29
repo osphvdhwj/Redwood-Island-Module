@@ -34,6 +34,7 @@ import com.example.dynamicisland.settings.SettingsManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
@@ -91,17 +92,22 @@ fun PermissionGuard(content: @Composable () -> Unit) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val isAnyCriticalMissing = isOverlayMissing || isNotificationMissing || isAccessibilityMissing
+    val missingPermission = when {
+        isOverlayMissing -> "Overlay"
+        isNotificationMissing -> "Notification Access"
+        isAccessibilityMissing -> "Accessibility"
+        else -> null
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         content()
 
-        if (isAnyCriticalMissing) {
+        if (missingPermission != null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.92f))
-                    .premiumClickable(enabled = false) {}, // Intercept all touches
+                    .premiumClickable(enabled = false) {},
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -126,7 +132,7 @@ fun PermissionGuard(content: @Composable () -> Unit) {
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Critical system permissions were not granted or have been revoked. The Island cannot function without them.",
+                        "The Island cannot function without $missingPermission. Tap below to fix this specific requirement.",
                         color = Color.White.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center,
                         lineHeight = 20.sp
@@ -135,14 +141,24 @@ fun PermissionGuard(content: @Composable () -> Unit) {
                     
                     Button(
                         onClick = {
-                            val intent = Intent(context, com.example.dynamicisland.ui.setup.SetupActivity::class.java)
-                            context.startActivity(intent)
+                            when {
+                                isOverlayMissing -> {
+                                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
+                                    context.startActivity(intent)
+                                }
+                                isNotificationMissing -> {
+                                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                                }
+                                isAccessibilityMissing -> {
+                                    context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                                }
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = IslandColors.accentCyan),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
-                        Text("Fix Permissions", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Text("Grant $missingPermission", color = Color.Black, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -169,7 +185,6 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
     val navItems = listOf(
         NavItemData("Layout", Icons.Default.Build),
         NavItemData("Appearance", Icons.Default.Palette),
-        NavItemData("Smart", Icons.Default.Star),
         NavItemData("Shortcuts", Icons.Default.Apps),
         NavItemData("System", Icons.Default.Settings)
     )
@@ -211,9 +226,8 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
                         when (navIndex) {
                             0 -> LayoutScreen(prefs)
                             1 -> AppearanceScreen(prefs)
-                            2 -> IntelligenceTab(prefs)
-                            3 -> InteractionsTab(prefs)
-                            4 -> SettingsScreen(settingsViewModel)
+                            2 -> InteractionsTab(prefs)
+                            3 -> SettingsScreen(settingsViewModel)
                         }
                     }
                 }
@@ -221,24 +235,6 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
             
             // Floating Visual Aid overlay
             LiveVisualAid()
-        }
-    }
-}
-
-@Composable
-fun IntelligenceTab(prefs: android.content.SharedPreferences) {
-    var selectedSubTab by remember { mutableIntStateOf(0) }
-    Column {
-        TabRow(
-            selectedTabIndex = selectedSubTab,
-            divider = {}
-        ) {
-            Tab(selected = selectedSubTab == 0, onClick = { selectedSubTab = 0 }, text = { Text("AI & Detection") })
-            Tab(selected = selectedSubTab == 1, onClick = { selectedSubTab = 1 }, text = { Text("Continuity") })
-        }
-        when (selectedSubTab) {
-            0 -> IntelligenceScreen(prefs)
-            1 -> ContinuityScreen(prefs)
         }
     }
 }

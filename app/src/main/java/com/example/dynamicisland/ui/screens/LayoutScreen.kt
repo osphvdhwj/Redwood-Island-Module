@@ -5,9 +5,6 @@ import android.content.SharedPreferences
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -51,7 +48,6 @@ fun LayoutScreen(prefs: SharedPreferences) {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // --- 1. Immersive Preview Area ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -63,14 +59,13 @@ fun LayoutScreen(prefs: SharedPreferences) {
                 liveHeight = h,
                 liveX = x,
                 liveY = y,
-                liveRadius = if (currentPrefix == "ring") h / 2 else r, // Force circle preview for ring
+                liveRadius = if (currentPrefix == "ring") h / 2 else r,
                 liveRingT = ringT,
                 isLivePreview = true,
                 previewState = currentPrefix
             )
         }
         
-        // --- 2. Segmented Navigation ---
         ScrollableTabRow(
             selectedTabIndex = selectedTab,
             edgePadding = 16.dp,
@@ -82,12 +77,11 @@ fun LayoutScreen(prefs: SharedPreferences) {
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
-                    text = { Text(title, style = MaterialTheme.typography.labelLarge) }
+                    text = { Text(title) }
                 )
             }
         }
         
-        // --- 3. Adjustment Controls ---
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -97,14 +91,15 @@ fun LayoutScreen(prefs: SharedPreferences) {
             SettingsCategoryHeader(title = "${tabs[selectedTab]} Geometry")
             
             // Dynamic value ranges based on state
-            val widthRange = if (currentPrefix == "ring" || currentPrefix == "cube") 20f..150f else 100f..420f
-            val heightRange = if (currentPrefix == "ring" || currentPrefix == "cube") 20f..150f else 20f..300f
-            val radiusRange = 0f..200f
+            val widthRange = if (currentPrefix == "ring") 20f..48f else if (currentPrefix == "cube") 20f..150f else 48f..420f
+            val heightRange = if (currentPrefix == "ring") 20f..48f else if (currentPrefix == "cube") 20f..150f else 20f..300f
+            val radiusRange = 4f..60f
 
             SettingsSlider(
                 title = "Width", 
                 description = "Standardize the horizontal span.",
                 value = w, 
+                defaultValue = NewConfigManager.getDefaultWidth(currentPrefix),
                 valueRange = widthRange, 
                 onValueChange = { 
                     w = it
@@ -117,9 +112,14 @@ fun LayoutScreen(prefs: SharedPreferences) {
                 title = "Height", 
                 description = "Adjust the vertical thickness.",
                 value = h, 
+                defaultValue = NewConfigManager.getDefaultHeight(currentPrefix),
                 valueRange = heightRange, 
                 onValueChange = { 
                     h = it
+                    if (currentPrefix == "ring") {
+                         // Force Ring to stay a circle
+                         w = it
+                    }
                     NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
                 },
                 valueFormatter = { "${it.toInt()} dp" }
@@ -129,6 +129,7 @@ fun LayoutScreen(prefs: SharedPreferences) {
                 title = "Horizontal Offset", 
                 description = "X-axis alignment (0 is centered).",
                 value = x, 
+                defaultValue = 0f,
                 valueRange = -150f..150f, 
                 onValueChange = { 
                     x = it
@@ -141,7 +142,8 @@ fun LayoutScreen(prefs: SharedPreferences) {
                 title = "Vertical Position", 
                 description = "Distance from the top (align with camera).",
                 value = y, 
-                valueRange = -50f..300f, 
+                defaultValue = 48f,
+                valueRange = -50f..400f, 
                 onValueChange = { 
                     y = it
                     NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
@@ -149,15 +151,15 @@ fun LayoutScreen(prefs: SharedPreferences) {
                 valueFormatter = { "${it.toInt()} dp" }
             )
 
-            // Hide corner radius for Ring as it's automatically calculated (height / 2)
             if (currentPrefix != "ring") {
                 SettingsSlider(
                     title = "Corner Radius", 
-                    description = "Curve of the edges (higher = rounder).",
+                    description = "Curve of the edges (capped at 60dp for stability).",
                     value = r, 
-                    valueRange = radiusRange, 
+                    defaultValue = NewConfigManager.getDefaultRadius(currentPrefix),
+                    valueRange = 4f..60f, 
                     onValueChange = { 
-                        r = it.coerceAtLeast(4f) // Prevent crash with tiny values
+                        r = it
                         NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
                     },
                     valueFormatter = { "${it.toInt()} dp" }
@@ -167,10 +169,11 @@ fun LayoutScreen(prefs: SharedPreferences) {
             if (currentPrefix == "ring") {
                 SettingsCategoryHeader(title = "Ring Specifics")
                 SettingsSlider(
-                    title = "Ring Thickness", 
+                    title = "Thickness", 
                     description = "Stroke width of the notification circle.",
                     value = ringT, 
-                    valueRange = 1f..20f, 
+                    defaultValue = 6f,
+                    valueRange = 1f..10f, 
                     onValueChange = { 
                         ringT = it
                         NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)

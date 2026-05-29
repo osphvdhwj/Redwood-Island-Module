@@ -1,27 +1,26 @@
 package com.example.dynamicisland.ui.design
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -31,6 +30,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun IslandPreviewCard(
@@ -42,169 +42,72 @@ fun IslandPreviewCard(
     liveRadius: Float = 100f,
     liveRingT: Float = 6f,
     isLivePreview: Boolean = false,
-    previewState: String = "",
-    expandUpwards: Boolean = false
+    previewState: String = ""
 ) {
     val states = listOf("Music", "Call", "Charging")
     var currentState by remember { mutableStateOf(states[0]) }
-    var isAutoPlaying by remember { mutableStateOf(true) }
-
-    LaunchedEffect(isAutoPlaying, isLivePreview) {
-        if (isAutoPlaying && !isLivePreview) {
+    
+    // Auto-cycling for non-live mode
+    LaunchedEffect(isLivePreview) {
+        if (!isLivePreview) {
             while (true) {
-                kotlinx.coroutines.delay(5000)
+                kotlinx.coroutines.delay(4000)
                 val currentIndex = states.indexOf(currentState)
-                val nextIndex = (currentIndex + 1) % states.size
-                currentState = states[nextIndex]
+                currentState = states[(currentIndex + 1) % states.size]
             }
         }
     }
 
-    val pillWidth by animateDpAsState(
-        targetValue = if (isLivePreview) liveWidth.dp else when (currentState) {
+    // Determine target dimensions
+    val targetWidth = if (isLivePreview) liveWidth.dp else when (previewState) {
+        "call" -> 160.dp
+        "charging" -> 190.dp
+        "music" -> 220.dp
+        else -> when (currentState) {
             "Music" -> 220.dp
             "Call" -> 160.dp
             "Charging" -> 190.dp
             else -> 120.dp
-        },
-        animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
-        label = "pillWidth"
-    )
+        }
+    }
 
-    val pillHeight by animateDpAsState(
-        targetValue = if (isLivePreview) liveHeight.dp else when (currentState) {
-            "Music" -> 44.dp
-            "Call" -> 40.dp
-            "Charging" -> 44.dp
-            else -> 40.dp
-        },
-        animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
-        label = "pillHeight"
-    )
+    val targetHeight = if (isLivePreview) liveHeight.dp else when (previewState) {
+        "call" -> 40.dp
+        "charging" -> 44.dp
+        "music" -> 44.dp
+        else -> 44.dp
+    }
 
-    val pillRadius by animateDpAsState(
-        targetValue = if (isLivePreview) liveRadius.dp else 100.dp,
-        animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
-        label = "pillRadius"
-    )
-
-    val pillOffsetX by animateDpAsState(
-        targetValue = if (isLivePreview) liveX.dp else 0.dp,
-        animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
-        label = "pillOffsetX"
-    )
-
-    val pillOffsetY by animateDpAsState(
-        targetValue = if (isLivePreview) liveY.dp else 48.dp,
-        animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
-        label = "pillOffsetY"
-    )
+    val pillWidth by animateDpAsState(targetWidth, label = "w")
+    val pillHeight by animateDpAsState(targetHeight, label = "h")
+    val pillRadius by animateDpAsState(if (isLivePreview) liveRadius.dp else 100.dp, label = "r")
+    val pillOffsetX by animateDpAsState(if (isLivePreview) liveX.dp else 0.dp, label = "x")
+    val pillOffsetY by animateDpAsState(if (isLivePreview) liveY.dp else 32.dp, label = "y")
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // Expanded Canvas Preview Area to fit all states
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(320.dp)
-                .background(Brush.radialGradient(listOf(Color(0xFF0A1628), Color.Black)), RoundedCornerShape(24.dp))
-                .border(1.dp, IslandColors.border, RoundedCornerShape(24.dp))
+                .height(280.dp)
+                .background(Brush.verticalGradient(listOf(Color(0xFF1A1C1E), Color.Black)), RoundedCornerShape(24.dp))
+                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
         ) {
-            // Background Canvas (Phone Silhouette or 1:1 Screen Preview)
+            // --- Screen Simulation ---
             Canvas(modifier = Modifier.fillMaxSize()) {
-                if (isLivePreview) {
-                    // 1:1 Scale Screen Preview
-                    val punchHoleRadius = 8.dp.toPx()
-                    // Typical centered punch-hole camera position
-                    val punchHoleY = 32.dp.toPx()
-                    
-                    // Draw a simulated camera cutout (punch hole)
-                    drawCircle(
-                        color = Color.Black,
-                        radius = punchHoleRadius,
-                        center = Offset(size.width / 2f, punchHoleY)
-                    )
-                    
-                    // Subtle inner shadow to make the punch hole look like hardware
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.1f),
-                        radius = punchHoleRadius,
-                        center = Offset(size.width / 2f, punchHoleY),
-                        style = Stroke(width = 1.dp.toPx())
-                    )
-                    
-                    // Draw a subtle border to represent the edges of the device screen
-                    drawRoundRect(
-                        color = Color.Black.copy(alpha = 0.5f),
-                        topLeft = Offset(0f, 0f),
-                        size = Size(size.width, size.height),
-                        cornerRadius = CornerRadius(24.dp.toPx(), 24.dp.toPx()),
-                        style = Stroke(width = 6.dp.toPx())
-                    )
-                } else {
-                    // Miniature Realistic Phone Silhouette
-                    val phoneW = 260.dp.toPx()
-                    val phoneH = 400.dp.toPx()
-                    val phoneT = 24.dp.toPx()
-                    val cr = 36.dp.toPx()
-
-                    // Outer metallic bezel
-                    drawRoundRect(
-                        color = Color(0xFF222222),
-                        topLeft = Offset(size.width / 2 - phoneW / 2, phoneT),
-                        size = Size(phoneW, phoneH),
-                        cornerRadius = CornerRadius(cr, cr),
-                        style = Stroke(width = 4.dp.toPx())
-                    )
-                    
-                    // Inner screen boundary
-                    drawRoundRect(
-                        color = Color(0xFF0D0D0D),
-                        topLeft = Offset(size.width / 2 - phoneW / 2 + 10f, phoneT + 10f),
-                        size = Size(phoneW - 20f, phoneH - 20f),
-                        cornerRadius = CornerRadius(cr - 5f, cr - 5f),
-                        style = Stroke(width = 2.dp.toPx())
-                    )
-                }
-            }
-
-            if (!isLivePreview) {
-                // Infinite Pulsing Ambient Background Ring
-                val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-                val pulseScale by infiniteTransition.animateFloat(
-                    initialValue = 1f,
-                    targetValue = 1.3f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(1500, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Restart
-                    ),
-                    label = "pulseScale"
-                )
-                val pulseAlpha by infiniteTransition.animateFloat(
-                    initialValue = 0.6f,
-                    targetValue = 0f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(1500, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Restart
-                    ),
-                    label = "pulseAlpha"
-                )
-
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .offset(x = pillOffsetX, y = pillOffsetY)
-                        .width(pillWidth)
-                        .height(pillHeight)
-                        .graphicsLayer {
-                            scaleX = pulseScale
-                            scaleY = pulseScale
-                            alpha = pulseAlpha
-                        }
-                        .border(2.dp, IslandColors.accentCyan, RoundedCornerShape(50))
+                // Punch hole
+                drawCircle(Color.Black, radius = 8.dp.toPx(), center = Offset(size.width / 2f, 32.dp.toPx()))
+                
+                // Content Boundaries
+                drawRoundRect(
+                    color = Color.White.copy(alpha = 0.05f),
+                    topLeft = Offset(16.dp.toPx(), 16.dp.toPx()),
+                    size = Size(size.width - 32.dp.toPx(), size.height - 32.dp.toPx()),
+                    cornerRadius = CornerRadius(20.dp.toPx()),
+                    style = Stroke(width = 1.dp.toPx())
                 )
             }
 
-            // Dynamic Island Pill
+            // --- The Island Pill ---
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -218,119 +121,42 @@ fun IslandPreviewCard(
                             if (previewState == "ring") {
                                 Modifier.border(liveRingT.dp, IslandColors.accentCyan, RoundedCornerShape(pillRadius))
                             } else {
-                                // Add a faint border to make it visible to "human eye" against black backgrounds
                                 Modifier.border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(pillRadius))
                             }
                         } else Modifier
-                    )
-                    .padding(horizontal = if (isLivePreview) 0.dp else 12.dp),
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                if (!isLivePreview) {
-                    // Real content rendering swaps
-                    Crossfade(targetState = currentState, label = "pillContent") { state ->
-                    when (state) {
-                        "Music" -> {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(Brush.linearGradient(listOf(IslandColors.accentPurple, IslandColors.accentCyan))),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Cyber Track", color = Color.White, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                                }
-                                // Simulated Equalizer Visualizer
-                                Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Box(modifier = Modifier.size(3.dp, 12.dp).background(IslandColors.accentCyan, CircleShape))
-                                    Box(modifier = Modifier.size(3.dp, 18.dp).background(IslandColors.accentPurple, CircleShape))
-                                    Box(modifier = Modifier.size(3.dp, 8.dp).background(IslandColors.accentCyan, CircleShape))
+                // Mock Content based on state
+                Crossfade(targetState = if (isLivePreview) previewState else currentState, label = "content") { state ->
+                    when (state.lowercase()) {
+                        "music" -> {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp)) {
+                                Icon(Icons.Default.MusicNote, null, tint = IslandColors.accentCyan, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Column {
+                                    Text("Now Playing", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    Text("Redwood Audio Engine", color = Color.Gray, fontSize = 8.sp)
                                 }
                             }
                         }
-                        "Call" -> {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Phone, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(20.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("0:42", color = Color(0xFF4CAF50), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFF44336)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.Phone, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp).graphicsLayer { rotationZ = 135f })
-                                }
+                        "call" -> {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp)) {
+                                Icon(Icons.Default.Call, null, tint = Color.Green, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("04:20", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black)
                             }
                         }
-                        "Charging" -> {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.BatteryChargingFull, contentDescription = null, tint = IslandColors.accentCyan, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("85% Super Charge", color = IslandColors.accentCyan, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        "charging" -> {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp)) {
+                                Icon(Icons.Default.BatteryChargingFull, null, tint = Color.Green, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("88%", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
-                    }
-                }
-            }
-        }
-        
-        if (!isLivePreview) {
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Horizontal LazyRow of state selector chips
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(states) { state ->
-                    val isSelected = currentState == state
-                    val chipBg = if (isSelected) IslandColors.accentCyan.copy(alpha = 0.15f) else IslandColors.surface
-                    val chipBorder = if (isSelected) IslandColors.accentCyan else IslandColors.border
-                    val chipTextColor = if (isSelected) IslandColors.accentCyan else IslandColors.textSecondary
-                    
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(chipBg)
-                            .border(1.dp, chipBorder, RoundedCornerShape(50))
-                            .clickable { 
-                                currentState = state 
-                                isAutoPlaying = false
-                            }
-                            .padding(horizontal = 20.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = state,
-                            color = chipTextColor,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
                     }
                 }
             }
         }
     }
-}
 }

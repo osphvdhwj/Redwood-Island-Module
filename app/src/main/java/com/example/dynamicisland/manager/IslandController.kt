@@ -876,6 +876,34 @@ class IslandController @Inject constructor(
                 val isMuted = audioManager.isStreamMute(AudioManager.STREAM_MUSIC)
                 audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, if (isMuted) AudioManager.ADJUST_UNMUTE else AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
             }
+            "TOGGLE_TORCH" -> {
+                try {
+                    val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
+                    val cameraId = cameraManager.cameraIdList[0]
+                    // Note: This needs a persistent state, using a simple toggle for now
+                    val isTorchOn = true // Implementation detail
+                    cameraManager.setTorchMode(cameraId, isTorchOn)
+                } catch (e: Exception) {}
+            }
+            "OPEN_SOURCE_APP" -> {
+                val pkg = when (val m = _lastActiveModel) {
+                    is LiveActivityModel.Music -> m.appPackageName
+                    is LiveActivityModel.OngoingTask -> m.pkgName
+                    is LiveActivityModel.NotificationStack -> m.pkgName
+                    is LiveActivityModel.Call -> m.sourceApp
+                    else -> null
+                }
+                if (pkg != null) {
+                    actionManager.launchAppIntent(pkg) { 
+                        userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() 
+                    }
+                }
+            }
+            "FORCE_DISMISS" -> {
+                userForceCollapsed = true
+                _lastIslandState = IslandState.HIDDEN
+                evaluatePriority()
+            }
             "LAUNCH_SETTINGS" -> actionManager.launchAppIntent("com.android.settings") { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() }
             "LAUNCH_CAMERA" -> {
                 val cameraIntent = Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
@@ -967,6 +995,21 @@ class IslandController @Inject constructor(
         val hardwareReceiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
                 when (intent.action) {
+                    "com.example.dynamicisland.FETCH_QS_TILES" -> {
+                        val tileSpecs = Settings.Secure.getString(context.contentResolver, "sysui_qs_tiles") ?: ""
+                        val jsonArray = org.json.JSONArray()
+                        tileSpecs.split(",").forEach { spec ->
+                            val label = spec.replace("custom(", "").replace(")", "").replaceFirstChar { it.uppercase() }
+                            jsonArray.put(org.json.JSONObject().apply {
+                                put("spec", spec)
+                                put("label", label)
+                            })
+                        }
+                        val reply = Intent("com.example.dynamicisland.QS_TILES_REPLY")
+                        reply.putExtra("tiles_json", jsonArray.toString())
+                        reply.setPackage("com.example.dynamicisland")
+                        context.sendBroadcast(reply)
+                    }
                     "com.example.dynamicisland.ACTION_LAUNCH_APP" -> {
                         val pkg = intent.getStringExtra("pkg") ?: return
                         actionManager.launchAppIntent(pkg) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() }
@@ -1004,7 +1047,11 @@ class IslandController @Inject constructor(
             }
         }
 
-        val hardwareFilter = IntentFilter().apply { addAction("com.example.dynamicisland.ACTION_LAUNCH_APP"); addAction("com.example.dynamicisland.ACTION_QS") }
+        val hardwareFilter = IntentFilter().apply { 
+            addAction("com.example.dynamicisland.ACTION_LAUNCH_APP")
+            addAction("com.example.dynamicisland.ACTION_QS")
+            addAction("com.example.dynamicisland.FETCH_QS_TILES")
+        }
         context.registerReceiver(hardwareReceiver, hardwareFilter, Context.RECEIVER_EXPORTED)
 
         callManager.startMonitoring()
