@@ -271,17 +271,17 @@ class IslandMediaManager(
 
             val musicModel = LiveActivityModel.Music(
                 id = "sys_media_native",
-                pkgName = pkg,
+                appPackageName = pkg,
                 title = title,
                 artist = artist,
                 albumArt = artwork,
                 blurredAlbumArt = blurredArtBitmap,
                 appIcon = appIconBmp,
                 isPlaying = isPlaying,
-                duration = 0L, 
-                position = 0L,
+                durationMs = 0L, 
+                positionMs = 0L,
                 dominantColor = bgColor,
-                contentColor = txtColor
+                titleTextColor = txtColor
             )
 
             withContext(Dispatchers.Main) {

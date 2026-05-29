@@ -210,7 +210,7 @@ class IslandController @Inject constructor(
     }
 
     private var windowManager: WindowManager? = null
-    private var islandView: DynamicIslandView? = null
+    internal var islandView: DynamicIslandView? = null
 
     // Trackers for the priority engine
     private var _lastIslandState = IslandState.TYPE_0_RING

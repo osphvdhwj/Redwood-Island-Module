@@ -153,7 +153,7 @@ private fun MD3RoleSelector(
                     NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
                 }
             }) {
-                Icon(Icons.Default.RemoveCircleOutline, null, tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
+                Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
             }
         }
         
