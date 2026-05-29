@@ -44,9 +44,9 @@ class BootReceiver : BroadcastReceiver() {
                     val x = prefs.getFloat("${prefix}_x", 0f)
                     val y = prefs.getFloat("${prefix}_y", 48f)
                     val ringT = prefs.getFloat("ring_thickness", 6f)
-                    val expandUp = prefs.getBoolean("expand_upwards", false)
+                    val r = prefs.getFloat("${prefix}_r", NewConfigManager.getDefaultRadius(prefix))
                     
-                    NewConfigManager.saveAndBroadcast(prefs, scope, context, prefix, w, h, x, y, ringT, expandUp)
+                    NewConfigManager.saveAndBroadcast(prefs, scope, context, prefix, w, h, x, y, r, ringT)
                 }
             } catch (e: Throwable) {
                 e.printStackTrace()

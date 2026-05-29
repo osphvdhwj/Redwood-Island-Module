@@ -340,7 +340,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                         )
                     }
                 },
-            contentAlignment = boxAlignment
+            contentAlignment = Alignment.TopCenter
         ) {
             // Privacy Dot Placement
             if (view.activePrivacyOp.value != null && state != IslandState.HIDDEN) {
