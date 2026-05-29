@@ -15,7 +15,7 @@ import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.settings.SettingsManager
 import com.example.dynamicisland.ui.DynamicIslandView
-import com.example.dynamicisland.ipc.IslandEventBus
+import com.example.dynamicisland.ui.mvi.IslandEventBus
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
@@ -207,7 +207,7 @@ class SystemUIA15Hooks {
                     
                     XposedBridge.log("$TAG: Native media caught: $song by $artist (Playing: $isPlaying)")
 
-                    val artworkBmp = artworkIcon?.let { decodeIcon(it, ctrl.context) }
+                    val artworkBmp = artworkIcon?.let { decodeIcon(it, ctrl.notificationManager.context) }
                     
                     ctrl.mediaManager.updateMediaFromNative(
                         pkg = pkg,
