@@ -42,8 +42,8 @@ object NewConfigManager {
         context: Context,
         prefix: String,
         w: Float, h: Float, x: Float, y: Float,
-        ringT: Float,
-        expandUp: Boolean
+        radius: Float,
+        ringT: Float
     ) {
         scope.launch(Dispatchers.IO) {
             val client = IslandIPCClient.get(context)
@@ -53,8 +53,8 @@ object NewConfigManager {
                 "${prefix}_h" to h,
                 "${prefix}_x" to x,
                 "${prefix}_y" to y,
-                "ring_thickness" to ringT,
-                "expand_upwards" to expandUp
+                "${prefix}_r" to radius,
+                "ring_thickness" to ringT
             )
 
             prefs.edit().apply {
@@ -62,12 +62,16 @@ object NewConfigManager {
                 putFloat("${prefix}_h", h)
                 putFloat("${prefix}_x", x)
                 putFloat("${prefix}_y", y)
+                putFloat("${prefix}_r", radius)
                 putFloat("ring_thickness", ringT)
-                putBoolean("expand_upwards", expandUp)
             }.commit()
 
             client.bulkPut(payload)
         }
+    }
+
+    fun getDefaultRadius(prefix: String): Float = when (prefix) {
+        "ring" -> 22.5f; "mini" -> 18f; "mid" -> 24f; "max" -> 42f; "cube" -> 20f; else -> 20f
     }
 
     fun sendGestureUpdate(context: Context, prefs: SharedPreferences) {

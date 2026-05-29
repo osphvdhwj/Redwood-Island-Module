@@ -5,15 +5,21 @@ import android.content.SharedPreferences
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.manager.NewConfigManager
 import com.example.dynamicisland.ui.components.SettingsCategoryHeader
 import com.example.dynamicisland.ui.components.SettingsSlider
-import com.example.dynamicisland.ui.components.SettingsSwitch
 import com.example.dynamicisland.ui.design.IslandPreviewCard
 import com.example.dynamicisland.ui.design.glassmorphicCard
 import kotlinx.coroutines.launch
@@ -24,99 +30,138 @@ fun LayoutScreen(prefs: SharedPreferences) {
     val scope = rememberCoroutineScope()
     
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "Tweaks")
+    val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "System")
 
+    // State for the current tab
     var w by remember { mutableFloatStateOf(0f) }
     var h by remember { mutableFloatStateOf(0f) }
     var x by remember { mutableFloatStateOf(0f) }
     var y by remember { mutableFloatStateOf(0f) }
+    var r by remember { mutableFloatStateOf(0f) }
     var ringT by remember { mutableFloatStateOf(prefs.getFloat("ring_thickness", 6f)) }
-    var expandUpwards by remember { mutableStateOf(prefs.getBoolean("expand_upwards", false)) }
 
     val currentPrefix = tabs[selectedTab].lowercase()
 
     LaunchedEffect(selectedTab) {
-        if (currentPrefix != "tweaks") {
+        if (currentPrefix != "system") {
             w = prefs.getFloat("${currentPrefix}_w", NewConfigManager.getDefaultWidth(currentPrefix))
             h = prefs.getFloat("${currentPrefix}_h", NewConfigManager.getDefaultHeight(currentPrefix))
             x = prefs.getFloat("${currentPrefix}_x", 0f)
             y = prefs.getFloat("${currentPrefix}_y", 48f)
-            NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+            r = prefs.getFloat("${currentPrefix}_r", NewConfigManager.getDefaultRadius(currentPrefix))
         }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.padding(24.dp)) {
+        // --- 1. Immersive Preview Area ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+        ) {
             IslandPreviewCard(
                 modifier = Modifier.glassmorphicCard(cornerRadius = 28.dp),
                 liveWidth = w,
                 liveHeight = h,
                 liveX = x,
                 liveY = y,
+                liveRadius = r,
                 liveRingT = ringT,
-                isLivePreview = currentPrefix != "tweaks",
-                previewState = currentPrefix,
-                expandUpwards = expandUpwards
+                isLivePreview = currentPrefix != "system",
+                previewState = if (currentPrefix == "system") "mini" else currentPrefix
             )
         }
         
+        // --- 2. Segmented Navigation ---
         ScrollableTabRow(
             selectedTabIndex = selectedTab,
             edgePadding = 16.dp,
-            divider = {}
+            divider = {},
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.primary
         ) {
             tabs.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
-                    text = { Text(title) }
+                    text = { Text(title, style = MaterialTheme.typography.labelLarge) }
                 )
             }
         }
         
+        // --- 3. Adjustment Controls ---
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
         ) {
-            if (currentPrefix == "tweaks") {
-                SettingsCategoryHeader(title = "Physical Adjustments")
-                var offsetY by remember { mutableFloatStateOf(prefs.getFloat("tweak_offset_y", 0f)) }
+            if (currentPrefix == "system") {
+                SettingsCategoryHeader(title = "System Calibrations")
+                
+                var globalOffsetY by remember { mutableFloatStateOf(prefs.getFloat("tweak_offset_y", 0f)) }
                 SettingsSlider(
-                    title = "Y-Axis Offset", 
-                    value = offsetY, 
-                    valueRange = 0f..150f,
+                    title = "Global Vertical Offset", 
+                    description = "Shifts the entire UI up or down.",
+                    value = globalOffsetY, 
+                    valueRange = -100f..300f,
                     onValueChange = {
-                        offsetY = it
+                        globalOffsetY = it
                         NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("tweak_offset_y", it) }) {
-                            NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                            NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
                         }
                     },
                     valueFormatter = { "${it.toInt()} px" }
                 )
-            } else {
-                SettingsCategoryHeader(title = "${tabs[selectedTab]} Geometry")
-                
-                SettingsSwitch(
-                    title = "Expand Upwards", 
-                    description = "Flip expansion direction (for bottom islands)", 
-                    checked = expandUpwards, 
-                    onCheckedChange = { 
-                        expandUpwards = it
-                        NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("expand_upwards", it) }) {
-                            NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
-                        }
+
+                Card(
+                    modifier = Modifier.padding(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(16.dp))
+                        Text(
+                            "The Island is injected directly below your camera. Use these sliders to align it perfectly with your hardware cutout.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                )
+                }
+            } else {
+                SettingsCategoryHeader(title = "${tabs[selectedTab]} State Geometry")
                 
+                SettingsSlider(
+                    title = "Vertical Position", 
+                    description = "Fine-tune the height relative to the punch hole.",
+                    value = y, 
+                    valueRange = -50f..250f, 
+                    onValueChange = { 
+                        y = it
+                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
+                    },
+                    valueFormatter = { "${it.toInt()} dp" }
+                )
+
+                SettingsSlider(
+                    title = "Corner Radius", 
+                    description = "Curve intensity of the pill/cube edges.",
+                    value = r, 
+                    valueRange = 0f..200f, 
+                    onValueChange = { 
+                        r = it
+                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
+                    },
+                    valueFormatter = { "${it.toInt()} dp" }
+                )
+
                 SettingsSlider(
                     title = "Width", 
                     value = w, 
                     valueRange = 10f..400f, 
                     onValueChange = { 
                         w = it
-                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
                     },
                     valueFormatter = { "${it.toInt()} dp" }
                 )
@@ -127,43 +172,31 @@ fun LayoutScreen(prefs: SharedPreferences) {
                     valueRange = 10f..400f, 
                     onValueChange = { 
                         h = it
-                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
                     },
                     valueFormatter = { "${it.toInt()} dp" }
                 )
                 
                 SettingsSlider(
-                    title = "X Position", 
+                    title = "Horizontal Offset", 
                     value = x, 
-                    valueRange = -200f..200f, 
+                    valueRange = -150f..150f, 
                     onValueChange = { 
                         x = it
-                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
-                    },
-                    valueFormatter = { "${it.toInt()} dp" }
-                )
-                
-                SettingsSlider(
-                    title = "Y Position", 
-                    value = y, 
-                    valueRange = -100f..200f, 
-                    onValueChange = { 
-                        y = it
-                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
+                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
                     },
                     valueFormatter = { "${it.toInt()} dp" }
                 )
 
                 if (currentPrefix == "ring") {
+                    SettingsCategoryHeader(title = "Ring Style")
                     SettingsSlider(
-                        title = "Ring Thickness", 
+                        title = "Thickness", 
                         value = ringT, 
                         valueRange = 1f..20f, 
                         onValueChange = { 
                             ringT = it
-                            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("ring_thickness", ringT) }) {
-                                NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, ringT, expandUpwards)
-                            }
+                            NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
                         },
                         valueFormatter = { "${it.toInt()} dp" }
                     )

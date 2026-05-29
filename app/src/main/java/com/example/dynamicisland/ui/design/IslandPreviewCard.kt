@@ -39,6 +39,7 @@ fun IslandPreviewCard(
     liveHeight: Float = 0f,
     liveX: Float = 0f,
     liveY: Float = 0f,
+    liveRadius: Float = 100f,
     liveRingT: Float = 6f,
     isLivePreview: Boolean = false,
     previewState: String = "",
@@ -79,6 +80,12 @@ fun IslandPreviewCard(
         },
         animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
         label = "pillHeight"
+    )
+
+    val pillRadius by animateDpAsState(
+        targetValue = if (isLivePreview) liveRadius.dp else 100.dp,
+        animationSpec = spring(dampingRatio = 0.75f, stiffness = 300f),
+        label = "pillRadius"
     )
 
     val pillOffsetX by animateDpAsState(
@@ -198,8 +205,6 @@ fun IslandPreviewCard(
                 )
             }
 
-            val alignment = if (expandUpwards) Alignment.BottomCenter else Alignment.TopCenter
-
             // Dynamic Island Pill
             Box(
                 modifier = Modifier
@@ -207,15 +212,20 @@ fun IslandPreviewCard(
                     .offset(x = pillOffsetX, y = pillOffsetY)
                     .width(pillWidth)
                     .height(pillHeight)
-                    .clip(RoundedCornerShape(50))
+                    .clip(RoundedCornerShape(pillRadius))
                     .background(if (isLivePreview && previewState == "ring") Color.Transparent else Color.Black)
                     .then(
-                        if (isLivePreview && previewState == "ring") {
-                            Modifier.border(liveRingT.dp, IslandColors.accentCyan, RoundedCornerShape(50))
+                        if (isLivePreview) {
+                            if (previewState == "ring") {
+                                Modifier.border(liveRingT.dp, IslandColors.accentCyan, RoundedCornerShape(pillRadius))
+                            } else {
+                                // Add a faint border to make it visible to "human eye" against black backgrounds
+                                Modifier.border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(pillRadius))
+                            }
                         } else Modifier
                     )
                     .padding(horizontal = if (isLivePreview) 0.dp else 12.dp),
-                contentAlignment = alignment
+                contentAlignment = Alignment.Center
             ) {
                 if (!isLivePreview) {
                     // Real content rendering swaps

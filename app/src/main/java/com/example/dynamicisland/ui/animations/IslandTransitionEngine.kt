@@ -35,7 +35,11 @@ fun updateIslandTransition(
     maxWidth: Float = 360f,
     maxHeight: Float = 220f,
     ringWidth: Float = 45f,
-    ringHeight: Float = 45f
+    ringHeight: Float = 45f,
+    // Per-state corner radius
+    miniRadius: Float = 18f,
+    maxRadius: Float = 42f,
+    ringRadius: Float = 22.5f
 ): IslandAnimationValues {
     val transition = updateTransition(targetState = targetState, label = "IslandTransition")
 
@@ -83,9 +87,9 @@ fun updateIslandTransition(
         label = "cornerRadius"
     ) { state ->
         when (state) {
-            IslandUiState.MAX_PILL -> 42.dp // Rounded squircle for Max Pill
-            IslandUiState.NOTIFICATION_RING -> (ringHeight / 2).dp // Perfect circle for Ring
-            IslandUiState.COMPACT, IslandUiState.SPLIT_PILL -> (miniHeight / 2).dp
+            IslandUiState.MAX_PILL -> maxRadius.dp
+            IslandUiState.NOTIFICATION_RING -> ringRadius.dp
+            IslandUiState.COMPACT, IslandUiState.SPLIT_PILL -> miniRadius.dp
             IslandUiState.HIDDEN -> 0.dp
         }
     }

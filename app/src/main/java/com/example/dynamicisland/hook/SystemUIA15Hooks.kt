@@ -108,6 +108,14 @@ class SystemUIA15Hooks {
                             FrameLayout.LayoutParams.MATCH_PARENT
                         )
                         
+                        // FIX: Ensure the parent doesn't clip the Island when moved or expanded
+                        root.clipChildren = false
+                        root.clipToPadding = false
+                        (root.parent as? ViewGroup)?.let {
+                            it.clipChildren = false
+                            it.clipToPadding = false
+                        }
+                        
                         root.addView(islandView, lp)
                         root.addView(sidebarView, FrameLayout.LayoutParams(
                             FrameLayout.LayoutParams.WRAP_CONTENT,

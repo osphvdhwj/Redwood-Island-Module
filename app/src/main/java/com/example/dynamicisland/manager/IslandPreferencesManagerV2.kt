@@ -127,20 +127,22 @@ object IslandPreferencesManagerV2 {
         val h = client.getFloat("${prefix}_h", NewConfigManager.getDefaultHeight(prefix))
         val x = client.getFloat("${prefix}_x", 0f)
         val y = client.getFloat("${prefix}_y", 48f)
+        val r = client.getFloat("${prefix}_r", NewConfigManager.getDefaultRadius(prefix))
 
         when (prefix) {
-            "ring" -> { view.ringW.value = w; view.ringH.value = h; view.ringX.value = x; view.ringY.value = y }
-            "mini" -> { view.miniW.value = w; view.miniH.value = h; view.miniX.value = x; view.miniY.value = y }
-            "mid"  -> { view.midW.value  = w; view.midH.value  = h; view.midX.value  = x; view.midY.value  = y }
-            "max"  -> { view.maxW.value  = w; view.maxH.value  = h; view.maxX.value  = x; view.maxY.value  = y }
-            "cube" -> { view.cubeW.value = w; view.cubeH.value = h; view.cubeX.value = x; view.cubeY.value = y }
+            "ring" -> { view.ringW.value = w; view.ringH.value = h; view.ringX.value = x; view.ringY.value = y; view.ringR.value = r }
+            "mini" -> { view.miniW.value = w; view.miniH.value = h; view.miniX.value = x; view.miniY.value = y; view.miniR.value = r }
+            "mid"  -> { view.midW.value  = w; view.midH.value  = h; view.midX.value  = x; view.midY.value  = y; view.midR.value  = r }
+            "max"  -> { view.maxW.value  = w; view.maxH.value  = h; view.maxX.value  = x; view.maxY.value  = y; view.maxR.value  = r }
+            "cube" -> { view.cubeW.value = w; view.cubeH.value = h; view.cubeX.value = x; view.cubeY.value = y; view.cubeR.value = r }
         }
     }
 
     private fun applyKeyChange(view: DynamicIslandView, key: String, client: IslandIPCClient) {
         when {
             key.endsWith("_w") || key.endsWith("_h") ||
-            key.endsWith("_x") || key.endsWith("_y") -> {
+            key.endsWith("_x") || key.endsWith("_y") ||
+            key.endsWith("_r") -> {
                 val prefix = key.substringBefore("_")
                 applyLayoutToView(view, prefix, client)
             }

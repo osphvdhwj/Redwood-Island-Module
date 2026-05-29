@@ -132,7 +132,10 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         maxWidth = maxW.value,
         maxHeight = if (activeModel.value is LiveActivityModel.Music) (maxH.value * 0.70f) else maxH.value,
         ringWidth = ringW.value,
-        ringHeight = ringH.value
+        ringHeight = ringH.value,
+        miniRadius = if (state == IslandState.TYPE_2_MID) midR.value else if (state == IslandState.TYPE_CUBE) cubeR.value else miniR.value,
+        maxRadius = maxR.value,
+        ringRadius = ringR.value
     )
 
     val haptic = LocalHapticFeedback.current
@@ -226,20 +229,18 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         try { wm.updateViewLayout(view, wp) } catch (e: Exception) {}
     }
 
-    val boxAlignment = if (expandUpwards.value) Alignment.BottomCenter else Alignment.TopCenter
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .offset { 
                 androidx.compose.ui.unit.IntOffset(
                     offsetX.dp.roundToPx(), 
-                    offsetY.coerceAtLeast(0f).dp.roundToPx()
+                    offsetY.dp.roundToPx() // Allow full freedom on Y-axis
                 ) 
             }
             .height(maxH.value.dp),
         horizontalArrangement = Arrangement.Center, 
-        verticalAlignment = if (expandUpwards.value) Alignment.Bottom else Alignment.Top
+        verticalAlignment = Alignment.Top
     ) {
         val shadowElevation by animateDpAsState(
             targetValue = if (isSquished) 4.dp else (if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp),
