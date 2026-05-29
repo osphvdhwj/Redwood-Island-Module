@@ -15,9 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Sort
-import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,7 +26,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.dynamicisland.ui.design.RedwoodDesignSystem
 import com.example.dynamicisland.ui.design.RedwoodTheme
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 
@@ -36,11 +33,19 @@ class AppPickerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        val isMultiSelect = intent.getBooleanExtra("multi_select", false)
+        val initialSelection = intent.getStringArrayExtra("initial_selection")?.toSet() ?: emptySet()
+        val roleType = intent.getStringExtra("role_type") ?: "Apps"
+
         setContent {
             RedwoodTheme {
-                AppPickerScreen { pkg ->
+                AppPickerScreen(
+                    title = "Select $roleType",
+                    isMultiSelect = isMultiSelect,
+                    initialSelection = initialSelection
+                ) { selected ->
                     val result = Intent()
-                    result.putExtra("package_name", pkg)
+                    result.putExtra("package_names", selected.toTypedArray())
                     setResult(Activity.RESULT_OK, result)
                     finish()
                 }
@@ -51,20 +56,24 @@ class AppPickerActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppPickerScreen(onAppSelected: (String) -> Unit) {
+fun AppPickerScreen(
+    title: String,
+    isMultiSelect: Boolean,
+    initialSelection: Set<String>,
+    onDone: (Set<String>) -> Unit
+) {
     val context = LocalContext.current
     val pm = context.packageManager
     
     var searchQuery by remember { mutableStateOf("") }
-    var sortOrder by remember { mutableStateOf("name") } // name, date
-    var isReverse by remember { mutableStateOf(false) }
-    var filterType by remember { mutableStateOf("all") } // all, installed, system
+    var filterType by remember { mutableStateOf("all") }
+    val selectedApps = remember { mutableStateListOf<String>().apply { addAll(initialSelection) } }
     
     val allApps = remember {
         pm.getInstalledApplications(0)
     }
 
-    val filteredApps = remember(searchQuery, sortOrder, isReverse, filterType) {
+    val filteredApps = remember(searchQuery, filterType) {
         var list = allApps.filter {
             val label = it.loadLabel(pm).toString()
             label.contains(searchQuery, ignoreCase = true) || it.packageName.contains(searchQuery, ignoreCase = true)
@@ -76,23 +85,19 @@ fun AppPickerScreen(onAppSelected: (String) -> Unit) {
             else -> list
         }
 
-        list = when (sortOrder) {
-            "name" -> list.sortedBy { it.loadLabel(pm).toString() }
-            // Note: Date sorting would require PackageInfo, but we'll stick to name for now as a stable baseline
-            else -> list.sortedBy { it.loadLabel(pm).toString() }
-        }
-
-        if (isReverse) list.reversed() else list
+        list.sortedBy { it.loadLabel(pm).toString() }
     }
 
     Scaffold(
         topBar = {
             Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
                 TopAppBar(
-                    title = { Text("Select Application") },
+                    title = { Text(title) },
                     actions = {
-                        IconButton(onClick = { isReverse = !isReverse }) {
-                            Icon(Icons.Default.SwapVert, "Reverse")
+                        if (isMultiSelect) {
+                            TextButton(onClick = { onDone(selectedApps.toSet()) }) {
+                                Text("DONE (${selectedApps.size})", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 )
@@ -100,8 +105,8 @@ fun AppPickerScreen(onAppSelected: (String) -> Unit) {
                 TextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    placeholder = { Text("Search apps...") },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    placeholder = { Text("Search system & user apps...") },
                     leadingIcon = { Icon(Icons.Default.Search, null) },
                     shape = RoundedCornerShape(12.dp),
                     colors = TextFieldDefaults.colors(
@@ -111,7 +116,7 @@ fun AppPickerScreen(onAppSelected: (String) -> Unit) {
                 )
 
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     FilterChip(
@@ -135,39 +140,64 @@ fun AppPickerScreen(onAppSelected: (String) -> Unit) {
     ) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
             items(filteredApps) { app ->
-                AppItem(app, onAppSelected)
+                val isSelected = selectedApps.contains(app.packageName)
+                AppItem(
+                    appInfo = app,
+                    isSelected = isSelected,
+                    showCheckbox = isMultiSelect
+                ) { pkg ->
+                    if (isMultiSelect) {
+                        if (isSelected) selectedApps.remove(pkg) else selectedApps.add(pkg)
+                    } else {
+                        onDone(setOf(pkg))
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun AppItem(appInfo: ApplicationInfo, onClick: (String) -> Unit) {
+fun AppItem(
+    appInfo: ApplicationInfo, 
+    isSelected: Boolean,
+    showCheckbox: Boolean,
+    onClick: (String) -> Unit
+) {
     val pm = LocalContext.current.packageManager
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick(appInfo.packageName) }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        onClick = { onClick(appInfo.packageName) },
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent
     ) {
-        Image(
-            painter = rememberDrawablePainter(drawable = appInfo.loadIcon(pm)),
-            contentDescription = null,
-            modifier = Modifier.size(40.dp).clip(CircleShape)
-        )
-        Spacer(Modifier.width(16.dp))
-        Column {
-            Text(
-                text = appInfo.loadLabel(pm).toString(),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                painter = rememberDrawablePainter(drawable = appInfo.loadIcon(pm)),
+                contentDescription = null,
+                modifier = Modifier.size(44.dp).clip(CircleShape)
             )
-            Text(
-                text = appInfo.packageName,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = appInfo.loadLabel(pm).toString(),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = appInfo.packageName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (showCheckbox) {
+                Checkbox(checked = isSelected, onCheckedChange = null)
+            } else if (isSelected) {
+                Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
+            }
         }
     }
 }

@@ -22,7 +22,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
-import com.example.dynamicisland.ui.components.LiveVisualAid
 import com.example.dynamicisland.ui.design.IslandColors
 import com.example.dynamicisland.ui.design.RedwoodTheme
 import com.example.dynamicisland.ui.design.glassmorphicCard
@@ -107,33 +106,32 @@ fun PermissionGuard(content: @Composable () -> Unit) {
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.92f))
-                    .premiumClickable(enabled = false) {},
+                    .clickable(enabled = false) {},
                 contentAlignment = Alignment.Center
             ) {
                 Column(
                     modifier = Modifier
                         .padding(32.dp)
-                        .glassmorphicCard(cornerRadius = 24.dp)
+                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(28.dp))
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
                         Icons.Default.GppMaybe, 
                         null, 
-                        tint = Color.Red, 
+                        tint = MaterialTheme.colorScheme.error, 
                         modifier = Modifier.size(64.dp)
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
                         "Permission Shield", 
-                        color = Color.White, 
-                        fontSize = 22.sp, 
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Black
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "The Island cannot function without $missingPermission. Tap below to fix this specific requirement.",
-                        color = Color.White.copy(alpha = 0.7f),
+                        "The Island requires $missingPermission to sit above other apps. Tap below to enable it.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         lineHeight = 20.sp
                     )
@@ -154,11 +152,10 @@ fun PermissionGuard(content: @Composable () -> Unit) {
                                 }
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = IslandColors.accentCyan),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth().height(56.dp)
                     ) {
-                        Text("Grant $missingPermission", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Text("Grant $missingPermission", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -183,7 +180,7 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
     var selectedNav by remember { mutableIntStateOf(0) }
     
     val navItems = listOf(
-        NavItemData("Layout", Icons.Default.Build),
+        NavItemData("Layout", Icons.Default.AspectRatio),
         NavItemData("Appearance", Icons.Default.Palette),
         NavItemData("Shortcuts", Icons.Default.Apps),
         NavItemData("System", Icons.Default.Settings)
@@ -191,7 +188,9 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+            ) {
                 navItems.forEachIndexed { index, item ->
                     NavigationBarItem(
                         icon = { Icon(item.icon, contentDescription = item.title) },
@@ -208,33 +207,24 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                Box(modifier = Modifier.weight(1f)) {
-                    AnimatedContent<Int>(
-                        targetState = selectedNav,
-                        transitionSpec = {
-                            if (targetState > initialState) {
-                                (slideInHorizontally(initialOffsetX = { fullWidth -> fullWidth }) + fadeIn()) togetherWith
-                                (slideOutHorizontally(targetOffsetX = { fullWidth -> -fullWidth }) + fadeOut())
-                            } else {
-                                (slideInHorizontally(initialOffsetX = { fullWidth -> -fullWidth }) + fadeIn()) togetherWith
-                                (slideOutHorizontally(targetOffsetX = { fullWidth -> fullWidth }) + fadeOut())
-                            }.using(SizeTransform(clip = false))
-                        },
-                        label = "TabTransition"
-                    ) { navIndex ->
-                        when (navIndex) {
-                            0 -> LayoutScreen(prefs)
-                            1 -> AppearanceScreen(prefs)
-                            2 -> InteractionsTab(prefs)
-                            3 -> SettingsScreen(settingsViewModel)
-                        }
-                    }
+            AnimatedContent<Int>(
+                targetState = selectedNav,
+                transitionSpec = {
+                    if (targetState > initialState) {
+                        slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()
+                    } else {
+                        slideInHorizontally { -it } + fadeIn() togetherWith slideOutHorizontally { it } + fadeOut()
+                    }.using(SizeTransform(clip = false))
+                },
+                label = "TabTransition"
+            ) { navIndex ->
+                when (navIndex) {
+                    0 -> LayoutScreen(prefs)
+                    1 -> AppearanceScreen(prefs)
+                    2 -> InteractionsTab(prefs)
+                    3 -> SettingsScreen(settingsViewModel)
                 }
             }
-            
-            // Floating Visual Aid overlay
-            LiveVisualAid()
         }
     }
 }
@@ -243,14 +233,14 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
 fun InteractionsTab(prefs: android.content.SharedPreferences) {
     var selectedSubTab by remember { mutableIntStateOf(0) }
     Column {
-        ScrollableTabRow(
+        TabRow(
             selectedTabIndex = selectedSubTab,
-            divider = {},
-            edgePadding = 16.dp
+            containerColor = MaterialTheme.colorScheme.surface,
+            divider = {}
         ) {
-            Tab(selected = selectedSubTab == 0, onClick = { selectedSubTab = 0 }, text = { Text("App Roles") })
-            Tab(selected = selectedSubTab == 1, onClick = { selectedSubTab = 1 }, text = { Text("Pins & Tiles") })
-            Tab(selected = selectedSubTab == 2, onClick = { selectedSubTab = 2 }, text = { Text("Gestures") })
+            Tab(selected = selectedSubTab == 0, onClick = { selectedSubTab = 0 }, text = { Text("App Roles", style = MaterialTheme.typography.labelLarge) })
+            Tab(selected = selectedSubTab == 1, onClick = { selectedSubTab = 1 }, text = { Text("Pins & Tiles", style = MaterialTheme.typography.labelLarge) })
+            Tab(selected = selectedSubTab == 2, onClick = { selectedSubTab = 2 }, text = { Text("Gestures", style = MaterialTheme.typography.labelLarge) })
         }
         when (selectedSubTab) {
             0 -> AppRolesScreen(prefs)

@@ -138,7 +138,6 @@ data class SettingsState(
     val islandEnabled: Boolean = true,
     val islandOnLockscreen: Boolean = true,
     val lockscreenFeatures: Set<String> = setOf("music", "notifications"),
-    val allowedMusicApps: Set<String> = emptySet(),
     val allowedNotificationApps: Set<String> = emptySet(),
     val swipeLeftAction: String = "dismiss",
     val swipeRightAction: String = "next_track",
@@ -164,10 +163,10 @@ data class SettingsState(
 
     // === App Roles ===
     val roleCallingApp: String = "",
-    val roleMusicApp: String = "",
-    val roleVideoApp: String = "",
-    val roleNotesApp: String = "",
     val roleGameLauncher: String = "",
+    val allowedMusicApps: Set<String> = emptySet(),
+    val allowedMediaApps: Set<String> = emptySet(),
+    val allowedNotesApps: Set<String> = emptySet(),
 
     // === Styles ===
     val callStyle: CallStyle = CallStyle.IOS,

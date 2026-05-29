@@ -82,6 +82,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     val pendingNotifColor = mutableIntStateOf(android.graphics.Color.WHITE)
     val hasUnseenNotif = mutableStateOf(false)
+    val calibrationMode = mutableStateOf(false)
+    val calibrationTarget = mutableStateOf("ring")
 
     val ringW = mutableStateOf(48f); val ringH = mutableStateOf(48f); val ringX = mutableStateOf(0f); val ringY = mutableStateOf(48f); val ringR = mutableStateOf(24f)
     val miniW = mutableStateOf(180f); val miniH = mutableStateOf(36f); val miniX = mutableStateOf(0f); val miniY = mutableStateOf(48f); val miniR = mutableStateOf(18f)

@@ -50,7 +50,8 @@ class IslandMediaManager(
     private var tickerJob: Job? = null
     private var lastTrackTitle = ""
     
-    var userMusicApp: String? = null
+    var allowedMusicApps: Set<String> = emptySet()
+    var allowedMediaApps: Set<String> = emptySet()
     var userVideoApp: String? = null
 
     // 🚀 OPTIMIZATION: Reuse RenderScript context to prevent memory leaks and GC jank
@@ -76,7 +77,15 @@ class IslandMediaManager(
         if (!isMediaEnabled) return
         val activeControllers = try { controllers ?: sessionManager.getActiveSessions(null) } catch (e: Exception) { emptyList() }
         
-        val bestController = activeControllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING } ?: activeControllers.firstOrNull()
+        // Filter by user preference if any apps are explicitly allowed
+        val combinedAllowed = allowedMusicApps + allowedMediaApps
+        val filteredControllers = if (combinedAllowed.isNotEmpty()) {
+            activeControllers.filter { combinedAllowed.contains(it.packageName) }
+        } else {
+            activeControllers
+        }
+
+        val bestController = filteredControllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING } ?: filteredControllers.firstOrNull()
 
         if (activeMediaController != bestController) {
             activeMediaController?.unregisterCallback(mediaCallback)
@@ -245,6 +254,10 @@ class IslandMediaManager(
     fun updateMediaFromNative(pkg: String, title: String, artist: String, artwork: Bitmap?, isPlaying: Boolean) {
         if (!isMediaEnabled) return
         
+        // Filter by user preference
+        val combinedAllowed = allowedMusicApps + allowedMediaApps
+        if (combinedAllowed.isNotEmpty() && !combinedAllowed.contains(pkg)) return
+
         processJob?.cancel()
         val isNewTrack = title != lastTrackTitle && lastTrackTitle.isNotEmpty()
         lastTrackTitle = title

@@ -91,7 +91,8 @@ class SettingsManager(private val context: Context) {
 
         // === Global Controls ===
         ISLAND_ENABLED, ISLAND_ON_LOCKSCREEN, FEATURES_ON_LOCKSCREEN,
-        ALLOWED_MUSIC_APPS, ALLOWED_NOTIFICATION_APPS,
+        ALLOWED_MUSIC_APPS, ALLOWED_MEDIA_APPS, ALLOWED_NOTES_APPS,
+        ALLOWED_NOTIFICATION_APPS,
         SWIPE_LEFT_ACTION, SWIPE_RIGHT_ACTION,
 
         // === Call & Communication ===
@@ -111,7 +112,7 @@ class SettingsManager(private val context: Context) {
         FOCUS_MODE_PILL,
 
         // === App Roles ===
-        ROLE_CALLING_APP, ROLE_MUSIC_APP, ROLE_VIDEO_APP, ROLE_NOTES_APP, ROLE_GAME_LAUNCHER,
+        ROLE_CALLING_APP, ROLE_GAME_LAUNCHER,
 
         // === Styles ===
         CALL_STYLE, CHARGING_STYLE, BATTERY_STYLE
@@ -291,7 +292,6 @@ class SettingsManager(private val context: Context) {
             islandEnabled = getBoolean(SettingKey.ISLAND_ENABLED, true),
             islandOnLockscreen = getBoolean(SettingKey.ISLAND_ON_LOCKSCREEN, true),
             lockscreenFeatures = getStringSet(SettingKey.FEATURES_ON_LOCKSCREEN, setOf("music", "notifications")),
-            allowedMusicApps = getStringSet(SettingKey.ALLOWED_MUSIC_APPS, emptySet()),
             allowedNotificationApps = getStringSet(SettingKey.ALLOWED_NOTIFICATION_APPS, emptySet()),
             swipeLeftAction = getString(SettingKey.SWIPE_LEFT_ACTION, "dismiss") ?: "dismiss",
             swipeRightAction = getString(SettingKey.SWIPE_RIGHT_ACTION, "next_track") ?: "next_track",
@@ -317,10 +317,10 @@ class SettingsManager(private val context: Context) {
 
             // App Roles
             roleCallingApp = getString(SettingKey.ROLE_CALLING_APP, "") ?: "",
-            roleMusicApp = getString(SettingKey.ROLE_MUSIC_APP, "") ?: "",
-            roleVideoApp = getString(SettingKey.ROLE_VIDEO_APP, "") ?: "",
-            roleNotesApp = getString(SettingKey.ROLE_NOTES_APP, "") ?: "",
             roleGameLauncher = getString(SettingKey.ROLE_GAME_LAUNCHER, "") ?: "",
+            allowedMusicApps = getStringSet(SettingKey.ALLOWED_MUSIC_APPS, emptySet()),
+            allowedMediaApps = getStringSet(SettingKey.ALLOWED_MEDIA_APPS, emptySet()),
+            allowedNotesApps = getStringSet(SettingKey.ALLOWED_NOTES_APPS, emptySet()),
 
             // Styles
             callStyle = CallStyle.valueOf(getString(SettingKey.CALL_STYLE, "IOS") ?: "IOS"),

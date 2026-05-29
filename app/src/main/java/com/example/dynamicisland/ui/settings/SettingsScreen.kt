@@ -54,116 +54,102 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         SettingsCategoryHeader("Core Engine")
         
         SettingsSwitch(
-            title = "Engine Master", 
+            title = "Island Master Switch", 
             description = "Enable or disable all Dynamic Island features.", 
             icon = Icons.Default.PowerSettingsNew,
             checked = state.islandEnabled, 
             onCheckedChange = { viewModel.updateSetting(SettingKey.ISLAND_ENABLED, it) }
         )
         SettingsSwitch(
-            title = "Lockscreen Visibility", 
-            description = "Keep the Island active on the Always-On Display.", 
-            icon = Icons.Default.Lock,
+            title = "AOD Persistence", 
+            description = "Keep the Island visible on the Always-On Display.", 
+            icon = Icons.Default.BrightnessLow,
             checked = state.islandOnLockscreen, 
             onCheckedChange = { viewModel.updateSetting(SettingKey.ISLAND_ON_LOCKSCREEN, it) }
         )
         SettingsSwitch(
-            title = "Multitasking (Split)", 
-            description = "Allow two activities to share the Island simultaneously.", 
-            icon = Icons.Default.VerticalSplit,
+            title = "Simultaneous Multitasking", 
+            description = "Allow two activities to share the Island (Split mode).", 
+            icon = Icons.Default.CompareArrows,
             checked = state.splitPillEnabled, 
             onCheckedChange = { viewModel.updateSetting(SettingKey.SPLIT_PILL_ENABLED, it) }
         )
         SettingsSwitch(
-            title = "Haptic Feedback", 
-            description = "Vibrate on transitions and interactions.", 
+            title = "Tactile Response", 
+            description = "Haptic feedback on transitions and interactions.", 
             icon = Icons.Default.Vibration,
             checked = state.hapticFeedback, 
             onCheckedChange = { viewModel.updateSetting(SettingKey.HAPTIC_FEEDBACK, it) }
         )
 
-        SettingsCategoryHeader("Automation & Continuity")
+        SettingsCategoryHeader("Intelligence & Automation")
         
         SettingsSwitch(
-            title = "OTP Auto-Capture", 
-            description = "Intercept 2FA codes from incoming messages.", 
+            title = "Secure OTP Detection", 
+            description = "Intercept 2FA codes from messages and show them.", 
             icon = Icons.Default.VpnKey,
             checked = state.otpDetection, 
             onCheckedChange = { viewModel.updateSetting(SettingKey.OTP_DETECTION, it) }
         )
         SettingsSwitch(
-            title = "AirPods Bridge", 
-            description = "iOS-style connection card for AirPods and Beats.", 
-            icon = Icons.Default.Headset,
-            checked = state.airpodsPopup, 
-            onCheckedChange = { viewModel.updateSetting(SettingKey.AIRPODS_POPUP, it) }
-        )
-        SettingsSwitch(
-            title = "Navigation HUD", 
-            description = "Native Google Maps instruction ticker.", 
-            icon = Icons.Default.Navigation,
+            title = "Navigation Hijacker", 
+            description = "Show real-time Google Maps ticker in the Island.", 
+            icon = Icons.Default.Explore,
             checked = state.navigation, 
             onCheckedChange = { viewModel.updateSetting(SettingKey.NAVIGATION, it) }
         )
         SettingsSwitch(
-            title = "Face ID Engine", 
-            description = "Unlock animation synced with biometric auth.", 
-            icon = Icons.Default.LockOpen,
-            checked = state.faceIDPadlock, 
-            onCheckedChange = { viewModel.updateSetting(SettingKey.FACE_ID_PADLOCK, it) }
-        )
-        SettingsSwitch(
-            title = "MagSafe Charging", 
-            description = "Circular charging ring with haptic pulse.", 
-            icon = Icons.Default.ChargingStation,
-            checked = state.magsafeChargingAnimation, 
-            onCheckedChange = { viewModel.updateSetting(SettingKey.MAGSAFE_CHARGING_ANIMATION, it) }
+            title = "Auto-Translation", 
+            description = "On-the-fly translation of notification text.", 
+            icon = Icons.Default.Translate,
+            checked = state.translation, 
+            onCheckedChange = { viewModel.updateSetting(SettingKey.TRANSLATION, it) }
         )
 
-        SettingsCategoryHeader("Media Hub")
+        SettingsCategoryHeader("Media Intelligence")
         
         SettingsSwitch(
-            title = "Waveform Seeker", 
-            description = "Visualized playback bar for active music.", 
+            title = "Adaptive Waveform", 
+            description = "Visualized playback progress for active music.", 
             icon = Icons.Default.GraphicEq,
             checked = state.waveformEnabled, 
             onCheckedChange = { viewModel.updateSetting(SettingKey.WAVEFORM_ENABLED, it) }
         )
         SettingsSwitch(
-            title = "Artwork Canvas", 
-            description = "Immersive background blur from album art.", 
-            icon = Icons.Default.Album,
+            title = "Context-Aware Blur", 
+            description = "Sample album art colors for Island background.", 
+            icon = Icons.Default.Palette,
             checked = state.mediaArtworkBlur, 
             onCheckedChange = { viewModel.updateSetting(SettingKey.MEDIA_ARTWORK_BLUR, it) }
         )
         SettingsSwitch(
-            title = "Beat Pulse", 
-            description = "Sync Island expansion with audio tempo.", 
-            icon = Icons.Default.Hearing,
+            title = "Beat Synchronization", 
+            description = "Island pulse intensity based on audio tempo.", 
+            icon = Icons.Default.MusicNote,
             checked = state.bpmPulse, 
             onCheckedChange = { viewModel.updateSetting(SettingKey.BPM_PULSE, it) }
         )
 
-        SettingsCategoryHeader("Maintenance")
+        SettingsCategoryHeader("System Maintenance")
 
         Column(
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                FilledTonalButton(
-                    onClick = { exportLauncher.launch("redwood_config.json") },
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = { exportLauncher.launch("island_config.json") },
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(vertical = 12.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Export Config")
+                    Text("Export")
                 }
-                FilledTonalButton(
+                Button(
                     onClick = { importLauncher.launch(arrayOf("application/json")) },
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(vertical = 12.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Import Config")
+                    Text("Import")
                 }
             }
 
@@ -171,12 +157,12 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 onClick = { viewModel.resetAll() },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(vertical = 16.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Reset All Settings")
+                Text("Factory Reset Settings")
             }
         }
 
-        Spacer(modifier = Modifier.height(100.dp))
+        Spacer(modifier = Modifier.height(120.dp))
     }
 }

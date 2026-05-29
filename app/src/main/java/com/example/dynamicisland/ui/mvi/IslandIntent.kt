@@ -34,4 +34,5 @@ sealed class IslandIntent {
     // Performance & Lifecycle
     data class UpdateScreenState(val isScreenOn: Boolean) : IslandIntent()
     data class UpdatePowerSaveMode(val isPowerSaveMode: Boolean) : IslandIntent()
+    data class ToggleCalibration(val enabled: Boolean, val targetState: String? = null) : IslandIntent()
 }

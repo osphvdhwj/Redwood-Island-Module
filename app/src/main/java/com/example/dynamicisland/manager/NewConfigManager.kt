@@ -1,6 +1,7 @@
 package com.example.dynamicisland.manager
 
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import com.example.dynamicisland.ipc.IslandContentProvider
 import com.example.dynamicisland.ipc.IslandIPCClient
@@ -36,6 +37,14 @@ object NewConfigManager {
         }
     }
 
+    fun setCalibrationMode(context: Context, enabled: Boolean, target: String) {
+        val intent = Intent("com.example.dynamicisland.CALIBRATION_MODE")
+        intent.putExtra("enabled", enabled)
+        intent.putExtra("target", target)
+        intent.setPackage("com.android.systemui")
+        context.sendBroadcast(intent)
+    }
+
     fun saveAndBroadcast(
         prefs: SharedPreferences,
         scope: CoroutineScope,
@@ -45,6 +54,17 @@ object NewConfigManager {
         radius: Float,
         ringT: Float
     ) {
+        // Send immediate broadcast for real-time overlay adjustment
+        val calIntent = Intent("com.example.dynamicisland.CALIBRATION_UPDATE")
+        calIntent.putExtra("prefix", prefix)
+        calIntent.putExtra("w", w)
+        calIntent.putExtra("h", h)
+        calIntent.putExtra("x", x)
+        calIntent.putExtra("y", y)
+        calIntent.putExtra("r", radius)
+        calIntent.setPackage("com.android.systemui")
+        context.sendBroadcast(calIntent)
+
         scope.launch(Dispatchers.IO) {
             val client = IslandIPCClient.get(context)
 
@@ -71,7 +91,7 @@ object NewConfigManager {
     }
 
     fun getDefaultRadius(prefix: String): Float = when (prefix) {
-        "ring" -> 22.5f; "mini" -> 18f; "mid" -> 24f; "max" -> 42f; "cube" -> 20f; else -> 20f
+        "ring" -> 24f; "mini" -> 18f; "mid" -> 24f; "max" -> 42f; "cube" -> 20f; else -> 20f
     }
 
     fun sendGestureUpdate(context: Context, prefs: SharedPreferences) {

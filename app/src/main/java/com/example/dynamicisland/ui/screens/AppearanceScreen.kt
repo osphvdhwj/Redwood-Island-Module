@@ -1,5 +1,6 @@
 package com.example.dynamicisland.ui.screens
 
+import android.content.Intent
 import android.content.SharedPreferences
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -9,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,10 +20,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.manager.NewConfigManager
 import com.example.dynamicisland.ui.components.*
-import com.example.dynamicisland.ui.design.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,209 +37,157 @@ fun AppearanceScreen(prefs: SharedPreferences) {
     var glowEffect by remember { mutableStateOf(prefs.getBoolean("glow_effect", true)) }
     var elasticStretch by remember { mutableStateOf(prefs.getBoolean("elastic_stretch", true)) }
     
-    var callStyle by remember { mutableStateOf(com.example.dynamicisland.settings.CallStyle.valueOf(prefs.getString("call_style", "IOS") ?: "IOS")) }
-    var chargingStyle by remember { mutableStateOf(com.example.dynamicisland.settings.ChargingStyle.valueOf(prefs.getString("charging_style", "RING") ?: "RING")) }
-    var batteryStyle by remember { mutableStateOf(com.example.dynamicisland.settings.BatteryStyle.valueOf(prefs.getString("battery_style", "PILL") ?: "PILL")) }
+    var callStyle by remember { mutableStateOf(prefs.getString("call_style", "IOS") ?: "IOS") }
+    var chargingStyle by remember { mutableStateOf(prefs.getString("charging_style", "RING") ?: "RING") }
+    var batteryStyle by remember { mutableStateOf(prefs.getString("battery_style", "PILL") ?: "PILL") }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.padding(24.dp)) {
-            IslandPreviewCard(
-                modifier = Modifier.glassmorphicCard(cornerRadius = 28.dp),
-                previewState = when {
-                    callStyle != com.example.dynamicisland.settings.CallStyle.IOS -> "call"
-                    chargingStyle != com.example.dynamicisland.settings.ChargingStyle.RING -> "charging"
-                    else -> "music"
-                }
-            )
-        }
+    var springStiffness by remember { mutableFloatStateOf(prefs.getFloat("spring_stiffness", 400f)) }
+    var springDamping by remember { mutableFloatStateOf(prefs.getFloat("spring_damping", 0.85f)) }
+
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
+        // --- PRO GRADE STYLE PLAYGROUND ---
+        SettingsCategoryHeader("Live Style Playground")
+        Surface(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
         ) {
-            SettingsCategoryHeader("Component Styles")
-            
-            MD3StyleSelector("Call Style", callStyle.name, listOf("IOS", "MINIMAL", "MODERN")) { newStyle ->
-                callStyle = com.example.dynamicisland.settings.CallStyle.valueOf(newStyle)
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("call_style", newStyle) }) {
-                    NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-                }
-            }
-            
-            MD3StyleSelector("Charging Animation", chargingStyle.name, listOf("RING", "WAVE", "CUBE")) { newStyle ->
-                chargingStyle = com.example.dynamicisland.settings.ChargingStyle.valueOf(newStyle)
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("charging_style", newStyle) }) {
-                    NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-                }
-            }
-
-            MD3StyleSelector("Battery Style", batteryStyle.name, listOf("PILL", "GAUGE", "DIGITAL")) { newStyle ->
-                batteryStyle = com.example.dynamicisland.settings.BatteryStyle.valueOf(newStyle)
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("battery_style", newStyle) }) {
-                    NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-                }
-            }
-
-            SettingsCategoryHeader("Visual Engine")
-            
-            SettingsSwitch(
-                title = "True Glassmorphism", 
-                description = "Enable premium blurred backgrounds & translucent surfaces.", 
-                checked = glassMode, 
-                onCheckedChange = { 
-                    glassMode = it
-                    NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("glass_mode", it) }) {
-                        NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-                    }
-                }
-            )
-
-            if (glassMode) {
-                SettingsSlider(
-                    title = "Blur Intensity", 
-                    description = "Strength of the background frost effect.",
-                    value = blurIntensity, 
-                    defaultValue = 15f,
-                    valueRange = 5f..40f,
-                    onValueChange = { 
-                        blurIntensity = it
-                        NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("blur_intensity", it) }) {
-                            NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-                        }
-                    }
-                )
-            }
-
-            SettingsSwitch(
-                title = "Glow Effect", 
-                description = "Outer neon radiation around the Island.", 
-                checked = glowEffect, 
-                onCheckedChange = { 
-                    glowEffect = it
-                    NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("glow_effect", it) }) {
-                        NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-                    }
-                }
-            )
-
-            SettingsSwitch(
-                title = "Elastic Stretch", 
-                description = "Squishy liquid animations during transitions.", 
-                checked = elasticStretch, 
-                onCheckedChange = { 
-                    elasticStretch = it
-                    NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("elastic_stretch", it) }) {
-                        NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-                    }
-                }
-            )
-
-            SettingsCategoryHeader("Physics Tester")
-            
-            // Interactive spring tester
-            val isPressed = remember { mutableStateOf(false) }
-            var stiffness by remember { mutableFloatStateOf(prefs.getFloat("spring_stiffness", 400f)) }
-            var damping by remember { mutableFloatStateOf(prefs.getFloat("spring_damping", 0.85f)) }
-
-            val scale by animateFloatAsState(
-                targetValue = if (isPressed.value) 0.8f else 1f,
-                animationSpec = spring(dampingRatio = damping, stiffness = stiffness),
-                label = "visualSpring"
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp)
-                    .height(100.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                    .clickable { isPressed.value = !isPressed.value },
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .graphicsLayer { scaleX = scale; scaleY = scale }
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                )
+            Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    "Tap to test animation feel",
-                    color = MaterialTheme.colorScheme.onSurface,
+                    "TRIGGER REAL-TIME TESTS", 
                     style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Black
                 )
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PlaygroundChip("Charging", Icons.Default.BatteryChargingFull) {
+                        context.sendBroadcast(Intent("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE").apply { putExtra("action", "SMART_CHARGE_LIMIT"); putExtra("level", 85) })
+                    }
+                    PlaygroundChip("Music", Icons.Default.MusicNote) {
+                        // Mock music update via native pipe logic (internal)
+                        context.sendBroadcast(Intent("com.example.dynamicisland.MEDIA_STATE_CHANGED"))
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PlaygroundChip("Incoming Call", Icons.Default.Call) {
+                        // Trigger a mock system alert that looks like a call
+                        context.sendBroadcast(Intent("com.example.dynamicisland.HARDWARE_TOGGLE").apply { putExtra("type", "RINGER"); putExtra("state", 2) })
+                    }
+                    PlaygroundChip("Privacy", Icons.Default.Visibility) {
+                        context.sendBroadcast(Intent("com.example.dynamicisland.hook.FutureFrameworkA15Hooks.ACTION_FUTURE_PRIVACY_INDICATOR").apply { putExtra("op", "CAMERA"); putExtra("pkg", "System UI") })
+                    }
+                }
             }
-
-            SettingsSlider(
-                title = "Animation Bounciness", 
-                description = "Higher values increase oscillation.",
-                value = damping, 
-                defaultValue = 0.85f,
-                valueRange = 0.1f..1.0f,
-                onValueChange = { 
-                    damping = it
-                    NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("spring_damping", it) }) {
-                        NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-                    }
-                }
-            )
-            
-            SettingsSlider(
-                title = "Animation Speed", 
-                description = "Stiffness of the animation spring.",
-                value = stiffness, 
-                defaultValue = 400f,
-                valueRange = 50f..1000f,
-                onValueChange = { 
-                    stiffness = it
-                    NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("spring_stiffness", it) }) {
-                        NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-                    }
-                }
-            )
-
-            Spacer(modifier = Modifier.height(100.dp))
         }
+
+        SettingsCategoryHeader("Visual Surfaces")
+        SettingsSwitch(
+            title = "True Glassmorphism", 
+            description = "Premium frosted glass effect with background sampling.", 
+            checked = glassMode, 
+            icon = Icons.Default.BlurOn,
+            onCheckedChange = { 
+                glassMode = it
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("glass_mode", it) })
+            }
+        )
+
+        if (glassMode) {
+            SettingsSlider(
+                title = "Frosted Intensity", 
+                description = "Sampling radius for background blur.",
+                value = blurIntensity, 
+                defaultValue = 15f,
+                valueRange = 5f..40f,
+                onValueChange = { 
+                    blurIntensity = it
+                    NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("blur_intensity", it) })
+                }
+            )
+        }
+
+        SettingsSwitch(
+            title = "Neon Radiation", 
+            description = "Subtle outer glow based on content color.", 
+            checked = glowEffect, 
+            icon = Icons.Default.WbIridescent,
+            onCheckedChange = { 
+                glowEffect = it
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("glow_effect", it) })
+            }
+        )
+
+        SettingsCategoryHeader("Component Studio")
+        SettingsChoiceChip("Call Style", callStyle, listOf("IOS", "MINIMAL", "MODERN")) {
+            callStyle = it
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("call_style", it) })
+        }
+        SettingsChoiceChip("Charging UI", chargingStyle, listOf("RING", "WAVE", "CUBE")) {
+            chargingStyle = it
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("charging_style", it) })
+        }
+        SettingsChoiceChip("Battery Style", batteryStyle, listOf("PILL", "GAUGE", "DIGITAL")) {
+            batteryStyle = it
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("battery_style", it) })
+        }
+
+        SettingsCategoryHeader("Motion & Physics")
+        SettingsSwitch(
+            title = "Liquid Elasticity", 
+            description = "Squishy metaball-inspired transitions.", 
+            checked = elasticStretch, 
+            icon = Icons.Default.AutoFixHigh,
+            onCheckedChange = { 
+                elasticStretch = it
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("elastic_stretch", it) })
+            }
+        )
+
+        SettingsSlider(
+            title = "Animation Stiffness", 
+            description = "How fast the Island snaps into position.",
+            value = springStiffness, 
+            defaultValue = 400f,
+            valueRange = 100f..1000f,
+            onValueChange = { 
+                springStiffness = it
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("spring_stiffness", it) })
+            }
+        )
+
+        SettingsSlider(
+            title = "Bounciness", 
+            description = "Oscillation level of the springs.",
+            value = springDamping, 
+            defaultValue = 0.85f,
+            valueRange = 0.2f..1.0f,
+            onValueChange = { 
+                springDamping = it
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("spring_damping", it) })
+            }
+        )
+
+        Spacer(modifier = Modifier.height(120.dp))
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MD3StyleSelector(
-    label: String,
-    selectedStyle: String,
-    options: List<String>,
-    onSelect: (String) -> Unit
-) {
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 24.dp, vertical = 8.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            options.forEach { style ->
-                FilterChip(
-                    selected = selectedStyle.equals(style, ignoreCase = true),
-                    onClick = { onSelect(style) },
-                    label = { 
-                        Text(
-                            text = style.lowercase().replaceFirstChar { it.uppercase() },
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        ) 
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-    }
+private fun RowScope.PlaygroundChip(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    FilterChip(
+        selected = false,
+        onClick = onClick,
+        label = { Text(label, fontSize = 12.sp) },
+        leadingIcon = { Icon(icon, null, modifier = Modifier.size(16.dp)) },
+        modifier = Modifier.weight(1f),
+        colors = FilterChipDefaults.filterChipColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+    )
 }
