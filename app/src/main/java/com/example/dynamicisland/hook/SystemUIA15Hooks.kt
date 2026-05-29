@@ -36,7 +36,6 @@ class SystemUIA15Hooks {
 
             // ── 1. Core UI Injection Points ───────────────────────────────────
             
-            // Primary: Status Bar Area
             XposedHelpers.findAndHookMethod(
                 "com.android.systemui.statusbar.phone.PhoneStatusBarView",
                 lpparam.classLoader,
@@ -48,7 +47,6 @@ class SystemUIA15Hooks {
                 }
             )
 
-            // Secondary: Notification Shade Window (Ensures visibility on lockscreen/expanded shade)
             XposedHelpers.findAndHookMethod(
                 "com.android.systemui.shade.NotificationShadeWindowView",
                 lpparam.classLoader,
@@ -132,9 +130,6 @@ class SystemUIA15Hooks {
             }, 2000)
         }
 
-        /**
-         * Hooks the modern Notification Pipeline to capture events directly.
-         */
         private fun hookNotifPipeline(lpparam: XC_LoadPackage.LoadPackageParam) {
             try {
                 val pipelineClass = "com.android.systemui.statusbar.notification.collection.NotifPipeline"
@@ -150,8 +145,7 @@ class SystemUIA15Hooks {
                             val listener = param.args[0] ?: return
                             XposedBridge.log("$TAG: Intercepting NotifPipeline Listener")
                             
-                            // We hook the listener's methods to steal the data
-                            XposedHelpers.findAndHookMethod(listener.javaClass, "onEntryAdded", 
+                            XposedHelpers.findAndHookMethod(listener.javaClass.name, lpparam.classLoader, "onEntryAdded", 
                                 "com.android.systemui.statusbar.notification.collection.NotificationEntry",
                                 object : XC_MethodHook() {
                                     override fun afterHookedMethod(innerParam: MethodHookParam) {
@@ -168,9 +162,6 @@ class SystemUIA15Hooks {
             }
         }
 
-        /**
-         * Hooks the modern Media Pipeline.
-         */
         private fun hookMediaPipeline(lpparam: XC_LoadPackage.LoadPackageParam) {
             try {
                 val dataManagerClass = "com.android.systemui.media.controls.domain.pipeline.MediaDataManager"
@@ -188,7 +179,6 @@ class SystemUIA15Hooks {
 
                             IslandHookEngine.hookAllMethodsByName(listener.javaClass.name, lpparam.classLoader, "onMediaDataLoaded", object : XC_MethodHook() {
                                 override fun afterHookedMethod(innerParam: MethodHookParam) {
-                                    // Typically: onMediaDataLoaded(key, oldKey, data, immediately, ...)
                                     val data = innerParam.args.find { it?.javaClass?.name?.contains("MediaData") == true } ?: return
                                     processNativeMedia(data)
                                 }
@@ -222,15 +212,45 @@ class SystemUIA15Hooks {
                     val packageName = XposedHelpers.getObjectField(mediaData, "app") as? String ?: return
                     val song = XposedHelpers.getObjectField(mediaData, "song") as? CharSequence ?: ""
                     val artist = XposedHelpers.getObjectField(mediaData, "artist") as? CharSequence ?: ""
-                    val artwork = XposedHelpers.getObjectField(mediaData, "artwork") as? android.graphics.drawable.Icon
-                    val isPlaying = XposedHelpers.getBooleanField(mediaData, "active") // This might be 'active' or 'isPlaying' depending on version
+                    val artworkIcon = XposedHelpers.getObjectField(mediaData, "artwork") as? android.graphics.drawable.Icon
                     
+                    val isPlaying = try { 
+                        XposedHelpers.getBooleanField(mediaData, "isPlaying") 
+                    } catch (e: Throwable) {
+                        XposedHelpers.getBooleanField(mediaData, "active")
+                    }
+                    
+                    val context = ctrl.islandView?.context ?: return
+                    val bitmap = iconToBitmap(context, artworkIcon)
+
                     XposedBridge.log("$TAG: Native media caught from $packageName: $song")
-                    // Note: We need to map this to ctrl.mediaManager or a new method
+                    ctrl.mediaManager.updateMediaFromNative(
+                        packageName, 
+                        song.toString(), 
+                        artist.toString(), 
+                        bitmap, 
+                        isPlaying
+                    )
                 }
             } catch (e: Throwable) {
                 XposedBridge.log("$TAG ❌: processNativeMedia failed — ${e.message}")
             }
+        }
+
+        private fun iconToBitmap(context: Context, icon: android.graphics.drawable.Icon?): android.graphics.Bitmap? {
+            if (icon == null) return null
+            return try {
+                val drawable = icon.loadDrawable(context) ?: return null
+                val bitmap = android.graphics.Bitmap.createBitmap(
+                    drawable.intrinsicWidth.coerceAtLeast(1),
+                    drawable.intrinsicHeight.coerceAtLeast(1),
+                    android.graphics.Bitmap.Config.ARGB_8888
+                )
+                val canvas = android.graphics.Canvas(bitmap)
+                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                drawable.draw(canvas)
+                bitmap
+            } catch (e: Exception) { null }
         }
     }
 }

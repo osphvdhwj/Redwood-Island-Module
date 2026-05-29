@@ -242,6 +242,55 @@ class IslandMediaManager(
         } catch(e: Exception) { null }
     }
     
+    fun updateMediaFromNative(pkg: String, title: String, artist: String, artwork: Bitmap?, isPlaying: Boolean) {
+        if (!isMediaEnabled) return
+        
+        processJob?.cancel()
+        val isNewTrack = title != lastTrackTitle && lastTrackTitle.isNotEmpty()
+        lastTrackTitle = title
+
+        if (isNewTrack && isPlaying) onPeekRequested()
+
+        processJob = scope.launch(Dispatchers.IO) {
+            val appIconBmp = getAppIcon(pkg)
+            var blurredArtBitmap: Bitmap? = null
+            var bgColor: Int? = null
+            var txtColor = android.graphics.Color.WHITE
+
+            if (artwork != null) {
+                blurredArtBitmap = blurBitmapOptimized(artwork)
+                val palette = Palette.from(artwork).generate()
+                val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
+                if (swatch != null) {
+                    var rgb = swatch.rgb; val hsl = FloatArray(3); androidx.core.graphics.ColorUtils.colorToHSL(rgb, hsl)
+                    if (hsl[2] < 0.35f) { hsl[2] = 0.35f; rgb = androidx.core.graphics.ColorUtils.HSLToColor(hsl) }
+                    bgColor = rgb
+                    txtColor = if (androidx.core.graphics.ColorUtils.calculateLuminance(bgColor) > 0.5) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+                }
+            }
+
+            val musicModel = LiveActivityModel.Music(
+                id = "sys_media_native",
+                pkgName = pkg,
+                title = title,
+                artist = artist,
+                albumArt = artwork,
+                blurredAlbumArt = blurredArtBitmap,
+                appIcon = appIconBmp,
+                isPlaying = isPlaying,
+                duration = 0L, 
+                position = 0L,
+                dominantColor = bgColor,
+                contentColor = txtColor
+            )
+
+            withContext(Dispatchers.Main) {
+                currentMedia = musicModel
+                onMediaChanged(musicModel)
+            }
+        }
+    }
+
     private fun stopTicker() { tickerJob?.cancel(); tickerJob = null }
 
     fun sendMediaCommand(command: String) {
