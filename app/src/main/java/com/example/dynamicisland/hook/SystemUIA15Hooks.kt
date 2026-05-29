@@ -38,7 +38,6 @@ class SystemUIA15Hooks {
             XposedBridge.log("$TAG: 🚀 Initializing Modern SystemUI Hooks (Direct Target Mode)...")
 
             // ── 1. Core UI Injection Point ────────────────────────────────────
-            // We hook PhoneStatusBarView's onAttachedToWindow for reliable timing
             try {
                 XposedHelpers.findAndHookMethod(
                     "com.android.systemui.statusbar.phone.PhoneStatusBarView",
@@ -54,7 +53,7 @@ class SystemUIA15Hooks {
                 XposedBridge.log("$TAG ⚠️: PhoneStatusBarView hook failed: ${e.message}")
             }
 
-            // ── 2. Native Data Pipelines (A15 Targets) ────────────────────────
+            // ── 2. Native Data Pipelines ──────────────────────────────────────
             hookNotifPipeline(lpparam)
             hookMediaPipeline(lpparam)
         }
@@ -84,7 +83,6 @@ class SystemUIA15Hooks {
                         hapticsManager,
                         networkMonitor
                     ).also { ctrl ->
-                        // Get the module context for resources
                         val moduleContext = try { 
                             context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) 
                         } catch (e: Exception) { context }
@@ -92,8 +90,6 @@ class SystemUIA15Hooks {
                         val islandView = DynamicIslandView(context, moduleContext)
                         ctrl.islandView = islandView
                         
-                        // We add it directly to the root SystemUI view (PhoneStatusBarView)
-                        // But we ensure it's not clipped and sits on top
                         val lp = FrameLayout.LayoutParams(
                             FrameLayout.LayoutParams.MATCH_PARENT,
                             FrameLayout.LayoutParams.MATCH_PARENT
@@ -101,7 +97,6 @@ class SystemUIA15Hooks {
                             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                         }
                         
-                        // Aggressive un-clipping up the hierarchy
                         var current: android.view.ViewParent? = root
                         repeat(5) {
                             (current as? ViewGroup)?.let {
@@ -119,16 +114,13 @@ class SystemUIA15Hooks {
                     }
                 } catch (e: Throwable) {
                     XposedBridge.log("$TAG ❌: Native injection failed — ${e.message}")
-                    e.printStackTrace()
                 }
             }, 1500)
         }
 
         private fun hookNotifPipeline(lpparam: XC_LoadPackage.LoadPackageParam) {
             try {
-                // Hook NotifPipeline to intercept new notifications
                 val pipelineClass = "com.android.systemui.statusbar.notification.collection.NotifPipeline"
-                
                 IslandHookEngine.hookAllMethodsByName(
                     pipelineClass, 
                     lpparam.classLoader, 
@@ -136,13 +128,11 @@ class SystemUIA15Hooks {
                     object : XC_MethodHook() {
                         override fun beforeHookedMethod(param: MethodHookParam) {
                             val listener = param.args.firstOrNull() ?: return
-                            
-                            // Hook the listener's onEntryAdded method
                             IslandHookEngine.hookAllMethodsByName(listener.javaClass.name, lpparam.classLoader, "onEntryAdded", 
                                 object : XC_MethodHook() {
                                     override fun afterHookedMethod(innerParam: MethodHookParam) {
                                         val entry = innerParam.args.firstOrNull() ?: return
-                                        processNativeNotification(entry, context)
+                                        processNativeNotification(entry)
                                     }
                                 }
                             )
@@ -156,20 +146,16 @@ class SystemUIA15Hooks {
 
         private fun hookMediaPipeline(lpparam: XC_LoadPackage.LoadPackageParam) {
             try {
-                // In A14/A15, MediaDataManager implementation is LegacyMediaDataManagerImpl
                 val dataManagerClass = "com.android.systemui.media.controls.domain.pipeline.LegacyMediaDataManagerImpl"
-
                 IslandHookEngine.hookAllMethodsByName(
                     dataManagerClass,
                     lpparam.classLoader,
                     "onMediaDataLoaded",
                     object : XC_MethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {
-                            // Signature: onMediaDataLoaded(String, String, MediaData, boolean, int, boolean)
-                            // MediaData is at index 2
                             val data = param.args.getOrNull(2) ?: return
                             if (data.javaClass.name.contains("MediaData")) {
-                                processNativeMedia(data, context)
+                                processNativeMedia(data)
                             }
                         }
                     }
@@ -179,26 +165,21 @@ class SystemUIA15Hooks {
             }
         }
 
-        private fun processNativeNotification(entry: Any, context: Context) {
+        private fun processNativeNotification(entry: Any) {
             try {
-                // com.android.systemui.statusbar.notification.collection.NotificationEntry
                 val sbn = XposedHelpers.callMethod(entry, "getSbn") as android.service.notification.StatusBarNotification
-                val pkg = sbn.packageName
-                val notification = sbn.notification
-                
                 controller?.let { ctrl ->
-                    XposedBridge.log("$TAG: Native notification caught from $pkg")
-                    ctrl.notificationManager.processIncomingNotification(pkg, notification)
+                    XposedBridge.log("$TAG: Native notification caught from ${sbn.packageName}")
+                    ctrl.notificationManager.processIncomingNotification(sbn.packageName, sbn.notification)
                 }
             } catch (e: Throwable) {
                 XposedBridge.log("$TAG ❌: processNativeNotification failed — ${e.message}")
             }
         }
 
-        private fun processNativeMedia(mediaData: Any, context: Context) {
+        private fun processNativeMedia(mediaData: Any) {
             try {
                 controller?.let { ctrl ->
-                    // Field names verified from SystemUI.apk dexdump
                     val pkg = XposedHelpers.getObjectField(mediaData, "packageName") as? String ?: return
                     val song = XposedHelpers.getObjectField(mediaData, "song") as? CharSequence ?: ""
                     val artist = XposedHelpers.getObjectField(mediaData, "artist") as? CharSequence ?: ""
@@ -206,16 +187,9 @@ class SystemUIA15Hooks {
                     val isPlaying = XposedHelpers.getBooleanField(mediaData, "isPlaying")
                     
                     XposedBridge.log("$TAG: Native media caught: $song by $artist (Playing: $isPlaying)")
-
-                    val artworkBmp = artworkIcon?.let { decodeIcon(it, context) }
+                    val artworkBmp = artworkIcon?.let { decodeIcon(it, ctrl.context) }
                     
-                    ctrl.mediaManager.updateMediaFromNative(
-                        pkg = pkg,
-                        title = song.toString(),
-                        artist = artist.toString(),
-                        isPlaying = isPlaying,
-                        artwork = artworkBmp
-                    )
+                    ctrl.mediaManager.updateMediaFromNative(pkg, song.toString(), artist.toString(), isPlaying, artworkBmp)
                 }
             } catch (e: Throwable) {
                 XposedBridge.log("$TAG ❌: processNativeMedia failed — ${e.message}")

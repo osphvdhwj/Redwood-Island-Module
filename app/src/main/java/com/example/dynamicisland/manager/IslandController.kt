@@ -40,7 +40,7 @@ import com.example.dynamicisland.ui.mvi.IslandIntent
 
 @Singleton
 class IslandController @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @ApplicationContext internal val context: Context,
     private val settingsManager: SettingsManager,
     val mediaManager: IslandMediaManager,
     private val hardwareMonitor: IslandHardwareMonitor,
