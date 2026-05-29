@@ -114,15 +114,12 @@
             android:name=".ipc.IslandContentProvider"
             android:authorities="com.example.dynamicisland.provider"
             android:exported="true"
-            android:readPermission="com.redwood.permission.SECURE_IPC"
-            android:writePermission="com.redwood.permission.SECURE_IPC"
             android:multiprocess="false"
             android:syncable="false" />
 
         <service
             android:name=".ipc.LiveActivityManagerService"
-            android:exported="true"
-            android:permission="com.redwood.permission.SECURE_IPC">
+            android:exported="true">
             <intent-filter>
                 <action android:name="com.example.dynamicisland.LIVE_ACTIVITY_MANAGER" />
             </intent-filter>
@@ -130,8 +127,7 @@
 
         <service
             android:name=".ipc.IslandStateService"
-            android:exported="true"
-            android:permission="com.redwood.permission.SECURE_IPC">
+            android:exported="true">
             <intent-filter>
                 <action android:name="com.example.dynamicisland.STATE_SERVICE" />
             </intent-filter>
