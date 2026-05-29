@@ -36,27 +36,35 @@ class SystemUIA15Hooks {
 
             // ── 1. Core UI Injection Points ───────────────────────────────────
             
-            XposedHelpers.findAndHookMethod(
-                "com.android.systemui.statusbar.phone.PhoneStatusBarView",
-                lpparam.classLoader,
-                "onFinishInflate",
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        injectIsland(param.thisObject as FrameLayout, "PhoneStatusBarView")
+            try {
+                XposedHelpers.findAndHookMethod(
+                    "com.android.systemui.statusbar.phone.PhoneStatusBarView",
+                    lpparam.classLoader,
+                    "onFinishInflate",
+                    object : XC_MethodHook() {
+                        override fun afterHookedMethod(param: MethodHookParam) {
+                            injectIsland(param.thisObject as FrameLayout, "PhoneStatusBarView")
+                        }
                     }
-                }
-            )
+                )
+            } catch (e: Throwable) {
+                XposedBridge.log("$TAG ⚠️: PhoneStatusBarView hook failed: ${e.message}")
+            }
 
-            XposedHelpers.findAndHookMethod(
-                "com.android.systemui.shade.NotificationShadeWindowView",
-                lpparam.classLoader,
-                "onFinishInflate",
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        injectIsland(param.thisObject as FrameLayout, "NotificationShadeWindowView")
+            try {
+                XposedHelpers.findAndHookMethod(
+                    "com.android.systemui.shade.NotificationShadeWindowView",
+                    lpparam.classLoader,
+                    "onFinishInflate",
+                    object : XC_MethodHook() {
+                        override fun afterHookedMethod(param: MethodHookParam) {
+                            injectIsland(param.thisObject as FrameLayout, "NotificationShadeWindowView")
+                        }
                     }
-                }
-            )
+                )
+            } catch (e: Throwable) {
+                XposedBridge.log("$TAG ⚠️: NotificationShadeWindowView hook failed: ${e.message}")
+            }
 
             // ── 2. Native Data Pipelines ──────────────────────────────────────
             
