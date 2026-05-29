@@ -2,45 +2,48 @@ package com.example.dynamicisland.hook
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.PixelFormat
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import com.example.dynamicisland.manager.*
-import com.example.dynamicisland.model.*
+import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.settings.SettingsManager
-import com.example.dynamicisland.ui.mvi.IslandEventBus
-import de.robv.android.xposed.*
+import com.example.dynamicisland.ui.DynamicIslandView
+import com.example.dynamicisland.ipc.IslandEventBus
+import de.robv.android.xposed.IXposedHookLoadPackage
+import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedBridge
+import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import java.lang.reflect.Proxy
 
 class SystemUIA15Hooks {
-
     companion object {
         private const val TAG = "DynamicIsland-Native"
-        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-        internal var controller: IslandController? = null
+        private var controller: IslandController? = null
         private var injected = false
+        private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
         fun init(lpparam: XC_LoadPackage.LoadPackageParam) {
             if (lpparam.packageName != "com.android.systemui") return
-
-            XposedBridge.log("$TAG: 🚀 Initializing Modern SystemUI Hooks...")
-
-            // ── 1. Core UI Injection Points ───────────────────────────────────
             
+            XposedBridge.log("$TAG: 🚀 Initializing Modern SystemUI Hooks (Direct Target Mode)...")
+
+            // ── 1. Core UI Injection Point ────────────────────────────────────
+            // We hook PhoneStatusBarView's onAttachedToWindow for reliable timing
             try {
                 XposedHelpers.findAndHookMethod(
                     "com.android.systemui.statusbar.phone.PhoneStatusBarView",
                     lpparam.classLoader,
-                    "onFinishInflate",
+                    "onAttachedToWindow",
                     object : XC_MethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {
                             injectIsland(param.thisObject as FrameLayout, "PhoneStatusBarView")
@@ -51,23 +54,7 @@ class SystemUIA15Hooks {
                 XposedBridge.log("$TAG ⚠️: PhoneStatusBarView hook failed: ${e.message}")
             }
 
-            try {
-                XposedHelpers.findAndHookMethod(
-                    "com.android.systemui.shade.NotificationShadeWindowView",
-                    lpparam.classLoader,
-                    "onFinishInflate",
-                    object : XC_MethodHook() {
-                        override fun afterHookedMethod(param: MethodHookParam) {
-                            injectIsland(param.thisObject as FrameLayout, "NotificationShadeWindowView")
-                        }
-                    }
-                )
-            } catch (e: Throwable) {
-                XposedBridge.log("$TAG ⚠️: NotificationShadeWindowView hook failed: ${e.message}")
-            }
-
-            // ── 2. Native Data Pipelines ──────────────────────────────────────
-            
+            // ── 2. Native Data Pipelines (A15 Targets) ────────────────────────
             hookNotifPipeline(lpparam)
             hookMediaPipeline(lpparam)
         }
@@ -75,7 +62,7 @@ class SystemUIA15Hooks {
         private fun injectIsland(root: FrameLayout, source: String) {
             if (injected) return
             val context = root.context
-            XposedBridge.log("$TAG: Injecting Island from $source")
+            XposedBridge.log("$TAG: Injecting Island Overlay from $source")
 
             Handler(Looper.getMainLooper()).postDelayed({
                 if (injected) return@postDelayed
@@ -97,49 +84,49 @@ class SystemUIA15Hooks {
                         hapticsManager,
                         networkMonitor
                     ).also { ctrl ->
-                        val islandView = ctrl.createIslandView(
-                            context.getSystemService(Context.WINDOW_SERVICE) as WindowManager,
-                            null
-                        )
+                        // Get the module context for resources
+                        val moduleContext = try { 
+                            context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) 
+                        } catch (e: Exception) { context }
 
-                        val hardwareManager = IslandHardwareManager(
-                            context,
-                            context.getSystemService(Context.AUDIO_SERVICE) as AudioManager,
-                            scope
-                        )
-                        val sidebarView = com.example.dynamicisland.ui.SidebarView(context, hardwareManager)
-
+                        val islandView = DynamicIslandView(context, moduleContext)
+                        ctrl.islandView = islandView
+                        
+                        // We add it directly to the root SystemUI view (PhoneStatusBarView)
+                        // But we ensure it's not clipped and sits on top
                         val lp = FrameLayout.LayoutParams(
                             FrameLayout.LayoutParams.MATCH_PARENT,
                             FrameLayout.LayoutParams.MATCH_PARENT
-                        )
+                        ).apply {
+                            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                        }
                         
-                        // FIX: Ensure the parent doesn't clip the Island when moved or expanded
-                        root.clipChildren = false
-                        root.clipToPadding = false
-                        (root.parent as? ViewGroup)?.let {
-                            it.clipChildren = false
-                            it.clipToPadding = false
+                        // Aggressive un-clipping up the hierarchy
+                        var current: android.view.ViewParent? = root
+                        repeat(5) {
+                            (current as? ViewGroup)?.let {
+                                it.clipChildren = false
+                                it.clipToPadding = false
+                            }
+                            current = current?.parent
                         }
                         
                         root.addView(islandView, lp)
-                        root.addView(sidebarView, FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            android.view.Gravity.END
-                        ))
+                        islandView.bringToFront()
+                        
                         injected = true
-                        XposedBridge.log("$TAG: ✅ Island injected successfully into $source")
+                        XposedBridge.log("$TAG ✅: Island injected successfully into $source")
                     }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     XposedBridge.log("$TAG ❌: Native injection failed — ${e.message}")
                     e.printStackTrace()
                 }
-            }, 2000)
+            }, 1500)
         }
 
         private fun hookNotifPipeline(lpparam: XC_LoadPackage.LoadPackageParam) {
             try {
+                // Hook NotifPipeline to intercept new notifications
                 val pipelineClass = "com.android.systemui.statusbar.notification.collection.NotifPipeline"
                 
                 IslandHookEngine.hookAllMethodsByName(
@@ -149,8 +136,8 @@ class SystemUIA15Hooks {
                     object : XC_MethodHook() {
                         override fun beforeHookedMethod(param: MethodHookParam) {
                             val listener = param.args.firstOrNull() ?: return
-                            XposedBridge.log("$TAG: Intercepting NotifPipeline Listener: ${listener.javaClass.name}")
                             
+                            // Hook the listener's onEntryAdded method
                             IslandHookEngine.hookAllMethodsByName(listener.javaClass.name, lpparam.classLoader, "onEntryAdded", 
                                 object : XC_MethodHook() {
                                     override fun afterHookedMethod(innerParam: MethodHookParam) {
@@ -169,7 +156,7 @@ class SystemUIA15Hooks {
 
         private fun hookMediaPipeline(lpparam: XC_LoadPackage.LoadPackageParam) {
             try {
-                // Hook LegacyMediaDataManagerImpl directly to avoid listener interface signature mismatches
+                // In A14/A15, MediaDataManager implementation is LegacyMediaDataManagerImpl
                 val dataManagerClass = "com.android.systemui.media.controls.domain.pipeline.LegacyMediaDataManagerImpl"
 
                 IslandHookEngine.hookAllMethodsByName(
@@ -178,22 +165,12 @@ class SystemUIA15Hooks {
                     "onMediaDataLoaded",
                     object : XC_MethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {
-                            val data = param.args.find { it?.javaClass?.name?.contains("MediaData") == true } ?: return
-                            processNativeMedia(data)
-                        }
-                    }
-                )
-                
-                // Fallback for older A13/A14 styles that might still use MediaDataManager
-                val oldDataManagerClass = "com.android.systemui.media.controls.pipeline.MediaDataManager"
-                IslandHookEngine.hookAllMethodsByName(
-                    oldDataManagerClass,
-                    lpparam.classLoader,
-                    "onMediaDataLoaded",
-                    object : XC_MethodHook() {
-                        override fun afterHookedMethod(param: MethodHookParam) {
-                            val data = param.args.find { it?.javaClass?.name?.contains("MediaData") == true } ?: return
-                            processNativeMedia(data)
+                            // Signature: onMediaDataLoaded(String, String, MediaData, boolean, int, boolean)
+                            // MediaData is at index 2
+                            val data = param.args.getOrNull(2) ?: return
+                            if (data.javaClass.name.contains("MediaData")) {
+                                processNativeMedia(data)
+                            }
                         }
                     }
                 )
@@ -204,6 +181,7 @@ class SystemUIA15Hooks {
 
         private fun processNativeNotification(entry: Any) {
             try {
+                // com.android.systemui.statusbar.notification.collection.NotificationEntry
                 val sbn = XposedHelpers.callMethod(entry, "getSbn") as android.service.notification.StatusBarNotification
                 val pkg = sbn.packageName
                 val notification = sbn.notification
@@ -220,27 +198,23 @@ class SystemUIA15Hooks {
         private fun processNativeMedia(mediaData: Any) {
             try {
                 controller?.let { ctrl ->
-                    val packageName = XposedHelpers.getObjectField(mediaData, "app") as? String ?: return
+                    // Field names verified from SystemUI.apk dexdump
+                    val pkg = XposedHelpers.getObjectField(mediaData, "packageName") as? String ?: return
                     val song = XposedHelpers.getObjectField(mediaData, "song") as? CharSequence ?: ""
                     val artist = XposedHelpers.getObjectField(mediaData, "artist") as? CharSequence ?: ""
                     val artworkIcon = XposedHelpers.getObjectField(mediaData, "artwork") as? android.graphics.drawable.Icon
+                    val isPlaying = XposedHelpers.getBooleanField(mediaData, "isPlaying")
                     
-                    val isPlaying = try { 
-                        XposedHelpers.getBooleanField(mediaData, "isPlaying") 
-                    } catch (e: Throwable) {
-                        XposedHelpers.getBooleanField(mediaData, "active")
-                    }
-                    
-                    val context = ctrl.islandView?.context ?: return
-                    val bitmap = iconToBitmap(context, artworkIcon)
+                    XposedBridge.log("$TAG: Native media caught: $song by $artist (Playing: $isPlaying)")
 
-                    XposedBridge.log("$TAG: Native media caught from $packageName: $song")
+                    val artworkBmp = artworkIcon?.let { decodeIcon(it, ctrl.context) }
+                    
                     ctrl.mediaManager.updateMediaFromNative(
-                        packageName, 
-                        song.toString(), 
-                        artist.toString(), 
-                        bitmap, 
-                        isPlaying
+                        pkg = pkg,
+                        title = song.toString(),
+                        artist = artist.toString(),
+                        isPlaying = isPlaying,
+                        artwork = artworkBmp
                     )
                 }
             } catch (e: Throwable) {
@@ -248,8 +222,7 @@ class SystemUIA15Hooks {
             }
         }
 
-        private fun iconToBitmap(context: Context, icon: android.graphics.drawable.Icon?): android.graphics.Bitmap? {
-            if (icon == null) return null
+        private fun decodeIcon(icon: android.graphics.drawable.Icon, context: Context): android.graphics.Bitmap? {
             return try {
                 val drawable = icon.loadDrawable(context) ?: return null
                 val bitmap = android.graphics.Bitmap.createBitmap(
