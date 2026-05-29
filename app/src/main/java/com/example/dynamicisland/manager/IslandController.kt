@@ -277,6 +277,18 @@ class IslandController @Inject constructor(
     private val ecosystemReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             when (intent.action) {
+                "com.example.dynamicisland.DEBUG_TEST" -> {
+                    android.util.Log.d("IslandController", "DEBUG: Triggering test notification")
+                    postTransientNotification(
+                        LiveActivityModel.General(
+                            id = "debug_test",
+                            type = ActivityType.MESSAGE,
+                            title = "System Integration Active",
+                            dataText = "Direct hook confirmed.",
+                            accentColor = android.graphics.Color.GREEN
+                        ), 10000L
+                    )
+                }
                 "com.example.dynamicisland.CALIBRATION_MODE" -> {
                     val enabled = intent.getBooleanExtra("enabled", false)
                     val target = intent.getStringExtra("target") ?: "ring"
@@ -469,6 +481,8 @@ class IslandController @Inject constructor(
             return
         }
 
+        android.util.Log.d("IslandController", "Evaluating Priority -> New State: ${result.islandState}, ActiveModel: ${result.activeModel?.id}")
+
         userForceCollapsed = result.userForceCollapsed
         _lastIslandState = result.islandState
         _lastActiveModel = result.activeModel
@@ -604,6 +618,7 @@ class IslandController @Inject constructor(
         context.registerReceiver(screenStateReceiver, screenFilter)
         
         val ecoFilter = IntentFilter().apply {
+            addAction("com.example.dynamicisland.DEBUG_TEST")
             addAction("com.example.dynamicisland.CALIBRATION_MODE")
             addAction("com.example.dynamicisland.CALIBRATION_UPDATE")
             addAction("com.example.dynamicisland.HARDWARE_TOGGLE")

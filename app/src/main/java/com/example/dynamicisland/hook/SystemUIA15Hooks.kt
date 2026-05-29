@@ -66,12 +66,13 @@ class SystemUIA15Hooks {
         private fun injectIsland(root: FrameLayout, source: String) {
             if (injected) return
             val context = root.context
-            XposedBridge.log("$TAG: System-level injection starting from $source")
+            XposedBridge.log("$TAG: System-level injection starting from $source (Parent: ${root.parent})")
 
             Handler(Looper.getMainLooper()).postDelayed({
                 if (injected) return@postDelayed
                 
                 try {
+                    XposedBridge.log("$TAG: Creating Controller and IslandView...")
                     val eventBus = IslandEventBus()
                     val settingsManager = SettingsManager(context)
                     val hapticsManager = IslandHapticsManager(context, settingsManager)
@@ -219,8 +220,11 @@ class SystemUIA15Hooks {
         private fun processNativeNotification(entry: Any) {
             try {
                 val sbn = XposedHelpers.callMethod(entry, "getSbn") as android.service.notification.StatusBarNotification
+                XposedBridge.log("$TAG: Catching native notification from ${sbn.packageName}")
                 controller?.notificationManager?.processIncomingNotification(sbn.packageName, sbn.notification)
-            } catch (e: Throwable) {}
+            } catch (e: Throwable) {
+                XposedBridge.log("$TAG ❌: processNativeNotification error: ${e.message}")
+            }
         }
 
         private fun processNativeMedia(mediaData: Any) {
@@ -232,10 +236,14 @@ class SystemUIA15Hooks {
                     val artworkIcon = XposedHelpers.getObjectField(mediaData, "artwork") as? android.graphics.drawable.Icon
                     val isPlaying = XposedHelpers.getBooleanField(mediaData, "isPlaying")
                     
+                    XposedBridge.log("$TAG: Catching native media: $song by $artist from $pkg (isPlaying: $isPlaying)")
+                    
                     val artworkBmp = artworkIcon?.let { decodeIcon(it, ctrl.context) }
                     ctrl.mediaManager.updateMediaFromNative(pkg, song.toString(), artist.toString(), artworkBmp, isPlaying)
                 }
-            } catch (e: Throwable) {}
+            } catch (e: Throwable) {
+                XposedBridge.log("$TAG ❌: processNativeMedia error: ${e.message}")
+            }
         }
 
         private fun decodeIcon(icon: android.graphics.drawable.Icon, context: Context): android.graphics.Bitmap? {
