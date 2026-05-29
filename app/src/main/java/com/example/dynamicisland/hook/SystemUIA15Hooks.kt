@@ -189,7 +189,7 @@ class SystemUIA15Hooks {
                     XposedBridge.log("$TAG: Native media caught: $song by $artist (Playing: $isPlaying)")
                     val artworkBmp = artworkIcon?.let { decodeIcon(it, ctrl.context) }
                     
-                    ctrl.mediaManager.updateMediaFromNative(pkg, song.toString(), artist.toString(), isPlaying, artworkBmp)
+                    ctrl.mediaManager.updateMediaFromNative(pkg, song.toString(), artist.toString(), artworkBmp, isPlaying)
                 }
             } catch (e: Throwable) {
                 XposedBridge.log("$TAG ❌: processNativeMedia failed — ${e.message}")
