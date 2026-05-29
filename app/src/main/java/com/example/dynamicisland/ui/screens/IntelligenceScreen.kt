@@ -26,29 +26,31 @@ fun IntelligenceScreen(prefs: SharedPreferences) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        SettingsCategoryHeader("Smart Detection")
+        SettingsCategoryHeader("Automation")
         
         MD3IntelligenceToggle(
             title = "OTP Auto-Capture", 
-            description = "Instantly captures verification codes from SMS.", 
+            description = "Intercept and extract 2FA codes from incoming SMS.", 
             icon = Icons.Default.VpnKey,
             key = SettingKey.OTP_DETECTION, 
             prefs = prefs,
             scope = scope,
             context = context
         )
+        
         MD3IntelligenceToggle(
-            title = "Link Interceptor", 
-            description = "Detects URLs in clipboard or notifications.", 
-            icon = Icons.Default.Link,
-            key = SettingKey.LINK_INTERCEPT, 
+            title = "Navigation HUD", 
+            description = "Turn Google Maps notifications into a live instruction bar.", 
+            icon = Icons.Default.Navigation,
+            key = SettingKey.NAVIGATION, 
             prefs = prefs,
             scope = scope,
             context = context
         )
+
         MD3IntelligenceToggle(
             title = "Real-time Barcode", 
-            description = "Shows a snippet of detected QR/barcodes.", 
+            description = "Preview detected barcodes for quick scanning.", 
             icon = Icons.Default.QrCodeScanner,
             key = SettingKey.BARCODE, 
             prefs = prefs,
@@ -56,61 +58,33 @@ fun IntelligenceScreen(prefs: SharedPreferences) {
             context = context
         )
 
-        SettingsCategoryHeader("AI Assistance")
+        SettingsCategoryHeader("AI & Analysis")
         
         MD3IntelligenceToggle(
             title = "Live Translation", 
-            description = "Translates foreign text on screen in real-time.", 
+            description = "Translate intercepted text using ML Kit.", 
             icon = Icons.Default.Translate,
             key = SettingKey.TRANSLATION, 
             prefs = prefs,
             scope = scope,
             context = context
         )
-        MD3IntelligenceToggle(
-            title = "App Predictions", 
-            description = "Analyzes usage to suggest the next app.", 
-            icon = Icons.Default.Psychology,
-            key = SettingKey.APP_PREDICTION_SUGGESTION, 
-            prefs = prefs,
-            scope = scope,
-            context = context
-        )
-        MD3IntelligenceToggle(
-            title = "Contextual Logic", 
-            description = "Dynamically changes Island priority based on context.", 
-            icon = Icons.Default.DynamicFeed,
-            key = SettingKey.CONTEXTUAL_SUGGESTIONS, 
-            prefs = prefs,
-            scope = scope,
-            context = context
-        )
-
-        SettingsCategoryHeader("Advanced Labs")
         
         MD3IntelligenceToggle(
             title = "Gaming Telemetry", 
-            description = "Displays FPS, CPU temp when a game is detected.", 
+            description = "Monitor FPS and CPU status during heavy gameplay.", 
             icon = Icons.Default.Gamepad,
             key = SettingKey.GAMING_HUD, 
             prefs = prefs,
             scope = scope,
             context = context
         )
+
         MD3IntelligenceToggle(
-            title = "AR Vision", 
-            description = "Makes the Island appear floating.", 
-            icon = Icons.Default.Layers,
-            key = SettingKey.AR_ISLAND, 
-            prefs = prefs,
-            scope = scope,
-            context = context
-        )
-        MD3IntelligenceToggle(
-            title = "Morse Input", 
-            description = "Input text via Morse code.", 
-            icon = Icons.Default.Toll,
-            key = SettingKey.MORSE_CODE_INPUT, 
+            title = "App Predictions", 
+            description = "Suggest the next likely app based on usage patterns.", 
+            icon = Icons.Default.Psychology,
+            key = SettingKey.APP_PREDICTION_SUGGESTION, 
             prefs = prefs,
             scope = scope,
             context = context

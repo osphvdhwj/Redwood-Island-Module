@@ -55,102 +55,38 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         
         SettingsSwitch(
             title = "Engine Master", 
-            description = "Enable/Disable Dynamic Island", 
+            description = "Enable or disable all Dynamic Island features.", 
             icon = Icons.Default.PowerSettingsNew,
             checked = state.islandEnabled, 
             onCheckedChange = { viewModel.updateSetting(SettingKey.ISLAND_ENABLED, it) }
         )
         SettingsSwitch(
-            title = "AOD Visibility", 
-            description = "Show on Lockscreen", 
+            title = "Lockscreen Visibility", 
+            description = "Keep the Island active on the Always-On Display.", 
             icon = Icons.Default.Lock,
             checked = state.islandOnLockscreen, 
             onCheckedChange = { viewModel.updateSetting(SettingKey.ISLAND_ON_LOCKSCREEN, it) }
         )
         SettingsSwitch(
-            title = "Multitasking", 
-            description = "Split Pill Mode support", 
+            title = "Multitasking (Split)", 
+            description = "Allow two activities to share the Island simultaneously.", 
             icon = Icons.Default.VerticalSplit,
             checked = state.splitPillEnabled, 
             onCheckedChange = { viewModel.updateSetting(SettingKey.SPLIT_PILL_ENABLED, it) }
         )
         SettingsSwitch(
-            title = "Tactile Feedback", 
-            description = "System-wide haptics", 
+            title = "Haptic Feedback", 
+            description = "Vibrate on transitions and interactions.", 
             icon = Icons.Default.Vibration,
             checked = state.hapticFeedback, 
             onCheckedChange = { viewModel.updateSetting(SettingKey.HAPTIC_FEEDBACK, it) }
         )
 
-        SettingsCategoryHeader("Media Hub")
-        
-        SettingsSwitch(
-            title = "Waveform Seeker", 
-            description = "Visualized playback bar", 
-            icon = Icons.Default.GraphicEq,
-            checked = state.waveformEnabled, 
-            onCheckedChange = { viewModel.updateSetting(SettingKey.WAVEFORM_ENABLED, it) }
-        )
-        SettingsSwitch(
-            title = "Artwork Blur", 
-            description = "Immersive media backdrop", 
-            icon = Icons.Default.Album,
-            checked = state.mediaArtworkBlur, 
-            onCheckedChange = { viewModel.updateSetting(SettingKey.MEDIA_ARTWORK_BLUR, it) }
-        )
-        SettingsSwitch(
-            title = "Ambient Ring", 
-            description = "Audio-reactive border", 
-            icon = Icons.Default.BlurCircular,
-            checked = state.ambientReactiveRing, 
-            onCheckedChange = { viewModel.updateSetting(SettingKey.AMBIENT_REACTIVE, it) }
-        )
-        SettingsSwitch(
-            title = "Beat Pulse", 
-            description = "Sync island with BPM", 
-            icon = Icons.Default.Hearing,
-            checked = state.bpmPulse, 
-            onCheckedChange = { viewModel.updateSetting(SettingKey.BPM_PULSE, it) }
-        )
-
-        SettingsCategoryHeader("Advanced Labs")
-        
-        SettingsSwitch(
-            title = "Gaming HUD", 
-            description = "FPS & Thermal monitoring", 
-            icon = Icons.Default.Gamepad,
-            checked = state.gamingHud, 
-            onCheckedChange = { viewModel.updateSetting(SettingKey.GAMING_HUD, it) }
-        )
-        SettingsSwitch(
-            title = "iOS Padlock", 
-            description = "Face ID style unlock", 
-            icon = Icons.Default.LockOpen,
-            checked = state.faceIDPadlock, 
-            onCheckedChange = { viewModel.updateSetting(SettingKey.FACE_ID_PADLOCK, it) }
-        )
-        SettingsSwitch(
-            title = "Continuity Cam", 
-            description = "Pro camera integration", 
-            icon = Icons.Default.CameraAlt,
-            checked = state.continuityCameraActions, 
-            onCheckedChange = { viewModel.updateSetting(SettingKey.CONTINUITY_CAMERA_ACTIONS, it) }
-        )
-        SettingsSwitch(
-            title = "MagSafe Anim", 
-            description = "Premium charging visuals", 
-            icon = Icons.Default.ChargingStation,
-            checked = state.magsafeChargingAnimation, 
-            onCheckedChange = { viewModel.updateSetting(SettingKey.MAGSAFE_CHARGING_ANIMATION, it) }
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-        Divider(modifier = Modifier.padding(horizontal = 24.dp))
-        Spacer(modifier = Modifier.height(24.dp))
+        SettingsCategoryHeader("Maintenance")
 
         Column(
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(horizontal = 24.dp)
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
                 FilledTonalButton(

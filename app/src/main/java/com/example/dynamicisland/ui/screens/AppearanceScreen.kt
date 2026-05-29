@@ -17,7 +17,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.manager.NewConfigManager
-import com.example.dynamicisland.settings.DesignLanguage
 import com.example.dynamicisland.ui.components.*
 import com.example.dynamicisland.ui.design.*
 
@@ -27,14 +26,8 @@ fun AppearanceScreen(prefs: SharedPreferences) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var designLanguage by remember { mutableStateOf(DesignLanguage.valueOf(prefs.getString("design_language", "APPLE_LIQUID_GLASS") ?: "APPLE_LIQUID_GLASS")) }
     var glassMode by remember { mutableStateOf(prefs.getBoolean("glass_mode", true)) }
-    var dynamicColors by remember { mutableStateOf(prefs.getBoolean("dynamic_colors", true)) }
     var blurIntensity by remember { mutableFloatStateOf(prefs.getFloat("blur_intensity", 15f)) }
-    var cornerRadius by remember { mutableFloatStateOf(prefs.getFloat("pill_corner_radius", 100f)) }
-    var pillShape by remember { mutableStateOf(prefs.getString("pill_shape", "pill") ?: "pill") }
-    var stiffness by remember { mutableFloatStateOf(prefs.getFloat("spring_stiffness", 400f)) }
-    var damping by remember { mutableFloatStateOf(prefs.getFloat("spring_damping", 0.85f)) }
     var glowEffect by remember { mutableStateOf(prefs.getBoolean("glow_effect", true)) }
     var elasticStretch by remember { mutableStateOf(prefs.getBoolean("elastic_stretch", true)) }
     
@@ -69,39 +62,18 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                 }
             }
 
-            MD3StyleSelector("Battery Vital", batteryStyle.name, listOf("PILL", "GAUGE", "DIGITAL")) { newStyle ->
+            MD3StyleSelector("Battery Style", batteryStyle.name, listOf("PILL", "GAUGE", "DIGITAL")) { newStyle ->
                 batteryStyle = com.example.dynamicisland.settings.BatteryStyle.valueOf(newStyle)
                 NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("battery_style", newStyle) }) {
                     NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
                 }
             }
 
-            SettingsCategoryHeader("Design Language")
+            SettingsCategoryHeader("Visual Engine")
             
-            MD3StyleSelector("Base Language", designLanguage.name, listOf("MATERIAL_YOU", "APPLE_LIQUID_GLASS")) { newLanguage ->
-                designLanguage = DesignLanguage.valueOf(newLanguage)
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("design_language", newLanguage) }) {
-                    NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-                }
-            }
-
-            if (designLanguage == DesignLanguage.MATERIAL_YOU) {
-                SettingsSwitch(
-                    title = "Dynamic Colors", 
-                    description = "Use system accent colors", 
-                    checked = dynamicColors, 
-                    onCheckedChange = { 
-                        dynamicColors = it
-                        NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("dynamic_colors", it) }) {
-                            NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-                        }
-                    }
-                )
-            }
-
             SettingsSwitch(
                 title = "True Glassmorphism", 
-                description = "Enable premium blurred backgrounds", 
+                description = "Enable premium blurred backgrounds & translucent surfaces.", 
                 checked = glassMode, 
                 onCheckedChange = { 
                     glassMode = it
@@ -111,23 +83,24 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                 }
             )
 
-            SettingsCategoryHeader("Visual Effects")
-            
-            SettingsSlider(
-                title = "Blur Intensity", 
-                value = blurIntensity, 
-                valueRange = 5f..40f,
-                onValueChange = { 
-                    blurIntensity = it
-                    NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("blur_intensity", it) }) {
-                        NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+            if (glassMode) {
+                SettingsSlider(
+                    title = "Blur Intensity", 
+                    description = "Strength of the background frost effect.",
+                    value = blurIntensity, 
+                    valueRange = 5f..40f,
+                    onValueChange = { 
+                        blurIntensity = it
+                        NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("blur_intensity", it) }) {
+                            NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+                        }
                     }
-                }
-            )
+                )
+            }
 
             SettingsSwitch(
                 title = "Glow Effect", 
-                description = "Outer neon radiation", 
+                description = "Outer neon radiation around the Island.", 
                 checked = glowEffect, 
                 onCheckedChange = { 
                     glowEffect = it
@@ -139,7 +112,7 @@ fun AppearanceScreen(prefs: SharedPreferences) {
 
             SettingsSwitch(
                 title = "Elastic Stretch", 
-                description = "Squishy liquid animations", 
+                description = "Squishy liquid animations during transitions.", 
                 checked = elasticStretch, 
                 onCheckedChange = { 
                     elasticStretch = it
@@ -149,31 +122,13 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                 }
             )
 
-            SettingsCategoryHeader("Shape & Geometry")
-            
-            MD3StyleSelector("Base Shape", pillShape, listOf("pill", "capsule", "squircle")) { shape ->
-                pillShape = shape
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("pill_shape", shape) }) {
-                    NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-                }
-            }
-
-            SettingsSlider(
-                title = "Corner Radius", 
-                value = cornerRadius, 
-                valueRange = 8f..200f,
-                onValueChange = { 
-                    cornerRadius = it
-                    NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("pill_corner_radius", it) }) {
-                        NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-                    }
-                }
-            )
-
-            SettingsCategoryHeader("Physics & Animations")
+            SettingsCategoryHeader("Physics Tester")
             
             // Interactive spring tester
             val isPressed = remember { mutableStateOf(false) }
+            var stiffness by remember { mutableFloatStateOf(prefs.getFloat("spring_stiffness", 400f)) }
+            var damping by remember { mutableFloatStateOf(prefs.getFloat("spring_damping", 0.85f)) }
+
             val scale by animateFloatAsState(
                 targetValue = if (isPressed.value) 0.8f else 1f,
                 animationSpec = spring(dampingRatio = damping, stiffness = stiffness),
@@ -185,8 +140,8 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 16.dp)
                     .height(100.dp)
-                    .glassmorphicCard(cornerRadius = 16.dp)
-                    .premiumClickable { isPressed.value = !isPressed.value },
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                    .clickable { isPressed.value = !isPressed.value },
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -197,7 +152,7 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                         .background(MaterialTheme.colorScheme.primary)
                 )
                 Text(
-                    "Tap to test spring",
+                    "Tap to test animation feel",
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
@@ -206,6 +161,7 @@ fun AppearanceScreen(prefs: SharedPreferences) {
 
             SettingsSlider(
                 title = "Animation Bounciness", 
+                description = "Higher values increase oscillation.",
                 value = damping, 
                 valueRange = 0.1f..1.0f,
                 onValueChange = { 
@@ -217,7 +173,8 @@ fun AppearanceScreen(prefs: SharedPreferences) {
             )
             
             SettingsSlider(
-                title = "Animation Stiffness", 
+                title = "Animation Speed", 
+                description = "Stiffness of the animation spring.",
                 value = stiffness, 
                 valueRange = 50f..1000f,
                 onValueChange = { 

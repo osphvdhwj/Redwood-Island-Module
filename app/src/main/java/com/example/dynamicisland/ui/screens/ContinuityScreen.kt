@@ -26,11 +26,11 @@ fun ContinuityScreen(prefs: SharedPreferences) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        SettingsCategoryHeader("Apple Ecosystem")
+        SettingsCategoryHeader("Continuity Experience")
         
         MD3ContinuityToggle(
-            title = "AirPods Pop-up", 
-            description = "Simulates the Apple AirPods connection card.", 
+            title = "AirPods Bridge", 
+            description = "iOS-style connection card for AirPods and Beats.", 
             icon = Icons.Default.Headset,
             key = SettingKey.AIRPODS_POPUP, 
             prefs = prefs,
@@ -38,8 +38,8 @@ fun ContinuityScreen(prefs: SharedPreferences) {
             context = context
         )
         MD3ContinuityToggle(
-            title = "Face ID Padlock", 
-            description = "Shows a smooth iOS-style padlock animation.", 
+            title = "Face ID Engine", 
+            description = "Unlock animation synced with biometric auth.", 
             icon = Icons.Default.Lock,
             key = SettingKey.FACE_ID_PADLOCK, 
             prefs = prefs,
@@ -48,7 +48,7 @@ fun ContinuityScreen(prefs: SharedPreferences) {
         )
         MD3ContinuityToggle(
             title = "MagSafe Charging", 
-            description = "Displays the circular MagSafe charging ring.", 
+            description = "Circular charging ring with haptic pulse.", 
             icon = Icons.Default.ChargingStation,
             key = SettingKey.MAGSAFE_CHARGING_ANIMATION, 
             prefs = prefs,
@@ -56,32 +56,11 @@ fun ContinuityScreen(prefs: SharedPreferences) {
             context = context
         )
 
-        SettingsCategoryHeader("Network Continuity")
+        SettingsCategoryHeader("Immersive Media")
         
         MD3ContinuityToggle(
-            title = "Clipboard Sync", 
-            description = "Syncs copied text across devices.", 
-            icon = Icons.Default.Assignment,
-            key = SettingKey.CLIPBOARD_SYNC, 
-            prefs = prefs,
-            scope = scope,
-            context = context
-        )
-        MD3ContinuityToggle(
-            title = "Wear OS Remote", 
-            description = "Allows smartwatch to trigger Island actions.", 
-            icon = Icons.Default.Watch,
-            key = SettingKey.WEAR_OS_REMOTE, 
-            prefs = prefs,
-            scope = scope,
-            context = context
-        )
-
-        SettingsCategoryHeader("Ambient Media")
-        
-        MD3ContinuityToggle(
-            title = "Artwork Backdrop", 
-            description = "Blurs background to match album art.", 
+            title = "Artwork Canvas", 
+            description = "Blur the Island backdrop with media album art colors.", 
             icon = Icons.Default.Brush,
             key = SettingKey.MEDIA_ARTWORK_BLUR, 
             prefs = prefs,
@@ -89,19 +68,19 @@ fun ContinuityScreen(prefs: SharedPreferences) {
             context = context
         )
         MD3ContinuityToggle(
-            title = "Now Playing AI", 
-            description = "Listens for ambient music.", 
-            icon = Icons.Default.Hearing,
-            key = SettingKey.NOW_PLAYING, 
+            title = "Waveform Visualizer", 
+            description = "Adaptive wavy seeker for active playback.", 
+            icon = Icons.Default.Waves,
+            key = SettingKey.WAVEFORM_ENABLED, 
             prefs = prefs,
             scope = scope,
             context = context
         )
         MD3ContinuityToggle(
-            title = "Waveform Visualizer", 
-            description = "Adds an audio-reactive wavy seeker bar.", 
-            icon = Icons.Default.Waves,
-            key = SettingKey.WAVEFORM_ENABLED, 
+            title = "Beat Pulse", 
+            description = "Sync the entire Island with audio tempo.", 
+            icon = Icons.Default.Hearing,
+            key = SettingKey.BPM_PULSE, 
             prefs = prefs,
             scope = scope,
             context = context

@@ -101,13 +101,12 @@ fun IslandPreviewCard(
     )
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // 200.dp Canvas Preview Area
+        // Expanded Canvas Preview Area to fit all states
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(Brush.radialGradient(listOf(Color(0xFF0A1628), Color.Black)))
+                .height(320.dp)
+                .background(Brush.radialGradient(listOf(Color(0xFF0A1628), Color.Black)), RoundedCornerShape(24.dp))
                 .border(1.dp, IslandColors.border, RoundedCornerShape(24.dp))
         ) {
             // Background Canvas (Phone Silhouette or 1:1 Screen Preview)

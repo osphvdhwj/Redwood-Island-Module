@@ -30,7 +30,7 @@ fun LayoutScreen(prefs: SharedPreferences) {
     val scope = rememberCoroutineScope()
     
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube", "System")
+    val tabs = listOf("Ring", "Mini", "Mid", "Max", "Cube")
 
     // State for the current tab
     var w by remember { mutableFloatStateOf(0f) }
@@ -43,13 +43,11 @@ fun LayoutScreen(prefs: SharedPreferences) {
     val currentPrefix = tabs[selectedTab].lowercase()
 
     LaunchedEffect(selectedTab) {
-        if (currentPrefix != "system") {
-            w = prefs.getFloat("${currentPrefix}_w", NewConfigManager.getDefaultWidth(currentPrefix))
-            h = prefs.getFloat("${currentPrefix}_h", NewConfigManager.getDefaultHeight(currentPrefix))
-            x = prefs.getFloat("${currentPrefix}_x", 0f)
-            y = prefs.getFloat("${currentPrefix}_y", 48f)
-            r = prefs.getFloat("${currentPrefix}_r", NewConfigManager.getDefaultRadius(currentPrefix))
-        }
+        w = prefs.getFloat("${currentPrefix}_w", NewConfigManager.getDefaultWidth(currentPrefix))
+        h = prefs.getFloat("${currentPrefix}_h", NewConfigManager.getDefaultHeight(currentPrefix))
+        x = prefs.getFloat("${currentPrefix}_x", 0f)
+        y = prefs.getFloat("${currentPrefix}_y", 48f)
+        r = prefs.getFloat("${currentPrefix}_r", NewConfigManager.getDefaultRadius(currentPrefix))
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -65,10 +63,10 @@ fun LayoutScreen(prefs: SharedPreferences) {
                 liveHeight = h,
                 liveX = x,
                 liveY = y,
-                liveRadius = r,
+                liveRadius = if (currentPrefix == "ring") h / 2 else r, // Force circle preview for ring
                 liveRingT = ringT,
-                isLivePreview = currentPrefix != "system",
-                previewState = if (currentPrefix == "system") "mini" else currentPrefix
+                isLivePreview = true,
+                previewState = currentPrefix
             )
         }
         
@@ -96,111 +94,89 @@ fun LayoutScreen(prefs: SharedPreferences) {
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
         ) {
-            if (currentPrefix == "system") {
-                SettingsCategoryHeader(title = "System Calibrations")
-                
-                var globalOffsetY by remember { mutableFloatStateOf(prefs.getFloat("tweak_offset_y", 0f)) }
-                SettingsSlider(
-                    title = "Global Vertical Offset", 
-                    description = "Shifts the entire UI up or down.",
-                    value = globalOffsetY, 
-                    valueRange = -100f..300f,
-                    onValueChange = {
-                        globalOffsetY = it
-                        NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("tweak_offset_y", it) }) {
-                            NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-                        }
-                    },
-                    valueFormatter = { "${it.toInt()} px" }
-                )
+            SettingsCategoryHeader(title = "${tabs[selectedTab]} Geometry")
+            
+            // Dynamic value ranges based on state
+            val widthRange = if (currentPrefix == "ring" || currentPrefix == "cube") 20f..150f else 100f..420f
+            val heightRange = if (currentPrefix == "ring" || currentPrefix == "cube") 20f..150f else 20f..300f
+            val radiusRange = 0f..200f
 
-                Card(
-                    modifier = Modifier.padding(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                ) {
-                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(16.dp))
-                        Text(
-                            "The Island is injected directly below your camera. Use these sliders to align it perfectly with your hardware cutout.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            } else {
-                SettingsCategoryHeader(title = "${tabs[selectedTab]} State Geometry")
-                
-                SettingsSlider(
-                    title = "Vertical Position", 
-                    description = "Fine-tune the height relative to the punch hole.",
-                    value = y, 
-                    valueRange = -50f..250f, 
-                    onValueChange = { 
-                        y = it
-                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
-                    },
-                    valueFormatter = { "${it.toInt()} dp" }
-                )
+            SettingsSlider(
+                title = "Width", 
+                description = "Standardize the horizontal span.",
+                value = w, 
+                valueRange = widthRange, 
+                onValueChange = { 
+                    w = it
+                    NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
+                },
+                valueFormatter = { "${it.toInt()} dp" }
+            )
+            
+            SettingsSlider(
+                title = "Height", 
+                description = "Adjust the vertical thickness.",
+                value = h, 
+                valueRange = heightRange, 
+                onValueChange = { 
+                    h = it
+                    NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
+                },
+                valueFormatter = { "${it.toInt()} dp" }
+            )
+            
+            SettingsSlider(
+                title = "Horizontal Offset", 
+                description = "X-axis alignment (0 is centered).",
+                value = x, 
+                valueRange = -150f..150f, 
+                onValueChange = { 
+                    x = it
+                    NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
+                },
+                valueFormatter = { "${it.toInt()} dp" }
+            )
 
+            SettingsSlider(
+                title = "Vertical Position", 
+                description = "Distance from the top (align with camera).",
+                value = y, 
+                valueRange = -50f..300f, 
+                onValueChange = { 
+                    y = it
+                    NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
+                },
+                valueFormatter = { "${it.toInt()} dp" }
+            )
+
+            // Hide corner radius for Ring as it's automatically calculated (height / 2)
+            if (currentPrefix != "ring") {
                 SettingsSlider(
                     title = "Corner Radius", 
-                    description = "Curve intensity of the pill/cube edges.",
+                    description = "Curve of the edges (higher = rounder).",
                     value = r, 
-                    valueRange = 0f..200f, 
+                    valueRange = radiusRange, 
                     onValueChange = { 
-                        r = it
+                        r = it.coerceAtLeast(4f) // Prevent crash with tiny values
                         NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
                     },
                     valueFormatter = { "${it.toInt()} dp" }
                 )
+            }
 
+            if (currentPrefix == "ring") {
+                SettingsCategoryHeader(title = "Ring Specifics")
                 SettingsSlider(
-                    title = "Width", 
-                    value = w, 
-                    valueRange = 10f..400f, 
+                    title = "Ring Thickness", 
+                    description = "Stroke width of the notification circle.",
+                    value = ringT, 
+                    valueRange = 1f..20f, 
                     onValueChange = { 
-                        w = it
+                        ringT = it
                         NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
                     },
                     valueFormatter = { "${it.toInt()} dp" }
                 )
-                
-                SettingsSlider(
-                    title = "Height", 
-                    value = h, 
-                    valueRange = 10f..400f, 
-                    onValueChange = { 
-                        h = it
-                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
-                    },
-                    valueFormatter = { "${it.toInt()} dp" }
-                )
-                
-                SettingsSlider(
-                    title = "Horizontal Offset", 
-                    value = x, 
-                    valueRange = -150f..150f, 
-                    onValueChange = { 
-                        x = it
-                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
-                    },
-                    valueFormatter = { "${it.toInt()} dp" }
-                )
-
-                if (currentPrefix == "ring") {
-                    SettingsCategoryHeader(title = "Ring Style")
-                    SettingsSlider(
-                        title = "Thickness", 
-                        value = ringT, 
-                        valueRange = 1f..20f, 
-                        onValueChange = { 
-                            ringT = it
-                            NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
-                        },
-                        valueFormatter = { "${it.toInt()} dp" }
-                    )
-                }
             }
             
             Spacer(modifier = Modifier.height(100.dp))
