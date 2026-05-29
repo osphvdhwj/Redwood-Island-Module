@@ -141,23 +141,20 @@ class SystemUIA15Hooks {
         private fun hookNotifPipeline(lpparam: XC_LoadPackage.LoadPackageParam) {
             try {
                 val pipelineClass = "com.android.systemui.statusbar.notification.collection.NotifPipeline"
-                val listenerClass = "com.android.systemui.statusbar.notification.collection.notifcollection.NotifCollectionListener"
                 
-                XposedHelpers.findAndHookMethod(
+                IslandHookEngine.hookAllMethodsByName(
                     pipelineClass, 
                     lpparam.classLoader, 
                     "addCollectionListener", 
-                    listenerClass, 
                     object : XC_MethodHook() {
                         override fun beforeHookedMethod(param: MethodHookParam) {
-                            val listener = param.args[0] ?: return
-                            XposedBridge.log("$TAG: Intercepting NotifPipeline Listener")
+                            val listener = param.args.firstOrNull() ?: return
+                            XposedBridge.log("$TAG: Intercepting NotifPipeline Listener: ${listener.javaClass.name}")
                             
-                            XposedHelpers.findAndHookMethod(listener.javaClass.name, lpparam.classLoader, "onEntryAdded", 
-                                "com.android.systemui.statusbar.notification.collection.NotificationEntry",
+                            IslandHookEngine.hookAllMethodsByName(listener.javaClass.name, lpparam.classLoader, "onEntryAdded", 
                                 object : XC_MethodHook() {
                                     override fun afterHookedMethod(innerParam: MethodHookParam) {
-                                        val entry = innerParam.args[0] ?: return
+                                        val entry = innerParam.args.firstOrNull() ?: return
                                         processNativeNotification(entry)
                                     }
                                 }
@@ -172,25 +169,31 @@ class SystemUIA15Hooks {
 
         private fun hookMediaPipeline(lpparam: XC_LoadPackage.LoadPackageParam) {
             try {
-                val dataManagerClass = "com.android.systemui.media.controls.domain.pipeline.MediaDataManager"
-                val listenerClass = "$dataManagerClass\$Listener"
+                // Hook LegacyMediaDataManagerImpl directly to avoid listener interface signature mismatches
+                val dataManagerClass = "com.android.systemui.media.controls.domain.pipeline.LegacyMediaDataManagerImpl"
 
-                XposedHelpers.findAndHookMethod(
+                IslandHookEngine.hookAllMethodsByName(
                     dataManagerClass,
                     lpparam.classLoader,
-                    "addListener",
-                    listenerClass,
+                    "onMediaDataLoaded",
                     object : XC_MethodHook() {
-                        override fun beforeHookedMethod(param: MethodHookParam) {
-                            val listener = param.args[0] ?: return
-                            XposedBridge.log("$TAG: Intercepting MediaDataManager Listener")
-
-                            IslandHookEngine.hookAllMethodsByName(listener.javaClass.name, lpparam.classLoader, "onMediaDataLoaded", object : XC_MethodHook() {
-                                override fun afterHookedMethod(innerParam: MethodHookParam) {
-                                    val data = innerParam.args.find { it?.javaClass?.name?.contains("MediaData") == true } ?: return
-                                    processNativeMedia(data)
-                                }
-                            })
+                        override fun afterHookedMethod(param: MethodHookParam) {
+                            val data = param.args.find { it?.javaClass?.name?.contains("MediaData") == true } ?: return
+                            processNativeMedia(data)
+                        }
+                    }
+                )
+                
+                // Fallback for older A13/A14 styles that might still use MediaDataManager
+                val oldDataManagerClass = "com.android.systemui.media.controls.pipeline.MediaDataManager"
+                IslandHookEngine.hookAllMethodsByName(
+                    oldDataManagerClass,
+                    lpparam.classLoader,
+                    "onMediaDataLoaded",
+                    object : XC_MethodHook() {
+                        override fun afterHookedMethod(param: MethodHookParam) {
+                            val data = param.args.find { it?.javaClass?.name?.contains("MediaData") == true } ?: return
+                            processNativeMedia(data)
                         }
                     }
                 )
