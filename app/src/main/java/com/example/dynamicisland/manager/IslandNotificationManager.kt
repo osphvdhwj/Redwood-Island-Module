@@ -20,6 +20,11 @@ class IslandNotificationManager(
 ) {
     private val notificationMap = mutableMapOf<String, MutableList<SimpleNotification>>()
 
+    fun clearAll() {
+        notificationMap.values.flatten().forEach { it.avatar?.recycle() }
+        notificationMap.clear()
+    }
+
     // This function will be called directly by our Xposed Hook when a notification arrives
     fun processIncomingNotification(packageName: String, notification: Notification) {
         scope.launch {
@@ -90,7 +95,10 @@ class IslandNotificationManager(
 
             // 📦 FEATURE 4: Smart Coalescing (Stacking)
             val list = notificationMap.getOrPut(packageName) { mutableListOf() }
-            if (list.size > 5) list.removeAt(0) // Keep last 5
+            if (list.size > 3) {
+                val old = list.removeAt(0) // Keep last 3
+                old.avatar?.recycle()
+            }
             list.add(simpleNotif)
 
             val stack = LiveActivityModel.NotificationStack(

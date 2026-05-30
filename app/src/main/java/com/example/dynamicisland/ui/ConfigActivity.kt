@@ -33,10 +33,7 @@ import com.example.dynamicisland.settings.SettingsViewModel
 import com.example.dynamicisland.settings.SettingsManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
-import android.content.Intent
-import android.net.Uri
 import android.provider.Settings
-import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
@@ -52,126 +49,15 @@ class ConfigActivity : ComponentActivity() {
         settingsViewModel = SettingsViewModel(settingsManager)
         val prefs = getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
         
-        val hasCompletedSetup = prefs.getBoolean("has_completed_setup", false)
-        if (!hasCompletedSetup) {
-            startActivity(Intent(this, com.example.dynamicisland.ui.setup.SetupActivity::class.java))
-            finish()
-            return
-        }
-
         val composeView = ComposeView(this).apply {
             setContent {
                 RedwoodTheme {
-                    PermissionGuard {
-                        ConfigScreenNav(prefs, settingsViewModel)
-                    }
+                    ConfigScreenNav(prefs, settingsViewModel)
                 }
             }
         }
         setContentView(composeView)
     }
-}
-
-@Composable
-fun PermissionGuard(content: @Composable () -> Unit) {
-    val context = LocalContext.current
-    var isOverlayMissing by remember { mutableStateOf(!Settings.canDrawOverlays(context)) }
-    var isNotificationMissing by remember { mutableStateOf(!isNotificationListenerEnabled(context)) }
-    var isAccessibilityMissing by remember { mutableStateOf(!isAccessibilityServiceEnabled(context)) }
-
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                isOverlayMissing = !Settings.canDrawOverlays(context)
-                isNotificationMissing = !isNotificationListenerEnabled(context)
-                isAccessibilityMissing = !isAccessibilityServiceEnabled(context)
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    val missingPermission = when {
-        isOverlayMissing -> "Overlay"
-        isNotificationMissing -> "Notification Access"
-        isAccessibilityMissing -> "Accessibility"
-        else -> null
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        content()
-
-        if (missingPermission != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.92f))
-                    .clickable(enabled = false) {},
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(32.dp)
-                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(28.dp))
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        Icons.Default.GppMaybe, 
-                        null, 
-                        tint = MaterialTheme.colorScheme.error, 
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        "Permission Shield", 
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Black
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "The Island requires $missingPermission to sit above other apps. Tap below to enable it.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 20.sp
-                    )
-                    Spacer(Modifier.height(32.dp))
-                    
-                    Button(
-                        onClick = {
-                            when {
-                                isOverlayMissing -> {
-                                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
-                                    context.startActivity(intent)
-                                }
-                                isNotificationMissing -> {
-                                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                                }
-                                isAccessibilityMissing -> {
-                                    context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                                }
-                            }
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth().height(56.dp)
-                    ) {
-                        Text("Grant $missingPermission", fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-    }
-}
-
-private fun isNotificationListenerEnabled(context: Context): Boolean {
-    return NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
-}
-
-private fun isAccessibilityServiceEnabled(context: Context): Boolean {
-    val expectedId = "${context.packageName}/com.example.dynamicisland.accessibility.IslandAccessibilityService"
-    val enabledServices = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-    return enabledServices?.contains(expectedId) == true
 }
 
 data class NavItemData(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
@@ -208,15 +94,8 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            AnimatedContent<Int>(
+            Crossfade(
                 targetState = selectedNav,
-                transitionSpec = {
-                    if (targetState > initialState) {
-                        slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()
-                    } else {
-                        slideInHorizontally { -it } + fadeIn() togetherWith slideOutHorizontally { it } + fadeOut()
-                    }.using(SizeTransform(clip = false))
-                },
                 label = "TabTransition"
             ) { navIndex ->
                 when (navIndex) {

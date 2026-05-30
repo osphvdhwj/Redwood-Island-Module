@@ -146,6 +146,9 @@ class IslandMediaManager(
             var txtColor = android.graphics.Color.WHITE
 
             if (albumArtBitmap != null) {
+                // Recycle old blurred bitmap if it exists
+                currentMedia?.blurredAlbumArt?.recycle()
+                
                 // Optimized Blur using cached RenderScript
                 blurredArtBitmap = blurBitmapOptimized(albumArtBitmap)
                 
@@ -182,6 +185,11 @@ class IslandMediaManager(
             }
 
             withContext(Dispatchers.Main) {
+                // Explicitly recycle the previous album art if it's different
+                if (currentMedia?.albumArt != albumArtBitmap) {
+                    currentMedia?.albumArt?.recycle()
+                }
+                
                 currentMedia = LiveActivityModel.Music(
                     id = "media_main", type = ActivityType.MESSAGE, title = newTitle, artist = artistString, 
                     albumArt = albumArtBitmap, blurredAlbumArt = blurredArtBitmap, appIcon = appIconBmp, 
@@ -271,6 +279,7 @@ class IslandMediaManager(
             var txtColor = android.graphics.Color.WHITE
 
             if (artwork != null) {
+                currentMedia?.blurredAlbumArt?.recycle()
                 blurredArtBitmap = blurBitmapOptimized(artwork)
                 val palette = Palette.from(artwork).generate()
                 val swatch = palette.darkVibrantSwatch ?: palette.darkMutedSwatch ?: palette.dominantSwatch
@@ -298,6 +307,9 @@ class IslandMediaManager(
             )
 
             withContext(Dispatchers.Main) {
+                if (currentMedia?.albumArt != artwork) {
+                    currentMedia?.albumArt?.recycle()
+                }
                 currentMedia = musicModel
                 onMediaChanged(musicModel)
             }
@@ -316,6 +328,9 @@ class IslandMediaManager(
             sessionManager.removeOnActiveSessionsChangedListener(sessionListener)
             activeMediaController?.unregisterCallback(mediaCallback)
             stopTicker()
+            currentMedia?.albumArt?.recycle()
+            currentMedia?.blurredAlbumArt?.recycle()
+            currentMedia?.appIcon?.recycle()
             rs.destroy() // Clean up hardware resources
         } catch (e: Exception) {}
     }

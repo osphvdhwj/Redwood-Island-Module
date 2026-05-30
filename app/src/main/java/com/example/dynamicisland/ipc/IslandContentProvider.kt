@@ -82,7 +82,10 @@ class IslandContentProvider : ContentProvider() {
             lock.read { store[key]?.first?.toIntOrNull() ?: default }
 
         fun getBoolean(key: String, default: Boolean = false): Boolean =
-            lock.read { store[key]?.first?.toBooleanStrictOrNull() ?: default }
+            lock.read { 
+                val raw = store[key]?.first?.lowercase() ?: return@read default
+                raw == "true" || raw == "1"
+            }
 
         fun getString(key: String, default: String = ""): String =
             lock.read { store[key]?.first ?: default }

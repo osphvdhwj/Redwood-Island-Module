@@ -3,10 +3,24 @@ package com.example.dynamicisland.settings
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.ui.graphics.Color
+import com.example.dynamicisland.ipc.IslandIPCClient
+import org.json.JSONObject
 
+/**
+ * Pro-Grade Settings Manager
+ * 
+ * AUTOMATIC BRIDGE:
+ * - In the module app: Reads/Writes to local SharedPreferences.
+ * - In SystemUI: Reads from the IslandIPCClient (ContentProvider).
+ * 
+ * This ensures "Settings taking effect" without complex manual sync logic.
+ */
 class SettingsManager(private val context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+
+    private val isSystemUI = context.packageName == "com.android.systemui"
+    private val ipcClient by lazy { IslandIPCClient.get(context) }
 
     fun broadcastUpdate() {
         try {
@@ -118,44 +132,63 @@ class SettingsManager(private val context: Context) {
         CALL_STYLE, CHARGING_STYLE, BATTERY_STYLE
     }
 
-    // Type-safe getters and setters
     fun getBoolean(key: SettingKey, default: Boolean): Boolean =
-        prefs.getBoolean(key.name, default)
+        if (isSystemUI) ipcClient.getBoolean(key.name, default)
+        else prefs.getBoolean(key.name, default)
 
-    fun putBoolean(key: SettingKey, value: Boolean) =
+    fun putBoolean(key: SettingKey, value: Boolean) {
         prefs.edit().putBoolean(key.name, value).apply()
+        if (!isSystemUI) ipcClient.putBoolean(key.name, value)
+    }
 
     fun getInt(key: SettingKey, default: Int): Int =
-        prefs.getInt(key.name, default)
+        if (isSystemUI) ipcClient.getInt(key.name, default)
+        else prefs.getInt(key.name, default)
 
-    fun putInt(key: SettingKey, value: Int) =
+    fun putInt(key: SettingKey, value: Int) {
         prefs.edit().putInt(key.name, value).apply()
+        if (!isSystemUI) ipcClient.putInt(key.name, value)
+    }
 
     fun getFloat(key: SettingKey, default: Float): Float =
-        prefs.getFloat(key.name, default)
+        if (isSystemUI) ipcClient.getFloat(key.name, default)
+        else prefs.getFloat(key.name, default)
 
-    fun putFloat(key: SettingKey, value: Float) =
+    fun putFloat(key: SettingKey, value: Float) {
         prefs.edit().putFloat(key.name, value).apply()
+        if (!isSystemUI) ipcClient.putFloat(key.name, value)
+    }
 
     fun getString(key: SettingKey, default: String?): String? =
-        prefs.getString(key.name, default)
+        if (isSystemUI) ipcClient.getString(key.name, default ?: "")
+        else prefs.getString(key.name, default)
 
-    fun putString(key: SettingKey, value: String) =
+    fun putString(key: SettingKey, value: String) {
         prefs.edit().putString(key.name, value).apply()
+        if (!isSystemUI) ipcClient.putString(key.name, value)
+    }
 
     fun getStringSet(key: SettingKey, default: Set<String>): Set<String> =
-        prefs.getStringSet(key.name, default) ?: default
+        if (isSystemUI) {
+            // IPCClient doesn't support Set directly, we use JSON array string
+            val raw = ipcClient.getString(key.name, "")
+            if (raw.isEmpty()) default else raw.split(",").toSet()
+        } else {
+            prefs.getStringSet(key.name, default) ?: default
+        }
 
-    fun putStringSet(key: SettingKey, values: Set<String>) =
+    fun putStringSet(key: SettingKey, values: Set<String>) {
         prefs.edit().putStringSet(key.name, values).apply()
+        if (!isSystemUI) ipcClient.putString(key.name, values.joinToString(","))
+    }
 
-    // Bulk operations
-    fun getAll(): Map<String, *> = prefs.all
-
-    fun resetAll() = prefs.edit().clear().apply()
+    fun resetAll() {
+        prefs.edit().clear().apply()
+        // No bulk delete in IPC yet, but a reboot usually follows reset
+    }
 
     fun getSettingsState(): SettingsState {
-        val iconPackName = prefs.getString("icon_pack", "MATERIAL_YOU") ?: "MATERIAL_YOU"
+        val iconPackName = getString(SettingKey.ICON_PACK, "MATERIAL_YOU") ?: "MATERIAL_YOU"
         return SettingsState(
             // Appearance
             designLanguage = if (getBoolean(SettingKey.USE_LIQUID_GLASS, false)) DesignLanguage.APPLE_LIQUID_GLASS else DesignLanguage.MATERIAL_YOU,
@@ -163,7 +196,7 @@ class SettingsManager(private val context: Context) {
             customAccentColor = Color(getInt(SettingKey.ACCENT_COLOR, 0xFF6750A4.toInt())),
             blurIntensity = getFloat(SettingKey.BLUR_INTENSITY, 15f),
             pillCornerRadius = getFloat(SettingKey.PILL_RADIUS, 100f),
-            animationSpeed = AnimationSpeed.valueOf(getString(SettingKey.ANIM_SPEED, "NORMAL") ?: "NORMAL"),
+            animationSpeed = try { AnimationSpeed.valueOf(getString(SettingKey.ANIM_SPEED, "NORMAL") ?: "NORMAL") } catch(e: Exception) { AnimationSpeed.NORMAL },
             showRingIdle = getBoolean(SettingKey.RING_IDLE, true),
             pillShape = getString(SettingKey.PILL_SHAPE, "pill") ?: "pill",
             dynamicGradient = getBoolean(SettingKey.DYNAMIC_GRADIENT, true),
@@ -208,112 +241,12 @@ class SettingsManager(private val context: Context) {
             ringCadenceVibration = getBoolean(SettingKey.RING_CADENCE_VIBRATION, true),
             hapticMorseAlerts = getBoolean(SettingKey.HAPTIC_MORSE_ALERTS, false),
 
-            // Prediction & Smart Features
-            predictionTint = getBoolean(SettingKey.PREDICTION_TINT, true),
-            predictiveActions = getBoolean(SettingKey.PREDICTIVE_ACTIONS, true),
-            autoDismissDelay = getInt(SettingKey.AUTO_DISMISS_DELAY, 5),
-            contextualSuggestions = getBoolean(SettingKey.CONTEXTUAL_SUGGESTIONS, true),
-            gestureLearning = getBoolean(SettingKey.GESTURE_LEARNING, true),
-            voiceTrigger = getBoolean(SettingKey.VOICE_TRIGGER, false),
-            adaptiveBrightnessVolume = getBoolean(SettingKey.ADAPTIVE_BRIGHTNESS_VOLUME, false),
-            appPredictionSuggestion = getBoolean(SettingKey.APP_PREDICTION_SUGGESTION, true),
-            contextualRoutineLauncher = getBoolean(SettingKey.CONTEXTUAL_ROUTINE_LAUNCHER, true),
-
-            // Cross-Device & Continuity
-            clipboardSync = getBoolean(SettingKey.CLIPBOARD_SYNC, false),
-            universalControl = getBoolean(SettingKey.UNIVERSAL_CONTROL, false),
-            quickNote = getBoolean(SettingKey.QUICK_NOTE, true),
-            phoneToTabletHandoff = getBoolean(SettingKey.PHONE_TO_TABLET_HANDOFF, false),
-            nearbyShareProgress = getBoolean(SettingKey.NEARBY_SHARE_PROGRESS, true),
-            multiDeviceClipboard = getBoolean(SettingKey.MULTI_DEVICE_CLIPBOARD, false),
-            wearOsRemote = getBoolean(SettingKey.WEAR_OS_REMOTE, false),
-            airpodsPopup = getBoolean(SettingKey.AIRPODS_POPUP, true),
-            airplayCastIndicator = getBoolean(SettingKey.AIRPLAY_CAST_INDICATOR, true),
-            homePodControl = getBoolean(SettingKey.HOME_POD_CONTROL, false),
-
-            // iOS-Inspired
-            liveActivitiesApi = getBoolean(SettingKey.LIVE_ACTIVITIES_API, true),
-            focusFilterIntegration = getBoolean(SettingKey.FOCUS_FILTER_INTEGRATION, true),
-            universalClipboardPreviews = getBoolean(SettingKey.UNIVERSAL_CLIPBOARD_PREVIEWS, true),
-            alwaysOnDisplayCompanion = getBoolean(SettingKey.ALWAYS_ON_DISPLAY_COMPANION, true),
-            faceIDPadlock = getBoolean(SettingKey.FACE_ID_PADLOCK, true),
-            ringModeSwitch = getBoolean(SettingKey.RING_MODE_SWITCH, true),
-            timerIntegration = getBoolean(SettingKey.TIMER_INTEGRATION, true),
-            magsafeChargingAnimation = getBoolean(SettingKey.MAGSAFE_CHARGING_ANIMATION, true),
-            proximityWake = getBoolean(SettingKey.PROXIMITY_WAKE, false),
-
-            // Android Ecosystem
-            materialYouDynamicContrast = getBoolean(SettingKey.MATERIAL_YOU_DYNAMIC_CONTRAST, true),
-            quickSettingsTile = getBoolean(SettingKey.QUICK_SETTINGS_TILE, true),
-            digitalWellbeingIntegration = getBoolean(SettingKey.DIGITAL_WELLBEING_INTEGRATION, false),
-            rootAdbFeatures = getBoolean(SettingKey.ROOT_ADB_FEATURES, false),
-            iconPack = IconPack.fromString(iconPackName),
-
-            // Accessibility
-            talkbackIntegration = getBoolean(SettingKey.TALKBACK_INTEGRATION, true),
-            oneHandMode = getBoolean(SettingKey.ONE_HAND_MODE, false),
-            dedicatedOneHandPlacement = getBoolean(SettingKey.DEDICATED_ONE_HAND_PLACEMENT, false),
-
-            // Customisation
-            customPillAnimations = getString(SettingKey.CUSTOM_PILL_ANIMATIONS, null),
-            thirdPartyWidgetApi = getBoolean(SettingKey.THIRD_PARTY_WIDGET_API, false),
-
-            // Battery & Performance
-            batteryAwareAnimation = getBoolean(SettingKey.BATTERY_AWARE_ANIMATION, true),
-            dozeModeOptimisation = getBoolean(SettingKey.DOZE_MODE_OPTIMISATION, true),
-            quickPerformanceProfile = getBoolean(SettingKey.QUICK_PERFORMANCE_PROFILE, true),
-            dataSaver = getBoolean(SettingKey.DATA_SAVER, false),
-
-            // Gamification
-            islandStreaks = getBoolean(SettingKey.ISLAND_STREAKS, true),
-            leaderboard = getBoolean(SettingKey.LEADERBOARD, false),
-            exclusiveThemes = getBoolean(SettingKey.EXCLUSIVE_THEMES, false),
-            achievementsEnabled = getBoolean(SettingKey.ACHIEVEMENTS_ENABLED, true),
-            showAchievementBadge = getBoolean(SettingKey.ACHIEVEMENTS_DISPLAY, true),
-
-            // Privacy & Security
-            clipboardCleaner = getBoolean(SettingKey.CLIPBOARD_CLEANER, true),
-            vpnTorIndicator = getBoolean(SettingKey.VPN_TOR_INDICATOR, true),
-
-            // Experimental
-            arIsland = getBoolean(SettingKey.AR_ISLAND, false),
-            mindfulnessBreathPacer = getBoolean(SettingKey.MINDFULNESS_BREATH_PACER, false),
-            morseCodeInput = getBoolean(SettingKey.MORSE_CODE_INPUT, false),
-            multiUserProfileSwitching = getBoolean(SettingKey.MULTI_USER_PROFILE_SWITCHING, false),
-            cryptoStockTicker = getBoolean(SettingKey.CRYPTO_STOCK_TICKER, false),
-
-            // Developer Tools
-            adbCommandInjector = getBoolean(SettingKey.ADB_COMMAND_INJECTOR, false),
-            taskerPlugin = getBoolean(SettingKey.TASKER_PLUGIN, true),
-            logDebugOverlay = getBoolean(SettingKey.LOG_DEBUG_OVERLAY, false),
-            openSourceSdk = getBoolean(SettingKey.OPEN_SOURCE_SDK, true),
-
             // Global Controls
             islandEnabled = getBoolean(SettingKey.ISLAND_ENABLED, true),
             islandOnLockscreen = getBoolean(SettingKey.ISLAND_ON_LOCKSCREEN, true),
-            lockscreenFeatures = getStringSet(SettingKey.FEATURES_ON_LOCKSCREEN, setOf("music", "notifications")),
             allowedNotificationApps = getStringSet(SettingKey.ALLOWED_NOTIFICATION_APPS, emptySet()),
             swipeLeftAction = getString(SettingKey.SWIPE_LEFT_ACTION, "dismiss") ?: "dismiss",
             swipeRightAction = getString(SettingKey.SWIPE_RIGHT_ACTION, "next_track") ?: "next_track",
-
-            // Call & Communication
-            callScreenTranscript = getBoolean(SettingKey.CALL_SCREEN_TRANSCRIPT, true),
-            silentRingModeSwitch = getBoolean(SettingKey.SILENT_RING_MODE_SWITCH, true),
-
-            // Weather & Environment
-            weatherMoodRing = getBoolean(SettingKey.WEATHER_MOOD_RING, true),
-            atAGlance = getBoolean(SettingKey.AT_A_GLANCE, true),
-
-            // Split & Multi-Event
-            splitPillEnabled = getBoolean(SettingKey.SPLIT_PILL_ENABLED, true),
-            mergeSimultaneousEvents = getBoolean(SettingKey.MERGE_SIMULTANEOUS_EVENTS, true),
-            multiIslandStack = getBoolean(SettingKey.MULTI_ISLAND_STACK, false),
-
-            // Continuity Camera
-            continuityCameraActions = getBoolean(SettingKey.CONTINUITY_CAMERA_ACTIONS, true),
-
-            // Focus & DND
-            focusModePill = getBoolean(SettingKey.FOCUS_MODE_PILL, true),
 
             // App Roles
             roleCallingApp = getString(SettingKey.ROLE_CALLING_APP, "") ?: "",
@@ -323,9 +256,9 @@ class SettingsManager(private val context: Context) {
             allowedNotesApps = getStringSet(SettingKey.ALLOWED_NOTES_APPS, emptySet()),
 
             // Styles
-            callStyle = CallStyle.valueOf(getString(SettingKey.CALL_STYLE, "IOS") ?: "IOS"),
-            chargingStyle = ChargingStyle.valueOf(getString(SettingKey.CHARGING_STYLE, "RING") ?: "RING"),
-            batteryStyle = BatteryStyle.valueOf(getString(SettingKey.BATTERY_STYLE, "PILL") ?: "PILL")
+            callStyle = try { CallStyle.valueOf(getString(SettingKey.CALL_STYLE, "IOS") ?: "IOS") } catch(e: Exception) { CallStyle.IOS },
+            chargingStyle = try { ChargingStyle.valueOf(getString(SettingKey.CHARGING_STYLE, "RING") ?: "RING") } catch(e: Exception) { ChargingStyle.RING },
+            batteryStyle = try { BatteryStyle.valueOf(getString(SettingKey.BATTERY_STYLE, "PILL") ?: "PILL") } catch(e: Exception) { BatteryStyle.PILL }
         )
     }
 }
