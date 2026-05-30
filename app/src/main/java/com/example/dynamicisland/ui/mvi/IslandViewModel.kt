@@ -112,6 +112,8 @@ class IslandViewModel @Inject constructor(
                 is IslandIntent.UpdateScreenState -> currentState.copy(isScreenOn = intent.isScreenOn)
                 
                 is IslandIntent.UpdatePowerSaveMode -> currentState.copy(isPowerSaveMode = intent.isPowerSaveMode)
+                
+                is IslandIntent.ToggleCalibration -> currentState // Handled via side-effects or direct view state
             }
         }
     }

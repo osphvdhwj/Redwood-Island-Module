@@ -84,7 +84,7 @@ class IslandController @Inject constructor(
         mediaManager.isMediaEnabled = state.mediaArtworkBlur || state.waveformEnabled || state.nowPlaying
         mediaManager.allowedMusicApps = state.allowedMusicApps
         mediaManager.allowedMediaApps = state.allowedMediaApps
-        mediaManager.userVideoApp = state.roleVideoApp.takeIf { it.isNotEmpty() }
+        mediaManager.userVideoApp = state.allowedMediaApps.firstOrNull()?.takeIf { it.isNotEmpty() }
         
         callManager.userCallingApp = state.roleCallingApp.takeIf { it.isNotEmpty() }
         
