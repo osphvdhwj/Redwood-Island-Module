@@ -238,6 +238,8 @@ class IslandContentProvider : ContentProvider() {
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
         val result = Bundle()
+        val legacy = context?.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+
         when (method) {
             "GET_FLOAT"   -> result.putFloat("v",   getFloat(arg   ?: "", extras?.getFloat("d")   ?: 0f))
             "GET_INT"     -> result.putInt("v",     getInt(arg     ?: "", extras?.getInt("d")     ?: 0))
@@ -245,13 +247,34 @@ class IslandContentProvider : ContentProvider() {
             "GET_STRING"  -> result.putString("v",  getString(arg  ?: "", extras?.getString("d")  ?: ""))
             "GET_SNAPSHOT"-> result.putString("v",  snapshotJson().toString())
 
-            "PUT_FLOAT"   -> { putFloat(arg   ?: "", extras?.getFloat("v")   ?: 0f);   notifyAllObservers() }
-            "PUT_INT"     -> { putInt(arg     ?: "", extras?.getInt("v")     ?: 0);    notifyAllObservers() }
-            "PUT_BOOLEAN" -> { putBoolean(arg ?: "", extras?.getBoolean("v") ?: false); notifyAllObservers() }
-            "PUT_STRING"  -> { putString(arg  ?: "", extras?.getString("v")  ?: "");   notifyAllObservers() }
+            "PUT_FLOAT"   -> { 
+                val v = extras?.getFloat("v") ?: 0f
+                putFloat(arg ?: "", v)
+                legacy?.edit()?.putFloat(arg ?: "", v)?.apply()
+                notifyAllObservers() 
+            }
+            "PUT_INT"     -> { 
+                val v = extras?.getInt("v") ?: 0
+                putInt(arg ?: "", v)
+                legacy?.edit()?.putInt(arg ?: "", v)?.apply()
+                notifyAllObservers() 
+            }
+            "PUT_BOOLEAN" -> { 
+                val v = extras?.getBoolean("v") ?: false
+                putBoolean(arg ?: "", v)
+                legacy?.edit()?.putBoolean(arg ?: "", v)?.apply()
+                notifyAllObservers() 
+            }
+            "PUT_STRING"  -> { 
+                val v = extras?.getString("v") ?: ""
+                putString(arg ?: "", v)
+                legacy?.edit()?.putString(arg ?: "", v)?.apply()
+                notifyAllObservers() 
+            }
             "PUT_JSON"    -> {
                 val json = try { JSONObject(extras?.getString("v") ?: "{}") } catch (e: Exception) { JSONObject() }
                 putJson(arg ?: "", json)
+                legacy?.edit()?.putString(arg ?: "", json.toString())?.apply()
                 notifyAllObservers()
             }
 
@@ -259,12 +282,23 @@ class IslandContentProvider : ContentProvider() {
                 val payload = extras?.getString("payload") ?: return result
                 try {
                     val obj = JSONObject(payload)
+                    val editor = legacy?.edit()
                     lock.write {
                         obj.keys().forEach { key ->
                             val entry = obj.getJSONObject(key)
-                            store[key] = Pair(entry.getString("v"), entry.getString("t"))
+                            val v = entry.getString("v")
+                            val t = entry.getString("t")
+                            store[key] = Pair(v, t)
+                            
+                            when (t) {
+                                TYPE_FLOAT -> editor?.putFloat(key, v.toFloat())
+                                TYPE_INT -> editor?.putInt(key, v.toInt())
+                                TYPE_BOOLEAN -> editor?.putBoolean(key, v.toBoolean() || v == "1")
+                                else -> editor?.putString(key, v)
+                            }
                         }
                     }
+                    editor?.apply()
                     notifyAllObservers()
                     result.putBoolean("ok", true)
                 } catch (e: Exception) {

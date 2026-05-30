@@ -72,13 +72,12 @@ class IslandController @Inject constructor(
 
     private fun applySettings(state: com.example.dynamicisland.settings.SettingsState) {
         if (!isSystemProcess) return 
+// Feature 199: Wire up the managers based on toggles
+mediaManager.isMediaEnabled = state.mediaArtworkBlur || state.waveformEnabled || state.nowPlaying
+mediaManager.allowedMusicApps = state.allowedMusicApps
+mediaManager.allowedMediaApps = state.allowedMediaApps
 
-        mediaManager.isMediaEnabled = state.mediaArtworkBlur || state.waveformEnabled || state.nowPlaying
-        mediaManager.allowedMusicApps = state.allowedMusicApps
-        mediaManager.allowedMediaApps = state.allowedMediaApps
-        mediaManager.userVideoApp = state.allowedMediaApps.firstOrNull()?.takeIf { it.isNotEmpty() }
-        
-        callManager.userCallingApp = state.roleCallingApp.takeIf { it.isNotEmpty() }
+callManager.userCallingApp = state.roleCallingApp.takeIf { it.isNotEmpty() }
         
         isChargingEnabled = state.magsafeChargingAnimation || state.batteryAwareAnimation
         isAlertsEnabled = state.otpDetection || state.linkIntercept || state.barcode || state.translation
@@ -276,11 +275,14 @@ class IslandController @Inject constructor(
         if (!isSystemProcess || !settingsState.islandEnabled) {
             _lastIslandState = IslandState.HIDDEN
             eventBus.emit(IslandIntent.SyncState(IslandState.HIDDEN, null, null))
-            updateWindowHeight(false)
+            updateWindowHeight(IslandState.HIDDEN)
             return
         }
         
-        if (islandView?.calibrationMode?.value == true) { updateWindowHeight(true); return }
+        if (islandView?.calibrationMode?.value == true) { 
+            updateWindowHeight(IslandState.TYPE_2_MID) // Force expansion for calibration visibility
+            return 
+        }
 
         val result = IslandPriorityEngine.evaluatePriority(
             context = context, windowManager = windowManager, topAppPackage = topAppPackage,
@@ -301,17 +303,32 @@ class IslandController @Inject constructor(
         eventBus.emit(IslandIntent.SyncState(result.islandState, result.activeModel, result.splitModel))
         triggerTransitionHaptic(result.islandState)
         
-        updateWindowHeight(result.islandState != IslandState.HIDDEN && result.islandState != IslandState.TYPE_0_RING)
+        updateWindowHeight(result.islandState)
     }
 
-    private fun updateWindowHeight(isExpanded: Boolean) {
+    private fun updateWindowHeight(state: IslandState) {
         val wm = windowManager ?: return
         val view = islandView ?: return
         val wp = windowParams ?: return
-        val targetHeight = if (isExpanded) (320 * context.resources.displayMetrics.density).toInt() else (94 * context.resources.displayMetrics.density).toInt()
         
-        if (wp.height != targetHeight) {
+        val density = context.resources.displayMetrics.density
+        val targetHeight = when (state) {
+            IslandState.HIDDEN -> 1 // 1 pixel tall, effectively invisible but alive
+            IslandState.TYPE_0_RING, IslandState.TYPE_1_MINI -> (94 * density).toInt()
+            else -> (320 * density).toInt()
+        }
+        
+        // Dynamically update flags: NOT_TOUCHABLE when tiny
+        val isTouchable = state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING
+        val newFlags = if (isTouchable) {
+             wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+        } else {
+             wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        }
+        
+        if (wp.height != targetHeight || wp.flags != newFlags) {
             wp.height = targetHeight
+            wp.flags = newFlags
             try { wm.updateViewLayout(view, wp) } catch (e: Exception) {}
         }
     }

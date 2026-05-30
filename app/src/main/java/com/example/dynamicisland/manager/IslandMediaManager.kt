@@ -52,7 +52,6 @@ class IslandMediaManager(
     
     var allowedMusicApps: Set<String> = emptySet()
     var allowedMediaApps: Set<String> = emptySet()
-    var userVideoApp: String? = null
 
     // 🚀 OPTIMIZATION: Reuse RenderScript context to prevent memory leaks and GC jank
     private val rs: RenderScript by lazy { RenderScript.create(context) }
@@ -120,7 +119,7 @@ class IslandMediaManager(
         // 🎬 THE VIDEO CLASSIFIER HEURISTIC
         val pkg = controller.packageName ?: ""
         val knownVideoApps = listOf("com.netflix.mediaclient", "org.videolan.vlc", "com.mxtech.videoplayer.ad", "com.mxtech.videoplayer.pro", "com.google.android.youtube")
-        val isVideoPackage = knownVideoApps.contains(pkg) || pkg == userVideoApp
+        val isVideoPackage = knownVideoApps.contains(pkg) || allowedMediaApps.contains(pkg)
 
         val isWideThumbnail = albumArtBitmap?.let { (it.width.toFloat() / it.height.toFloat()) > 1.3f } ?: false
         val isVideoContent = isVideoPackage || isWideThumbnail
