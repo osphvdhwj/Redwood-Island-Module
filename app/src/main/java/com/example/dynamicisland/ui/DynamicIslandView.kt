@@ -108,7 +108,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     val pinnedApps = mutableStateListOf("", "", "", "", "", "", "", "")
     val qsTiles = mutableStateListOf("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
 
-    val islandState = mutableStateOf(IslandState.HIDDEN)
+    val islandState = mutableStateOf(IslandState.TYPE_0_RING)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
     val splitModel = mutableStateOf<LiveActivityModel?>(null)
 

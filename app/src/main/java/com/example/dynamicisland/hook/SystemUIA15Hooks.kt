@@ -97,6 +97,9 @@ class SystemUIA15Hooks {
                         val islandView = DynamicIslandView(context, moduleContext)
                         ctrl.islandView = islandView
                         
+                        islandView.elevation = 999f
+                        islandView.translationZ = 999f
+                        
                         val lp = FrameLayout.LayoutParams(
                             FrameLayout.LayoutParams.MATCH_PARENT,
                             FrameLayout.LayoutParams.MATCH_PARENT
@@ -107,6 +110,7 @@ class SystemUIA15Hooks {
                         // Aggressive recursive un-clipping
                         unclipRecursive(root)
                         
+                        XposedBridge.log("$TAG: Attaching IslandView to SystemUI Root")
                         root.addView(islandView, lp)
                         islandView.bringToFront()
                         
@@ -131,21 +135,21 @@ class SystemUIA15Hooks {
         }
 
         private fun hookHardwareControllers(lpparam: XC_LoadPackage.LoadPackageParam) {
-            // Hook FlashlightController to sync state and grab instance
+            // Hook setFlashlight to grab controller instance and detect changes
             try {
                 val flashlightClass = "com.android.systemui.statusbar.policy.FlashlightControllerImpl"
-                IslandHookEngine.hookAllMethodsByName(flashlightClass, lpparam.classLoader, "onTorchModeChanged", object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
+                IslandHookEngine.hookAllMethodsByName(flashlightClass, lpparam.classLoader, "setFlashlight", object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
                         flashlightController = param.thisObject
                         val enabled = param.args.getOrNull(0) as? Boolean ?: return
-                        XposedBridge.log("$TAG: System Flashlight changed -> $enabled")
+                        XposedBridge.log("$TAG: System Flashlight set -> $enabled")
                         controller?.postTransientNotification(
                             LiveActivityModel.General(
                                 id = "sys_torch", type = ActivityType.HARDWARE,
                                 title = if (enabled) "Flashlight On" else "Flashlight Off",
                                 dataText = if (enabled) "System torch is active" else "Torch disabled",
                                 accentColor = if (enabled) android.graphics.Color.YELLOW else android.graphics.Color.GRAY
-                            ), 2500L
+                            ), 3000L
                         )
                     }
                 })

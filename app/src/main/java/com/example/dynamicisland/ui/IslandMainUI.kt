@@ -109,6 +109,7 @@ fun EdgeLightUI(isActive: Boolean) {
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun DynamicIslandView.IslandUI(state: IslandState) {
+    android.util.Log.d("IslandMainUI", "Composing IslandUI -> State: $state")
     val view = this
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE

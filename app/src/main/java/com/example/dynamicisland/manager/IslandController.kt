@@ -276,17 +276,18 @@ class IslandController @Inject constructor(
 
     private val ecosystemReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
+            android.util.Log.d("IslandController", "System Integration Broadcast Received: ${intent.action}")
             when (intent.action) {
                 "com.example.dynamicisland.DEBUG_TEST" -> {
-                    android.util.Log.d("IslandController", "DEBUG: Triggering test notification")
+                    android.util.Log.d("IslandController", "DEBUG: Manually triggering visible state")
                     postTransientNotification(
                         LiveActivityModel.General(
                             id = "debug_test",
                             type = ActivityType.MESSAGE,
-                            title = "System Integration Active",
-                            dataText = "Direct hook confirmed.",
+                            title = "System Native Integration",
+                            dataText = "UI rendering is confirmed.",
                             accentColor = android.graphics.Color.GREEN
-                        ), 10000L
+                        ), 15000L
                     )
                 }
                 "com.example.dynamicisland.CALIBRATION_MODE" -> {
@@ -608,6 +609,7 @@ class IslandController @Inject constructor(
     }
 
     init {
+        android.util.Log.d("IslandController", "Initializing Island Engine Brain...")
         loadAndApplySettings()
         weatherManager.startPolling()
         hardwareMonitor.onHardwareUpdate = { newHw -> currentHardware = newHw; evaluatePriority() }
