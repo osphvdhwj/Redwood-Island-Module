@@ -134,6 +134,32 @@ data class SettingsState(
     val logDebugOverlay: Boolean = false,
     val openSourceSdk: Boolean = true,
 
+    // === Advanced Triggers & Sensors ===
+    val ringMediaVisible: Boolean = true,
+    val ringBatteryVisible: Boolean = true,
+    val ringDownloadVisible: Boolean = true,
+    val ringBluetoothVisible: Boolean = true,
+    val ringHotspotVisible: Boolean = true,
+    val ringDataVisible: Boolean = true,
+    
+    val invisibleRingTouchPassthrough: Boolean = true,
+    val antiBurnInEnabled: Boolean = true,
+    val antiBurnInIntensity: Float = 1.5f, // 1px to 3px
+    
+    val wifiAlertDuration: Int = 3,
+    val btAlertDuration: Int = 3,
+    val hotspotAlertDuration: Int = 5,
+    val dataAlertDuration: Int = 3,
+    
+    val liveDownloadTracking: Boolean = true,
+    val networkSpeedRing: Boolean = true,
+
+    // === Smart AI Gestures ===
+    val smartGesturesEnabled: Boolean = true,
+    val smartMediaOverride: Boolean = true,
+    val smartGamingOverride: Boolean = true,
+    val smartCallOverride: Boolean = true,
+
     // === Global Controls ===
     val islandEnabled: Boolean = true,
     val islandOnLockscreen: Boolean = true,

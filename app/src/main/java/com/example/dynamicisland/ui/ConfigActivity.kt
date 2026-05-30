@@ -70,6 +70,7 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
         NavItemData("Layout", Icons.Default.AspectRatio),
         NavItemData("Appearance", Icons.Default.Palette),
         NavItemData("Shortcuts", Icons.Default.Apps),
+        NavItemData("Sensors", Icons.Default.Radar),
         NavItemData("System", Icons.Default.Settings)
     )
 
@@ -102,7 +103,8 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
                     0 -> LayoutScreen(prefs)
                     1 -> AppearanceScreen(prefs)
                     2 -> InteractionsTab(prefs)
-                    3 -> SettingsScreen(settingsViewModel)
+                    3 -> AdvancedTriggersScreen(prefs)
+                    4 -> SettingsScreen(settingsViewModel)
                 }
             }
         }

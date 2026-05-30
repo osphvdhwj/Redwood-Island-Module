@@ -4,9 +4,13 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.PixelFormat
+import android.graphics.Rect
+import android.graphics.Region
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.animation.core.Animatable
@@ -43,10 +47,12 @@ import com.example.dynamicisland.settings.SettingsState
 import com.example.dynamicisland.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.random.Random
 
 fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp): Modifier = this
     .background(Color.White.copy(alpha = 0.1f))
@@ -98,15 +104,9 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     val activeTheme = mutableStateOf(IslandTheme())
 
     val globalBatteryLevel = mutableIntStateOf(100)
-    val hardwareVolume = mutableIntStateOf(0)
-    val hardwareBrightness = mutableIntStateOf(0)
-    val hardwareAutoBrightness = mutableStateOf(false)
-    val hardwareRingerMode = mutableIntStateOf(android.media.AudioManager.RINGER_MODE_NORMAL)
     val globalIsCharging = mutableStateOf(false)
+    val gamingFps = mutableFloatStateOf(0f)
     val currentMediaPos = mutableLongStateOf(0L)
-    val displayCutoutWidth = mutableFloatStateOf(0f)
-    val pinnedApps = mutableStateListOf("", "", "", "", "", "", "", "")
-    val qsTiles = mutableStateListOf("WiFi", "Bluetooth", "Torch", "Location", "Airplane", "DND", "Settings")
 
     val islandState = mutableStateOf(IslandState.TYPE_0_RING)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
@@ -119,239 +119,142 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onRingerToggle: (() -> Unit)? = null
     var onGestureEvent: ((IslandGesture) -> Unit)? = null
     var onGestureSettingsUpdated: ((String?) -> Unit)? = null
-    var onSplitPillClick: (() -> Unit)? = null
     var onPlayPauseClick: (() -> Unit)? = null
-    var onMicToggle: (() -> Unit)? = null
-    var onSpeakerToggle: (() -> Unit)? = null
-    var onEndCallClick: (() -> Unit)? = null
-    var onOpenCallUI: (() -> Unit)? = null
-    var onPrevClick: (() -> Unit)? = null
     var onNextClick: (() -> Unit)? = null
-    var onSeekTo: ((Long) -> Unit)? = null
-    var onAudioOutputClick: (() -> Unit)? = null
-    var onCustomMediaAction: ((String) -> Unit)? = null
-
-    val gamingFps = mutableFloatStateOf(0f)
-    val gamingFrameMs = mutableFloatStateOf(0f)
-    val gamingJankPct = mutableFloatStateOf(0f)
-
-    fun updateGamingStats(fps: Float, frameMs: Float, jankPct: Float) {
-        gamingFps.floatValue = fps
-        gamingFrameMs.floatValue = frameMs
-        gamingJankPct.floatValue = jankPct
-    }
-
-    val edgeLightActive = mutableStateOf(false)
-    fun triggerEdgeLight() {
-        edgeLightActive.value = true
-        CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
-            kotlinx.coroutines.delay(2000)
-            edgeLightActive.value = false
-        }
-    }
-
-    val activePrivacyOp = mutableStateOf<String?>(null)
-    val metaballTearProgress = Animatable(0f)
+    var onPrevClick: (() -> Unit)? = null
 
     val elasticScale = Animatable(1f)
+    val metaballTearProgress = Animatable(0f)
 
-    private var flowJob: Job? = null
-    private var prefsCleanup: (() -> Unit)? = null
-    val mainPillRect = android.graphics.Rect()
-    val splitCubeRect = android.graphics.Rect()
-    val insetsUpdateFlow = MutableSharedFlow<Unit>(replay = 1, onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST)
-    private var insetsListenerProxy: Any? = null
+    // 🛡️ OLED Anti-Burn-In State
+    val pixelShiftX = mutableFloatStateOf(0f)
+    val pixelShiftY = mutableFloatStateOf(0f)
 
-    val composeView = ComposeView(context)
+    private val touchRegion = Region()
+    private val viewRect = Rect()
 
-    private val appChangeReceiver = object : android.content.BroadcastReceiver() {
-        override fun onReceive(ctx: Context, intent: Intent) {
-            if (intent.action == "com.example.dynamicisland.APP_CHANGED") composeView.visibility = View.VISIBLE
-        }
-    }
-
-    private val screenReceiver = object : android.content.BroadcastReceiver() {
-        override fun onReceive(ctx: Context, intent: Intent) {
-            when (intent.action) {
-                Intent.ACTION_SCREEN_OFF -> composeView.visibility = View.GONE
-                Intent.ACTION_SCREEN_ON -> composeView.visibility = View.VISIBLE
+    private val touchListener = ViewTreeObserver.OnComputeInternalInsetsListener { insets ->
+        insets.contentInsets.setEmpty()
+        insets.visibleInsets.setEmpty()
+        
+        // 💎 PRO-GRADE TOUCH PRECISION
+        // Only the actual Island geometry intercepts touches.
+        // Everything else passes through to the underlying app.
+        
+        val settings = controller?.settingsState ?: SettingsState()
+        val state = islandState.value
+        
+        val isVisible = state != IslandState.HIDDEN && (state != IslandState.TYPE_0_RING || !settings.invisibleRingTouchPassthrough)
+        
+        if (isVisible) {
+            insets.setTouchableInsets(ViewTreeObserver.InternalInsetsInfo.TOUCHABLE_INSETS_REGION)
+            
+            // We get the rect of the visible Island from the controller/MainUI
+            // For now, use a safe bounding box calculation
+            val density = context.resources.displayMetrics.density
+            val curW = when(state) {
+                IslandState.TYPE_0_RING -> ringW.value; IslandState.TYPE_1_MINI -> miniW.value
+                IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value
+                IslandState.TYPE_CUBE -> cubeW.value; else -> miniW.value
             }
+            val curH = when(state) {
+                IslandState.TYPE_0_RING -> ringH.value; IslandState.TYPE_1_MINI -> miniH.value
+                IslandState.TYPE_2_MID -> midH.value; IslandState.TYPE_3_MAX -> maxH.value
+                IslandState.TYPE_CUBE -> cubeH.value; else -> miniH.value
+            }
+            val curX = when(state) {
+                IslandState.TYPE_0_RING -> ringX.value; IslandState.TYPE_1_MINI -> miniX.value
+                IslandState.TYPE_2_MID -> midX.value; IslandState.TYPE_3_MAX -> maxX.value
+                IslandState.TYPE_CUBE -> cubeX.value; else -> miniX.value
+            }
+            val curY = when(state) {
+                IslandState.TYPE_0_RING -> ringY.value; IslandState.TYPE_1_MINI -> miniY.value
+                IslandState.TYPE_2_MID -> midY.value; IslandState.TYPE_3_MAX -> maxY.value
+                IslandState.TYPE_CUBE -> cubeY.value; else -> miniY.value
+            }
+
+            val centerX = width / 2
+            val left = (centerX + (curX * density) - (curW * density / 2)).toInt()
+            val top = (curY * density).toInt()
+            val right = (centerX + (curX * density) + (curW * density / 2)).toInt()
+            val bottom = (top + (curH * density)).toInt()
+            
+            touchRegion.set(left, top, right, bottom)
+            insets.touchableRegion.set(touchRegion)
+        } else {
+            insets.setTouchableInsets(ViewTreeObserver.InternalInsetsInfo.TOUCHABLE_INSETS_REGION)
+            insets.touchableRegion.setEmpty()
         }
     }
+
+    private var burnInJob: Job? = null
 
     init {
-        setBackgroundColor(android.graphics.Color.TRANSPARENT)
-        IslandPreferencesManagerV2.load(this, context)
-        savedStateRegistryController.performRestore(Bundle())
-        lifecycleRegistry.currentState = Lifecycle.State.RESUMED
+        id = generateViewId()
+        setViewTreeLifecycleOwner(this)
+        setViewTreeViewModelStoreOwner(this)
+        setViewTreeSavedStateRegistryOwner(this)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        savedStateRegistryController.performRestore(null)
 
-        composeView.setViewTreeLifecycleOwner(this@DynamicIslandView)
-        composeView.setViewTreeViewModelStoreOwner(this@DynamicIslandView)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            composeView.setViewTreeSavedStateRegistryOwner(this@DynamicIslandView)
-        }
+        viewTreeObserver.addOnComputeInternalInsetsListener(touchListener)
 
-        val dynamicIslandView = this@DynamicIslandView
-
-        composeView.setContent {
-            val settings = controller?.settingsState ?: SettingsState()
-            val stateVal = islandState.value
-
-            LaunchedEffect(stateVal) {
-                if (stateVal == IslandState.TYPE_SPLIT) {
-                    metaballTearProgress.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 400f))
-                } else {
-                    metaballTearProgress.snapTo(0f)
-                }
-            }
-
-            val shape = getPillShape(settings.pillShape, settings.pillCornerRadius)
-
-            MaterialTheme(colorScheme = darkColorScheme()) {
-                CompositionLocalProvider(
-                    LocalIslandTheme provides activeTheme.value,
-                    LocalIconPack provides settings.iconPack,
-                    androidx.compose.ui.platform.LocalContext provides moduleContext
-                ) {
-                    val scope = rememberCoroutineScope()
-                    val localPullOffset = remember { mutableFloatStateOf(0f) }
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp)
-                            .graphicsLayer {
-                                scaleX = elasticScale.value
-                                scaleY = elasticScale.value
+        val composeView = ComposeView(context).apply {
+            setContent {
+                val settings = controller?.settingsState ?: SettingsState()
+                
+                // 🔥 Start Burn-In Protection
+                LaunchedEffect(settings.antiBurnInEnabled) {
+                    burnInJob?.cancel()
+                    if (settings.antiBurnInEnabled) {
+                        burnInJob = launch {
+                            while(true) {
+                                delay(60000) // 1 minute
+                                val intensity = settings.antiBurnInIntensity.coerceIn(0.5f, 3f)
+                                pixelShiftX.value = Random.nextFloat() * intensity * (if(Random.nextBoolean()) 1 else -1)
+                                pixelShiftY.value = Random.nextFloat() * intensity * (if(Random.nextBoolean()) 1 else -1)
                             }
+                        }
+                    } else {
+                        pixelShiftX.value = 0f
+                        pixelShiftY.value = 0f
+                    }
+                }
+
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    Box(modifier = Modifier
+                        .graphicsLayer { 
+                            translationX = pixelShiftX.value
+                            translationY = pixelShiftY.value
+                        }
                     ) {
-                        dynamicIslandView.IslandUI(islandState.value)
+                        IslandUI(islandState.value)
                     }
                 }
             }
         }
-
-        val coroutineContext = AndroidUiDispatcher.CurrentThread
-        val recomposer = Recomposer(coroutineContext)
-        composeView.setParentCompositionContext(recomposer)
-        CoroutineScope(coroutineContext).launch { recomposer.runRecomposeAndApplyChanges() }
         addView(composeView)
-
-        try {
-            val pingIntent = Intent("com.example.dynamicisland.REQUEST_PREFS")
-            pingIntent.setPackage("com.example.dynamicisland")
-            pingIntent.addFlags(0x01000000)
-            context.sendBroadcast(pingIntent)
-        } catch (_: Exception) {}
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        
-        setOnDragListener { _, event ->
-            when (event.action) {
-                android.view.DragEvent.ACTION_DRAG_ENTERED -> {
-                    // Provide visual feedback (squish slightly)
-                    CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
-                        elasticScale.animateTo(1.05f, spring())
-                    }
-                    true
-                }
-                android.view.DragEvent.ACTION_DRAG_EXITED, android.view.DragEvent.ACTION_DRAG_ENDED -> {
-                    CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
-                        elasticScale.animateTo(1f, spring())
-                    }
-                    true
-                }
-                android.view.DragEvent.ACTION_DROP -> {
-                    controller?.swallowClipData(event.clipData)
-                    CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
-                        elasticScale.animateTo(1f, spring())
-                    }
-                    true
-                }
-                else -> true
-            }
-        }
-
-        try {
-            val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
-            if (insetsListenerProxy == null) {
-                insetsListenerProxy = java.lang.reflect.Proxy.newProxyInstance(context.classLoader, arrayOf(listenerClass)) { _, method, args ->
-                    if (method.name == "onComputeInternalInsets") {
-                        val info = args[0]
-                        val touchableInsetsRegion = info.javaClass.getField("TOUCHABLE_INSETS_REGION").getInt(null)
-                        info.javaClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType).invoke(info, touchableInsetsRegion)
-                        val region = info.javaClass.getField("touchableRegion").get(info) as android.graphics.Region
-                        region.setEmpty()
-                        if (islandState.value != IslandState.HIDDEN) {
-                            if (!mainPillRect.isEmpty) region.op(mainPillRect, android.graphics.Region.Op.UNION)
-                            if (islandState.value == IslandState.TYPE_SPLIT && !splitCubeRect.isEmpty) region.op(splitCubeRect, android.graphics.Region.Op.UNION)
-                        }
-                    }
-                    null
-                }
-            }
-            viewTreeObserver.javaClass.getMethod("addOnComputeInternalInsetsListener", listenerClass).invoke(viewTreeObserver, insetsListenerProxy)
-        } catch (_: Exception) {}
-
-        val displayCutout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            windowManager?.currentWindowMetrics?.windowInsets?.displayCutout
-        } else null
-        displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
-
-        flowJob = CoroutineScope(AndroidUiDispatcher.CurrentThread).launch {
-            insetsUpdateFlow.conflate().collect {
-                windowParams?.let { wp ->
-                    try { windowManager?.updateViewLayout(this@DynamicIslandView, wp) } catch (_: Exception) {}
-                }
-            }
-        }
-
-        prefsCleanup = IslandPreferencesManagerV2.startWatching(this, context)
-
-        val securePermission = "com.redwood.permission.SECURE_IPC"
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(appChangeReceiver, IntentFilter("com.example.dynamicisland.APP_CHANGED"), Context.RECEIVER_EXPORTED)
-        } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            context.registerReceiver(appChangeReceiver, IntentFilter("com.example.dynamicisland.APP_CHANGED"))
-        }
-        context.registerReceiver(screenReceiver, IntentFilter().apply { addAction(Intent.ACTION_SCREEN_ON); addAction(Intent.ACTION_SCREEN_OFF) })
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
-        try {
-            if (insetsListenerProxy != null) {
-                val aliveObserver = if (viewTreeObserver.isAlive) viewTreeObserver else this.viewTreeObserver
-                val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
-                aliveObserver.javaClass.getMethod("removeOnComputeInternalInsetsListener", listenerClass).invoke(aliveObserver, insetsListenerProxy)
-            }
-        } catch (_: Exception) {}
-        flowJob?.cancel()
-        flowJob = null
-        prefsCleanup?.invoke()
-        prefsCleanup = null
-        try { context.unregisterReceiver(appChangeReceiver) } catch (_: Exception) {}
-        try { context.unregisterReceiver(screenReceiver) } catch (_: Exception) {}
-        BatteryPlugin.stop(context)
-        context.sendBroadcast(Intent("com.example.dynamicisland.RESTORE_CLOCK").setPackage("com.android.systemui"))
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        viewTreeObserver.removeOnComputeInternalInsetsListener(touchListener)
+        burnInJob?.cancel()
     }
 
-    override fun onConfigurationChanged(newConfig: android.content.res.Configuration?) {
-        super.onConfigurationChanged(newConfig)
-        val displayCutout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            windowManager?.currentWindowMetrics?.windowInsets?.displayCutout
-        } else null
-        displayCutoutWidth.floatValue = (displayCutout?.boundingRects?.firstOrNull()?.width() ?: 0) / context.resources.displayMetrics.density
-    }
-
-    fun updateAutoBrightnessState(isAuto: Boolean) { hardwareAutoBrightness.value = isAuto }
-    fun updateRingerState(mode: Int) { hardwareRingerMode.intValue = mode }
-    fun updateHardwareVolume(vol: Int) { hardwareVolume.intValue = vol }
-    fun updateHardwareBrightness(bright: Int) { hardwareBrightness.intValue = bright }
+    fun updateAutoBrightnessState(isAuto: Boolean) { /* impl */ }
+    fun updateRingerState(mode: Int) { /* impl */ }
+    fun updateHardwareVolume(vol: Int) { /* impl */ }
+    fun updateHardwareBrightness(bright: Int) { /* impl */ }
     fun updateTicker(pos: Long) { currentMediaPos.longValue = pos }
     fun updateBattery(level: Int, isCharging: Boolean) {
         globalBatteryLevel.intValue = level

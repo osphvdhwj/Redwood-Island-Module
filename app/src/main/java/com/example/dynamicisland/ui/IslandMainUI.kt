@@ -290,11 +290,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                     }
                 )
                 .border(0.5.dp, borderColor, RoundedCornerShape(animatedRadius))
-                .then(
-                    if (view.calibrationMode.value) {
-                        Modifier.border(2.dp, Color.Red, RoundedCornerShape(animatedRadius))
-                    } else Modifier
-                )
                 .pointerInput(Unit) {
                     awaitEachGesture { awaitFirstDown(pass = PointerEventPass.Initial); isSquished = true; waitForUpOrCancellation(pass = PointerEventPass.Initial); isSquished = false }
                 }

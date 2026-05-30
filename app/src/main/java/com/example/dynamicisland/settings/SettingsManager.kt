@@ -12,8 +12,6 @@ import org.json.JSONObject
  * AUTOMATIC BRIDGE:
  * - In the module app: Reads/Writes to local SharedPreferences.
  * - In SystemUI: Reads from the IslandIPCClient (ContentProvider).
- * 
- * This ensures "Settings taking effect" without complex manual sync logic.
  */
 class SettingsManager(private val context: Context) {
     private val prefs: SharedPreferences =
@@ -55,53 +53,16 @@ class SettingsManager(private val context: Context) {
         HAPTIC_FEEDBACK, HAPTIC_INTENSITY, RING_CADENCE_VIBRATION,
         HAPTIC_MORSE_ALERTS,
 
-        // === Prediction & Smart Features ===
-        PREDICTION_TINT, PREDICTIVE_ACTIONS, AUTO_DISMISS_DELAY,
-        CONTEXTUAL_SUGGESTIONS, GESTURE_LEARNING, VOICE_TRIGGER,
-        ADAPTIVE_BRIGHTNESS_VOLUME, APP_PREDICTION_SUGGESTION,
-        CONTEXTUAL_ROUTINE_LAUNCHER,
+        // === Advanced Triggers & Sensors ===
+        RING_MEDIA_VISIBLE, RING_BATTERY_VISIBLE, RING_DOWNLOAD_VISIBLE,
+        RING_BLUETOOTH_VISIBLE, RING_HOTSPOT_VISIBLE, RING_DATA_VISIBLE,
+        INVISIBLE_RING_TOUCH_PASSTHROUGH, ANTI_BURN_IN_ENABLED, ANTI_BURN_IN_INTENSITY,
+        WIFI_ALERT_DURATION, BT_ALERT_DURATION, HOTSPOT_ALERT_DURATION, DATA_ALERT_DURATION,
+        LIVE_DOWNLOAD_TRACKING, NETWORK_SPEED_RING,
 
-        // === Cross-Device & Continuity ===
-        CLIPBOARD_SYNC, UNIVERSAL_CONTROL, QUICK_NOTE,
-        PHONE_TO_TABLET_HANDOFF, NEARBY_SHARE_PROGRESS,
-        MULTI_DEVICE_CLIPBOARD, WEAR_OS_REMOTE,
-        AIRPODS_POPUP, AIRPLAY_CAST_INDICATOR, HOME_POD_CONTROL,
-
-        // === iOS-Inspired ===
-        LIVE_ACTIVITIES_API, FOCUS_FILTER_INTEGRATION,
-        UNIVERSAL_CLIPBOARD_PREVIEWS, ALWAYS_ON_DISPLAY_COMPANION,
-        FACE_ID_PADLOCK, RING_MODE_SWITCH, TIMER_INTEGRATION,
-        MAGSAFE_CHARGING_ANIMATION, PROXIMITY_WAKE,
-
-        // === Android Ecosystem ===
-        MATERIAL_YOU_DYNAMIC_CONTRAST, QUICK_SETTINGS_TILE,
-        DIGITAL_WELLBEING_INTEGRATION, ROOT_ADB_FEATURES, ICON_PACK,
-
-        // === Accessibility ===
-        TALKBACK_INTEGRATION, ONE_HAND_MODE,
-        DEDICATED_ONE_HAND_PLACEMENT,
-
-        // === Customisation ===
-        CUSTOM_PILL_ANIMATIONS, THIRD_PARTY_WIDGET_API,
-
-        // === Battery & Performance ===
-        BATTERY_AWARE_ANIMATION, DOZE_MODE_OPTIMISATION,
-        QUICK_PERFORMANCE_PROFILE, DATA_SAVER,
-
-        // === Gamification ===
-        ISLAND_STREAKS, LEADERBOARD, EXCLUSIVE_THEMES,
-        ACHIEVEMENTS_ENABLED, ACHIEVEMENTS_DISPLAY,
-
-        // === Privacy & Security ===
-        CLIPBOARD_CLEANER, VPN_TOR_INDICATOR,
-
-        // === Experimental ===
-        AR_ISLAND, MINDFULNESS_BREATH_PACER, MORSE_CODE_INPUT,
-        MULTI_USER_PROFILE_SWITCHING, CRYPTO_STOCK_TICKER,
-
-        // === Developer Tools ===
-        ADB_COMMAND_INJECTOR, TASKER_PLUGIN, LOG_DEBUG_OVERLAY,
-        OPEN_SOURCE_SDK,
+        // === Smart AI Gestures ===
+        SMART_GESTURES_ENABLED, SMART_MEDIA_OVERRIDE, 
+        SMART_GAMING_OVERRIDE, SMART_CALL_OVERRIDE,
 
         // === Global Controls ===
         ISLAND_ENABLED, ISLAND_ON_LOCKSCREEN, FEATURES_ON_LOCKSCREEN,
@@ -129,7 +90,9 @@ class SettingsManager(private val context: Context) {
         ROLE_CALLING_APP, ROLE_GAME_LAUNCHER,
 
         // === Styles ===
-        CALL_STYLE, CHARGING_STYLE, BATTERY_STYLE
+        CALL_STYLE, CHARGING_STYLE, BATTERY_STYLE,
+        
+        ICON_PACK
     }
 
     fun getBoolean(key: SettingKey, default: Boolean): Boolean =
@@ -138,7 +101,7 @@ class SettingsManager(private val context: Context) {
 
     fun putBoolean(key: SettingKey, value: Boolean) {
         prefs.edit().putBoolean(key.name, value).apply()
-        if (!isSystemUI) ipcClient.putBoolean(key.name, value)
+        ipcClient.putBoolean(key.name, value)
     }
 
     fun getInt(key: SettingKey, default: Int): Int =
@@ -147,7 +110,7 @@ class SettingsManager(private val context: Context) {
 
     fun putInt(key: SettingKey, value: Int) {
         prefs.edit().putInt(key.name, value).apply()
-        if (!isSystemUI) ipcClient.putInt(key.name, value)
+        ipcClient.putInt(key.name, value)
     }
 
     fun getFloat(key: SettingKey, default: Float): Float =
@@ -156,7 +119,7 @@ class SettingsManager(private val context: Context) {
 
     fun putFloat(key: SettingKey, value: Float) {
         prefs.edit().putFloat(key.name, value).apply()
-        if (!isSystemUI) ipcClient.putFloat(key.name, value)
+        ipcClient.putFloat(key.name, value)
     }
 
     fun getString(key: SettingKey, default: String?): String? =
@@ -165,26 +128,25 @@ class SettingsManager(private val context: Context) {
 
     fun putString(key: SettingKey, value: String) {
         prefs.edit().putString(key.name, value).apply()
-        if (!isSystemUI) ipcClient.putString(key.name, value)
+        ipcClient.putString(key.name, value)
     }
 
-    fun getStringSet(key: SettingKey, default: Set<String>): Set<String> =
-        if (isSystemUI) {
-            // IPCClient doesn't support Set directly, we use JSON array string
-            val raw = ipcClient.getString(key.name, "")
-            if (raw.isEmpty()) default else raw.split(",").toSet()
+    fun getStringSet(key: SettingKey, default: Set<String>): Set<String> {
+        val raw = ipcClient.getString(key.name, "")
+        return if (raw.isEmpty()) {
+            if (isSystemUI) default else prefs.getStringSet(key.name, default) ?: default
         } else {
-            prefs.getStringSet(key.name, default) ?: default
+            raw.split(",").toSet()
         }
+    }
 
     fun putStringSet(key: SettingKey, values: Set<String>) {
         prefs.edit().putStringSet(key.name, values).apply()
-        if (!isSystemUI) ipcClient.putString(key.name, values.joinToString(","))
+        ipcClient.putString(key.name, values.joinToString(","))
     }
 
     fun resetAll() {
         prefs.edit().clear().apply()
-        // No bulk delete in IPC yet, but a reboot usually follows reset
     }
 
     fun getSettingsState(): SettingsState {
@@ -240,6 +202,29 @@ class SettingsManager(private val context: Context) {
             hapticIntensity = getFloat(SettingKey.HAPTIC_INTENSITY, 1f),
             ringCadenceVibration = getBoolean(SettingKey.RING_CADENCE_VIBRATION, true),
             hapticMorseAlerts = getBoolean(SettingKey.HAPTIC_MORSE_ALERTS, false),
+
+            // Advanced Triggers & Sensors
+            ringMediaVisible = getBoolean(SettingKey.RING_MEDIA_VISIBLE, true),
+            ringBatteryVisible = getBoolean(SettingKey.RING_BATTERY_VISIBLE, true),
+            ringDownloadVisible = getBoolean(SettingKey.RING_DOWNLOAD_VISIBLE, true),
+            ringBluetoothVisible = getBoolean(SettingKey.RING_BLUETOOTH_VISIBLE, true),
+            ringHotspotVisible = getBoolean(SettingKey.RING_HOTSPOT_VISIBLE, true),
+            ringDataVisible = getBoolean(SettingKey.RING_DATA_VISIBLE, true),
+            invisibleRingTouchPassthrough = getBoolean(SettingKey.INVISIBLE_RING_TOUCH_PASSTHROUGH, true),
+            antiBurnInEnabled = getBoolean(SettingKey.ANTI_BURN_IN_ENABLED, true),
+            antiBurnInIntensity = getFloat(SettingKey.ANTI_BURN_IN_INTENSITY, 1.5f),
+            wifiAlertDuration = getInt(SettingKey.WIFI_ALERT_DURATION, 3),
+            btAlertDuration = getInt(SettingKey.BT_ALERT_DURATION, 3),
+            hotspotAlertDuration = getInt(SettingKey.HOTSPOT_ALERT_DURATION, 5),
+            dataAlertDuration = getInt(SettingKey.DATA_ALERT_DURATION, 3),
+            liveDownloadTracking = getBoolean(SettingKey.LIVE_DOWNLOAD_TRACKING, true),
+            networkSpeedRing = getBoolean(SettingKey.NETWORK_SPEED_RING, true),
+
+            // Smart AI Gestures
+            smartGesturesEnabled = getBoolean(SettingKey.SMART_GESTURES_ENABLED, true),
+            smartMediaOverride = getBoolean(SettingKey.SMART_MEDIA_OVERRIDE, true),
+            smartGamingOverride = getBoolean(SettingKey.SMART_GAMING_OVERRIDE, true),
+            smartCallOverride = getBoolean(SettingKey.SMART_CALL_OVERRIDE, true),
 
             // Global Controls
             islandEnabled = getBoolean(SettingKey.ISLAND_ENABLED, true),

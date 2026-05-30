@@ -134,6 +134,7 @@ class SystemUIA15Hooks {
                         (320 * context.resources.displayMetrics.density).toInt(), // Constrained height (320dp)
                         2017, // WindowManager.LayoutParams.TYPE_STATUS_BAR_SUB_PANEL
                         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                                 WindowManager.LayoutParams.FLAG_SPLIT_TOUCH or
                                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or

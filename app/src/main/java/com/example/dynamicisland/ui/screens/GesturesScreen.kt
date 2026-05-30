@@ -32,7 +32,46 @@ fun GesturesScreen(prefs: SharedPreferences) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        SettingsCategoryHeader("Gesture Configuration")
+        SettingsCategoryHeader("Smart AI Gestures")
+        
+        Surface(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
+        ) {
+            Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                SettingsSwitch(
+                    title = "Enable Smart Engine", 
+                    description = "AI predicts intent and overrides defaults.", 
+                    checked = prefs.getBoolean("smart_gestures_enabled", true),
+                    onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("smart_gestures_enabled", it) }) }
+                )
+                
+                if (prefs.getBoolean("smart_gestures_enabled", true)) {
+                    Divider(modifier = Modifier.padding(horizontal = 24.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    SettingsSwitch(
+                        title = "Smart Media Controls", 
+                        description = "Swipe social media apps to change songs.", 
+                        checked = prefs.getBoolean("smart_media_override", true),
+                        onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("smart_media_override", it) }) }
+                    )
+                    SettingsSwitch(
+                        title = "Smart Gaming Mode", 
+                        description = "Auto-Dashboard & Dismiss during games.", 
+                        checked = prefs.getBoolean("smart_gaming_override", true),
+                        onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("smart_gaming_override", it) }) }
+                    )
+                    SettingsSwitch(
+                        title = "Smart Call Handling", 
+                        description = "Tap to mute, long press to hang up.", 
+                        checked = prefs.getBoolean("smart_call_override", true),
+                        onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("smart_call_override", it) }) }
+                    )
+                }
+            }
+        }
+
+        SettingsCategoryHeader("Manual Fallback Actions")
         
         ScrollableTabRow(
             selectedTabIndex = selectedTab,
