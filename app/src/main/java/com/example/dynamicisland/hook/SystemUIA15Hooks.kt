@@ -35,14 +35,16 @@ class SystemUIA15Hooks {
         private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
         
         private var flashlightController: Any? = null
+        private var isWindowAdded = false
 
         fun init(lpparam: XC_LoadPackage.LoadPackageParam) {
             if (lpparam.packageName != "com.android.systemui") return
             
-            XposedBridge.log("$TAG: 🚀 Initializing Pro-Grade SystemUI Integration (Enhanced Reliability)...")
+            XposedBridge.log("$TAG: 🚀 Initializing Pro-Grade SystemUI Integration (Window Overlay Mode)...")
 
-            // ── 0. Brain Initialization ───────────────────────────────────────
+            // ── 0. Core Engine Initialization ─────────────────────────────────
             try {
+                // Hook CentralSurfacesImpl.start() to initialize the controller brain
                 XposedHelpers.findAndHookMethod(
                     "com.android.systemui.statusbar.phone.CentralSurfacesImpl",
                     lpparam.classLoader,
@@ -51,60 +53,45 @@ class SystemUIA15Hooks {
                         override fun afterHookedMethod(param: MethodHookParam) {
                             val context = XposedHelpers.getObjectField(param.thisObject, "mContext") as Context
                             ensureControllerInitialized(context)
+                            
+                            // Once brain is ready, we can add our window
+                            val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                            addIslandWindow(context, wm)
                         }
                     }
                 )
             } catch (e: Throwable) {
-                XposedBridge.log("$TAG ⚠️: CentralSurfaces hook failed: ${e.message}")
+                XposedBridge.log("$TAG ⚠️: CentralSurfaces hook failed, falling back to Service hook")
             }
 
-            // ── 1. Multiple UI Injection Points ───────────────────────────────
-            
-            // Primary: Status Bar View
+            // Fallback for earlier initialization if CentralSurfaces fails
             try {
                 XposedHelpers.findAndHookMethod(
-                    "com.android.systemui.statusbar.phone.PhoneStatusBarView",
+                    "com.android.systemui.SystemUIService",
                     lpparam.classLoader,
-                    "onAttachedToWindow",
+                    "onCreate",
                     object : XC_MethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {
-                            injectIsland(param.thisObject as FrameLayout, "PhoneStatusBarView")
+                            val context = param.thisObject as Context
+                            ensureControllerInitialized(context)
                         }
                     }
                 )
             } catch (e: Throwable) {}
 
-            // Secondary: Notification Shade Window (Ensures visibility during lockscreen/shade interaction)
-            try {
-                XposedHelpers.findAndHookMethod(
-                    "com.android.systemui.shade.NotificationShadeWindowViewController",
-                    lpparam.classLoader,
-                    "onViewAttached",
-                    object : XC_MethodHook() {
-                        override fun afterHookedMethod(param: MethodHookParam) {
-                            val view = XposedHelpers.callMethod(param.thisObject, "getView") as? FrameLayout ?: return
-                            injectIsland(view, "NotificationShadeWindow")
-                        }
-                    }
-                )
-            } catch (e: Throwable) {}
-
-            // ── 2. Hardware Controller Hooks ──────────────────────────────────
-            hookHardwareControllers(lpparam)
-
-            // ── 3. Native Data Pipelines ──────────────────────────────────────
+            // ── 1. Native Data Pipelines ──────────────────────────────────────
             hookNotifPipeline(lpparam)
             hookMediaPipeline(lpparam)
+            hookHardwareControllers(lpparam)
             
-            // ── 4. Recovery Broadcast ──────────────────────────────────────────
-            // Allows the settings app to trigger a re-injection if the view is lost
-            setupRecoveryReceiver(lpparam)
+            // ── 2. Recovery & External Triggers ───────────────────────────────
+            setupReceiver(lpparam)
         }
 
         private fun ensureControllerInitialized(context: Context) {
             if (controller != null) return
             try {
-                XposedBridge.log("$TAG: Initializing Island Controller Engine...")
+                XposedBridge.log("$TAG: Powering up the Island Engine Brain...")
                 val eventBus = IslandEventBus()
                 val settingsManager = SettingsManager(context)
                 val hapticsManager = IslandHapticsManager(context, settingsManager)
@@ -122,22 +109,16 @@ class SystemUIA15Hooks {
                     networkMonitor
                 )
             } catch (e: Throwable) {
-                XposedBridge.log("$TAG ❌: Controller init failed: ${e.message}")
+                XposedBridge.log("$TAG ❌: Controller bootstrap failed: ${e.message}")
             }
         }
 
-        private fun injectIsland(root: FrameLayout, source: String) {
-            val currentView = islandViewRef?.get()
-            if (currentView != null && currentView.parent == root) return
+        private fun addIslandWindow(context: Context, wm: WindowManager) {
+            if (isWindowAdded) return
             
-            val context = root.context
-            ensureControllerInitialized(context)
-            
-            XposedBridge.log("$TAG: Injecting Island from $source")
-
-            Handler(Looper.getMainLooper()).postDelayed({
+            Handler(Looper.getMainLooper()).post {
                 try {
-                    val ctrl = controller ?: return@postDelayed
+                    val ctrl = controller ?: return@post
                     
                     val moduleContext = try { 
                         context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) 
@@ -146,47 +127,34 @@ class SystemUIA15Hooks {
                     val islandView = DynamicIslandView(context, moduleContext)
                     ctrl.islandView = islandView
                     islandViewRef = WeakReference(islandView)
-                    
-                    islandView.elevation = 1000f
-                    islandView.translationZ = 1000f
-                    
-                    val lp = FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT
+
+                    // 💎 PRO-GRADE OVERLAY PARAMETERS
+                    // We use TYPE_NAVIGATION_BAR_PANEL or TYPE_STATUS_BAR_ADDITIONAL
+                    // to sit on top of the status bar but below high-level system alerts.
+                    val params = WindowManager.LayoutParams(
+                        WindowManager.LayoutParams.MATCH_PARENT,
+                        WindowManager.LayoutParams.MATCH_PARENT,
+                        2024, // WindowManager.LayoutParams.TYPE_NAVIGATION_BAR_PANEL (Reliable on MIUI)
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                        PixelFormat.TRANSLUCENT
                     ).apply {
                         gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                        title = "RedwoodDynamicIsland"
+                        // Ensure it bypasses MIUI's aggressive status bar clipping
+                        XposedHelpers.setObjectField(this, "privateFlags", 
+                            (XposedHelpers.getIntField(this, "privateFlags") or 0x00000040)) // PRIVATE_FLAG_TRUSTED_OVERLAY
                     }
-                    
-                    unclipRecursive(root)
-                    
-                    // Remove old instance if exists in this root
-                    for (i in 0 until root.childCount) {
-                        val child = root.getChildAt(i)
-                        if (child?.javaClass?.name?.contains("DynamicIslandView") == true) {
-                            root.removeViewAt(i)
-                            break
-                        }
-                    }
-                    
-                    root.addView(islandView, lp)
-                    islandView.bringToFront()
-                    
-                    XposedBridge.log("$TAG ✅: Island active in $source hierarchy")
-                } catch (e: Throwable) {
-                    XposedBridge.log("$TAG ❌: Injection failed — ${e.message}")
-                }
-            }, 1000)
-        }
 
-        private fun unclipRecursive(view: View?) {
-            var current = view
-            repeat(10) {
-                (current as? ViewGroup)?.let {
-                    it.clipChildren = false
-                    it.clipToPadding = false
-                    it.layoutTransition = null // Prevent system animations from hiding us
+                    wm.addView(islandView, params)
+                    isWindowAdded = true
+                    XposedBridge.log("$TAG ✅: Pro-Grade Global Overlay Window added successfully")
+                } catch (e: Throwable) {
+                    XposedBridge.log("$TAG ❌: Window creation failed — ${e.message}")
                 }
-                current = current?.parent as? View
             }
         }
 
@@ -210,7 +178,7 @@ class SystemUIA15Hooks {
             } catch (e: Throwable) {}
         }
 
-        private fun setupRecoveryReceiver(lpparam: XC_LoadPackage.LoadPackageParam) {
+        private fun setupReceiver(lpparam: XC_LoadPackage.LoadPackageParam) {
             try {
                 XposedHelpers.findAndHookMethod(
                     "com.android.systemui.SystemUIService",
@@ -219,13 +187,31 @@ class SystemUIA15Hooks {
                     object : XC_MethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {
                             val context = param.thisObject as Context
-                            val filter = android.content.IntentFilter("com.example.dynamicisland.RE_INJECT")
+                            val filter = android.content.IntentFilter().apply {
+                                addAction("com.example.dynamicisland.RE_INJECT")
+                                addAction("com.example.dynamicisland.DEBUG_TEST")
+                            }
                             context.registerReceiver(object : android.content.BroadcastReceiver() {
                                 override fun onReceive(c: Context, intent: Intent) {
-                                    XposedBridge.log("$TAG: Recovery broadcast received. Forcing re-injection.")
-                                    // We can't easily find the root view from here, 
-                                    // but we can clear the ref to allow next auto-injection
-                                    islandViewRef = null
+                                    XposedBridge.log("$TAG: System Hook Broadcast -> ${intent.action}")
+                                    if (intent.action == "com.example.dynamicisland.RE_INJECT") {
+                                        val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                                        val currentView = islandViewRef?.get()
+                                        if (currentView != null) {
+                                            try { wm.removeView(currentView) } catch (e: Exception) {}
+                                        }
+                                        isWindowAdded = false
+                                        addIslandWindow(context, wm)
+                                    } else if (intent.action == "com.example.dynamicisland.DEBUG_TEST") {
+                                        controller?.postTransientNotification(
+                                            LiveActivityModel.General(
+                                                id = "debug_test", type = ActivityType.MESSAGE,
+                                                title = "System Integration Active",
+                                                dataText = "Global Window Rendering Confirmed",
+                                                accentColor = android.graphics.Color.GREEN
+                                            ), 10000L
+                                        )
+                                    }
                                 }
                             }, filter, Context.RECEIVER_EXPORTED)
                         }
