@@ -54,7 +54,7 @@ class IslandController @Inject constructor(
     val currentGradientColors: List<Color> = listOf(Color(0xFF1E1E2E), Color(0xFF0A0A0A))
     val currentBrandColor: Color = Color.White
     
-    // 🧠 SYSTEM CONTEXT DETECTION: Only run heavy logic if inside com.android.systemui
+    // 🧠 SYSTEM CONTEXT DETECTION
     private val isSystemProcess = context.packageName == "com.android.systemui"
 
     var settingsState by mutableStateOf(com.example.dynamicisland.settings.SettingsState())
@@ -92,6 +92,23 @@ class IslandController @Inject constructor(
         evaluatePriority()
     }
     
+    fun swallowClipData(clipData: android.content.ClipData) {
+        scope.launch {
+            val saved = storageManager.swallowDroppedData(clipData)
+            if (saved) {
+                postTransientNotification(
+                    LiveActivityModel.General(
+                        id = "sys_stash", type = ActivityType.MESSAGE, title = "Item Stashed", 
+                        dataText = "Added to Archive", accentColor = android.graphics.Color.GREEN
+                    ), 3000L
+                )
+            }
+        }
+    }
+
+    val stashHistory: StateFlow<List<com.example.dynamicisland.manager.StashedItem>> 
+        get() = storageManager.stashHistory
+
     private fun triggerTransitionHaptic(newState: IslandState) {
         hapticsManager.triggerTransitionHaptic(newState, currentCall?.state, topAppPackage)
     }
@@ -169,7 +186,7 @@ class IslandController @Inject constructor(
         }
     }
 
-    private val iconCache = object : LruCache<String, Bitmap>(5 * 1024 * 1024) { // Reduced cache size for SystemUI stability
+    private val iconCache = object : LruCache<String, Bitmap>(5 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
 
@@ -197,7 +214,6 @@ class IslandController @Inject constructor(
                         view.calibrationTarget.value = target
                         if (enabled) {
                             val targetState = when(target.lowercase()) {
-                                "ring" -> IslandState.TYPE_0_RING
                                 "mini" -> IslandState.TYPE_1_MINI
                                 "mid" -> IslandState.TYPE_2_MID
                                 "max" -> IslandState.TYPE_3_MAX
@@ -365,7 +381,17 @@ class IslandController @Inject constructor(
             else context.registerReceiver(ecosystemReceiver, ecoFilter)
 
             BatteryPlugin.onBatteryChanged = { level, isCharging, _, _ ->
-                if (isChargingEnabled && isCharging && !wasCharging) postTransientNotification(LiveActivityModel.Charging("sys_battery", level, true, true, false), 3000L)
+                if (isChargingEnabled && isCharging && !wasCharging) {
+                    postTransientNotification(
+                        LiveActivityModel.Charging(
+                            id = "sys_battery",
+                            level = level,
+                            isPluggedIn = true,
+                            isTransient = true,
+                            isCritical = false
+                        ), 3000L
+                    )
+                }
                 wasCharging = isCharging; islandView?.updateBattery(level, isCharging)
             }
             BatteryPlugin.start(context)

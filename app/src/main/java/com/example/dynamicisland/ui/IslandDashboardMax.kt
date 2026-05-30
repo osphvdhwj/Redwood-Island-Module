@@ -46,6 +46,9 @@ import com.example.dynamicisland.R
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.manager.IslandController
 import com.example.dynamicisland.model.LocalIslandTheme
+import com.example.dynamicisland.manager.StashedItem
+import com.example.dynamicisland.manager.StashType
+import com.example.dynamicisland.model.ActivityType
 
 @Composable
 fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controller: IslandController) {
@@ -200,7 +203,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
 }
 
 @Composable
-fun DynamicIslandView.StashItemCard(item: com.example.dynamicisland.manager.StashedItem) {
+fun DynamicIslandView.StashItemCard(item: StashedItem) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
 
@@ -229,14 +232,14 @@ fun DynamicIslandView.StashItemCard(item: com.example.dynamicisland.manager.Stas
             modifier = Modifier.padding(8.dp)
         ) {
             val icon = when (item.type) {
-                com.example.dynamicisland.manager.StashType.TEXT -> Icons.Default.Edit
-                com.example.dynamicisland.manager.StashType.IMAGE -> Icons.Default.Image
-                com.example.dynamicisland.manager.StashType.FILE -> Icons.Default.Build
+                StashType.TEXT -> Icons.Default.Edit
+                StashType.IMAGE -> Icons.Default.Image
+                StashType.FILE -> Icons.Default.Build
             }
             Icon(icon, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
             Spacer(Modifier.height(4.dp))
             Text(
-                text = if (item.type == com.example.dynamicisland.manager.StashType.TEXT) item.content else item.id,
+                text = if (item.type == StashType.TEXT) item.content else item.id,
                 color = Color.White,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -248,8 +251,8 @@ fun DynamicIslandView.StashItemCard(item: com.example.dynamicisland.manager.Stas
     }
 }
 
-private fun handleStashClick(context: android.content.Context, item: com.example.dynamicisland.manager.StashedItem) {
-    if (item.type == com.example.dynamicisland.manager.StashType.TEXT) {
+private fun handleStashClick(context: android.content.Context, item: StashedItem) {
+    if (item.type == StashType.TEXT) {
         val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
         cm.setPrimaryClip(android.content.ClipData.newPlainText("Stashed Text", item.content))
         android.widget.Toast.makeText(context, "Copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
@@ -269,9 +272,9 @@ private fun handleStashClick(context: android.content.Context, item: com.example
     }
 }
 
-private fun shareStashItem(context: android.content.Context, item: com.example.dynamicisland.manager.StashedItem) {
+private fun shareStashItem(context: android.content.Context, item: StashedItem) {
     val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-        if (item.type == com.example.dynamicisland.manager.StashType.TEXT) {
+        if (item.type == StashType.TEXT) {
             type = "text/plain"
             putExtra(android.content.Intent.EXTRA_TEXT, item.content)
         } else {
