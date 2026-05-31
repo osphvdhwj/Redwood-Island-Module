@@ -64,6 +64,13 @@ data class SettingsState(
     val enableLowLatencyMode: Boolean = false,
     val enableClipboardPaperclip: Boolean = true,
     
+    // --- AI & Prediction ---
+    val predictionTint: Boolean = true,
+    val predictiveActions: Boolean = true,
+    val autoDismissDelay: Int = 5,
+    val contextualSuggestions: Boolean = true,
+    val gestureLearning: Boolean = true,
+    
     // --- Legacy / Miscellaneous ---
     val otpDetection: Boolean = true,
     val linkIntercept: Boolean = true,
@@ -73,8 +80,6 @@ data class SettingsState(
     val notificationCoalescing: Boolean = true,
     val appPermissionChecker: Boolean = true,
     val gamingHud: Boolean = true,
-    val showFpsHUD: Boolean = false,
-    val showCpuTempHUD: Boolean = false,
     val hapticFeedback: Boolean = true,
     val hapticIntensity: Float = 1f,
     val ringCadenceVibration: Boolean = true,
@@ -94,7 +99,39 @@ data class SettingsState(
     val stashStoragePath: String = "/sdcard/DynamicIsland/Archive",
     val aiConfidenceThreshold: Int = 10,
     val aiReinforcementRate: Float = 1.0f,
-    val iconPack: IconPack = IconPack.MaterialYou
+    val iconPack: IconPack = IconPack.MaterialYou,
+    
+    // --- Missing fields from controller ---
+    val wifiAlertDuration: Int = 3,
+    val btAlertDuration: Int = 3,
+    val hotspotAlertDuration: Int = 5,
+    val dataAlertDuration: Int = 3,
+    val ringMediaVisible: Boolean = true,
+    val ringBatteryVisible: Boolean = true,
+    val ringDataVisible: Boolean = true,
+    val invisibleRingTouchPassthrough: Boolean = true,
+    val antiBurnInEnabled: Boolean = true,
+    val antiBurnInIntensity: Float = 1.5f,
+    val smartGesturesEnabled: Boolean = true,
+    val smartCallOverride: Boolean = true,
+    val smartMediaOverride: Boolean = true,
+    val smartGamingOverride: Boolean = true,
+    val freeformSmartGesture: Boolean = true,
+    val freeformLaunchEnabled: Boolean = true,
+    val talkbackIntegration: Boolean = true,
+    val proximityWake: Boolean = false,
+    val timerIntegration: Boolean = true,
+    val allowChargingMini: Boolean = true,
+    val allowChargingMid: Boolean = true,
+    val allowNotifMini: Boolean = true,
+    val allowNotifMid: Boolean = true,
+    val allowNotifMax: Boolean = true,
+    val allowCallMid: Boolean = true,
+    val allowCallMax: Boolean = true,
+    val allowTaskMini: Boolean = true,
+    val allowTaskMid: Boolean = true,
+    val dynamicGradient: Boolean = true,
+    val splitPillEnabled: Boolean = true
 )
 
 enum class DesignLanguage { MATERIAL_YOU, APPLE_LIQUID_GLASS }

@@ -12,6 +12,7 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import com.example.dynamicisland.manager.*
+import com.example.dynamicisland.ipc.*
 import com.example.dynamicisland.model.ActivityType
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.settings.SettingsManager

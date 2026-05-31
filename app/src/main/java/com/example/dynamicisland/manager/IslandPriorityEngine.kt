@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.WindowManager
 import com.example.dynamicisland.model.*
 import com.example.dynamicisland.ipc.IslandState
+import com.example.dynamicisland.settings.SettingsState
 
 data class PriorityResult(
     val islandState: IslandState,
@@ -13,6 +14,7 @@ data class PriorityResult(
 )
 
 object IslandPriorityEngine {
+
     fun evaluatePriority(
         context: Context,
         windowManager: WindowManager?,
@@ -28,7 +30,7 @@ object IslandPriorityEngine {
         userForceCollapsed: Boolean,
         currentActiveModel: LiveActivityModel?,
         currentVisualState: IslandState,
-        settings: com.example.dynamicisland.settings.SettingsState = com.example.dynamicisland.settings.SettingsState()
+        settings: SettingsState = SettingsState()
     ): PriorityResult {
         
         val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -125,7 +127,7 @@ object IslandPriorityEngine {
     private fun constrainState(
         target: IslandState,
         model: LiveActivityModel,
-        settings: com.example.dynamicisland.settings.SettingsState
+        settings: SettingsState
     ): IslandState {
         var current = target
         while (current != IslandState.HIDDEN) {

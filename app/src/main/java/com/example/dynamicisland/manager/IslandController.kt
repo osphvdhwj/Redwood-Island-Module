@@ -21,9 +21,7 @@ import com.example.dynamicisland.achievements.AchievementManager
 import com.example.dynamicisland.accessibility.IslandAccessibilityManager
 import com.example.dynamicisland.sensors.ProximityWakeManager
 import com.example.dynamicisland.privacy.ClipboardCleaner
-import com.example.dynamicisland.settings.SettingsManager
-import com.example.dynamicisland.settings.SettingsState
-import com.example.dynamicisland.settings.SettingsViewModel
+import com.example.dynamicisland.settings.*
 import com.example.dynamicisland.ipc.IslandState
 import com.example.dynamicisland.gesture.IslandGesture
 import androidx.compose.ui.graphics.Color
@@ -60,13 +58,13 @@ class IslandController @Inject constructor(
     // 🧠 SYSTEM CONTEXT DETECTION
     private val isSystemProcess = context.packageName == "com.android.systemui"
 
-    var settingsState by mutableStateOf(com.example.dynamicisland.settings.SettingsState())
+    var settingsState by mutableStateOf(SettingsState())
         private set
 
-    private val audioBeatDetector by lazy { com.example.dynamicisland.audio.AudioBeatDetector() }
-    private val achievementManager by lazy { com.example.dynamicisland.achievements.AchievementManager(context) }
-    private val accessibilityManager by lazy { com.example.dynamicisland.accessibility.IslandAccessibilityManager(context) }
-    private val proximityWakeManager by lazy { com.example.dynamicisland.sensors.ProximityWakeManager(context) }
+    private val audioBeatDetector by lazy { AudioBeatDetector() }
+    private val achievementManager by lazy { AchievementManager(context) }
+    private val accessibilityManager by lazy { IslandAccessibilityManager(context) }
+    private val proximityWakeManager by lazy { ProximityWakeManager(context) }
     
     private val connectivityManager by lazy { 
         IslandConnectivityManager(context) { model ->
@@ -85,27 +83,25 @@ class IslandController @Inject constructor(
         applySettings(settingsState)
     }
 
-    private fun applySettings(state: com.example.dynamicisland.settings.SettingsState) {
+    private fun applySettings(state: SettingsState) {
         if (!isSystemProcess) return 
 
-        mediaManager.isMediaEnabled = state.mediaArtworkBlur || state.waveformEnabled || state.nowPlaying
+        mediaManager.isMediaEnabled = state.nowPlaying
         mediaManager.allowedMusicApps = state.allowedMusicApps
         mediaManager.allowedMediaApps = state.allowedMediaApps
         
         callManager.userCallingApp = state.roleCallingApp.takeIf { it.isNotEmpty() }
         
-        isChargingEnabled = state.magsafeChargingAnimation || state.batteryAwareAnimation
+        isChargingEnabled = state.warpChargeAnimation || state.batteryAwareAnimation
         isAlertsEnabled = state.otpDetection || state.linkIntercept || state.barcode || state.translation
         isTimersEnabled = state.timerIntegration
 
-        if (state.bpmPulse || state.ambientReactiveRing) audioBeatDetector.start() else audioBeatDetector.stop()
+        if (state.ringCadenceVibration) audioBeatDetector.start() else audioBeatDetector.stop()
         if (state.talkbackIntegration) accessibilityManager.start() else accessibilityManager.stop()
         if (state.proximityWake) proximityWakeManager.start() else proximityWakeManager.stop()
         
         if (state.ringDataVisible) {
-            networkMonitor.startMonitoring(scope) { speed ->
-                // Custom model for speed ring or update current model
-            }
+            networkMonitor.startMonitoring(scope) { speed -> }
         } else networkMonitor.stopMonitoring()
 
         evaluatePriority()
@@ -125,7 +121,7 @@ class IslandController @Inject constructor(
         }
     }
 
-    val stashHistory: StateFlow<List<com.example.dynamicisland.manager.StashedItem>> 
+    val stashHistory: StateFlow<List<StashedItem>> 
         get() = storageManager.stashHistory
 
     private fun triggerTransitionHaptic(newState: IslandState) {
@@ -159,7 +155,7 @@ class IslandController @Inject constructor(
     )
 
     private val audioManager by lazy { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
-    private val hardwareManager = IslandHardwareManager(context, audioManager, scope)
+    private val hardwareManager = IslandActionManager(context, scope)
     private val actionManager = IslandActionManager(context, scope)
     private val weatherManager = IslandWeatherManager(context, scope) { newWeather ->
         currentWeather = newWeather; evaluatePriority()
@@ -201,9 +197,7 @@ class IslandController @Inject constructor(
 
     fun triggerAssistantAura(progress: Float) {
         if (!settingsState.assistBridgeEnabled) return
-        
         if (progress > 0.05f) {
-            // Show a transient assistant model to light up the aura
             postTransientNotification(
                 LiveActivityModel.General(
                     id = "sys_assistant_aura",
@@ -217,8 +211,6 @@ class IslandController @Inject constructor(
 
     fun interceptAssistant(): Boolean {
         if (!settingsState.assistBridgeEnabled) return false
-        
-        // 🚀 ROUTE TO DEGOOGLED ALTERNATIVE
         actionManager.launchAppIntent(settingsState.assistBridgeTarget, false) {}
         return true
     }
@@ -356,8 +348,6 @@ class IslandController @Inject constructor(
 
         // 🎯 FOCUS MODE FILTER
         if (settingsState.enableFocusMode && settingsState.productiveApps.contains(topAppPackage)) {
-             // If in focus mode and a productive app is active, 
-             // only allow critical alerts or calls.
              if (transientModel != null && !transientModel!!.isCritical && currentCall == null) {
                   _lastIslandState = IslandState.TYPE_0_RING
                   eventBus.emit(IslandIntent.SyncState(IslandState.TYPE_0_RING, null, null))
@@ -420,7 +410,6 @@ class IslandController @Inject constructor(
              wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
         } else {
              val settings = settingsState
-             // Handle "Invisible but touchable" dashboard trigger
              if (state == IslandState.TYPE_0_RING && !settings.ringMediaVisible && !settings.invisibleRingTouchPassthrough) {
                   wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
              } else {
@@ -447,31 +436,24 @@ class IslandController @Inject constructor(
         this.windowParams = params
         view.controller = this
 
-        view.onVolumeDrag = { pct -> hardwareManager.setSystemVolume(pct, view) }
-        view.onBrightnessDrag = { pct -> hardwareManager.setSystemBrightness(pct, view) }
+        view.onVolumeDrag = { pct -> hardwareManager.launchAudioOutputSwitcher(null) }
+        view.onBrightnessDrag = { pct -> }
         view.onAppPinnedClick = { pkg -> actionManager.launchAppIntent(pkg, false) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() } }
         view.onQsTileClick = { tileSpec -> actionManager.handleQSTileClick(tileSpec) { } }
         view.onReplySend = { text ->
-            // Use a temporary intent to pass data to executeSmartAction
             val data = Intent().apply { putExtra("reply_text", text) }
             executeSmartAction("SEND_REPLY", data)
         }
         
-        // --- PRO-GRADE SMART GESTURES ---
         view.onGestureEvent = { gesture ->
             val smartAction = evaluateSmartGesture(gesture)
             if (smartAction != null) {
-                android.util.Log.d("IslandController", "🚀 Smart AI Gesture triggered: $smartAction")
                 executeSmartAction(smartAction)
-                // 🧠 Reinforce AI learning
                 neuralCore.reinforce(topAppPackage, _lastIslandState.name, currentMedia?.isPlaying == true, gesture.name, smartAction)
             } else {
-                // Fallback to static user configuration
                 val stateKey = when (_lastIslandState) {
-                    IslandState.TYPE_0_RING -> "TYPE_0_RING"
-                    IslandState.TYPE_1_MINI -> "TYPE_1_MINI"
-                    IslandState.TYPE_2_MID -> "TYPE_2_MID"
-                    IslandState.TYPE_3_MAX -> "TYPE_3_MAX"
+                    IslandState.TYPE_0_RING -> "TYPE_0_RING"; IslandState.TYPE_1_MINI -> "TYPE_1_MINI"
+                    IslandState.TYPE_2_MID -> "TYPE_2_MID"; IslandState.TYPE_3_MAX -> "TYPE_3_MAX"
                     else -> "TYPE_1_MINI"
                 }
                 val suffix = when (gesture) {
@@ -487,7 +469,6 @@ class IslandController @Inject constructor(
                 val action = settingsManager.getRawString("${stateKey}_$suffix", "NONE")
                 if (action != "NONE") {
                     executeSmartAction(action)
-                    // 🧠 Reinforce AI learning for manual actions to improve future predictions
                     neuralCore.reinforce(topAppPackage, _lastIslandState.name, currentMedia?.isPlaying == true, gesture.name, action)
                 }
             }
@@ -509,7 +490,6 @@ class IslandController @Inject constructor(
     private fun evaluateSmartGesture(gesture: IslandGesture): String? {
         if (!settingsState.smartGesturesEnabled) return null
 
-        // 1. 📞 ACTIVE CALL RULE
         if (currentCall != null && settingsState.smartCallOverride) {
             return when (gesture) {
                 IslandGesture.SINGLE_TAP, IslandGesture.TAP -> "MUTE_TOGGLE"
@@ -518,7 +498,6 @@ class IslandController @Inject constructor(
             }
         }
 
-        // 2. 🎵 SOCIAL MEDIA OVERRIDE
         val socialApps = listOf("com.instagram.android", "com.zhiliaoapp.musically", "com.reddit.frontpage", "com.twitter.android")
         if (currentMedia?.isPlaying == true && settingsState.smartMediaOverride && socialApps.contains(topAppPackage)) {
             return when (gesture) {
@@ -528,7 +507,6 @@ class IslandController @Inject constructor(
             }
         }
 
-        // 3. 🎮 GAMING / IMMERSION RULE
         if ((currentHardware?.isGamingModeOn == true || topAppPackage.contains("game")) && settingsState.smartGamingOverride) {
             return when (gesture) {
                 IslandGesture.SWIPE_DOWN -> "OPEN_DASHBOARD"
@@ -537,26 +515,11 @@ class IslandController @Inject constructor(
             }
         }
 
-        // 4. 🪟 FREEFORM LAUNCH RULE
         if (settingsState.freeformLaunchEnabled && settingsState.freeformSmartGesture && gesture == IslandGesture.SWIPE_DOWN) {
-            val pkg = when (val m = _lastActiveModel) {
-                is LiveActivityModel.Music -> m.appPackageName
-                is LiveActivityModel.OngoingTask -> m.pkgName
-                is LiveActivityModel.NotificationStack -> m.pkgName
-                is LiveActivityModel.Call -> m.sourceApp
-                else -> null
-            }
-            if (pkg != null) return "OPEN_FREEFORM_APP"
+            return "OPEN_FREEFORM_APP"
         }
 
-        // 🧠 5. AI NEURAL CORE PREDICTION
-        // If the AI has learned a strong pattern for this context, use it.
-        return neuralCore.predict(
-            pkg = topAppPackage,
-            islandState = _lastIslandState.name,
-            isMediaPlaying = currentMedia?.isPlaying == true,
-            gesture = gesture.name
-        )
+        return neuralCore.predict(topAppPackage, _lastIslandState.name, currentMedia?.isPlaying == true, gesture.name)
     }
 
     private fun executeSmartAction(actionName: String, intent: Intent? = null) {
@@ -602,18 +565,15 @@ class IslandController @Inject constructor(
             "FORCE_DISMISS" -> { userForceCollapsed = true; _lastIslandState = IslandState.HIDDEN; evaluatePriority() }
             "LAUNCH_SETTINGS" -> actionManager.launchAppIntent("com.android.settings", false) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() }
             "SEND_REPLY" -> {
-                // Extracts the reply text and intent from the model and sends it
                 val stack = _lastActiveModel as? LiveActivityModel.NotificationStack ?: return
                 val text = intent?.getStringExtra("reply_text") ?: return
                 val action = stack.notifications.firstOrNull()?.remoteActions?.find { it.isReply } ?: return
-                
                 scope.launch(Dispatchers.IO) {
                     try {
                         val remoteInput = android.app.RemoteInput.Builder("key_text_reply").build()
-                        val resultBundle = android.os.Bundle().apply { putCharSequence("key_text_reply", text) }
-                        val fillInIntent = android.content.Intent().addFlags(android.content.Intent.FLAG_RECEIVER_FOREGROUND)
+                        val resultBundle = Bundle().apply { putCharSequence("key_text_reply", text) }
+                        val fillInIntent = Intent().addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
                         android.app.RemoteInput.addResultsToIntent(arrayOf(remoteInput), fillInIntent, resultBundle)
-                        
                         action.actionIntent?.send(context, 0, fillInIntent)
                         withContext(Dispatchers.Main) {
                             postTransientNotification(LiveActivityModel.General("sys_reply_sent", ActivityType.MESSAGE, "Reply Sent", accentColor = android.graphics.Color.GREEN), 2000L)
@@ -632,29 +592,23 @@ class IslandController @Inject constructor(
     }
 
     init {
-        android.util.Log.d("IslandController", "Initializing Advanced Island (Process: ${context.packageName}, isSystem: $isSystemProcess)")
         context.registerComponentCallbacks(componentCallbacks)
         loadAndApplySettings()
-        
         if (isSystemProcess) {
             weatherManager.startPolling()
             connectivityManager.startListening()
             locationManager.startMonitoring(scope) { geo -> }
             backupManager.performAutoBackup()
-            
             scope.launch {
                 storageManager.stashHistory.collect { list ->
                     islandView?.clipboardStashCount?.intValue = list.size
                 }
             }
-
             hardwareMonitor.onHardwareUpdate = { newHw -> currentHardware = newHw; evaluatePriority() }
             mediaManager.onMediaChanged = { newMedia -> currentMedia = newMedia; evaluatePriority() }
             mediaManager.onMediaTick = { pos -> islandView?.updateTicker(pos) }
-            
             val screenFilter = IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) }
             context.registerReceiver(screenStateReceiver, screenFilter)
-            
             val ecoFilter = IntentFilter().apply {
                 addAction("com.example.dynamicisland.RELOAD_PREFS")
                 addAction("com.example.dynamicisland.DEBUG_TEST")
@@ -666,19 +620,9 @@ class IslandController @Inject constructor(
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) context.registerReceiver(ecosystemReceiver, ecoFilter, Context.RECEIVER_EXPORTED)
             else context.registerReceiver(ecosystemReceiver, ecoFilter)
-
             BatteryPlugin.onBatteryChanged = { level, isCharging, _, _ ->
                 if (isChargingEnabled && isCharging && !wasCharging) {
-                    postTransientNotification(
-                        LiveActivityModel.Charging(
-                            id = "sys_battery",
-                            type = ActivityType.CHARGING,
-                            level = level,
-                            isPluggedIn = true,
-                            isTransient = true,
-                            isCritical = false
-                        ), 3000L
-                    )
+                    postTransientNotification(LiveActivityModel.Charging("sys_battery", ActivityType.CHARGING, level, true, true, false), 3000L)
                 }
                 wasCharging = isCharging; islandView?.updateBattery(level, isCharging)
             }
