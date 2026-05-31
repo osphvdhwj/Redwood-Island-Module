@@ -186,16 +186,16 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
             Text("Quick Actions", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                qsTiles.take(4).forEach { tile ->
-                    QSTileModern(tile, onQsTileClick)
+                view.qsTiles.take(4).forEach { tile ->
+                    QSTileModern(tile, view.onQsTileClick)
                 }
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                qsTiles.drop(4).take(4).forEach { tile ->
-                    QSTileModern(tile, onQsTileClick)
+                view.qsTiles.drop(4).take(4).forEach { tile ->
+                    QSTileModern(tile, view.onQsTileClick)
                 }
-                if (qsTiles.size < 8) {
-                    repeat(4 - (qsTiles.size - 4)) { Spacer(Modifier.size(64.dp)) }
+                if (view.qsTiles.size < 8) {
+                    repeat(4 - (view.qsTiles.size - 4)) { Spacer(Modifier.size(64.dp)) }
                 }
             }
         }

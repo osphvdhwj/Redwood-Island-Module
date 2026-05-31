@@ -394,15 +394,16 @@ class IslandController @Inject constructor(
                     else -> "TYPE_1_MINI"
                 }
                 val suffix = when (gesture) {
-                    IslandGesture.SINGLE_TAP -> "single_tap"
+                    IslandGesture.SINGLE_TAP, IslandGesture.TAP -> "single_tap"
                     IslandGesture.DOUBLE_TAP -> "double_tap"
                     IslandGesture.LONG_PRESS -> "long_press"
                     IslandGesture.SWIPE_LEFT -> "swipe_left"
                     IslandGesture.SWIPE_RIGHT -> "swipe_right"
                     IslandGesture.SWIPE_UP -> "swipe_up"
                     IslandGesture.SWIPE_DOWN -> "swipe_down"
+                    else -> "none"
                 }
-                val action = settingsManager.getString("${stateKey}_$suffix", "NONE") ?: "NONE"
+                val action = settingsManager.getRawString("${stateKey}_$suffix", "NONE")
                 if (action != "NONE") executeSmartAction(action)
             }
         }
@@ -426,7 +427,7 @@ class IslandController @Inject constructor(
         // 1. 📞 ACTIVE CALL RULE
         if (currentCall != null && settingsState.smartCallOverride) {
             return when (gesture) {
-                IslandGesture.SINGLE_TAP -> "MUTE_TOGGLE"
+                IslandGesture.SINGLE_TAP, IslandGesture.TAP -> "MUTE_TOGGLE"
                 IslandGesture.LONG_PRESS -> "END_CALL"
                 else -> null
             }
@@ -524,7 +525,16 @@ class IslandController @Inject constructor(
 
             BatteryPlugin.onBatteryChanged = { level, isCharging, _, _ ->
                 if (isChargingEnabled && isCharging && !wasCharging) {
-                    postTransientNotification(LiveActivityModel.Charging("sys_battery", level, true, true, false), 3000L)
+                    postTransientNotification(
+                        LiveActivityModel.Charging(
+                            id = "sys_battery",
+                            type = ActivityType.CHARGING,
+                            level = level,
+                            isPluggedIn = true,
+                            isTransient = true,
+                            isCritical = false
+                        ), 3000L
+                    )
                 }
                 wasCharging = isCharging; islandView?.updateBattery(level, isCharging)
             }

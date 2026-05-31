@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -85,6 +86,33 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     var onAppPinnedClick: ((String) -> Unit)? = null
     var onQsTileClick: ((String) -> Unit)? = null
+    
+    // --- UI State Fields ---
+    val pinnedApps = mutableStateListOf("", "", "", "", "", "", "", "")
+    val qsTiles = mutableStateListOf("", "", "", "", "", "", "")
+    
+    val displayCutoutWidth = mutableFloatStateOf(94f)
+    val mainPillRect = mutableStateOf(android.graphics.Rect())
+    val splitCubeRect = mutableStateOf(android.graphics.Rect())
+    val insetsUpdateFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val activePrivacyOp = mutableStateOf<String?>(null)
+    val edgeLightActive = mutableStateOf(false)
+    val gamingFrameMs = mutableFloatStateOf(16.6f)
+    val gamingJankPct = mutableFloatStateOf(0f)
+    
+    // Call UI Callbacks
+    var onOpenCallUI: (() -> Unit)? = null
+    var onMicToggle: (() -> Unit)? = null
+    var onSpeakerToggle: (() -> Unit)? = null
+    var onEndCallClick: (() -> Unit)? = null
+    
+    // Media UI Callbacks
+    var onAudioOutputClick: (() -> Unit)? = null
+    var onCustomMediaAction: ((String) -> Unit)? = null
+    var onSeekTo: ((Long) -> Unit)? = null
+    
+    // Split UI Callbacks
+    var onSplitPillClick: (() -> Unit)? = null
 
     val pendingNotifColor = mutableIntStateOf(android.graphics.Color.WHITE)
     val hasUnseenNotif = mutableStateOf(false)
@@ -130,63 +158,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     val pixelShiftX = mutableFloatStateOf(0f)
     val pixelShiftY = mutableFloatStateOf(0f)
 
-    private val touchRegion = Region()
-    private val viewRect = Rect()
-
-    private val touchListener = ViewTreeObserver.OnComputeInternalInsetsListener { insets ->
-        insets.contentInsets.setEmpty()
-        insets.visibleInsets.setEmpty()
-        
-        // 💎 PRO-GRADE TOUCH PRECISION
-        // Only the actual Island geometry intercepts touches.
-        // Everything else passes through to the underlying app.
-        
-        val settings = controller?.settingsState ?: SettingsState()
-        val state = islandState.value
-        
-        val isVisible = state != IslandState.HIDDEN && (state != IslandState.TYPE_0_RING || !settings.invisibleRingTouchPassthrough)
-        
-        if (isVisible) {
-            insets.setTouchableInsets(ViewTreeObserver.InternalInsetsInfo.TOUCHABLE_INSETS_REGION)
-            
-            // We get the rect of the visible Island from the controller/MainUI
-            // For now, use a safe bounding box calculation
-            val density = context.resources.displayMetrics.density
-            val curW = when(state) {
-                IslandState.TYPE_0_RING -> ringW.value; IslandState.TYPE_1_MINI -> miniW.value
-                IslandState.TYPE_2_MID -> midW.value; IslandState.TYPE_3_MAX -> maxW.value
-                IslandState.TYPE_CUBE -> cubeW.value; else -> miniW.value
-            }
-            val curH = when(state) {
-                IslandState.TYPE_0_RING -> ringH.value; IslandState.TYPE_1_MINI -> miniH.value
-                IslandState.TYPE_2_MID -> midH.value; IslandState.TYPE_3_MAX -> maxH.value
-                IslandState.TYPE_CUBE -> cubeH.value; else -> miniH.value
-            }
-            val curX = when(state) {
-                IslandState.TYPE_0_RING -> ringX.value; IslandState.TYPE_1_MINI -> miniX.value
-                IslandState.TYPE_2_MID -> midX.value; IslandState.TYPE_3_MAX -> maxX.value
-                IslandState.TYPE_CUBE -> cubeX.value; else -> miniX.value
-            }
-            val curY = when(state) {
-                IslandState.TYPE_0_RING -> ringY.value; IslandState.TYPE_1_MINI -> miniY.value
-                IslandState.TYPE_2_MID -> midY.value; IslandState.TYPE_3_MAX -> maxY.value
-                IslandState.TYPE_CUBE -> cubeY.value; else -> miniY.value
-            }
-
-            val centerX = width / 2
-            val left = (centerX + (curX * density) - (curW * density / 2)).toInt()
-            val top = (curY * density).toInt()
-            val right = (centerX + (curX * density) + (curW * density / 2)).toInt()
-            val bottom = (top + (curH * density)).toInt()
-            
-            touchRegion.set(left, top, right, bottom)
-            insets.touchableRegion.set(touchRegion)
-        } else {
-            insets.setTouchableInsets(ViewTreeObserver.InternalInsetsInfo.TOUCHABLE_INSETS_REGION)
-            insets.touchableRegion.setEmpty()
-        }
-    }
-
     private var burnInJob: Job? = null
 
     init {
@@ -196,8 +167,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         setViewTreeSavedStateRegistryOwner(this)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         savedStateRegistryController.performRestore(null)
-
-        viewTreeObserver.addOnComputeInternalInsetsListener(touchListener)
 
         val composeView = ComposeView(context).apply {
             setContent {
@@ -247,7 +216,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-        viewTreeObserver.removeOnComputeInternalInsetsListener(touchListener)
         burnInJob?.cancel()
     }
 

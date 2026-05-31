@@ -117,7 +117,7 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
 
                 Box(
                     modifier = Modifier
-                        .squishClickable { onAudioOutputClick?.invoke() }
+                        .squishClickable { view.onAudioOutputClick?.invoke() }
                         .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
                         .padding(horizontal = 14.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
@@ -185,7 +185,7 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                         baseSize = 40.dp
                     ) { 
                         localIsLiked = !localIsLiked
-                        onCustomMediaAction?.invoke(action.action) 
+                        view.onCustomMediaAction?.invoke(action.action) 
                     }
                 }
             }
@@ -194,11 +194,11 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 InteractiveWavyMediaBar(
                     durationMs = music.durationMs,
-                    posProvider = { currentMediaPos.longValue },
+                    posProvider = { view.currentMediaPos.longValue },
                     isPlaying = music.isPlaying,
                     color = dynamicTextColor,
                     trackColor = Color.White.copy(alpha = 0.1f),
-                    onSeek = { onSeekTo?.invoke(it) },
+                    onSeek = { view.onSeekTo?.invoke(it) },
                     modifier = Modifier.height(32.dp)
                 )
 
@@ -206,7 +206,7 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(formatTime(currentMediaPos.longValue), color = Color.White.copy(0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(formatTime(view.currentMediaPos.longValue), color = Color.White.copy(0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Text(formatTime(music.durationMs), color = Color.White.copy(0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
@@ -218,18 +218,18 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 music.customActions.find { it.action.contains("shuffle", true) }?.let { action ->
-                    InteractiveIconButton(logicalIcon = IconProvider.LogicalIcon.SHUFFLE, tint = if (localIsShuffled) dominantColor else Color.White.copy(0.4f), baseSize = 36.dp) { localIsShuffled = !localIsShuffled; onCustomMediaAction?.invoke(action.action) }
+                    InteractiveIconButton(logicalIcon = IconProvider.LogicalIcon.SHUFFLE, tint = if (localIsShuffled) dominantColor else Color.White.copy(0.4f), baseSize = 36.dp) { localIsShuffled = !localIsShuffled; view.onCustomMediaAction?.invoke(action.action) }
                 } ?: Spacer(Modifier.width(36.dp))
 
-                InteractiveIconButton(logicalIcon = IconProvider.LogicalIcon.PREV, tint = Color.White, baseSize = 48.dp) { onPrevClick?.invoke() }
+                InteractiveIconButton(logicalIcon = IconProvider.LogicalIcon.PREV, tint = Color.White, baseSize = 48.dp) { view.onPrevClick?.invoke() }
 
                 val playIcon = if (music.isPlaying) IconProvider.LogicalIcon.PAUSE else IconProvider.LogicalIcon.PLAY
-                InteractiveIconButton(logicalIcon = playIcon, tint = Color.White, baseSize = 64.dp, bgAlpha = 0.15f) { onPlayPauseClick?.invoke() }
+                InteractiveIconButton(logicalIcon = playIcon, tint = Color.White, baseSize = 64.dp, bgAlpha = 0.15f) { view.onPlayPauseClick?.invoke() }
 
-                InteractiveIconButton(logicalIcon = IconProvider.LogicalIcon.NEXT, tint = Color.White, baseSize = 48.dp) { onNextClick?.invoke() }
+                InteractiveIconButton(logicalIcon = IconProvider.LogicalIcon.NEXT, tint = Color.White, baseSize = 48.dp) { view.onNextClick?.invoke() }
 
                 music.customActions.find { it.action.contains("repeat", true) }?.let { action ->
-                    InteractiveIconButton(logicalIcon = IconProvider.LogicalIcon.SYNC, tint = if (localRepeatMode > 0) dominantColor else Color.White.copy(0.4f), baseSize = 36.dp) { localRepeatMode = (localRepeatMode + 1) % 3; onCustomMediaAction?.invoke(action.action) }
+                    InteractiveIconButton(logicalIcon = IconProvider.LogicalIcon.SYNC, tint = if (localRepeatMode > 0) dominantColor else Color.White.copy(0.4f), baseSize = 36.dp) { localRepeatMode = (localRepeatMode + 1) % 3; view.onCustomMediaAction?.invoke(action.action) }
                 } ?: Spacer(Modifier.width(36.dp))
             }
         }

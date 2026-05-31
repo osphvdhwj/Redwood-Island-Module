@@ -89,7 +89,7 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
                     }
                     .background(bgColor, RoundedCornerShape(50))
                     .squishClickable {
-                        if (isRinging) onOpenCallUI?.invoke() else setState(IslandState.TYPE_2_MID)
+                        if (isRinging) view.onOpenCallUI?.invoke() else setState(IslandState.TYPE_2_MID)
                     }
                     .padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -146,7 +146,7 @@ fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {
 
     AlertMidSlot(
         islandState = islandState.value,
-        swipeAction = { onOpenCallUI?.invoke() },
+        swipeAction = { view.onOpenCallUI?.invoke() },
         iconContent = {
             val pulse by rememberInfiniteTransition(label="p").animateFloat(initialValue = 0.96f, targetValue = 1.04f, animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Reverse), label="s")
             Box(
@@ -172,13 +172,13 @@ fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {
         rightContent = {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 QuickCircleBtn(icon = if(isMicMuted) Icons.Default.Close else Icons.Default.Check, isActive = isMicMuted, activeColor = Color.White, inactiveColor = Color.White.copy(0.15f)) { 
-                    onMicToggle?.invoke(); isMicMuted = !isMicMuted 
+                    view.onMicToggle?.invoke(); isMicMuted = !isMicMuted 
                 }
                 QuickCircleBtn(icon = Icons.Default.Notifications, isActive = isSpeakerOn, activeColor = Color.White, inactiveColor = Color.White.copy(0.15f)) { 
-                    onSpeakerToggle?.invoke(); isSpeakerOn = !isSpeakerOn 
+                    view.onSpeakerToggle?.invoke(); isSpeakerOn = !isSpeakerOn 
                 }
                 QuickCircleBtn(icon = Icons.Default.Call, isActive = true, activeColor = Color(0xFFFF3B30), inactiveColor = Color(0xFFFF3B30)) { 
-                    onEndCallClick?.invoke() 
+                    view.onEndCallClick?.invoke() 
                 }
             }
         }

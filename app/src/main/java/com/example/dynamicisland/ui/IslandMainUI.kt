@@ -148,7 +148,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         label = "squish"
     )
     
-    val minSafeWidth = displayCutoutWidth.floatValue + 4f
+    val minSafeWidth = view.displayCutoutWidth.floatValue + 4f
     val screenWidthDp = configuration.screenWidthDp.toFloat()
     val maxSafeWidth = (screenWidthDp - 16f).coerceAtLeast(minSafeWidth)
 
@@ -262,10 +262,10 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                     val newTop = bounds.top.toInt()
                     val newRight = bounds.right.toInt()
                     val newBottom = bounds.bottom.toInt()
-                    if (mainPillRect.left != newLeft || mainPillRect.top != newTop || 
-                        mainPillRect.right != newRight || mainPillRect.bottom != newBottom) {
-                        mainPillRect.set(newLeft, newTop, newRight, newBottom)
-                        insetsUpdateFlow.tryEmit(Unit)
+                    if (view.mainPillRect.value.left != newLeft || view.mainPillRect.value.top != newTop || 
+                        view.mainPillRect.value.right != newRight || view.mainPillRect.value.bottom != newBottom) {
+                        view.mainPillRect.value.set(newLeft, newTop, newRight, newBottom)
+                        view.insetsUpdateFlow.tryEmit(Unit)
                     }
                 }
                 .shadow(elevation = shadowElevation, shape = RoundedCornerShape(animatedRadius), spotColor = Color.Black)
@@ -505,9 +505,9 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                 IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { 
                                     if (view.controller?.currentHardware?.isGamingModeOn == true && model !is LiveActivityModel.Call) {
                                         GamingHUDMini(
-                                            fps        = gamingFps.floatValue,
-                                            frameMs    = gamingFrameMs.floatValue,
-                                            jankPct    = gamingJankPct.floatValue,
+                                            fps        = view.gamingFps.floatValue,
+                                            frameMs    = view.gamingFrameMs.floatValue,
+                                            jankPct    = view.gamingJankPct.floatValue,
                                             cpuTemp    = view.controller?.currentHardware?.cpuTempCelsius ?: 0f,
                                             cpuFreqMhz = view.controller?.currentHardware?.cpuFreqMhz    ?: 0
                                         )

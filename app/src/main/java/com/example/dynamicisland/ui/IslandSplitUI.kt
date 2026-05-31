@@ -64,9 +64,9 @@ fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.c
                         val newBottom = bounds.bottom.toInt()
                     
                         // 🧠 THE LOOP BREAKER
-                        if (splitCubeRect.left != newLeft || splitCubeRect.top != newTop || splitCubeRect.right != newRight || splitCubeRect.bottom != newBottom) {
-                            splitCubeRect.set(newLeft, newTop, newRight, newBottom)
-                            insetsUpdateFlow.tryEmit(Unit)
+                        if (view.splitCubeRect.value.left != newLeft || view.splitCubeRect.value.top != newTop || view.splitCubeRect.value.right != newRight || view.splitCubeRect.value.bottom != newBottom) {
+                            view.splitCubeRect.value.set(newLeft, newTop, newRight, newBottom)
+                            view.insetsUpdateFlow.tryEmit(Unit)
                         }
                     }
                     .clip(CircleShape)
@@ -75,7 +75,7 @@ fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.c
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
-                    ) { onSplitPillClick?.invoke() },
+                    ) { view.onSplitPillClick?.invoke() },
                 contentAlignment = Alignment.Center
             ) {
                 when (sModel) {

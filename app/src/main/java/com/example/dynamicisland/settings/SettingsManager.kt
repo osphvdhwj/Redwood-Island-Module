@@ -126,6 +126,10 @@ class SettingsManager(private val context: Context) {
         if (isSystemUI) ipcClient.getString(key.name, default ?: "")
         else prefs.getString(key.name, default)
 
+    fun getRawString(keyName: String, default: String): String =
+        if (isSystemUI) ipcClient.getString(keyName, default)
+        else prefs.getString(keyName, default) ?: default
+
     fun putString(key: SettingKey, value: String) {
         prefs.edit().putString(key.name, value).apply()
         ipcClient.putString(key.name, value)

@@ -35,11 +35,13 @@ class IslandDownloadMonitor @Inject constructor(
                         onUpdate(
                             LiveActivityModel.OngoingTask(
                                 id = "dl_$id",
-                                type = ActivityType.MESSAGE,
+                                type = ActivityType.ONGOING_TASK,
+                                pkgName = "com.android.providers.downloads",
                                 title = "Downloading...",
-                                dataText = title,
-                                progress = progress,
-                                accentColor = android.graphics.Color.CYAN
+                                text = title,
+                                progress = progress.toInt(),
+                                progressMax = 100,
+                                networkSpeed = null
                             )
                         )
                     }
