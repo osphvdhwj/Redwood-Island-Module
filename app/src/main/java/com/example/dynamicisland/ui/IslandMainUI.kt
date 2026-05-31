@@ -251,7 +251,8 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                 .width(animatedWidth) 
                 .height(animatedHeight)
                 .graphicsLayer { 
-                    scaleX = islandScale; scaleY = islandScale; alpha = islandAlpha; 
+                    val s = view.elasticScale.value * touchScale
+                    scaleX = s; scaleY = s; alpha = animValues.alpha.value
                     transformOrigin = TransformOrigin(0.5f, 0.5f) 
                 }
                 .onGloballyPositioned { coordinates ->
