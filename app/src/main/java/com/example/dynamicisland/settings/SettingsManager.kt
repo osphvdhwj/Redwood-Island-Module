@@ -65,7 +65,8 @@ class SettingsManager(private val context: Context) {
         TIMER_INTEGRATION, ALLOW_CHARGING_MINI, ALLOW_CHARGING_MID,
         ALLOW_NOTIF_MINI, ALLOW_NOTIF_MID, ALLOW_NOTIF_MAX,
         ALLOW_CALL_MID, ALLOW_CALL_MAX, ALLOW_TASK_MINI, ALLOW_TASK_MID,
-        DYNAMIC_GRADIENT, SPLIT_PILL_ENABLED
+        DYNAMIC_GRADIENT, SPLIT_PILL_ENABLED, CLIPBOARD_CLEANER, 
+        ENABLE_METABALL_TEAR, SHOW_FPS_HUD, SHOW_CPU_TEMP_HUD
     }
 
     fun getBoolean(key: SettingKey, default: Boolean): Boolean =
@@ -143,6 +144,7 @@ class SettingsManager(private val context: Context) {
             rollingTypographyEnabled = getBoolean(SettingKey.ROLLING_TYPOGRAPHY_ENABLED, true),
             aestheticStyle = try { AestheticStyle.valueOf(getString(SettingKey.AESTHETIC_STYLE, "GLASS") ?: "GLASS") } catch(e: Exception) { AestheticStyle.GLASS },
             monochromeIcons = getBoolean(SettingKey.MONOCHROME_ICONS, false),
+            enableMetaballTear = getBoolean(SettingKey.ENABLE_METABALL_TEAR, true),
             parseDeliveryNotifications = getBoolean(SettingKey.PARSE_DELIVERY_NOTIFICATIONS, true),
             warpChargeAnimation = getBoolean(SettingKey.WARP_CHARGE_ANIMATION, true),
             batteryAwareAnimation = getBoolean(SettingKey.BATTERY_AWARE_ANIMATION, true),
@@ -176,6 +178,7 @@ class SettingsManager(private val context: Context) {
             productiveApps = getStringSet(SettingKey.PRODUCTIVE_APPS, emptySet()),
             enableLowLatencyMode = getBoolean(SettingKey.ENABLE_LOW_LATENCY_MODE, false),
             enableClipboardPaperclip = getBoolean(SettingKey.ENABLE_CLIPBOARD_PAPERCLIP, true),
+            clipboardCleaner = getBoolean(SettingKey.CLIPBOARD_CLEANER, true),
             predictionTint = getBoolean(SettingKey.PREDICTION_TINT, true),
             predictiveActions = getBoolean(SettingKey.PREDICTIVE_ACTIONS, true),
             autoDismissDelay = getInt(SettingKey.AUTO_DISMISS_DELAY, 5),
@@ -189,6 +192,8 @@ class SettingsManager(private val context: Context) {
             notificationCoalescing = getBoolean(SettingKey.NOTIFICATION_COALESCING, true),
             appPermissionChecker = getBoolean(SettingKey.APP_PERMISSION_CHECKER, true),
             gamingHud = getBoolean(SettingKey.GAMING_HUD, true),
+            showFpsHUD = getBoolean(SettingKey.SHOW_FPS_HUD, false),
+            showCpuTempHUD = getBoolean(SettingKey.SHOW_CPU_TEMP_HUD, false),
             hapticFeedback = getBoolean(SettingKey.HAPTIC_FEEDBACK, true),
             hapticIntensity = getFloat(SettingKey.HAPTIC_INTENSITY, 1f),
             ringCadenceVibration = getBoolean(SettingKey.RING_CADENCE_VIBRATION, true),
@@ -238,7 +243,9 @@ class SettingsManager(private val context: Context) {
             allowTaskMini = getBoolean(SettingKey.ALLOW_TASK_MINI, true),
             allowTaskMid = getBoolean(SettingKey.ALLOW_TASK_MID, true),
             dynamicGradient = getBoolean(SettingKey.DYNAMIC_GRADIENT, true),
-            splitPillEnabled = getBoolean(SettingKey.SPLIT_PILL_ENABLED, true)
+            splitPillEnabled = getBoolean(SettingKey.SPLIT_PILL_ENABLED, true),
+            mediaArtworkBlur = getBoolean(SettingKey.MEDIA_ARTWORK_BLUR, true),
+            bpmPulse = getBoolean(SettingKey.BPM_PULSE, true)
         )
     }
 }
