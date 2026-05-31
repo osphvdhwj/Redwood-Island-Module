@@ -35,6 +35,7 @@ import com.example.dynamicisland.ipc.IslandState
 
 @Composable
 fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
+    val view = this
     val theme = LocalIslandTheme.current
     val isRinging = model.state == "RINGING"
 
@@ -137,6 +138,7 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
 
 @Composable
 fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {
+    val view = this
     val context = LocalContext.current
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager }
     val theme = LocalIslandTheme.current

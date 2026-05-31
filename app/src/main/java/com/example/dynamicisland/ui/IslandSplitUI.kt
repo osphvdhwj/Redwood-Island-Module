@@ -42,7 +42,7 @@ fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.c
         enter = scaleIn(spring(dampingRatio = 0.8f, stiffness = 300f)) + fadeIn(),
         exit = scaleOut() + fadeOut()
     ) {
-        val sModel = splitModel.value
+        val sModel = view.splitModel.value
 
         val splitBg = when {
             sModel is LiveActivityModel.Charging && sModel.isPluggedIn -> Color.Green.copy(alpha = 0.2f)

@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
+    val view = this
     val dynamicTextColor = Color(music.titleTextColor).takeIf { it != Color.Transparent && it != Color.Black } ?: Color.White
     val theme = LocalIslandTheme.current
     val context = LocalContext.current

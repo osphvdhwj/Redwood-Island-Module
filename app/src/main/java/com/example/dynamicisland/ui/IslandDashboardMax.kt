@@ -52,6 +52,7 @@ import com.example.dynamicisland.model.ActivityType
 
 @Composable
 fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controller: IslandController) {
+    val view = this
     val theme = LocalIslandTheme.current
     val stashItems by controller.stashHistory.collectAsState()
 
@@ -86,7 +87,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                     modifier = Modifier
                         .size(40.dp)
                         .background(Color.White.copy(alpha = 0.1f), CircleShape)
-                        .squishClickable { onGestureEvent?.invoke(IslandGesture.LONG_PRESS) },
+                        .squishClickable { view.onGestureEvent?.invoke(IslandGesture.LONG_PRESS) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Settings, null, tint = Color.White, modifier = Modifier.size(20.dp))

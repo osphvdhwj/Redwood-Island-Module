@@ -128,15 +128,15 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     val animValues = updateIslandTransition(
         targetState = uiState,
         isCyberpunk = isCyberpunk,
-        miniWidth = if (state == IslandState.TYPE_2_MID) midW.value else if (state == IslandState.TYPE_CUBE) cubeW.value else miniW.value,
-        miniHeight = if (state == IslandState.TYPE_2_MID) midH.value else if (state == IslandState.TYPE_CUBE) cubeH.value else miniH.value,
-        maxWidth = maxW.value,
-        maxHeight = if (activeModel.value is LiveActivityModel.Music) (maxH.value * 0.70f) else maxH.value,
-        ringWidth = ringW.value,
-        ringHeight = ringH.value,
-        miniRadius = if (state == IslandState.TYPE_2_MID) midR.value else if (state == IslandState.TYPE_CUBE) cubeR.value else miniR.value,
-        maxRadius = maxR.value,
-        ringRadius = ringR.value
+        miniWidth = if (state == IslandState.TYPE_2_MID) view.midW.value else if (state == IslandState.TYPE_CUBE) view.cubeW.value else view.miniW.value,
+        miniHeight = if (state == IslandState.TYPE_2_MID) view.midH.value else if (state == IslandState.TYPE_CUBE) view.cubeH.value else view.miniH.value,
+        maxWidth = view.maxW.value,
+        maxHeight = if (view.activeModel.value is LiveActivityModel.Music) (view.maxH.value * 0.70f) else view.maxH.value,
+        ringWidth = view.ringW.value,
+        ringHeight = view.ringH.value,
+        miniRadius = if (state == IslandState.TYPE_2_MID) view.midR.value else if (state == IslandState.TYPE_CUBE) view.cubeR.value else view.miniR.value,
+        maxRadius = view.maxR.value,
+        ringRadius = view.ringR.value
     )
 
     val haptic = LocalHapticFeedback.current
@@ -156,24 +156,22 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     val animatedHeight = animValues.height
     val animatedRadius = animValues.cornerRadius.coerceAtLeast(0.dp)
     val offsetX = when (state) {
-        IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniX.value
-        IslandState.TYPE_2_MID -> midX.value
-        IslandState.TYPE_3_MAX -> maxX.value
-        IslandState.TYPE_CUBE -> cubeX.value
-        else -> ringX.value
+        IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> view.miniX.value
+        IslandState.TYPE_2_MID -> view.midX.value
+        IslandState.TYPE_3_MAX -> view.maxX.value
+        IslandState.TYPE_CUBE -> view.cubeX.value
+        else -> view.ringX.value
     }
     val offsetY = when (state) {
-        IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> miniY.value
-        IslandState.TYPE_2_MID -> midY.value
-        IslandState.TYPE_3_MAX -> maxY.value
-        IslandState.TYPE_CUBE -> cubeY.value
-        else -> ringY.value
+        IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> view.miniY.value
+        IslandState.TYPE_2_MID -> view.midY.value
+        IslandState.TYPE_3_MAX -> view.maxY.value
+        IslandState.TYPE_CUBE -> view.cubeY.value
+        else -> view.ringY.value
     }
 
-    val islandScale = animValues.scale
+    val model = view.activeModel.value
     val islandAlpha = animValues.alpha
-
-    val model = activeModel.value
     
     val bgColor by animateColorAsState(
         targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else {
@@ -298,15 +296,15 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                         detectTapGestures(
                             onTap = { 
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onGestureEvent?.invoke(IslandGesture.SINGLE_TAP)
+                                view.onGestureEvent?.invoke(IslandGesture.SINGLE_TAP)
                             },
                             onDoubleTap = { 
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) 
+                                view.onGestureEvent?.invoke(IslandGesture.DOUBLE_TAP) 
                             },
                             onLongPress = { 
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onGestureEvent?.invoke(IslandGesture.LONG_PRESS) 
+                                view.onGestureEvent?.invoke(IslandGesture.LONG_PRESS) 
                             }
                         )
                     }
@@ -317,26 +315,23 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                         detectDragGestures(
                             onDragEnd = {
                                 if (abs(dragOffsetX) > abs(dragOffsetY)) {
-                                    if (dragOffsetX > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT) 
-                                    else if (dragOffsetX < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
+                                    if (dragOffsetX > 40f) view.onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT) 
+                                    else if (dragOffsetX < -40f) view.onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
                                 } else {
-                                    if (dragOffsetY > 40f) onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN) 
-                                    else if (dragOffsetY < -40f) onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
+                                    if (dragOffsetY > 40f) view.onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN) 
+                                    else if (dragOffsetY < -40f) view.onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
                                 }
-                                dragOffsetX = 0f; dragOffsetY = 0f
-                                // Reset elastic scale
-                                scope.launch { elasticScale.animateTo(1f, spring()) }
+                                scope.launch { view.elasticScale.animateTo(1f, spring()) }
                             },
                             onDragCancel = { 
                                 dragOffsetX = 0f; dragOffsetY = 0f
-                                scope.launch { elasticScale.snapTo(1f) }
+                                scope.launch { view.elasticScale.snapTo(1f) }
                             },
                             onDrag = { change, dragAmount -> 
                                 if (abs(dragAmount.x) > 5f || abs(dragAmount.y) > 5f) { change.consume() }
                                 dragOffsetX += dragAmount.x; dragOffsetY += dragAmount.y 
-                                // Apply elastic scale based on vertical drag
-                                val newScale = (elasticScale.value + dragAmount.y * 0.001f).coerceIn(0.85f, 1.15f)
-                                scope.launch { elasticScale.snapTo(newScale) }
+                                val newScale = (view.elasticScale.value + dragAmount.y * 0.001f).coerceIn(0.85f, 1.15f)
+                                scope.launch { view.elasticScale.snapTo(newScale) }
                             }
                         )
                     }
@@ -354,7 +349,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                 }
             }
 
-            Box(modifier = Modifier.fillMaxSize().padding(start = padL.value.dp, top = padT.value.dp, end = padR.value.dp, bottom = padB.value.dp)) {
+            Box(modifier = Modifier.fillMaxSize().padding(start = view.padL.value.dp, top = view.padT.value.dp, end = view.padR.value.dp, bottom = view.padB.value.dp)) {
                 
                 if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
                     // FIXED: Safe fallback for blur
@@ -420,10 +415,10 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .metaballFluid(
-                                        pill1 = mainPillRect,
+                                        pill1 = view.mainPillRect.value,
                                         pill2Center = splitCenter,
                                         pill2Radius = with(density) { (animatedHeight / 2).toPx() },
-                                        blobiness = 0.5f * (1f - metaballTearProgress.value),
+                                        blobiness = 0.5f * (1f - view.metaballTearProgress.value),
                                         color = Color.Black
                                     )
                             )
