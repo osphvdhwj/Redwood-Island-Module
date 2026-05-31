@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.manager.NewConfigManager
 import com.example.dynamicisland.ui.components.*
+import com.example.dynamicisland.ui.AppPickerActivity
 
 @Composable
 fun FocusModeScreen(prefs: SharedPreferences) {

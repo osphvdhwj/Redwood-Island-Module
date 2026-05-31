@@ -4,9 +4,11 @@ import com.example.dynamicisland.ui.DynamicIslandView
 
 import kotlinx.coroutines.*
 import java.io.File
+import android.content.Context
+import android.app.ActivityManager
 
 class IslandHardwareMonitor(
-    private val context: android.content.Context,
+    private val context: Context,
     private val scope: CoroutineScope,
     var onHardwareUpdate: (LiveActivityModel.HardwareMonitor?) -> Unit = {}
 ) {
@@ -27,8 +29,6 @@ class IslandHardwareMonitor(
     private var pollJob: Job? = null
 
     private fun evaluatePolling() {
-        // 🛑 TIER 3 SLEEP PROTOCOL: Only poll CPU when Screen is ON and Dashboard is OPEN.
-        // Otherwise, completely destroy the loop to save battery.
         if (isScreenOn && isDashboardOpen) {
             if (pollJob == null || pollJob?.isActive != true) {
                 pollJob = scope.launch(Dispatchers.IO) {
@@ -54,11 +54,18 @@ class IslandHardwareMonitor(
                         delay(2000)
                     }
                 }
-...
+            }
+        } else {
+            pollJob?.cancel()
+            pollJob = null
+            onHardwareUpdate(null)
+        }
+    }
+
     private fun getRamFree(): Long {
         try {
-            val mi = android.app.ActivityManager.MemoryInfo()
-            val am = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            val mi = ActivityManager.MemoryInfo()
+            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             am.getMemoryInfo(mi)
             return mi.availMem
         } catch (e: Exception) { return 0L }
@@ -72,13 +79,6 @@ class IslandHardwareMonitor(
             }
         } catch (e: Exception) {}
         return 0
-    }
-            }
-        } else {
-            pollJob?.cancel()
-            pollJob = null
-            onHardwareUpdate(null) // Clear state from memory when dormant
-        }
     }
 
     private fun readThermalZone(): Float {
