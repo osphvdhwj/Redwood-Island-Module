@@ -299,7 +299,8 @@ class IslandController @Inject constructor(
             activeExternalActivity = activeExternalActivities.values.firstOrNull(),
             currentMedia = currentMedia, currentHardware = currentHardware, currentWeather = currentWeather,
             isMediaEnabled = mediaManager.isMediaEnabled, userForceCollapsed = userForceCollapsed,
-            currentActiveModel = _lastActiveModel, currentVisualState = _lastIslandState
+            currentActiveModel = _lastActiveModel, currentVisualState = _lastIslandState,
+            settings = settingsState
         )
 
         // Visibility Filter for Ring
@@ -375,7 +376,7 @@ class IslandController @Inject constructor(
 
         view.onVolumeDrag = { pct -> hardwareManager.setSystemVolume(pct, view) }
         view.onBrightnessDrag = { pct -> hardwareManager.setSystemBrightness(pct, view) }
-        view.onAppPinnedClick = { pkg -> actionManager.launchAppIntent(pkg) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() } }
+        view.onAppPinnedClick = { pkg -> actionManager.launchAppIntent(pkg, false) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() } }
         view.onQsTileClick = { tileSpec -> actionManager.handleQSTileClick(tileSpec) { } }
         
         // --- PRO-GRADE SMART GESTURES ---
@@ -451,6 +452,18 @@ class IslandController @Inject constructor(
                 else -> null
             }
         }
+
+        // 4. 🪟 FREEFORM LAUNCH RULE
+        if (settingsState.freeformLaunchEnabled && settingsState.freeformSmartGesture && gesture == IslandGesture.SWIPE_DOWN) {
+            val pkg = when (val m = _lastActiveModel) {
+                is LiveActivityModel.Music -> m.appPackageName
+                is LiveActivityModel.OngoingTask -> m.pkgName
+                is LiveActivityModel.NotificationStack -> m.pkgName
+                is LiveActivityModel.Call -> m.sourceApp
+                else -> null
+            }
+            if (pkg != null) return "OPEN_FREEFORM_APP"
+        }
         return null
     }
 
@@ -482,10 +495,20 @@ class IslandController @Inject constructor(
                     is LiveActivityModel.Call -> m.sourceApp
                     else -> null
                 }
-                if (pkg != null) actionManager.launchAppIntent(pkg) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() }
+                if (pkg != null) actionManager.launchAppIntent(pkg, false) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() }
+            }
+            "OPEN_FREEFORM_APP" -> {
+                val pkg = when (val m = _lastActiveModel) {
+                    is LiveActivityModel.Music -> m.appPackageName
+                    is LiveActivityModel.OngoingTask -> m.pkgName
+                    is LiveActivityModel.NotificationStack -> m.pkgName
+                    is LiveActivityModel.Call -> m.sourceApp
+                    else -> null
+                }
+                if (pkg != null) actionManager.launchAppIntent(pkg, true) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() }
             }
             "FORCE_DISMISS" -> { userForceCollapsed = true; _lastIslandState = IslandState.HIDDEN; evaluatePriority() }
-            "LAUNCH_SETTINGS" -> actionManager.launchAppIntent("com.android.settings") { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() }
+            "LAUNCH_SETTINGS" -> actionManager.launchAppIntent("com.android.settings", false) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() }
         }
     }
 

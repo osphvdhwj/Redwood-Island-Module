@@ -71,13 +71,30 @@ class IslandActionManager(
         }
     }
 
-    fun executeBackgroundIntent(intent: Intent, onExecuted: () -> Unit) {
+    fun executeBackgroundIntent(intent: Intent, inFreeform: Boolean = false, onExecuted: () -> Unit) {
         try {
             val options = android.app.ActivityOptions.makeBasic()
             if (android.os.Build.VERSION.SDK_INT >= 34) {
                 options.pendingIntentBackgroundActivityStartMode =
                     android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
             }
+            
+            if (inFreeform) {
+                // Set windowing mode to FREEFORM (5)
+                try {
+                    val method = options.javaClass.getMethod("setLaunchWindowingMode", Int::class.javaPrimitiveType)
+                    method.invoke(options, 5)
+                    
+                    // Set bounds (Centered, 70% of screen)
+                    val dm = context.resources.displayMetrics
+                    val width = (dm.widthPixels * 0.8f).toInt()
+                    val height = (dm.heightPixels * 0.7f).toInt()
+                    val left = (dm.widthPixels - width) / 2
+                    val top = (dm.heightPixels - height) / 2
+                    options.setLaunchBounds(android.graphics.Rect(left, top, left + width, top + height))
+                } catch (e: Exception) {}
+            }
+
             val pendingIntent = android.app.PendingIntent.getActivity(
                 context,
                 System.currentTimeMillis().toInt(),
@@ -88,18 +105,19 @@ class IslandActionManager(
             onExecuted()
         } catch (e: Exception) {
             try {
-                context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                val finalIntent = intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(finalIntent)
             } catch (e2: Exception) {
                 // ignore
             }
         }
     }
 
-    fun launchAppIntent(packageName: String, onExecuted: () -> Unit) {
+    fun launchAppIntent(packageName: String, inFreeform: Boolean = false, onExecuted: () -> Unit) {
         val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
         if (launchIntent != null) {
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            executeBackgroundIntent(launchIntent, onExecuted)
+            executeBackgroundIntent(launchIntent, inFreeform, onExecuted)
         }
     }
 

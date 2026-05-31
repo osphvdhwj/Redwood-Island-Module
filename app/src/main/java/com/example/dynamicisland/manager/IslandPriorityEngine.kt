@@ -27,7 +27,8 @@ object IslandPriorityEngine {
         isMediaEnabled: Boolean,
         userForceCollapsed: Boolean,
         currentActiveModel: LiveActivityModel?,
-        currentVisualState: IslandState
+        currentVisualState: IslandState,
+        settings: com.example.dynamicisland.settings.SettingsState = com.example.dynamicisland.settings.SettingsState()
     ): PriorityResult {
         
         val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -38,30 +39,41 @@ object IslandPriorityEngine {
             return PriorityResult(IslandState.HIDDEN, currentActiveModel, null, userForceCollapsed)
         }
 
-        // 2. 📞 CALLS: Always break through, even in games or videos!
+        // 2. 📞 CALLS
         if (currentCall != null) {
+            val baseState = if (userForceCollapsed) IslandState.TYPE_0_RING else IslandState.TYPE_2_MID
             return PriorityResult(
-                if (userForceCollapsed) IslandState.TYPE_0_RING else IslandState.TYPE_2_MID,
+                constrainState(baseState, currentCall, settings),
                 currentCall,
                 null,
                 userForceCollapsed
             )
         }
 
-        // 3. 🚨 CRITICAL ALERTS: (Low Battery, OTP) Break through games and videos!
+        // 3. 🚨 CRITICAL ALERTS
         if (transientModel != null && transientModel.isCritical) {
-            return PriorityResult(IslandState.TYPE_2_MID, transientModel, null, userForceCollapsed)
+            return PriorityResult(
+                constrainState(IslandState.TYPE_2_MID, transientModel, settings),
+                transientModel,
+                null,
+                userForceCollapsed
+            )
         }
 
-        // 4. 🎬🎮 IMMERSION MODE: Hide idle states for Video and Landscape Games
+        // 4. 🎬🎮 IMMERSION MODE
         if (currentMedia?.isVideo == true || (isGaming && isLandscape)) {
             return PriorityResult(IslandState.HIDDEN, currentActiveModel, null, true)
         }
 
-        // 5. 🔔 STANDARD TRANSIENTS: (Downloads, Bluetooth, etc.)
+        // 5. 🔔 STANDARD TRANSIENTS
         if (transientModel != null && !transientModel.isCritical) {
             val split = if (currentMedia != null && isMediaEnabled && currentMedia.isVideo == false) currentMedia else null
-            return PriorityResult(IslandState.TYPE_1_MINI, transientModel, split, userForceCollapsed)
+            return PriorityResult(
+                constrainState(IslandState.TYPE_1_MINI, transientModel, settings),
+                transientModel,
+                split,
+                userForceCollapsed
+            )
         }
 
         // 6. 🎛️ DASHBOARD
@@ -71,19 +83,29 @@ object IslandPriorityEngine {
 
         // 7. 🎵 MUSIC
         if (currentMedia != null && isMediaEnabled) {
-            val state = if (currentVisualState == IslandState.TYPE_3_MAX && !userForceCollapsed) {
+            val baseState = if (currentVisualState == IslandState.TYPE_3_MAX && !userForceCollapsed) {
                 IslandState.TYPE_3_MAX
             } else if (currentMedia.isPlaying && !userForceCollapsed) {
                 IslandState.TYPE_2_MID 
             } else {
                 IslandState.TYPE_0_RING
             }
-            return PriorityResult(state, currentMedia, null, userForceCollapsed)
+            return PriorityResult(
+                constrainState(baseState, currentMedia, settings),
+                currentMedia,
+                null,
+                userForceCollapsed
+            )
         }
         
-        // 7.5 EXTERNAL ACTIVITIES (via SDK)
+        // 7.5 EXTERNAL ACTIVITIES
         if (activeExternalActivity != null) {
-            return PriorityResult(IslandState.TYPE_2_MID, activeExternalActivity, null, userForceCollapsed)
+            return PriorityResult(
+                constrainState(IslandState.TYPE_2_MID, activeExternalActivity, settings),
+                activeExternalActivity,
+                null,
+                userForceCollapsed
+            )
         }
 
         // 8. 📱 GAMING (Portrait) 
@@ -98,5 +120,56 @@ object IslandPriorityEngine {
 
         // 10. DEFAULT IDLE (Camera Cutout Ring)
         return PriorityResult(IslandState.TYPE_0_RING, null, null, true)
+    }
+
+    private fun constrainState(
+        target: IslandState,
+        model: LiveActivityModel,
+        settings: com.example.dynamicisland.settings.SettingsState
+    ): IslandState {
+        var current = target
+        while (current != IslandState.HIDDEN) {
+            val allowed = when (model) {
+                is LiveActivityModel.Music -> when (current) {
+                    IslandState.TYPE_2_MID -> settings.allowMusicMid
+                    IslandState.TYPE_3_MAX -> settings.allowMusicMax
+                    else -> true
+                }
+                is LiveActivityModel.Charging -> when (current) {
+                    IslandState.TYPE_1_MINI -> settings.allowChargingMini
+                    IslandState.TYPE_2_MID -> settings.allowChargingMid
+                    else -> true
+                }
+                is LiveActivityModel.NotificationStack -> when (current) {
+                    IslandState.TYPE_1_MINI -> settings.allowNotifMini
+                    IslandState.TYPE_2_MID -> settings.allowNotifMid
+                    IslandState.TYPE_3_MAX -> settings.allowNotifMax
+                    else -> true
+                }
+                is LiveActivityModel.Call -> when (current) {
+                    IslandState.TYPE_2_MID -> settings.allowCallMid
+                    IslandState.TYPE_3_MAX -> settings.allowCallMax
+                    else -> true
+                }
+                is LiveActivityModel.OngoingTask -> when (current) {
+                    IslandState.TYPE_1_MINI -> settings.allowTaskMini
+                    IslandState.TYPE_2_MID -> settings.allowTaskMid
+                    else -> true
+                }
+                else -> true
+            }
+
+            if (allowed) return current
+            
+            // Downgrade
+            current = when (current) {
+                IslandState.TYPE_3_MAX -> IslandState.TYPE_2_MID
+                IslandState.TYPE_2_MID -> IslandState.TYPE_1_MINI
+                IslandState.TYPE_1_MINI -> IslandState.TYPE_0_RING
+                IslandState.TYPE_0_RING -> IslandState.HIDDEN
+                else -> IslandState.HIDDEN
+            }
+        }
+        return current
     }
 }

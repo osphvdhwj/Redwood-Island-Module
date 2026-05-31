@@ -64,6 +64,16 @@ class SettingsManager(private val context: Context) {
         SMART_GESTURES_ENABLED, SMART_MEDIA_OVERRIDE, 
         SMART_GAMING_OVERRIDE, SMART_CALL_OVERRIDE,
 
+        // === State Constraint Engine ===
+        ALLOW_MUSIC_MID, ALLOW_MUSIC_MAX,
+        ALLOW_CHARGING_MINI, ALLOW_CHARGING_MID,
+        ALLOW_NOTIF_MINI, ALLOW_NOTIF_MID, ALLOW_NOTIF_MAX,
+        ALLOW_CALL_MID, ALLOW_CALL_MAX,
+        ALLOW_TASK_MINI, ALLOW_TASK_MID,
+
+        // === Floating / Freeform Windows ===
+        FREEFORM_LAUNCH_ENABLED, FREEFORM_SMART_GESTURE,
+
         // === Global Controls ===
         ISLAND_ENABLED, ISLAND_ON_LOCKSCREEN, FEATURES_ON_LOCKSCREEN,
         ALLOWED_MUSIC_APPS, ALLOWED_MEDIA_APPS, ALLOWED_NOTES_APPS,
@@ -229,6 +239,23 @@ class SettingsManager(private val context: Context) {
             smartMediaOverride = getBoolean(SettingKey.SMART_MEDIA_OVERRIDE, true),
             smartGamingOverride = getBoolean(SettingKey.SMART_GAMING_OVERRIDE, true),
             smartCallOverride = getBoolean(SettingKey.SMART_CALL_OVERRIDE, true),
+
+            // State Constraint Engine
+            allowMusicMid = getBoolean(SettingKey.ALLOW_MUSIC_MID, true),
+            allowMusicMax = getBoolean(SettingKey.ALLOW_MUSIC_MAX, true),
+            allowChargingMini = getBoolean(SettingKey.ALLOW_CHARGING_MINI, true),
+            allowChargingMid = getBoolean(SettingKey.ALLOW_CHARGING_MID, true),
+            allowNotifMini = getBoolean(SettingKey.ALLOW_NOTIF_MINI, true),
+            allowNotifMid = getBoolean(SettingKey.ALLOW_NOTIF_MID, true),
+            allowNotifMax = getBoolean(SettingKey.ALLOW_NOTIF_MAX, true),
+            allowCallMid = getBoolean(SettingKey.ALLOW_CALL_MID, true),
+            allowCallMax = getBoolean(SettingKey.ALLOW_CALL_MAX, true),
+            allowTaskMini = getBoolean(SettingKey.ALLOW_TASK_MINI, true),
+            allowTaskMid = getBoolean(SettingKey.ALLOW_TASK_MID, true),
+
+            // Floating / Freeform Windows
+            freeformLaunchEnabled = getBoolean(SettingKey.FREEFORM_LAUNCH_ENABLED, true),
+            freeformSmartGesture = getBoolean(SettingKey.FREEFORM_SMART_GESTURE, true),
 
             // Global Controls
             islandEnabled = getBoolean(SettingKey.ISLAND_ENABLED, true),

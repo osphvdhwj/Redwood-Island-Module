@@ -160,6 +160,23 @@ data class SettingsState(
     val smartGamingOverride: Boolean = true,
     val smartCallOverride: Boolean = true,
 
+    // === State Constraint Engine ===
+    val allowMusicMid: Boolean = true,
+    val allowMusicMax: Boolean = true,
+    val allowChargingMini: Boolean = true,
+    val allowChargingMid: Boolean = true,
+    val allowNotifMini: Boolean = true,
+    val allowNotifMid: Boolean = true,
+    val allowNotifMax: Boolean = true,
+    val allowCallMid: Boolean = true,
+    val allowCallMax: Boolean = true,
+    val allowTaskMini: Boolean = true,
+    val allowTaskMid: Boolean = true,
+
+    // === Floating / Freeform Windows ===
+    val freeformLaunchEnabled: Boolean = true,
+    val freeformSmartGesture: Boolean = true, // Swipe Down to open in floating window
+
     // === Global Controls ===
     val islandEnabled: Boolean = true,
     val islandOnLockscreen: Boolean = true,
