@@ -7,12 +7,128 @@ import com.example.dynamicisland.ipc.IslandIPCClient
 import org.json.JSONObject
 
 /**
- * Pro-Grade Settings Manager
- * 
- * AUTOMATIC BRIDGE:
- * - In the module app: Reads/Writes to local SharedPreferences.
- * - In SystemUI: Reads from the IslandIPCClient (ContentProvider).
+ * ULTIMATE SETTINGS CORE
+ * Unified file to prevent symbol resolution errors in Kotlin IR.
  */
+
+enum class DesignLanguage { MATERIAL_YOU, APPLE_LIQUID_GLASS }
+enum class AnimationSpeed { SLOW, NORMAL, FAST }
+enum class CallStyle { IOS, MINIMAL, MODERN }
+enum class ChargingStyle { RING, WAVE, CUBE }
+enum class BatteryStyle { PILL, GAUGE, DIGITAL }
+enum class PhysicsStyle { APPLE, OXYGEN_OS }
+enum class ContentTransitionStyle { SLIDE, FADE_SCALE, FLIP }
+enum class RingPulseStyle { BREATH, LASER, NONE }
+enum class AestheticStyle { GLASS, VOID_BLACK }
+enum class ShortcutLayout { GRID, CAROUSEL }
+
+data class SettingsState(
+    val designLanguage: DesignLanguage = DesignLanguage.MATERIAL_YOU,
+    val liveBridgeEnabled: Boolean = false,
+    val magneticEdgeDocking: Boolean = true,
+    val dynamicColors: Boolean = true,
+    val customAccentColor: Color = Color(0xFF6750A4),
+    val blurIntensity: Float = 15f,
+    val geminiAuraEnabled: Boolean = true,
+    val rollingTypographyEnabled: Boolean = true,
+    val aestheticStyle: AestheticStyle = AestheticStyle.GLASS,
+    val monochromeIcons: Boolean = false,
+    val enableMetaballTear: Boolean = true,
+    val physicsStyle: PhysicsStyle = PhysicsStyle.APPLE,
+    val contentTransitionStyle: ContentTransitionStyle = ContentTransitionStyle.SLIDE,
+    val velocitySquishEnabled: Boolean = true,
+    val inlineReplyEnabled: Boolean = true,
+    val enableMaxWidgets: Boolean = true,
+    val showVitalsRam: Boolean = true,
+    val showVitalsCpu: Boolean = true,
+    val showVitalsNet: Boolean = true,
+    val showVitalsFps: Boolean = true,
+    val showVitalsBatCycles: Boolean = true,
+    val shortcutLayout: ShortcutLayout = ShortcutLayout.GRID,
+    val assistBridgeEnabled: Boolean = false,
+    val assistBridgeTarget: String = "com.brave.browser",
+    val lensBridgeEnabled: Boolean = false,
+    val lensBridgeTarget: String = "com.brave.browser",
+    val islandEnabled: Boolean = true,
+    val showRingIdle: Boolean = true,
+    val pillShape: String = "pill",
+    val pillCornerRadius: Float = 100f,
+    val hideOnScreenshot: Boolean = true,
+    val hideOnScreenRecord: Boolean = true,
+    val hideIslandPerApp: Set<String> = emptySet(),
+    val enableFocusMode: Boolean = false,
+    val productiveApps: Set<String> = emptySet(),
+    val enableLowLatencyMode: Boolean = false,
+    val enableClipboardPaperclip: Boolean = true,
+    val clipboardCleaner: Boolean = true,
+    val privacyDotsEnabled: Boolean = false,
+    val otpDetection: Boolean = true,
+    val linkIntercept: Boolean = true,
+    val translation: Boolean = true,
+    val barcode: Boolean = true,
+    val navigation: Boolean = true,
+    val notificationCoalescing: Boolean = true,
+    val appPermissionChecker: Boolean = true,
+    val gamingHud: Boolean = true,
+    val hapticFeedback: Boolean = true,
+    val hapticIntensity: Float = 1f,
+    val ringCadenceVibration: Boolean = true,
+    val islandOnLockscreen: Boolean = true,
+    val lockscreenFeatures: Set<String> = setOf("music", "notifications"),
+    val allowedNotificationApps: Set<String> = emptySet(),
+    val swipeLeftAction: String = "dismiss",
+    val swipeRightAction: String = "next_track",
+    val roleCallingApp: String = "",
+    val allowedMusicApps: Set<String> = emptySet(),
+    val allowedMediaApps: Set<String> = emptySet(),
+    val allowedNotesApps: Set<String> = emptySet(),
+    val callStyle: CallStyle = CallStyle.IOS,
+    val chargingStyle: ChargingStyle = ChargingStyle.RING,
+    val batteryStyle: BatteryStyle = BatteryStyle.PILL,
+    val ringPulseStyle: RingPulseStyle = RingPulseStyle.BREATH,
+    val autoBackupEnabled: Boolean = false,
+    val autoBackupFreqDays: Int = 7,
+    val stashStoragePath: String = "/sdcard/DynamicIsland/Archive",
+    val aiConfidenceThreshold: Int = 10,
+    val aiReinforcementRate: Float = 1.0f,
+    val iconPack: IconPack = IconPack.MaterialYou,
+    val wifiAlertDuration: Int = 3,
+    val btAlertDuration: Int = 3,
+    val hotspotAlertDuration: Int = 5,
+    val dataAlertDuration: Int = 3,
+    val ringMediaVisible: Boolean = true,
+    val ringBatteryVisible: Boolean = true,
+    val ringDataVisible: Boolean = true,
+    val invisibleRingTouchPassthrough: Boolean = true,
+    val antiBurnInEnabled: Boolean = true,
+    val antiBurnInIntensity: Float = 1.5f,
+    val smartGesturesEnabled: Boolean = true,
+    val smartCallOverride: Boolean = true,
+    val smartMediaOverride: Boolean = true,
+    val smartGamingOverride: Boolean = true,
+    val freeformSmartGesture: Boolean = true,
+    val freeformLaunchEnabled: Boolean = true,
+    val talkbackIntegration: Boolean = true,
+    val proximityWake: Boolean = false,
+    val timerIntegration: Boolean = true,
+    val allowChargingMini: Boolean = true,
+    val allowChargingMid: Boolean = true,
+    val allowNotifMini: Boolean = true,
+    val allowNotifMid: Boolean = true,
+    val allowNotifMax: Boolean = true,
+    val allowCallMid: Boolean = true,
+    val allowCallMax: Boolean = true,
+    val allowTaskMini: Boolean = true,
+    val allowTaskMid: Boolean = true,
+    val dynamicGradient: Boolean = true,
+    val splitPillEnabled: Boolean = true,
+    val nowPlaying: Boolean = true,
+    val mediaArtworkBlur: Boolean = true,
+    val waveformEnabled: Boolean = true,
+    val bpmPulse: Boolean = true,
+    val musicVisualizerStyle: String = "NEURAL_CIRCLE"
+)
+
 class SettingsManager(private val context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
@@ -45,14 +161,12 @@ class SettingsManager(private val context: Context) {
         ISLAND_ENABLED, RING_IDLE, PILL_SHAPE, PILL_RADIUS,
         HIDE_ON_SCREENSHOT, HIDE_ON_SCREEN_RECORD, HIDE_ISLAND_PER_APP,
         ENABLE_FOCUS_MODE, PRODUCTIVE_APPS, ENABLE_LOW_LATENCY_MODE,
-        ENABLE_CLIPBOARD_PAPERCLIP, PREDICTION_TINT, PREDICTIVE_ACTIONS,
-        AUTO_DISMISS_DELAY, CONTEXTUAL_SUGGESTIONS, GESTURE_LEARNING,
-        OTP_DETECTION, LINK_INTERCEPT, TRANSLATION, BARCODE, NAVIGATION,
-        NOTIFICATION_COALESCING, APP_PERMISSION_CHECKER, GAMING_HUD,
-        HAPTIC_FEEDBACK, HAPTIC_INTENSITY, RING_CADENCE_VIBRATION, 
-        ISLAND_ON_LOCKSCREEN, LOCKSCREEN_FEATURES,
-        ALLOWED_NOTIFICATION_APPS, ROLE_CALLING_APP, ALLOWED_MUSIC_APPS,
-        ALLOWED_MEDIA_APPS, ALLOWED_NOTES_APPS, CALL_STYLE,
+        ENABLE_CLIPBOARD_PAPERCLIP, OTP_DETECTION, LINK_INTERCEPT, 
+        TRANSLATION, BARCODE, NAVIGATION, NOTIFICATION_COALESCING, 
+        APP_PERMISSION_CHECKER, GAMING_HUD, HAPTIC_FEEDBACK, 
+        HAPTIC_INTENSITY, RING_CADENCE_VIBRATION, ISLAND_ON_LOCKSCREEN, 
+        LOCKSCREEN_FEATURES, ALLOWED_NOTIFICATION_APPS, ROLE_CALLING_APP, 
+        ALLOWED_MUSIC_APPS, ALLOWED_MEDIA_APPS, ALLOWED_NOTES_APPS, CALL_STYLE,
         CHARGING_STYLE, BATTERY_STYLE, RING_PULSE_STYLE,
         AUTO_BACKUP_ENABLED, AUTO_BACKUP_FREQ_DAYS, STASH_STORAGE_PATH,
         AI_CONFIDENCE_THRESHOLD, AI_REINFORCEMENT_RATE, ICON_PACK,
@@ -66,7 +180,7 @@ class SettingsManager(private val context: Context) {
         ALLOW_NOTIF_MINI, ALLOW_NOTIF_MID, ALLOW_NOTIF_MAX,
         ALLOW_CALL_MID, ALLOW_CALL_MAX, ALLOW_TASK_MINI, ALLOW_TASK_MID,
         DYNAMIC_GRADIENT, SPLIT_PILL_ENABLED, CLIPBOARD_CLEANER, 
-        ENABLE_METABALL_TEAR, SHOW_FPS_HUD, SHOW_CPU_TEMP_HUD
+        ENABLE_METABALL_TEAR, MEDIA_ARTWORK_BLUR, BPM_PULSE
     }
 
     fun getBoolean(key: SettingKey, default: Boolean): Boolean =
@@ -179,11 +293,6 @@ class SettingsManager(private val context: Context) {
             enableLowLatencyMode = getBoolean(SettingKey.ENABLE_LOW_LATENCY_MODE, false),
             enableClipboardPaperclip = getBoolean(SettingKey.ENABLE_CLIPBOARD_PAPERCLIP, true),
             clipboardCleaner = getBoolean(SettingKey.CLIPBOARD_CLEANER, true),
-            predictionTint = getBoolean(SettingKey.PREDICTION_TINT, true),
-            predictiveActions = getBoolean(SettingKey.PREDICTIVE_ACTIONS, true),
-            autoDismissDelay = getInt(SettingKey.AUTO_DISMISS_DELAY, 5),
-            contextualSuggestions = getBoolean(SettingKey.CONTEXTUAL_SUGGESTIONS, true),
-            gestureLearning = getBoolean(SettingKey.GESTURE_LEARNING, true),
             otpDetection = getBoolean(SettingKey.OTP_DETECTION, true),
             linkIntercept = getBoolean(SettingKey.LINK_INTERCEPT, true),
             translation = getBoolean(SettingKey.TRANSLATION, true),
@@ -192,8 +301,6 @@ class SettingsManager(private val context: Context) {
             notificationCoalescing = getBoolean(SettingKey.NOTIFICATION_COALESCING, true),
             appPermissionChecker = getBoolean(SettingKey.APP_PERMISSION_CHECKER, true),
             gamingHud = getBoolean(SettingKey.GAMING_HUD, true),
-            showFpsHUD = getBoolean(SettingKey.SHOW_FPS_HUD, false),
-            showCpuTempHUD = getBoolean(SettingKey.SHOW_CPU_TEMP_HUD, false),
             hapticFeedback = getBoolean(SettingKey.HAPTIC_FEEDBACK, true),
             hapticIntensity = getFloat(SettingKey.HAPTIC_INTENSITY, 1f),
             ringCadenceVibration = getBoolean(SettingKey.RING_CADENCE_VIBRATION, true),
