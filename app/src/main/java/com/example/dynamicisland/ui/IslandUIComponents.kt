@@ -134,7 +134,14 @@ fun IsolatedCountdownText(targetTimeMs: Long, prefix: String, suffix: String, co
     LaunchedEffect(targetTimeMs) {
         while (remaining > 0) { delay(1000); remaining = ((targetTimeMs - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0) }
     }
-    Text(text = "$prefix$remaining$suffix", color = color, fontSize = theme.alertMsgSize, maxLines = 1)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(text = prefix, color = color, fontSize = theme.alertMsgSize)
+        com.example.dynamicisland.ui.components.text.RollingNumberText(
+            value = remaining.toString(), 
+            style = androidx.compose.ui.text.TextStyle(color = color, fontSize = theme.alertMsgSize, fontWeight = FontWeight.Bold)
+        )
+        Text(text = suffix, color = color, fontSize = theme.alertMsgSize)
+    }
 }
 
 @Composable

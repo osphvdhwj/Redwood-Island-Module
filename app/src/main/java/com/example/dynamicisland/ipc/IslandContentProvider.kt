@@ -317,6 +317,22 @@ class IslandContentProvider : ContentProvider() {
                     result.putString("v", com.example.dynamicisland.manager.IslandNeuralCore(it).exportData())
                 }
             }
+            
+            "GET_AI_WEIGHTS" -> {
+                val weightsFile = java.io.File(context?.filesDir, "neural_weights.json")
+                if (weightsFile.exists()) {
+                    result.putString("v", weightsFile.readText())
+                }
+            }
+            
+            "SET_AI_WEIGHTS" -> {
+                val data = extras?.getString("v")
+                if (data != null) {
+                    val weightsFile = java.io.File(context?.filesDir, "neural_weights.json")
+                    weightsFile.writeText(data)
+                    result.putBoolean("ok", true)
+                }
+            }
         }
         return result
     }

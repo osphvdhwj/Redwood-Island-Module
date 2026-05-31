@@ -31,6 +31,7 @@ import com.example.dynamicisland.ui.screens.*
 import com.example.dynamicisland.ui.settings.SettingsScreen
 import com.example.dynamicisland.settings.SettingsViewModel
 import com.example.dynamicisland.settings.SettingsManager
+import com.example.dynamicisland.manager.IslandBackupManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import android.provider.Settings
@@ -41,6 +42,7 @@ import androidx.lifecycle.LifecycleEventObserver
 class ConfigActivity : ComponentActivity() {
 
     @Inject lateinit var settingsManager: SettingsManager
+    @Inject lateinit var backupManager: IslandBackupManager
     private lateinit var settingsViewModel: SettingsViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,7 +54,7 @@ class ConfigActivity : ComponentActivity() {
         val composeView = ComposeView(this).apply {
             setContent {
                 RedwoodTheme {
-                    ConfigScreenNav(prefs, settingsViewModel)
+                    ConfigScreenNav(prefs, settingsViewModel, backupManager)
                 }
             }
         }
@@ -63,14 +65,19 @@ class ConfigActivity : ComponentActivity() {
 data class NavItemData(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 
 @Composable
-fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel: SettingsViewModel) {
+fun ConfigScreenNav(
+    prefs: android.content.SharedPreferences, 
+    settingsViewModel: SettingsViewModel,
+    backupManager: IslandBackupManager
+) {
     var selectedNav by remember { mutableIntStateOf(0) }
     
     val navItems = listOf(
         NavItemData("Layout", Icons.Default.AspectRatio),
         NavItemData("Appearance", Icons.Default.Palette),
-        NavItemData("Shortcuts", Icons.Default.Apps),
-        NavItemData("Sensors", Icons.Default.Radar),
+        NavItemData("Interactions", Icons.Default.TouchApp),
+        NavItemData("Advanced", Icons.Default.Radar),
+        NavItemData("Storage", Icons.Default.Storage),
         NavItemData("System", Icons.Default.Settings)
     )
 
@@ -104,7 +111,8 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
                     1 -> AppearanceScreen(prefs)
                     2 -> InteractionsTab(prefs)
                     3 -> AdvancedTriggersScreen(prefs, settingsViewModel)
-                    4 -> SettingsScreen(settingsViewModel)
+                    4 -> DataStorageScreen(prefs, backupManager)
+                    5 -> SettingsScreen(settingsViewModel)
                 }
             }
         }
@@ -123,11 +131,13 @@ fun InteractionsTab(prefs: android.content.SharedPreferences) {
             Tab(selected = selectedSubTab == 0, onClick = { selectedSubTab = 0 }, text = { Text("App Roles", style = MaterialTheme.typography.labelLarge) })
             Tab(selected = selectedSubTab == 1, onClick = { selectedSubTab = 1 }, text = { Text("Pins & Tiles", style = MaterialTheme.typography.labelLarge) })
             Tab(selected = selectedSubTab == 2, onClick = { selectedSubTab = 2 }, text = { Text("Gestures", style = MaterialTheme.typography.labelLarge) })
+            Tab(selected = selectedSubTab == 3, onClick = { selectedSubTab = 3 }, text = { Text("Focus", style = MaterialTheme.typography.labelLarge) })
         }
         when (selectedSubTab) {
             0 -> AppRolesScreen(prefs)
             1 -> PinsTilesScreen(prefs)
             2 -> GesturesScreen(prefs)
+            3 -> FocusModeScreen(prefs)
         }
     }
 }

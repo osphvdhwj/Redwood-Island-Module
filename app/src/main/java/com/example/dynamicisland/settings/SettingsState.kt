@@ -22,6 +22,14 @@ data class SettingsState(
     val highContrastMode: Boolean = false,
     val iconPackIntegration: Boolean = false,
 
+    // --- Ultimate Refinement: Appearance ---
+    val enableMetaballTear: Boolean = true,
+    val physicsStyle: PhysicsStyle = PhysicsStyle.APPLE,
+    val contentTransitionStyle: ContentTransitionStyle = ContentTransitionStyle.SLIDE,
+    val ringPulseStyle: RingPulseStyle = RingPulseStyle.BREATH,
+    val aestheticStyle: AestheticStyle = AestheticStyle.GLASS,
+    val monochromeIcons: Boolean = false,
+
     // === Notifications & Detection ===
     val otpDetection: Boolean = true,
     val linkIntercept: Boolean = true,
@@ -47,6 +55,7 @@ data class SettingsState(
     val nowPlaying: Boolean = true,
     val liveCaption: Boolean = false,
     val voiceMemoTranscription: Boolean = true,
+    val musicVisualizerStyle: String = "NEURAL_CIRCLE",
 
     // === Haptics ===
     val hapticFeedback: Boolean = true,
@@ -109,6 +118,7 @@ data class SettingsState(
     val dozeModeOptimisation: Boolean = true,
     val quickPerformanceProfile: Boolean = true,
     val dataSaver: Boolean = false,
+    val enableLowLatencyMode: Boolean = false,
 
     // === Gamification ===
     val islandStreaks: Boolean = true,
@@ -120,6 +130,12 @@ data class SettingsState(
     // === Privacy & Security ===
     val clipboardCleaner: Boolean = true,
     val vpnTorIndicator: Boolean = true,
+    
+    // --- Ultimate Refinement: Privacy ---
+    val hideOnScreenshot: Boolean = true,
+    val hideOnScreenRecord: Boolean = true,
+    val hideIslandPerApp: Set<String> = emptySet(),
+    val hideStatesPerAppJson: String = "{}",
 
     // === Experimental ===
     val arIsland: Boolean = false,
@@ -153,6 +169,12 @@ data class SettingsState(
     
     val liveDownloadTracking: Boolean = true,
     val networkSpeedRing: Boolean = true,
+    
+    // --- Ultimate Refinement: Sensors ---
+    val enableLocationAwareness: Boolean = false,
+    val enableTimeThemes: Boolean = false,
+    val dayThemeColors: String = "#6750A4",
+    val nightThemeColors: String = "#1E1E2E",
 
     // === Smart AI Gestures ===
     val smartGesturesEnabled: Boolean = true,
@@ -176,6 +198,7 @@ data class SettingsState(
     // === Floating / Freeform Windows ===
     val freeformLaunchEnabled: Boolean = true,
     val freeformSmartGesture: Boolean = true, // Swipe Down to open in floating window
+    val enableFreeformPortalAnim: Boolean = true,
 
     // === Global Controls ===
     val islandEnabled: Boolean = true,
@@ -184,6 +207,10 @@ data class SettingsState(
     val allowedNotificationApps: Set<String> = emptySet(),
     val swipeLeftAction: String = "dismiss",
     val swipeRightAction: String = "next_track",
+    
+    // --- Ultimate Refinement: Focus Mode ---
+    val enableFocusMode: Boolean = false,
+    val productiveApps: Set<String> = emptySet(),
 
     // === Call & Communication ===
     val callScreenTranscript: Boolean = true,
@@ -214,7 +241,44 @@ data class SettingsState(
     // === Styles ===
     val callStyle: CallStyle = CallStyle.IOS,
     val chargingStyle: ChargingStyle = ChargingStyle.RING,
-    val batteryStyle: BatteryStyle = BatteryStyle.PILL
+    val batteryStyle: BatteryStyle = BatteryStyle.PILL,
+    
+    // --- Ultimate Refinement: Dashboard ---
+    val enableMaxWidgets: Boolean = true,
+    val showVitalsRam: Boolean = true,
+    val showVitalsCpu: Boolean = true,
+    val showVitalsNet: Boolean = true,
+    val showVitalsFps: Boolean = true,
+    val showVitalsBatCycles: Boolean = true,
+    val shortcutLayout: ShortcutLayout = ShortcutLayout.GRID,
+
+    // --- Ultimate Refinement: Data & Storage ---
+    val autoBackupEnabled: Boolean = false,
+    val autoBackupFreqDays: Int = 7,
+    val stashStoragePath: String = "/sdcard/DynamicIsland/Archive",
+    val enableClipboardPaperclip: Boolean = true,
+
+    // === The Final 'Aura & Bridge' Core ===
+    val liveBridgeEnabled: Boolean = false,
+    val magneticEdgeDocking: Boolean = true,
+    val geminiAuraEnabled: Boolean = true,
+    val rollingTypographyEnabled: Boolean = true,
+    val parseDeliveryNotifications: Boolean = true,
+    val warpChargeAnimation: Boolean = true,
+    val velocitySquishEnabled: Boolean = true,
+    val inlineReplyEnabled: Boolean = true,
+    
+    // --- DeGoogled Bridge ---
+    val assistBridgeEnabled: Boolean = false,
+    val assistBridgeTarget: String = "com.brave.browser", // Default to Brave
+    val lensBridgeEnabled: Boolean = false,
+    val lensBridgeTarget: String = "com.brave.browser",
+    
+    // --- Deep Per-App Customization (JSON Backed) ---
+    val perAppGesturesJson: String = "{}", // Map<Pkg, Map<Gesture, Action>>
+    val perAppStatesJson: String = "{}", // Map<Pkg, List<AllowedStates>>
+    val aiConfidenceThreshold: Int = 10,
+    val aiReinforcementRate: Float = 1.0f
 )
 
 enum class DesignLanguage { MATERIAL_YOU, APPLE_LIQUID_GLASS }
@@ -222,3 +286,9 @@ enum class AnimationSpeed { SLOW, NORMAL, FAST }
 enum class CallStyle { IOS, MINIMAL, MODERN }
 enum class ChargingStyle { RING, WAVE, CUBE }
 enum class BatteryStyle { PILL, GAUGE, DIGITAL }
+enum class PhysicsStyle { APPLE, OXYGEN_OS }
+enum class ContentTransitionStyle { SLIDE, FADE_SCALE, FLIP }
+enum class RingPulseStyle { BREATH, LASER, NONE }
+enum class AestheticStyle { GLASS, VOID_BLACK }
+enum class ShortcutLayout { GRID, CAROUSEL }
+enum class IconPack { MaterialYou, iOS, OxygenOS, OneUI }

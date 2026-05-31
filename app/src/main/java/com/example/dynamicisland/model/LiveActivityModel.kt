@@ -87,6 +87,8 @@ sealed class LiveActivityModel {
         val cpuTempCelsius: Float,
         val cpuFreqMhz: Int,
         val isGamingModeOn: Boolean,
+        val ramFreeBytes: Long = 0,
+        val batteryCycles: Int = 0,
         override val isTransient: Boolean = false,
         override val isCritical: Boolean = false,
         override val isSensitive: Boolean = false

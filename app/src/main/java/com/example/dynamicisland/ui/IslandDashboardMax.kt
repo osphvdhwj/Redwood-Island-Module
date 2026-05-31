@@ -49,17 +49,22 @@ import com.example.dynamicisland.model.LocalIslandTheme
 import com.example.dynamicisland.manager.StashedItem
 import com.example.dynamicisland.manager.StashType
 import com.example.dynamicisland.model.ActivityType
+import com.example.dynamicisland.settings.ShortcutLayout
+import com.example.dynamicisland.ui.components.MiniWeatherWidget
+import com.example.dynamicisland.ui.components.MiniCalendarWidget
 
 @Composable
 fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controller: IslandController) {
     val view = this
     val theme = LocalIslandTheme.current
+    val settings = controller.settingsState
     val stashItems by controller.stashHistory.collectAsState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp),
+            .padding(20.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(
@@ -95,34 +100,41 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
             }
         }
 
-        // --- Section 1: System Vitals (Smart Cards) ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            SystemVitalCard(
-                modifier = Modifier.weight(1f),
-                label = "Battery",
-                value = "${globalBatteryLevel.intValue}%",
-                progress = globalBatteryLevel.intValue / 100f,
-                color = when {
-                    globalBatteryLevel.intValue <= 20 -> Color(0xFFFF3B30)
-                    globalBatteryLevel.intValue <= 50 -> Color(0xFFFFCC00)
-                    else -> Color(0xFF34C759)
-                },
-                icon = painterResource(R.drawable.ic_battery_full_vector)
-            )
-            SystemVitalCard(
-                modifier = Modifier.weight(1f),
-                label = "Gaming",
-                value = "${gamingFps.floatValue.toInt()} FPS",
-                progress = (gamingFps.floatValue / 120f).coerceIn(0f, 1f),
-                color = Color(0xFF00FFFF),
-                icon = Icons.Default.Info
-            )
+        // --- Section 1: System Vitals (Togglable) ---
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val hw = controller.currentHardware
+            val vitals = mutableListOf<@Composable () -> Unit>()
+            
+            if (settings.showVitalsRam && hw != null) vitals.add { 
+                SystemVitalCard(Modifier.fillMaxWidth(), "Free RAM", formatRam(hw.ramFreeBytes), (hw.ramFreeBytes / 8589934592f).coerceIn(0f, 1f), Color(0xFF34C759), Icons.Default.Memory) 
+            }
+            if (settings.showVitalsCpu && hw != null) vitals.add { 
+                SystemVitalCard(Modifier.fillMaxWidth(), "CPU Temp", "${hw.cpuTempCelsius.toInt()}°C", (hw.cpuTempCelsius / 100f).coerceIn(0f, 1f), Color(0xFFFF9500), Icons.Default.Thermostat) 
+            }
+            if (settings.showVitalsFps) vitals.add { 
+                SystemVitalCard(Modifier.fillMaxWidth(), "Performance", "${gamingFps.floatValue.toInt()} FPS", (gamingFps.floatValue / 120f).coerceIn(0f, 1f), Color(0xFF00FBFF), Icons.Default.Speed) 
+            }
+            if (settings.showVitalsBatCycles && hw != null) vitals.add { 
+                SystemVitalCard(Modifier.fillMaxWidth(), "Battery Cycles", "${hw.batteryCycles}", (hw.batteryCycles / 1000f).coerceIn(0f, 1f), Color(0xFFAF52DE), Icons.Default.Refresh) 
+            }
+            
+            vitals.chunked(2).forEach { pair ->
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    pair.forEach { Box(Modifier.weight(1f)) { it() } }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
         }
 
-        // --- Section 2: Island Stash (Productivity) ---
+        // --- Section 1.5: Widgets (NEW) ---
+        if (settings.enableMaxWidgets) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.weight(1f)) { MiniWeatherWidget("24°C", "Sunny") }
+                Box(Modifier.weight(1f)) { MiniCalendarWidget("Meeting", "14:00") }
+            }
+        }
+
+        // --- Section 2: Island Stash ---
         if (stashItems.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Island Stash", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
@@ -130,14 +142,12 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(stashItems) { item ->
-                        StashItemCard(item)
-                    }
+                    items(stashItems) { item -> StashItemCard(item) }
                 }
             }
         }
 
-        // --- Section 3: Media Mini (Cinematic) ---
+        // --- Section 3: Media Mini ---
         val media = activeModel.value as? LiveActivityModel.Music
         if (media != null) {
             Box(
@@ -182,24 +192,34 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
             }
         }
 
-        // --- Section 3: Quick Settings Grid ---
+        // --- Section 4: Quick Settings Grid/Carousel (NEW) ---
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Quick Actions", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
             
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                view.qsTiles.take(4).forEach { tile ->
-                    QSTileModern(tile, view.onQsTileClick)
+            if (settings.shortcutLayout == ShortcutLayout.CAROUSEL) {
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(view.qsTiles) { tile ->
+                        QSTileModern(tile, view.onQsTileClick)
+                    }
                 }
-            }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                view.qsTiles.drop(4).take(4).forEach { tile ->
-                    QSTileModern(tile, view.onQsTileClick)
+            } else {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    view.qsTiles.take(4).forEach { tile -> QSTileModern(tile, view.onQsTileClick) }
                 }
-                if (view.qsTiles.size < 8) {
-                    repeat(4 - (view.qsTiles.size - 4)) { Spacer(Modifier.size(64.dp)) }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    view.qsTiles.drop(4).take(4).forEach { tile -> QSTileModern(tile, view.onQsTileClick) }
+                    if (view.qsTiles.size < 8) {
+                        repeat(4 - (view.qsTiles.size - 4)) { Spacer(Modifier.size(64.dp)) }
+                    }
                 }
             }
         }
+        
+        Spacer(Modifier.height(10.dp))
     }
 }
 
@@ -301,31 +321,38 @@ fun SystemVitalCard(
 ) {
     Box(
         modifier = modifier
-            .height(80.dp)
-            .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(22.dp))
+            .height(84.dp)
+            .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(24.dp))
+            .border(0.5.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
             .padding(12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(48.dp)) {
                 CircularProgressIndicator(
                     progress = { progress },
                     color = color,
-                    trackColor = color.copy(alpha = 0.15f),
-                    strokeWidth = 3.dp,
+                    trackColor = color.copy(alpha = 0.12f),
+                    strokeWidth = 3.5.dp,
                     modifier = Modifier.fillMaxSize()
                 )
+                val iconModifier = Modifier.size(20.dp)
                 if (icon is androidx.compose.ui.graphics.painter.Painter) {
-                    Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
+                    Icon(icon, null, tint = color, modifier = iconModifier)
                 } else if (icon is ImageVector) {
-                    Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
+                    Icon(icon, null, tint = color, modifier = iconModifier)
                 }
             }
             Column {
-                Text(label, color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text(value, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                Text(label, color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                Text(value, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black, letterSpacing = (-0.5).sp)
             }
         }
     }
+}
+
+private fun formatRam(bytes: Long): String {
+    val gb = bytes.toDouble() / (1024 * 1024 * 1024)
+    return String.format("%.1f GB", gb)
 }
 
 @Composable

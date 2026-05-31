@@ -1,5 +1,6 @@
 package com.example.dynamicisland.ui.screens
 
+import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,9 +14,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.manager.NewConfigManager
 import com.example.dynamicisland.ui.components.*
+import com.example.dynamicisland.settings.SettingsViewModel
 
 @Composable
-fun AdvancedTriggersScreen(prefs: SharedPreferences, viewModel: com.example.dynamicisland.settings.SettingsViewModel) {
+fun AdvancedTriggersScreen(prefs: SharedPreferences, viewModel: SettingsViewModel) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -40,60 +42,80 @@ fun AdvancedTriggersScreen(prefs: SharedPreferences, viewModel: com.example.dyna
             onCheckedChange = { value -> NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("ring_battery_visible", value) }) }
         )
 
+        SettingsCategoryHeader("App Visibility Rules")
+        SettingsMenuLink(
+            title = "Hide Island Per App",
+            description = "Select apps where the module should be completely hidden.",
+            icon = Icons.Default.VisibilityOff,
+            onClick = {
+                // In a real implementation we'd launch AppPicker with 'hide' role
+                android.widget.Toast.makeText(context, "Hidden apps picker not implemented.", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        )
+        
+        SettingsSwitch(
+            title = "Hide on Screenshot",
+            description = "Automatically hide the Island when taking a screenshot.",
+            checked = prefs.getBoolean("HIDE_ON_SCREENSHOT", true),
+            onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context) { putBoolean("HIDE_ON_SCREENSHOT", it) } }
+        )
+        SettingsSwitch(
+            title = "Hide on Screen Record",
+            description = "Automatically hide the Island during screen recording.",
+            checked = prefs.getBoolean("HIDE_ON_SCREEN_RECORD", true),
+            onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context) { putBoolean("HIDE_ON_SCREEN_RECORD", it) } }
+        )
+
         SettingsCategoryHeader("Floating Windows (Freeform)")
         SettingsSwitch(
             title = "Enable Freeform Launch", 
-            description = "Open apps in floating windows (requires Developer Options -> Freeform Windows).", 
+            description = "Open apps in floating windows (requires Developer Options).", 
             icon = Icons.Default.OpenInNew,
             checked = prefs.getBoolean("freeform_launch_enabled", true),
             onCheckedChange = { value -> NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("freeform_launch_enabled", value) }) }
         )
         if (prefs.getBoolean("freeform_launch_enabled", true)) {
             SettingsSwitch(
-                title = "Smart Gesture Launch", 
-                description = "Swipe down on a notification/music pill to open in freeform.", 
-                checked = prefs.getBoolean("freeform_smart_gesture", true),
-                onCheckedChange = { value -> NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("freeform_smart_gesture", value) }) }
+                title = "Portal Animation", 
+                description = "Show a HyperOS-style portal effect when launching freeform.", 
+                checked = prefs.getBoolean("ENABLE_FREEFORM_PORTAL_ANIM", true),
+                onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context) { putBoolean("ENABLE_FREEFORM_PORTAL_ANIM", it) } }
             )
         }
 
         SettingsCategoryHeader("State Constraint Engine")
-        Text(
-            text = "Select which Island sizes are allowed for each event type. Island will automatically downgrade to the next safe size if disabled.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-        )
-
         SettingsExpander(title = "Music States", icon = Icons.Default.MusicNote) {
-            SettingsSwitch("Allow Mid Pill", "Standard media controls", prefs.getBoolean("allow_music_mid", true), { v ->
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("allow_music_mid", v) })
-            })
-            SettingsSwitch("Allow Max Pill", "Expanded album art & controls", prefs.getBoolean("allow_music_max", true), { v ->
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("allow_music_max", v) })
-            })
+            SettingsSwitch("Allow Mid Pill", "Standard media controls", prefs.getBoolean("allow_music_mid", true)) { 
+                NewConfigManager.commitAndBroadcast(prefs, scope, context) { putBoolean("allow_music_mid", it) } 
+            }
+            SettingsSwitch("Allow Max Pill", "Expanded album art & controls", prefs.getBoolean("allow_music_max", true)) { 
+                NewConfigManager.commitAndBroadcast(prefs, scope, context) { putBoolean("allow_music_max", it) } 
+            }
         }
 
-        SettingsExpander(title = "Charging States", icon = Icons.Default.BatteryChargingFull) {
-            SettingsSwitch("Allow Mini Pill", "Small battery percentage", prefs.getBoolean("allow_charging_mini", true), { v ->
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("allow_charging_mini", v) })
-            })
-            SettingsSwitch("Allow Mid Pill", "Standard charging info", prefs.getBoolean("allow_charging_mid", true), { v ->
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("allow_charging_mid", v) })
-            })
-        }
-
-        SettingsExpander(title = "Notification States", icon = Icons.Default.Notifications) {
-            SettingsSwitch("Allow Mini Pill", "App icon only", prefs.getBoolean("allow_notif_mini", true), { v ->
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("allow_notif_mini", v) })
-            })
-            SettingsSwitch("Allow Mid Pill", "Icon + Content text", prefs.getBoolean("allow_notif_mid", true), { v ->
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("allow_notif_mid", v) })
-            })
-            SettingsSwitch("Allow Max Pill", "Full notification stack", prefs.getBoolean("allow_notif_max", true), { v ->
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("allow_notif_max", v) })
-            })
-        }
+        SettingsCategoryHeader("Island Neural Core (AI)")
+        SettingsMenuLink(
+            title = "Clear AI Memory",
+            description = "Reset learned behavioral patterns.",
+            icon = Icons.Default.DeleteSweep,
+            onClick = {
+                val ok = viewModel.clearAiMemory()
+                if (ok) android.widget.Toast.makeText(context, "AI Memory Cleared", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        )
+        SettingsMenuLink(
+            title = "Export AI Data",
+            description = "Save learned weights as a JSON string.",
+            icon = Icons.Default.Share,
+            onClick = {
+                val data = viewModel.exportAiData()
+                if (data != null) {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("AI Data", data))
+                    android.widget.Toast.makeText(context, "AI Data copied to clipboard!", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
 
         SettingsCategoryHeader("OLED Protection")
         SettingsSwitch(
@@ -111,61 +133,14 @@ fun AdvancedTriggersScreen(prefs: SharedPreferences, viewModel: com.example.dyna
             )
         }
 
-        SettingsCategoryHeader("Island Neural Core (AI)")
-        Text(
-            text = "The AI learns your habits over time to predict gestures and optimize performance. You can reset its memory or export the learned data below.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+        SettingsCategoryHeader("Performance")
+        SettingsSwitch(
+            title = "Low-Latency Mode",
+            description = "Disable blur and heavy physics for maximum FPS (Recommended for Redwood).",
+            icon = Icons.Default.Speed,
+            checked = prefs.getBoolean("ENABLE_LOW_LATENCY_MODE", false),
+            onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context) { putBoolean("ENABLE_LOW_LATENCY_MODE", it) } }
         )
-
-        var showExportDialog by remember { mutableStateOf(false) }
-        var exportContent by remember { mutableStateOf("") }
-
-        SettingsMenuLink(
-            title = "Clear AI Memory",
-            description = "Reset all learned behavioral patterns.",
-            icon = Icons.Default.DeleteSweep,
-            onClick = {
-                val ok = viewModel.clearAiMemory()
-                if (ok) android.widget.Toast.makeText(context, "AI Memory Cleared", android.widget.Toast.LENGTH_SHORT).show()
-            }
-        )
-
-        SettingsMenuLink(
-            title = "Export AI Data",
-            description = "Save learned weights as a JSON string.",
-            icon = Icons.Default.Share,
-            onClick = {
-                val data = viewModel.exportAiData()
-                if (data != null) {
-                    exportContent = data
-                    showExportDialog = true
-                }
-            }
-        )
-
-        if (showExportDialog) {
-            AlertDialog(
-                onDismissRequest = { showExportDialog = false },
-                title = { Text("Exported AI Data") },
-                text = {
-                    Box(modifier = Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState())) {
-                        Text(exportContent, style = MaterialTheme.typography.bodySmall)
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("AI Data", exportContent))
-                        showExportDialog = false
-                    }) { Text("Copy to Clipboard") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showExportDialog = false }) { Text("Close") }
-                }
-            )
-        }
 
         Spacer(Modifier.height(120.dp))
     }

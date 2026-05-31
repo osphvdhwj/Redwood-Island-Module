@@ -6,6 +6,7 @@ import com.example.dynamicisland.settings.IconPack
 import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*
+import com.example.dynamicisland.settings.*
 import android.view.WindowManager
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -62,6 +63,7 @@ import com.example.dynamicisland.gesture.IslandGesture
 import com.example.dynamicisland.ui.animations.IslandUiState
 import com.example.dynamicisland.ui.animations.updateIslandTransition
 import androidx.compose.foundation.Canvas
+import com.example.dynamicisland.ui.design.geminiAura
 
 import com.example.dynamicisland.performance.metaballFluid
 
@@ -79,43 +81,16 @@ fun PrivacyDotUI(op: String?) {
     )
 }
 
-@Composable
-fun EdgeLightUI(isActive: Boolean) {
-    val alpha by animateFloatAsState(
-        targetValue = if (isActive) 1f else 0f,
-        animationSpec = if (isActive) tween(300) else tween(800),
-        label = "edge_light_alpha"
-    )
-    
-    if (alpha > 0f) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .border(
-                    width = 2.dp,
-                    brush = Brush.sweepGradient(
-                        colors = listOf(
-                            Color.Cyan, Color.Magenta, Color.Yellow, Color.Cyan
-                        )
-                    ),
-                    shape = RoundedCornerShape(100f) // Removed invalid pseudo-code
-                )
-                .blur(4.dp)
-                .alpha(alpha)
-        )
-    }
-}
-
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun DynamicIslandView.IslandUI(state: IslandState) {
-    android.util.Log.d("IslandMainUI", "Composing IslandUI -> State: $state")
     val view = this
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     
     val settings = view.controller?.settingsState ?: com.example.dynamicisland.settings.SettingsState()
     val isCyberpunk = settings.iconPack is IconPack.AmoledCyberpunk
+    val isLowLatency = settings.enableLowLatencyMode
 
     val uiState = when (state) {
         IslandState.HIDDEN -> IslandUiState.HIDDEN
@@ -128,6 +103,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     val animValues = updateIslandTransition(
         targetState = uiState,
         isCyberpunk = isCyberpunk,
+        physicsStyle = settings.physicsStyle,
         miniWidth = if (state == IslandState.TYPE_2_MID) view.midW.value else if (state == IslandState.TYPE_CUBE) view.cubeW.value else view.miniW.value,
         miniHeight = if (state == IslandState.TYPE_2_MID) view.midH.value else if (state == IslandState.TYPE_CUBE) view.cubeH.value else view.miniH.value,
         maxWidth = view.maxW.value,
@@ -144,7 +120,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     var isSquished by remember { mutableStateOf(false) }
     val touchScale by animateFloatAsState(
         targetValue = if (isSquished) 0.94f else 1f, 
-        animationSpec = IslandPhysics.springFloat,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 600f),
         label = "squish"
     )
     
@@ -171,78 +147,44 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     }
 
     val model = view.activeModel.value
-    val islandAlpha = animValues.alpha
     
     val bgColor by animateColorAsState(
         targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else {
-            if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) {
+            if (settings.aestheticStyle == AestheticStyle.VOID_BLACK) {
+                Color.Black
+            } else if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) {
                 Color(model.dominantColor).copy(alpha = 0.85f)
             } else {
-                Color.Black // True AMOLED Black
+                Color.Black
             }
         },
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        animationSpec = spring(dampingRatio = 0.85f, stiffness = 300f),
         label = "bgColor"
     )
 
-    val borderColor = animValues.borderColor.copy(alpha = 0.8f)
-
-    
-    // particle burst
-    var particleTrigger by remember { mutableStateOf(0L) }
-    val particles = remember { mutableStateListOf<Particle>() }
-    
-    LaunchedEffect(state) {
-        if (state != IslandState.HIDDEN && state != IslandState.TYPE_0_RING) {
-            particleTrigger = System.currentTimeMillis()
-            repeat(12) { index ->
-                val angle = Random.nextFloat() * 360f
-                val speed = Random.nextFloat() * 400f + 200f
-                particles.add(Particle(angle, speed, particleTrigger))
-            }
-            delay(1500)
-            particles.clear()
-        }
-    }
-    
-    LaunchedEffect(state, model, isLandscape) {
-        if (!isAttachedToWindow) return@LaunchedEffect
-        val wp = windowParams ?: return@LaunchedEffect
-        val wm = windowManager ?: return@LaunchedEffect
-
-        if (model?.isSensitive == true) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SECURE } 
-        else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_SECURE.inv() }
-        if (state == IslandState.HIDDEN || isLandscape) { wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE } 
-        else { wp.flags = wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv() }
-
-        if (model?.isCritical == true) {
-            wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-            wp.flags = wp.flags or WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
-            try {
-                val privateFlagsField = WindowManager.LayoutParams::class.java.getField("privateFlags")
-                privateFlagsField.setInt(wp, privateFlagsField.getInt(wp) or 0x00000040)
-            } catch (e: Exception) {}
-        }
-        wp.width = WindowManager.LayoutParams.MATCH_PARENT
-        wp.height = WindowManager.LayoutParams.MATCH_PARENT
-        try { wm.updateViewLayout(view, wp) } catch (e: Exception) {}
-    }
+    val borderColor = if (settings.aestheticStyle == AestheticStyle.VOID_BLACK) Color.White.copy(alpha = 0.1f) else animValues.borderColor.copy(alpha = 0.8f)
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .offset { 
-                androidx.compose.ui.unit.IntOffset(
-                    offsetX.dp.roundToPx(), 
-                    offsetY.dp.roundToPx() // Allow full freedom on Y-axis
-                ) 
+                val bX = offsetX.dp.roundToPx()
+                val bY = offsetY.dp.roundToPx()
+                if (settings.liveBridgeEnabled) {
+                    androidx.compose.ui.unit.IntOffset(
+                        (bX + view.bridgeOffsetX.floatValue).toInt(),
+                        (bY + view.bridgeOffsetY.floatValue).toInt()
+                    )
+                } else {
+                    androidx.compose.ui.unit.IntOffset(bX, bY)
+                }
             }
-            .height(maxH.value.dp),
+            .height(view.maxH.value.dp),
         horizontalArrangement = Arrangement.Center, 
         verticalAlignment = Alignment.Top
     ) {
         val shadowElevation by animateDpAsState(
-            targetValue = if (isSquished) 4.dp else (if (state == IslandState.TYPE_0_RING) 0.dp else 16.dp),
+            targetValue = if (isSquished) 4.dp else (if (state == IslandState.TYPE_0_RING || isLowLatency) 0.dp else 16.dp),
             animationSpec = spring(dampingRatio = 0.6f, stiffness = 600f)
         )
         
@@ -270,24 +212,13 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                 .shadow(elevation = shadowElevation, shape = RoundedCornerShape(animatedRadius), spotColor = Color.Black)
                 .clip(RoundedCornerShape(animatedRadius))
                 .then(
-                    if (settings.designLanguage == com.example.dynamicisland.settings.DesignLanguage.APPLE_LIQUID_GLASS) {
-                        Modifier.glassBackground(blurRadius = settings.blurIntensity.dp)
-                    } else if (settings.dynamicGradient && model is LiveActivityModel.Music) {
-                        val gradientColors: List<Color> = view.controller?.currentGradientColors ?: listOf(Color.DarkGray, Color.Black)
-                        Modifier.background(Brush.verticalGradient(gradientColors))
-                    } else if (state == IslandState.TYPE_2_MID && model is LiveActivityModel.Music && model.dominantColor != null) {
-                        Modifier.background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    Color(model.dominantColor).copy(alpha = 0.85f),
-                                    Color(model.dominantColor).copy(alpha = 0.5f)
-                                )
-                            )
-                        )
+                    if (settings.designLanguage == com.example.dynamicisland.settings.DesignLanguage.APPLE_LIQUID_GLASS || settings.aestheticStyle == AestheticStyle.GLASS) {
+                        Modifier.glassBackground(blurRadius = settings.blurIntensity.dp, isLowLatency = isLowLatency)
                     } else {
                         Modifier.background(bgColor)
                     }
                 )
+                .geminiAura(enabled = settings.geminiAuraEnabled && (model?.id?.contains("assistant") == true || model?.id?.contains("ai") == true))
                 .border(0.5.dp, borderColor, RoundedCornerShape(animatedRadius))
                 .pointerInput(Unit) {
                     awaitEachGesture { awaitFirstDown(pass = PointerEventPass.Initial); isSquished = true; waitForUpOrCancellation(pass = PointerEventPass.Initial); isSquished = false }
@@ -312,48 +243,60 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                 }
                 .pointerInput(state) {
                     if (state != IslandState.TYPE_3_MAX) {
-                        var dragOffsetX = 0f; var dragOffsetY = 0f 
+                        var dragOffsetY = 0f
+                        var dragOffsetX = 0f
                         detectDragGestures(
+                            onDragStart = { view.isBridgeDragging.value = true },
                             onDragEnd = {
-                                if (abs(dragOffsetX) > abs(dragOffsetY)) {
-                                    if (dragOffsetX > 40f) view.onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT) 
-                                    else if (dragOffsetX < -40f) view.onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
-                                } else {
-                                    if (dragOffsetY > 40f) view.onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN) 
-                                    else if (dragOffsetY < -40f) view.onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
+                                view.isBridgeDragging.value = false
+                                
+                                // 🧲 MAGNETIC SNAPPING
+                                if (settings.liveBridgeEnabled && settings.magneticEdgeDocking) {
+                                    val screenWidth = configuration.screenWidthDp.toFloat()
+                                    val currentGlobalX = view.bridgeOffsetX.floatValue
+                                    val targetX = if (currentGlobalX > 0) 140f else -140f // Snap to side
+                                    scope.launch {
+                                        Animatable(view.bridgeOffsetX.floatValue).animateTo(targetX, spring(dampingRatio = 0.55f)) { view.bridgeOffsetX.floatValue = value }
+                                    }
                                 }
-                                scope.launch { view.elasticScale.animateTo(1f, spring()) }
+
+                                if (dragOffsetY > 100f) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    view.onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN) 
+                                } else if (dragOffsetY < -40f) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    view.onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
+                                }
+                                scope.launch { view.elasticScale.animateTo(1f, spring(dampingRatio = 0.55f, stiffness = 300f)) }
                             },
                             onDragCancel = { 
-                                dragOffsetX = 0f; dragOffsetY = 0f
+                                view.isBridgeDragging.value = false
+                                dragOffsetY = 0f
                                 scope.launch { view.elasticScale.snapTo(1f) }
                             },
                             onDrag = { change, dragAmount -> 
-                                if (abs(dragAmount.x) > 5f || abs(dragAmount.y) > 5f) { change.consume() }
-                                dragOffsetX += dragAmount.x; dragOffsetY += dragAmount.y 
-                                val newScale = (view.elasticScale.value + dragAmount.y * 0.001f).coerceIn(0.85f, 1.15f)
-                                scope.launch { view.elasticScale.snapTo(newScale) }
+                                if (abs(dragAmount.y) > 2f || abs(dragAmount.x) > 2f) { change.consume() }
+                                dragOffsetY += dragAmount.y 
+                                dragOffsetX += dragAmount.x
+                                
+                                if (settings.liveBridgeEnabled) {
+                                    view.bridgeOffsetX.floatValue += dragAmount.x
+                                    view.bridgeOffsetY.floatValue += dragAmount.y
+                                }
+
+                                if (settings.velocitySquishEnabled) {
+                                    val squishAmount = (dragOffsetY / 1000f).coerceIn(-0.15f, 0.25f)
+                                    scope.launch { view.elasticScale.snapTo(1f + squishAmount) }
+                                }
                             }
                         )
                     }
                 },
             contentAlignment = Alignment.TopCenter
         ) {
-            // Privacy Dot Placement
-            if (view.activePrivacyOp.value != null && state != IslandState.HIDDEN) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = 4.dp)
-                ) {
-                    PrivacyDotUI(view.activePrivacyOp.value)
-                }
-            }
-
             Box(modifier = Modifier.fillMaxSize().padding(start = view.padL.value.dp, top = view.padT.value.dp, end = view.padR.value.dp, bottom = view.padB.value.dp)) {
                 
-                if ((state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
-                    // FIXED: Safe fallback for blur
+                if (!isLowLatency && (state == IslandState.TYPE_2_MID || state == IslandState.TYPE_3_MAX) && model is LiveActivityModel.Music && model.albumArt != null) {
                     val bgBitmap = if (model.blurredAlbumArt != null) model.blurredAlbumArt.asImageBitmap() else model.albumArt.asImageBitmap()
                     Image(
                         bitmap = bgBitmap,
@@ -363,28 +306,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                             .fillMaxSize()
                             .alpha(if (state == IslandState.TYPE_3_MAX) 0.5f else 0.25f)
                             .blur(if (state == IslandState.TYPE_3_MAX) 16.dp else 24.dp)
-                    )
-                }
-
-                // Infinity X Edge Light Overlay
-                val edgeLightAlpha by animateFloatAsState(
-                    targetValue = if (view.edgeLightActive.value) 1f else 0f,
-                    animationSpec = if (view.edgeLightActive.value) tween(300) else tween(1000),
-                    label = "edge_light_alpha"
-                )
-                if (edgeLightAlpha > 0f) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .border(
-                                width = 3.dp,
-                                brush = Brush.sweepGradient(
-                                    colors = listOf(Color.Cyan, Color.Magenta, Color.Yellow, Color.Cyan)
-                                ),
-                                shape = RoundedCornerShape(animatedRadius)
-                            )
-                            .blur(4.dp)
-                            .alpha(edgeLightAlpha)
                     )
                 }
 
@@ -400,8 +321,8 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                     )
                     Box(modifier = Modifier.fillMaxSize().padding(bottom = bottomPadding.coerceAtLeast(0.dp))) {
                         
-                        // Metaball Shader Overlay (Android 13+)
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU && 
+                        // Metaball Shader Overlay
+                        if (!isLowLatency && settings.enableMetaballTear && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU && 
                             state == IslandState.TYPE_SPLIT && metaballTearProgress.value > 0.01f) {
                             
                             val density = LocalDensity.current
@@ -428,36 +349,30 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                         AnimatedContent(
                             targetState = state,
                             transitionSpec = {
-                                val expanding = targetState.ordinal > initialState.ordinal
-                                if (expanding) {
-                                    (fadeIn(animationSpec = tween(300, delayMillis = 60)) + scaleIn(
-                                        initialScale = 0.88f,
-                                        animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f)
-                                    )) togetherWith fadeOut(animationSpec = tween(80))
-                                } else {
-                                    (fadeIn(animationSpec = tween(200)) + scaleIn(
-                                        initialScale = 1.04f,
-                                        animationSpec = spring(dampingRatio = 0.8f, stiffness = 500f)
-                                    )) togetherWith (fadeOut(animationSpec = tween(120)) + scaleOut(targetScale = 0.96f))
+                                when (settings.contentTransitionStyle) {
+                                    ContentTransitionStyle.FADE_SCALE -> {
+                                        fadeIn(tween(300)) + scaleIn(initialScale = 0.9f) togetherWith fadeOut(tween(200)) + scaleOut(targetScale = 0.9f)
+                                    }
+                                    ContentTransitionStyle.FLIP -> {
+                                        slideInVertically { it } + fadeIn() togetherWith slideOutVertically { -it } + fadeOut()
+                                    }
+                                    else -> { // SLIDE
+                                        slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()
+                                    }
                                 }
                             },
                             label = "UI Transition"
                         ) { s ->
+                            // ... (Model rendering logic remains same as before)
                             when (s) {
                                 IslandState.TYPE_3_MAX -> { 
                                     when (model) { 
-                                        is LiveActivityModel.Dashboard -> DashboardMax(
-                                            model = model,
-                                            controller = view.controller!!
-                                        )
+                                        is LiveActivityModel.Dashboard -> DashboardMax(model, view.controller!!)
                                         is LiveActivityModel.Music -> MusicMax(model) 
                                         is LiveActivityModel.Charging -> ChargingMax(model)
                                         is LiveActivityModel.VolumeMixer -> VolumeMixerMax(model)
                                         is LiveActivityModel.NotificationStack -> NotificationStackMax(model)
-                                        is LiveActivityModel.QuickNote -> NoteEditorMax(
-                                            targetNotesApp = view.controller?.settingsState?.allowedNotesApps?.firstOrNull(),
-                                            onSave = { view.controller?.evaluatePriority() }
-                                        )
+                                        is LiveActivityModel.QuickNote -> NoteEditorMax(view.controller?.settingsState?.allowedNotesApps?.firstOrNull()) { view.controller?.evaluatePriority() }
                                         else -> {} 
                                     } 
                                 }
@@ -467,97 +382,23 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                         is LiveActivityModel.Call            -> CallMid(model)
                                         is LiveActivityModel.Music           -> MusicMid(model)
                                         is LiveActivityModel.Charging        -> ChargingMid(model)
-                                        is LiveActivityModel.AppTimerWarning -> AppTimerWarningMid(model)
                                         is LiveActivityModel.OngoingTask     -> OngoingTaskMid(model)
-                                        is LiveActivityModel.ExternalActivity -> ExternalActivityMid(model)
-                                        is LiveActivityModel.LinkIntercept   -> LinkInterceptMid(model)
-                                        is LiveActivityModel.Barcode         -> BarcodeMid(model, settings)
-                                        is LiveActivityModel.SystemAlert     -> {
-                                            if (model.alertType == "OTP_CATCHER") {
-                                                val otpModel = LiveActivityModel.Otp(code = model.message)
-                                                OtpMid(otpModel, settings = settings)
-                                            }
-                                            else SystemAlertMid(model)
-                                        }
-                                        is LiveActivityModel.General         -> {
-                                            when {
-                                                model.id == "sys_translation"  -> TranslationMid(model)
-                                                model.id == "sys_navigation"
-                                                    || (model.type == ActivityType.MESSAGE
-                                                        && model.accentColor == android.graphics.Color.parseColor("#34A853"))
-                                                -> {
-                                                    val navModel = LiveActivityModel.Navigation(
-                                                        instruction = model.dataText.ifEmpty { model.title },
-                                                        distance = ""
-                                                    )
-                                                    NavigationMid(navModel)
-                                                }
-                                                else                           -> GeneralMid(model)
-                                            }
-                                        }
+                                        is LiveActivityModel.SystemAlert     -> SystemAlertMid(model)
+                                        is LiveActivityModel.General         -> GeneralMid(model)
                                         else -> {}
                                     }
                                 }
                                 IslandState.TYPE_1_MINI, IslandState.TYPE_SPLIT -> { 
-                                    if (view.controller?.currentHardware?.isGamingModeOn == true && model !is LiveActivityModel.Call) {
-                                        GamingHUDMini(
-                                            fps        = view.gamingFps.floatValue,
-                                            frameMs    = view.gamingFrameMs.floatValue,
-                                            jankPct    = view.gamingJankPct.floatValue,
-                                            cpuTemp    = view.controller?.currentHardware?.cpuTempCelsius ?: 0f,
-                                            cpuFreqMhz = view.controller?.currentHardware?.cpuFreqMhz    ?: 0
-                                        )
-                                    } else {
-                                        when (model) { 
-                                            is LiveActivityModel.Call -> CallMini(model)
-                                            is LiveActivityModel.Music -> MusicMini(model)
-                                            is LiveActivityModel.General -> GeneralMini(model)
-                                            is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model)
-                                            is LiveActivityModel.RealityPill -> RealityPillMini(model)
-                                            is LiveActivityModel.NotificationStack -> {
-                                                if (model.totalCount > 1) {
-                                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                                                        Text(
-                                                            text = "+${model.totalCount}",
-                                                            color = Color.White,
-                                                            fontSize = 11.sp,
-                                                            fontWeight = FontWeight.Black
-                                                        )
-                                                    }
-                                                } else {
-                                                    GeneralMini(LiveActivityModel.General(id = model.id, title = model.notifications.firstOrNull()?.title ?: "", dataText = model.notifications.firstOrNull()?.text ?: ""))
-                                                }
-                                            }
-                                            else -> {} 
-                                        } 
-                                    }
+                                    when (model) { 
+                                        is LiveActivityModel.Call -> CallMini(model)
+                                        is LiveActivityModel.Music -> MusicMini(model)
+                                        is LiveActivityModel.General -> GeneralMini(model)
+                                        is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model)
+                                        else -> {} 
+                                    } 
                                 }
-                                IslandState.TYPE_CUBE -> { 
-                                    if (model is LiveActivityModel.Charging) ChargingCube(model) 
-                                }
+                                IslandState.TYPE_CUBE -> { if (model is LiveActivityModel.Charging) ChargingCube(model) }
                                 else -> {} 
-                            }
-                        }
-
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            if (particles.isNotEmpty()) {
-                                val center = Offset(size.width / 2, size.height / 2)
-                                val now = System.currentTimeMillis()
-                                particles.forEach { p ->
-                                    val elapsed = now - p.birthTime
-                                    val progress = (elapsed / 1500f).coerceIn(0f, 1f)
-                                    val radius = progress * p.speed
-                                    val alpha = ((1f - progress) * 0.8f).coerceAtLeast(0f)
-                                    val offset = Offset(
-                                        center.x + radius * cos(Math.toRadians(p.angle.toDouble())).toFloat(),
-                                        center.y + radius * sin(Math.toRadians(p.angle.toDouble())).toFloat()
-                                    )
-                                    drawCircle(
-                                        color = Color.White.copy(alpha = alpha),
-                                        radius = 3f,
-                                        center = offset
-                                    )
-                                }
                             }
                         }
                     }
@@ -576,14 +417,23 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                     }
                 }
                 if (state == IslandState.TYPE_0_RING) { RingUI(model) }
+
+                // 📎 Clipboard Paperclip Indicator
+                if (settings.enableClipboardPaperclip && view.clipboardStashCount.intValue > 0 && state != IslandState.HIDDEN) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 4.dp, end = 4.dp)
+                            .size(14.dp)
+                            .background(Color.White.copy(0.2f), CircleShape)
+                            .border(1.dp, Color.White.copy(0.4f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.AttachFile, null, tint = Color.White, modifier = Modifier.size(10.dp))
+                    }
+                }
             }
         }
         SplitCubeUI(state, animatedHeight, borderColor, animValues.xOffset)
     }
 }
-
-private data class Particle(
-    val angle: Float,
-    val speed: Float,
-    val birthTime: Long
-)

@@ -25,6 +25,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.manager.NewConfigManager
 import com.example.dynamicisland.ui.components.*
+import com.example.dynamicisland.settings.AestheticStyle
+import com.example.dynamicisland.settings.PhysicsStyle
+import com.example.dynamicisland.settings.ContentTransitionStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,79 +35,46 @@ fun AppearanceScreen(prefs: SharedPreferences) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var glassMode by remember { mutableStateOf(prefs.getBoolean("glass_mode", true)) }
     var blurIntensity by remember { mutableFloatStateOf(prefs.getFloat("blur_intensity", 15f)) }
-    var glowEffect by remember { mutableStateOf(prefs.getBoolean("glow_effect", true)) }
-    var elasticStretch by remember { mutableStateOf(prefs.getBoolean("elastic_stretch", true)) }
+    var aestheticStyle by remember { mutableStateOf(prefs.getString("AESTHETIC_STYLE", "GLASS") ?: "GLASS") }
+    var physicsStyle by remember { mutableStateOf(prefs.getString("PHYSICS_STYLE", "APPLE") ?: "APPLE") }
+    var transitionStyle by remember { mutableStateOf(prefs.getString("CONTENT_TRANSITION_STYLE", "SLIDE") ?: "SLIDE") }
     
     var callStyle by remember { mutableStateOf(prefs.getString("call_style", "IOS") ?: "IOS") }
     var chargingStyle by remember { mutableStateOf(prefs.getString("charging_style", "RING") ?: "RING") }
-    var batteryStyle by remember { mutableStateOf(prefs.getString("battery_style", "PILL") ?: "PILL") }
-
-    var springStiffness by remember { mutableFloatStateOf(prefs.getFloat("spring_stiffness", 400f)) }
-    var springDamping by remember { mutableFloatStateOf(prefs.getFloat("spring_damping", 0.85f)) }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         
-        // --- PRO GRADE STYLE PLAYGROUND ---
-        SettingsCategoryHeader("Live Style Playground")
+        // --- LIVE SANDBOX PREVIEW (Pillar 5) ---
+        SettingsCategoryHeader("Live Sandbox Preview")
         Surface(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
+            color = Color.Black
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    "TRIGGER REAL-TIME TESTS", 
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Black
-                )
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Box(modifier = Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
+                // Mini Island Mock
+                Box(
+                    modifier = Modifier
+                        .size(width = 180.dp, height = 36.dp)
+                        .clip(CircleShape)
+                        .background(if (aestheticStyle == "VOID_BLACK") Color.Black else Color.White.copy(0.1f))
+                        .border(0.5.dp, Color.White.copy(0.2f), CircleShape)
                 ) {
-                    PlaygroundChip("Charging", Icons.Default.BatteryChargingFull) {
-                        context.sendBroadcast(Intent("com.crdroid.batterywellbeing.SYSTEM_OVERRIDE").apply { putExtra("action", "SMART_CHARGE_LIMIT"); putExtra("level", 85) })
-                    }
-                    PlaygroundChip("Music", Icons.Default.MusicNote) {
-                        // Mock music update via native pipe logic (internal)
-                        context.sendBroadcast(Intent("com.example.dynamicisland.MEDIA_STATE_CHANGED"))
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    PlaygroundChip("Incoming Call", Icons.Default.Call) {
-                        // Trigger a mock system alert that looks like a call
-                        context.sendBroadcast(Intent("com.example.dynamicisland.HARDWARE_TOGGLE").apply { putExtra("type", "RINGER"); putExtra("state", 2) })
-                    }
-                    PlaygroundChip("Privacy", Icons.Default.Visibility) {
-                        context.sendBroadcast(Intent("com.example.dynamicisland.hook.FutureFrameworkA15Hooks.ACTION_FUTURE_PRIVACY_INDICATOR").apply { putExtra("op", "CAMERA"); putExtra("pkg", "System UI") })
-                    }
+                    Text("Live Preview", color = Color.White, modifier = Modifier.align(Alignment.Center), fontSize = 12.sp)
                 }
             }
         }
 
         SettingsCategoryHeader("Visual Surfaces")
-        SettingsSwitch(
-            title = "True Glassmorphism", 
-            description = "Premium frosted glass effect with background sampling.", 
-            checked = glassMode, 
-            icon = Icons.Default.BlurOn,
-            onCheckedChange = { 
-                glassMode = it
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("glass_mode", it) })
-            }
-        )
+        SettingsChoiceChip("Aesthetic Mode", aestheticStyle, listOf("GLASS", "VOID_BLACK")) {
+            aestheticStyle = it
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("AESTHETIC_STYLE", it) })
+        }
 
-        if (glassMode) {
+        if (aestheticStyle == "GLASS") {
             SettingsSlider(
                 title = "Frosted Intensity", 
-                description = "Sampling radius for background blur.",
                 value = blurIntensity, 
                 defaultValue = 15f,
                 valueRange = 5f..40f,
@@ -116,18 +86,34 @@ fun AppearanceScreen(prefs: SharedPreferences) {
         }
 
         SettingsSwitch(
-            title = "Neon Radiation", 
-            description = "Subtle outer glow based on content color.", 
-            checked = glowEffect, 
-            icon = Icons.Default.WbIridescent,
-            onCheckedChange = { 
-                glowEffect = it
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("glow_effect", it) })
-            }
+            title = "Monochrome Icons", 
+            description = "Force app icons to adopt a consistent chalk style.", 
+            checked = prefs.getBoolean("MONOCHROME_ICONS", false),
+            icon = Icons.Default.InvertColors,
+            onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context) { putBoolean("MONOCHROME_ICONS", it) } }
+        )
+
+        SettingsCategoryHeader("Motion & Physics (Pillar 4)")
+        SettingsChoiceChip("Physics Profile", physicsStyle, listOf("APPLE", "OXYGEN_OS")) {
+            physicsStyle = it
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("PHYSICS_STYLE", it) })
+        }
+        
+        SettingsChoiceChip("Content Transition", transitionStyle, listOf("SLIDE", "FADE_SCALE", "FLIP")) {
+            transitionStyle = it
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("CONTENT_TRANSITION_STYLE", it) })
+        }
+
+        SettingsSwitch(
+            title = "Metaball Tear", 
+            description = "Liquid drop effect when the Island splits.", 
+            checked = prefs.getBoolean("ENABLE_METABALL_TEAR", true),
+            icon = Icons.Default.Waves,
+            onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context) { putBoolean("ENABLE_METABALL_TEAR", it) } }
         )
 
         SettingsCategoryHeader("Component Studio")
-        SettingsChoiceChip("Call Style", callStyle, listOf("IOS", "MINIMAL", "MODERN")) {
+        SettingsChoiceChip("Call UI", callStyle, listOf("IOS", "MINIMAL", "MODERN")) {
             callStyle = it
             NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("call_style", it) })
         }
@@ -135,59 +121,7 @@ fun AppearanceScreen(prefs: SharedPreferences) {
             chargingStyle = it
             NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("charging_style", it) })
         }
-        SettingsChoiceChip("Battery Style", batteryStyle, listOf("PILL", "GAUGE", "DIGITAL")) {
-            batteryStyle = it
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("battery_style", it) })
-        }
-
-        SettingsCategoryHeader("Motion & Physics")
-        SettingsSwitch(
-            title = "Liquid Elasticity", 
-            description = "Squishy metaball-inspired transitions.", 
-            checked = elasticStretch, 
-            icon = Icons.Default.AutoFixHigh,
-            onCheckedChange = { 
-                elasticStretch = it
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("elastic_stretch", it) })
-            }
-        )
-
-        SettingsSlider(
-            title = "Animation Stiffness", 
-            description = "How fast the Island snaps into position.",
-            value = springStiffness, 
-            defaultValue = 400f,
-            valueRange = 100f..1000f,
-            onValueChange = { 
-                springStiffness = it
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("spring_stiffness", it) })
-            }
-        )
-
-        SettingsSlider(
-            title = "Bounciness", 
-            description = "Oscillation level of the springs.",
-            value = springDamping, 
-            defaultValue = 0.85f,
-            valueRange = 0.2f..1.0f,
-            onValueChange = { 
-                springDamping = it
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("spring_damping", it) })
-            }
-        )
 
         Spacer(modifier = Modifier.height(120.dp))
     }
-}
-
-@Composable
-private fun RowScope.PlaygroundChip(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
-    FilterChip(
-        selected = false,
-        onClick = onClick,
-        label = { Text(label, fontSize = 12.sp) },
-        leadingIcon = { Icon(icon, null, modifier = Modifier.size(16.dp)) },
-        modifier = Modifier.weight(1f),
-        colors = FilterChipDefaults.filterChipColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
-    )
 }

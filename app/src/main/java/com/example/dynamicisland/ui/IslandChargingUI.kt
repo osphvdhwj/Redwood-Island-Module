@@ -29,6 +29,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dynamicisland.ui.components.text.RollingNumberText
+import androidx.compose.ui.text.TextStyle
 import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.sin
@@ -110,7 +112,7 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             val logicalIcon = if (model.isPluggedIn) IconProvider.LogicalIcon.BATTERY_CHARGING else if (isLow) IconProvider.LogicalIcon.BATTERY_LOW else IconProvider.LogicalIcon.BATTERY_FULL
             Icon(imageVector = IconProvider.getIcon(logicalIcon, LocalIconPack.current), contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
-            Text(text = "${model.level}%", color = color, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+            RollingNumberText(value = "${model.level}%", style = TextStyle(color = color, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold))
         }
     }
 }
@@ -171,11 +173,13 @@ fun DynamicIslandView.ChargingMax(charging: LiveActivityModel.Charging) {
             }
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "${displayedLevel}%",
-                    color = Color.White,
-                    fontSize = 48.sp, 
-                    fontWeight = FontWeight.Black,
+                RollingNumberText(
+                    value = "${displayedLevel}%",
+                    style = TextStyle(
+                        color = Color.White,
+                        fontSize = 48.sp, 
+                        fontWeight = FontWeight.Black
+                    ),
                     modifier = Modifier.alpha(alphaAnim.value)
                 )
                 Text(

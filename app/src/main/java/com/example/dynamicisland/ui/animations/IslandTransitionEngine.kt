@@ -6,7 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.dynamicisland.settings.IconPack
+import com.example.dynamicisland.settings.PhysicsStyle
 
 enum class IslandUiState {
     COMPACT,
@@ -30,30 +30,33 @@ data class IslandAnimationValues(
 fun updateIslandTransition(
     targetState: IslandUiState,
     isCyberpunk: Boolean,
+    physicsStyle: PhysicsStyle = PhysicsStyle.APPLE,
     miniWidth: Float = 180f,
     miniHeight: Float = 36f,
     maxWidth: Float = 360f,
     maxHeight: Float = 220f,
     ringWidth: Float = 45f,
     ringHeight: Float = 45f,
-    // Per-state corner radius
     miniRadius: Float = 18f,
     maxRadius: Float = 42f,
     ringRadius: Float = 22.5f
 ): IslandAnimationValues {
     val transition = updateTransition(targetState = targetState, label = "IslandTransition")
 
+    val damping = if (physicsStyle == PhysicsStyle.OXYGEN_OS) 0.5f else 0.85f
+    val stiffness = if (physicsStyle == PhysicsStyle.OXYGEN_OS) 600f else 300f
+
     val springSpecDp = spring<Dp>(
-        dampingRatio = Spring.DampingRatioMediumBouncy,
-        stiffness = Spring.StiffnessLow
+        dampingRatio = damping,
+        stiffness = stiffness
     )
     val springSpecFloat = spring<Float>(
-        dampingRatio = Spring.DampingRatioMediumBouncy,
-        stiffness = Spring.StiffnessLow
+        dampingRatio = damping,
+        stiffness = stiffness
     )
     val springSpecColor = spring<Color>(
-        dampingRatio = Spring.DampingRatioMediumBouncy,
-        stiffness = Spring.StiffnessLow
+        dampingRatio = damping,
+        stiffness = stiffness
     )
 
     val width by transition.animateDp(
@@ -99,7 +102,7 @@ fun updateIslandTransition(
         label = "xOffset"
     ) { state ->
         when (state) {
-            IslandUiState.SPLIT_PILL -> 24f // Push away from cutout in Split Pill
+            IslandUiState.SPLIT_PILL -> 24f
             else -> 0f
         }
     }
@@ -109,7 +112,7 @@ fun updateIslandTransition(
         label = "borderColor"
     ) { state ->
         if (state == IslandUiState.NOTIFICATION_RING && isCyberpunk) {
-            Color(0xFF00FFFF) // Neon Cyan
+            Color(0xFF00FFFF)
         } else {
             Color.Transparent
         }

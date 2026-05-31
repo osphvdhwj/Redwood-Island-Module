@@ -83,6 +83,9 @@ class SystemUIA15Hooks {
             hookNotifPipeline(lpparam)
             hookMediaPipeline(lpparam)
             hookHardwareControllers(lpparam)
+            hookRecordingController(lpparam)
+            hookAssistManager(lpparam)
+            hookScreenshotService(lpparam)
             
             // ── 2. Recovery & External Triggers ───────────────────────────────
             setupReceiver(lpparam)
@@ -177,6 +180,53 @@ class SystemUIA15Hooks {
                                 accentColor = if (enabled) android.graphics.Color.YELLOW else android.graphics.Color.GRAY
                             ), 2500L
                         )
+                    }
+                })
+            } catch (e: Throwable) {}
+        }
+
+        private fun hookRecordingController(lpparam: XC_LoadPackage.LoadPackageParam) {
+            try {
+                val recordClass = "com.android.systemui.screenrecord.RecordingController"
+                IslandHookEngine.hookAllMethodsByName(recordClass, lpparam.classLoader, "updateState", object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        val isRecording = XposedHelpers.callMethod(param.thisObject, "isRecording") as Boolean
+                        val isStarting = XposedHelpers.callMethod(param.thisObject, "isStarting") as Boolean
+                        controller?.setSystemRecordingState(isRecording || isStarting)
+                    }
+                })
+            } catch (e: Throwable) {}
+        }
+
+        private fun hookAssistManager(lpparam: XC_LoadPackage.LoadPackageParam) {
+            try {
+                val assistClass = "com.android.systemui.assist.AssistManager"
+                XposedHelpers.findAndHookMethod(assistClass, lpparam.classLoader, "onInvocationProgress", Int::class.javaPrimitiveType, Float::class.javaPrimitiveType, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val progress = param.args[1] as Float
+                        controller?.triggerAssistantAura(progress)
+                    }
+                })
+                
+                XposedHelpers.findAndHookMethod(assistClass, lpparam.classLoader, "startAssist", android.os.Bundle::class.java, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        if (controller?.interceptAssistant() == true) {
+                            param.result = null 
+                        }
+                    }
+                })
+            } catch (e: Throwable) {}
+        }
+
+        private fun hookScreenshotService(lpparam: XC_LoadPackage.LoadPackageParam) {
+            try {
+                val screenClass = "com.android.systemui.screenshot.TakeScreenshotService"
+                XposedHelpers.findAndHookMethod(screenClass, lpparam.classLoader, "handleMessage", android.os.Message::class.java, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        controller?.setSystemScreenshotActive(true)
+                    }
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        Handler(Looper.getMainLooper()).postDelayed({ controller?.setSystemScreenshotActive(false) }, 1000)
                     }
                 })
             } catch (e: Throwable) {}

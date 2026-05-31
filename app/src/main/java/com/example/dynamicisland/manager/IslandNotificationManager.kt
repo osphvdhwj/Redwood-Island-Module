@@ -76,6 +76,26 @@ class IslandNotificationManager(
                 }
             }
 
+            // 🍔 FEATURE 1.5: Smart Delivery & Ride Tracking (Zomato, Swiggy, Uber)
+            val deliveryApps = listOf("com.application.zomato", "in.swiggy.android", "com.ubercab", "com.ubercab.eats")
+            if (deliveryApps.contains(packageName)) {
+                val etaRegex = Regex("(\\d+)\\s*(min|mins|minutes)")
+                val match = etaRegex.find(text)
+                if (match != null) {
+                    val etaMins = match.groupValues[1]
+                    val deliveryModel = LiveActivityModel.OngoingTask(
+                        id = "delivery_$packageName",
+                        pkgName = packageName,
+                        title = if (packageName.contains("uber")) "Ride Arriving" else "Order Arriving",
+                        text = "$etaMins mins away",
+                        progress = 100 - (etaMins.toInt().coerceIn(1, 60)), 
+                        progressMax = 100
+                    )
+                    onProgressCaught(deliveryModel)
+                    return@launch
+                }
+            }
+
             // ⬇️ FEATURE 2: Global Progress
             val progress = extras.getInt(Notification.EXTRA_PROGRESS, -1)
             val progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, -1)

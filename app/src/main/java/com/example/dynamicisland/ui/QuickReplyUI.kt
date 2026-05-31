@@ -31,7 +31,8 @@ import com.example.dynamicisland.ui.design.IslandColors
 import com.example.dynamicisland.ui.design.premiumClickable
 
 @Composable
-fun NotificationStackMax(model: LiveActivityModel.NotificationStack) {
+fun DynamicIslandView.NotificationStackMax(model: LiveActivityModel.NotificationStack) {
+    val view = this
     var replyText by remember { mutableStateOf("") }
     val latestNotif = model.notifications.firstOrNull() ?: return
 
@@ -121,7 +122,7 @@ fun NotificationStackMax(model: LiveActivityModel.NotificationStack) {
                 IconButton(
                     onClick = {
                         if (replyText.isNotEmpty()) {
-                            // Logic to send remote input would go here
+                            view.onReplySend?.invoke(replyText)
                             replyText = ""
                         }
                     },

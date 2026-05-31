@@ -47,7 +47,9 @@ class IslandController @Inject constructor(
     private val eventBus: IslandEventBus,
     private val hapticsManager: IslandHapticsManager,
     private val networkMonitor: IslandNetworkMonitor,
-    private val neuralCore: IslandNeuralCore
+    private val neuralCore: IslandNeuralCore,
+    private val backupManager: IslandBackupManager,
+    private val locationManager: IslandLocationManager
 ) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val activeExternalActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
@@ -184,6 +186,42 @@ class IslandController @Inject constructor(
     private var wasCharging = false
     private var topAppPackage = ""
     private var isPanelExpanded = false
+    private var isSystemRecording = false
+    private var isScreenshotActive = false
+
+    fun setSystemRecordingState(active: Boolean) {
+        isSystemRecording = active
+        evaluatePriority()
+    }
+
+    fun setSystemScreenshotActive(active: Boolean) {
+        isScreenshotActive = active
+        evaluatePriority()
+    }
+
+    fun triggerAssistantAura(progress: Float) {
+        if (!settingsState.assistBridgeEnabled) return
+        
+        if (progress > 0.05f) {
+            // Show a transient assistant model to light up the aura
+            postTransientNotification(
+                LiveActivityModel.General(
+                    id = "sys_assistant_aura",
+                    type = ActivityType.HARDWARE,
+                    title = "Assistant Active",
+                    accentColor = android.graphics.Color.CYAN
+                ), 1000L
+            )
+        }
+    }
+
+    fun interceptAssistant(): Boolean {
+        if (!settingsState.assistBridgeEnabled) return false
+        
+        // 🚀 ROUTE TO DEGOOGLED ALTERNATIVE
+        actionManager.launchAppIntent(settingsState.assistBridgeTarget, false) {}
+        return true
+    }
 
     private var isChargingEnabled = true
     private var isAlertsEnabled = true
@@ -294,6 +332,40 @@ class IslandController @Inject constructor(
         
         if (islandView?.calibrationMode?.value == true) { updateWindowHeight(IslandState.TYPE_2_MID); return }
 
+        // 🛡️ ULTIMATE PRIVACY & CONTEXT CHECKS
+        if (isSystemRecording && settingsState.hideOnScreenRecord) {
+            _lastIslandState = IslandState.HIDDEN
+            eventBus.emit(IslandIntent.SyncState(IslandState.HIDDEN, null, null))
+            updateWindowHeight(IslandState.HIDDEN)
+            return
+        }
+
+        if (isScreenshotActive && settingsState.hideOnScreenshot) {
+            _lastIslandState = IslandState.HIDDEN
+            eventBus.emit(IslandIntent.SyncState(IslandState.HIDDEN, null, null))
+            updateWindowHeight(IslandState.HIDDEN)
+            return
+        }
+
+        if (settingsState.hideIslandPerApp.contains(topAppPackage)) {
+            _lastIslandState = IslandState.HIDDEN
+            eventBus.emit(IslandIntent.SyncState(IslandState.HIDDEN, null, null))
+            updateWindowHeight(IslandState.HIDDEN)
+            return
+        }
+
+        // 🎯 FOCUS MODE FILTER
+        if (settingsState.enableFocusMode && settingsState.productiveApps.contains(topAppPackage)) {
+             // If in focus mode and a productive app is active, 
+             // only allow critical alerts or calls.
+             if (transientModel != null && !transientModel!!.isCritical && currentCall == null) {
+                  _lastIslandState = IslandState.TYPE_0_RING
+                  eventBus.emit(IslandIntent.SyncState(IslandState.TYPE_0_RING, null, null))
+                  updateWindowHeight(IslandState.TYPE_0_RING)
+                  return
+             }
+        }
+
         val result = IslandPriorityEngine.evaluatePriority(
             context = context, windowManager = windowManager, topAppPackage = topAppPackage,
             isPanelExpanded = isPanelExpanded, currentCall = currentCall, transientModel = transientModel,
@@ -379,6 +451,11 @@ class IslandController @Inject constructor(
         view.onBrightnessDrag = { pct -> hardwareManager.setSystemBrightness(pct, view) }
         view.onAppPinnedClick = { pkg -> actionManager.launchAppIntent(pkg, false) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() } }
         view.onQsTileClick = { tileSpec -> actionManager.handleQSTileClick(tileSpec) { } }
+        view.onReplySend = { text ->
+            // Use a temporary intent to pass data to executeSmartAction
+            val data = Intent().apply { putExtra("reply_text", text) }
+            executeSmartAction("SEND_REPLY", data)
+        }
         
         // --- PRO-GRADE SMART GESTURES ---
         view.onGestureEvent = { gesture ->
@@ -482,7 +559,7 @@ class IslandController @Inject constructor(
         )
     }
 
-    private fun executeSmartAction(actionName: String) {
+    private fun executeSmartAction(actionName: String, intent: Intent? = null) {
         when (actionName) {
             "PLAY_PAUSE" -> { if (currentMedia?.isPlaying == true) mediaManager.sendMediaCommand("PAUSE") else mediaManager.sendMediaCommand("PLAY") }
             "NEXT_TRACK" -> mediaManager.sendMediaCommand("NEXT")
@@ -524,6 +601,26 @@ class IslandController @Inject constructor(
             }
             "FORCE_DISMISS" -> { userForceCollapsed = true; _lastIslandState = IslandState.HIDDEN; evaluatePriority() }
             "LAUNCH_SETTINGS" -> actionManager.launchAppIntent("com.android.settings", false) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() }
+            "SEND_REPLY" -> {
+                // Extracts the reply text and intent from the model and sends it
+                val stack = _lastActiveModel as? LiveActivityModel.NotificationStack ?: return
+                val text = intent?.getStringExtra("reply_text") ?: return
+                val action = stack.notifications.firstOrNull()?.remoteActions?.find { it.isReply } ?: return
+                
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        val remoteInput = android.app.RemoteInput.Builder("key_text_reply").build()
+                        val resultBundle = android.os.Bundle().apply { putCharSequence("key_text_reply", text) }
+                        val fillInIntent = android.content.Intent().addFlags(android.content.Intent.FLAG_RECEIVER_FOREGROUND)
+                        android.app.RemoteInput.addResultsToIntent(arrayOf(remoteInput), fillInIntent, resultBundle)
+                        
+                        action.actionIntent?.send(context, 0, fillInIntent)
+                        withContext(Dispatchers.Main) {
+                            postTransientNotification(LiveActivityModel.General("sys_reply_sent", ActivityType.MESSAGE, "Reply Sent", accentColor = android.graphics.Color.GREEN), 2000L)
+                        }
+                    } catch (e: Exception) {}
+                }
+            }
         }
     }
 
@@ -542,6 +639,15 @@ class IslandController @Inject constructor(
         if (isSystemProcess) {
             weatherManager.startPolling()
             connectivityManager.startListening()
+            locationManager.startMonitoring(scope) { geo -> }
+            backupManager.performAutoBackup()
+            
+            scope.launch {
+                storageManager.stashHistory.collect { list ->
+                    islandView?.clipboardStashCount?.intValue = list.size
+                }
+            }
+
             hardwareMonitor.onHardwareUpdate = { newHw -> currentHardware = newHw; evaluatePriority() }
             mediaManager.onMediaChanged = { newMedia -> currentMedia = newMedia; evaluatePriority() }
             mediaManager.onMediaTick = { pos -> islandView?.updateTicker(pos) }

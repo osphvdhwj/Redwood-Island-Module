@@ -6,6 +6,7 @@ import kotlinx.coroutines.*
 import java.io.File
 
 class IslandHardwareMonitor(
+    private val context: android.content.Context,
     private val scope: CoroutineScope,
     var onHardwareUpdate: (LiveActivityModel.HardwareMonitor?) -> Unit = {}
 ) {
@@ -34,12 +35,44 @@ class IslandHardwareMonitor(
                     while(isActive) {
                         val temp = readThermalZone()
                         val freq = readCpuFreq()
+                        val ram = getRamFree()
+                        val batCycles = getBatteryCycles()
+                        
                         withContext(Dispatchers.Main) {
-                            onHardwareUpdate(LiveActivityModel.HardwareMonitor("hw_monitor", ActivityType.HARDWARE, temp, freq, false))
+                            onHardwareUpdate(
+                                LiveActivityModel.HardwareMonitor(
+                                    id = "hw_monitor",
+                                    type = ActivityType.HARDWARE,
+                                    cpuTempCelsius = temp,
+                                    cpuFreqMhz = freq,
+                                    isGamingModeOn = false,
+                                    ramFreeBytes = ram,
+                                    batteryCycles = batCycles
+                                )
+                            )
                         }
                         delay(2000)
                     }
                 }
+...
+    private fun getRamFree(): Long {
+        try {
+            val mi = android.app.ActivityManager.MemoryInfo()
+            val am = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            am.getMemoryInfo(mi)
+            return mi.availMem
+        } catch (e: Exception) { return 0L }
+    }
+
+    private fun getBatteryCycles(): Int {
+        try {
+            val file = File("/sys/class/power_supply/battery/cycle_count")
+            if (file.exists()) {
+                return file.readText().trim().toIntOrNull() ?: 0
+            }
+        } catch (e: Exception) {}
+        return 0
+    }
             }
         } else {
             pollJob?.cancel()

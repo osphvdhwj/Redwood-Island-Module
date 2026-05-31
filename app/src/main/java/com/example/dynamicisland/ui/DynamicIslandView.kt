@@ -45,6 +45,7 @@ import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*
 import com.example.dynamicisland.settings.DesignLanguage
 import com.example.dynamicisland.settings.SettingsState
+import com.example.dynamicisland.settings.AestheticStyle
 import com.example.dynamicisland.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -55,8 +56,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.random.Random
 
-fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp): Modifier = this
-    .background(Color.White.copy(alpha = 0.1f))
+fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp, isLowLatency: Boolean): Modifier = this
+    .then(if (isLowLatency) Modifier.background(Color.Black.copy(alpha = 0.9f)) else Modifier.background(Color.White.copy(alpha = 0.1f)))
 
 fun getPillShape(shape: String, cornerRadius: Float): androidx.compose.foundation.shape.RoundedCornerShape {
     val safeRadius = cornerRadius.coerceAtLeast(0f)
@@ -99,6 +100,12 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     val edgeLightActive = mutableStateOf(false)
     val gamingFrameMs = mutableFloatStateOf(16.6f)
     val gamingJankPct = mutableFloatStateOf(0f)
+    val clipboardStashCount = mutableIntStateOf(0)
+    
+    // --- LiveBridge Mode States ---
+    val bridgeOffsetX = mutableFloatStateOf(0f)
+    val bridgeOffsetY = mutableFloatStateOf(0f)
+    val isBridgeDragging = mutableStateOf(false)
     
     // Call UI Callbacks
     var onOpenCallUI: (() -> Unit)? = null
@@ -110,6 +117,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     var onAudioOutputClick: (() -> Unit)? = null
     var onCustomMediaAction: ((String) -> Unit)? = null
     var onSeekTo: ((Long) -> Unit)? = null
+    var onReplySend: ((String) -> Unit)? = null
     
     // Split UI Callbacks
     var onSplitPillClick: (() -> Unit)? = null
