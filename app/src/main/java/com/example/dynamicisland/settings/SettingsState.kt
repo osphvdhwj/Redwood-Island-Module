@@ -2,247 +2,41 @@ package com.example.dynamicisland.settings
 
 import androidx.compose.ui.graphics.Color
 
+/**
+ * Pro-Grade Settings State
+ * Centrally manages all 6 Pillars of the Dynamic Island.
+ */
 data class SettingsState(
-    // === Appearance ===
+    // === Pillar 1: Dual-Mode Architecture ===
     val designLanguage: DesignLanguage = DesignLanguage.MATERIAL_YOU,
+    val liveBridgeEnabled: Boolean = false,
+    val magneticEdgeDocking: Boolean = true,
+    
+    // === Pillar 2: Ethereal Visuals ===
     val dynamicColors: Boolean = true,
     val customAccentColor: Color = Color(0xFF6750A4),
     val blurIntensity: Float = 15f,
-    val pillCornerRadius: Float = 100f,
-    val animationSpeed: AnimationSpeed = AnimationSpeed.NORMAL,
-    val showRingIdle: Boolean = true,
-    val pillShape: String = "pill",
-    val dynamicGradient: Boolean = true,
-    val glowEffect: Boolean = true,
-    val dotMode: Boolean = false,
-    val elasticStretch: Boolean = true,
-    val shadowCasting: Boolean = true,
-    val contentAwareBlur: Boolean = true,
-    val timeBasedThemes: Boolean = false,
-    val highContrastMode: Boolean = false,
-    val iconPackIntegration: Boolean = false,
-
-    // --- Ultimate Refinement: Appearance ---
-    val enableMetaballTear: Boolean = true,
-    val physicsStyle: PhysicsStyle = PhysicsStyle.APPLE,
-    val contentTransitionStyle: ContentTransitionStyle = ContentTransitionStyle.SLIDE,
-    val ringPulseStyle: RingPulseStyle = RingPulseStyle.BREATH,
+    val geminiAuraEnabled: Boolean = true,
+    val rollingTypographyEnabled: Boolean = true,
     val aestheticStyle: AestheticStyle = AestheticStyle.GLASS,
     val monochromeIcons: Boolean = false,
-
-    // === Notifications & Detection ===
-    val otpDetection: Boolean = true,
-    val linkIntercept: Boolean = true,
-    val translation: Boolean = true,
-    val barcode: Boolean = true,
-    val navigation: Boolean = true,
-    val notificationCoalescing: Boolean = true,
-    val appPermissionChecker: Boolean = true,
-
-    // === Gaming HUD ===
-    val gamingHud: Boolean = true,
-    val showFps: Boolean = false,
-    val showCpuTemp: Boolean = false,
-    val gamingDashboardOverlay: Boolean = false,
-
-    // === Media & Audio ===
-    val mediaArtworkBlur: Boolean = true,
-    val waveformEnabled: Boolean = true,
-    val ambientReactiveRing: Boolean = true,
-    val audioSensitivity: Float = 0.5f,
-    val bpmPulse: Boolean = true,
-    val liveMusicVisualizer: Boolean = false,
-    val nowPlaying: Boolean = true,
-    val liveCaption: Boolean = false,
-    val voiceMemoTranscription: Boolean = true,
-    val musicVisualizerStyle: String = "NEURAL_CIRCLE",
-
-    // === Haptics ===
-    val hapticFeedback: Boolean = true,
-    val hapticIntensity: Float = 1f,
-    val ringCadenceVibration: Boolean = true,
-    val hapticMorseAlerts: Boolean = false,
-
-    // === Prediction & Smart Features ===
-    val predictionTint: Boolean = true,
-    val predictiveActions: Boolean = true,
-    val autoDismissDelay: Int = 5,
-    val contextualSuggestions: Boolean = true,
-    val gestureLearning: Boolean = true,
-    val voiceTrigger: Boolean = false,
-    val adaptiveBrightnessVolume: Boolean = false,
-    val appPredictionSuggestion: Boolean = true,
-    val contextualRoutineLauncher: Boolean = true,
-
-    // === Cross-Device & Continuity ===
-    val clipboardSync: Boolean = false,
-    val universalControl: Boolean = false,
-    val quickNote: Boolean = true,
-    val phoneToTabletHandoff: Boolean = false,
-    val nearbyShareProgress: Boolean = true,
-    val multiDeviceClipboard: Boolean = false,
-    val wearOsRemote: Boolean = false,
-    val airpodsPopup: Boolean = true,
-    val airplayCastIndicator: Boolean = true,
-    val homePodControl: Boolean = false,
-
-    // === iOS-Inspired ===
-    val liveActivitiesApi: Boolean = true,
-    val focusFilterIntegration: Boolean = true,
-    val universalClipboardPreviews: Boolean = true,
-    val alwaysOnDisplayCompanion: Boolean = true,
-    val faceIDPadlock: Boolean = true,
-    val ringModeSwitch: Boolean = true,
-    val timerIntegration: Boolean = true,
-    val magsafeChargingAnimation: Boolean = true,
-    val proximityWake: Boolean = false,
-
-    // === Android Ecosystem ===
-    val materialYouDynamicContrast: Boolean = true,
-    val quickSettingsTile: Boolean = true,
-    val digitalWellbeingIntegration: Boolean = false,
-    val rootAdbFeatures: Boolean = false,
-
-    // === Accessibility ===
-    val talkbackIntegration: Boolean = true,
-    val oneHandMode: Boolean = false,
-    val dedicatedOneHandPlacement: Boolean = false,
-
-    // === Customisation ===
-    val customPillAnimations: String? = null,
-    val thirdPartyWidgetApi: Boolean = false,
-
-    // === Battery & Performance ===
+    
+    // === Pillar 3: Advanced Live Activities ===
+    val parseDeliveryNotifications: Boolean = true,
+    val warpChargeAnimation: Boolean = true,
     val batteryAwareAnimation: Boolean = true,
-    val dozeModeOptimisation: Boolean = true,
-    val quickPerformanceProfile: Boolean = true,
-    val dataSaver: Boolean = false,
-    val enableLowLatencyMode: Boolean = false,
+    val nowPlaying: Boolean = true,
+    val musicVisualizerStyle: String = "NEURAL_CIRCLE",
+    val waveformEnabled: Boolean = true,
 
-    // === Gamification ===
-    val islandStreaks: Boolean = true,
-    val leaderboard: Boolean = false,
-    val exclusiveThemes: Boolean = false,
-    val achievementsEnabled: Boolean = true,
-    val showAchievementBadge: Boolean = true,
-
-    // === Privacy & Security ===
-    val clipboardCleaner: Boolean = true,
-    val vpnTorIndicator: Boolean = true,
+    // === Pillar 4: Fluid Physics & Gestures ===
+    val animationSpeed: AnimationSpeed = AnimationSpeed.NORMAL,
+    val physicsStyle: PhysicsStyle = PhysicsStyle.APPLE,
+    val contentTransitionStyle: ContentTransitionStyle = ContentTransitionStyle.SLIDE,
+    val velocitySquishEnabled: Boolean = true,
+    val inlineReplyEnabled: Boolean = true,
     
-    // --- Ultimate Refinement: Privacy ---
-    val hideOnScreenshot: Boolean = true,
-    val hideOnScreenRecord: Boolean = true,
-    val hideIslandPerApp: Set<String> = emptySet(),
-    val hideStatesPerAppJson: String = "{}",
-
-    // === Experimental ===
-    val arIsland: Boolean = false,
-    val mindfulnessBreathPacer: Boolean = false,
-    val morseCodeInput: Boolean = false,
-    val multiUserProfileSwitching: Boolean = false,
-    val cryptoStockTicker: Boolean = false,
-
-    // === Developer Tools ===
-    val adbCommandInjector: Boolean = false,
-    val taskerPlugin: Boolean = true,
-    val logDebugOverlay: Boolean = false,
-    val openSourceSdk: Boolean = true,
-
-    // === Advanced Triggers & Sensors ===
-    val ringMediaVisible: Boolean = true,
-    val ringBatteryVisible: Boolean = true,
-    val ringDownloadVisible: Boolean = true,
-    val ringBluetoothVisible: Boolean = true,
-    val ringHotspotVisible: Boolean = true,
-    val ringDataVisible: Boolean = true,
-    
-    val invisibleRingTouchPassthrough: Boolean = true,
-    val antiBurnInEnabled: Boolean = true,
-    val antiBurnInIntensity: Float = 1.5f, // 1px to 3px
-    
-    val wifiAlertDuration: Int = 3,
-    val btAlertDuration: Int = 3,
-    val hotspotAlertDuration: Int = 5,
-    val dataAlertDuration: Int = 3,
-    
-    val liveDownloadTracking: Boolean = true,
-    val networkSpeedRing: Boolean = true,
-    
-    // --- Ultimate Refinement: Sensors ---
-    val enableLocationAwareness: Boolean = false,
-    val enableTimeThemes: Boolean = false,
-    val dayThemeColors: String = "#6750A4",
-    val nightThemeColors: String = "#1E1E2E",
-
-    // === Smart AI Gestures ===
-    val smartGesturesEnabled: Boolean = true,
-    val smartMediaOverride: Boolean = true,
-    val smartGamingOverride: Boolean = true,
-    val smartCallOverride: Boolean = true,
-
-    // === State Constraint Engine ===
-    val allowMusicMid: Boolean = true,
-    val allowMusicMax: Boolean = true,
-    val allowChargingMini: Boolean = true,
-    val allowChargingMid: Boolean = true,
-    val allowNotifMini: Boolean = true,
-    val allowNotifMid: Boolean = true,
-    val allowNotifMax: Boolean = true,
-    val allowCallMid: Boolean = true,
-    val allowCallMax: Boolean = true,
-    val allowTaskMini: Boolean = true,
-    val allowTaskMid: Boolean = true,
-
-    // === Floating / Freeform Windows ===
-    val freeformLaunchEnabled: Boolean = true,
-    val freeformSmartGesture: Boolean = true, // Swipe Down to open in floating window
-    val enableFreeformPortalAnim: Boolean = true,
-
-    // === Global Controls ===
-    val islandEnabled: Boolean = true,
-    val islandOnLockscreen: Boolean = true,
-    val lockscreenFeatures: Set<String> = setOf("music", "notifications"),
-    val allowedNotificationApps: Set<String> = emptySet(),
-    val swipeLeftAction: String = "dismiss",
-    val swipeRightAction: String = "next_track",
-    
-    // --- Ultimate Refinement: Focus Mode ---
-    val enableFocusMode: Boolean = false,
-    val productiveApps: Set<String> = emptySet(),
-
-    // === Call & Communication ===
-    val callScreenTranscript: Boolean = true,
-    val silentRingModeSwitch: Boolean = true,
-
-    // === Weather & Environment ===
-    val weatherMoodRing: Boolean = true,
-    val atAGlance: Boolean = true,
-
-    // === Split & Multi-Event ===
-    val splitPillEnabled: Boolean = true,
-    val mergeSimultaneousEvents: Boolean = true,
-    val multiIslandStack: Boolean = false,
-
-    // === Continuity Camera ===
-    val continuityCameraActions: Boolean = true,
-
-    // === Focus & DND ===
-    val focusModePill: Boolean = true,
-
-    // === App Roles ===
-    val roleCallingApp: String = "",
-    val roleGameLauncher: String = "",
-    val allowedMusicApps: Set<String> = emptySet(),
-    val allowedMediaApps: Set<String> = emptySet(),
-    val allowedNotesApps: Set<String> = emptySet(),
-
-    // === Styles ===
-    val callStyle: CallStyle = CallStyle.IOS,
-    val chargingStyle: ChargingStyle = ChargingStyle.RING,
-    val batteryStyle: BatteryStyle = BatteryStyle.PILL,
-    
-    // --- Ultimate Refinement: Dashboard ---
+    // === Pillar 5: Dashboard & Widgets ===
     val enableMaxWidgets: Boolean = true,
     val showVitalsRam: Boolean = true,
     val showVitalsCpu: Boolean = true,
@@ -250,35 +44,56 @@ data class SettingsState(
     val showVitalsFps: Boolean = true,
     val showVitalsBatCycles: Boolean = true,
     val shortcutLayout: ShortcutLayout = ShortcutLayout.GRID,
+    
+    // === Pillar 6: DeGoogled Bridge ===
+    val assistBridgeEnabled: Boolean = false,
+    val assistBridgeTarget: String = "com.brave.browser",
+    val lensBridgeEnabled: Boolean = false,
+    val lensBridgeTarget: String = "com.brave.browser",
 
-    // --- Ultimate Refinement: Data & Storage ---
+    // --- Core Controls & Privacy ---
+    val islandEnabled: Boolean = true,
+    val showRingIdle: Boolean = true,
+    val pillShape: String = "pill",
+    val pillCornerRadius: Float = 100f,
+    val hideOnScreenshot: Boolean = true,
+    val hideOnScreenRecord: Boolean = true,
+    val hideIslandPerApp: Set<String> = emptySet(),
+    val enableFocusMode: Boolean = false,
+    val productiveApps: Set<String> = emptySet(),
+    val enableLowLatencyMode: Boolean = false,
+    val enableClipboardPaperclip: Boolean = true,
+    
+    // --- Legacy / Miscellaneous ---
+    val otpDetection: Boolean = true,
+    val linkIntercept: Boolean = true,
+    val translation: Boolean = true,
+    val barcode: Boolean = true,
+    val navigation: Boolean = true,
+    val notificationCoalescing: Boolean = true,
+    val appPermissionChecker: Boolean = true,
+    val gamingHud: Boolean = true,
+    val showFpsHUD: Boolean = false,
+    val showCpuTempHUD: Boolean = false,
+    val hapticFeedback: Boolean = true,
+    val hapticIntensity: Float = 1f,
+    val ringCadenceVibration: Boolean = true,
+    val islandOnLockscreen: Boolean = true,
+    val lockscreenFeatures: Set<String> = setOf("music", "notifications"),
+    val allowedNotificationApps: Set<String> = emptySet(),
+    val roleCallingApp: String = "",
+    val allowedMusicApps: Set<String> = emptySet(),
+    val allowedMediaApps: Set<String> = emptySet(),
+    val allowedNotesApps: Set<String> = emptySet(),
+    val callStyle: CallStyle = CallStyle.IOS,
+    val chargingStyle: ChargingStyle = ChargingStyle.RING,
+    val batteryStyle: BatteryStyle = BatteryStyle.PILL,
+    val ringPulseStyle: RingPulseStyle = RingPulseStyle.BREATH,
     val autoBackupEnabled: Boolean = false,
     val autoBackupFreqDays: Int = 7,
     val stashStoragePath: String = "/sdcard/DynamicIsland/Archive",
-    val enableClipboardPaperclip: Boolean = true,
-
-    // === The Final 'Aura & Bridge' Core ===
-    val liveBridgeEnabled: Boolean = false,
-    val magneticEdgeDocking: Boolean = true,
-    val geminiAuraEnabled: Boolean = true,
-    val rollingTypographyEnabled: Boolean = true,
-    val parseDeliveryNotifications: Boolean = true,
-    val warpChargeAnimation: Boolean = true,
-    val velocitySquishEnabled: Boolean = true,
-    val inlineReplyEnabled: Boolean = true,
-    
-    // --- DeGoogled Bridge ---
-    val assistBridgeEnabled: Boolean = false,
-    val assistBridgeTarget: String = "com.brave.browser", // Default to Brave
-    val lensBridgeEnabled: Boolean = false,
-    val lensBridgeTarget: String = "com.brave.browser",
-    
-    // --- Deep Per-App Customization (JSON Backed) ---
-    val perAppGesturesJson: String = "{}", // Map<Pkg, Map<Gesture, Action>>
-    val perAppStatesJson: String = "{}", // Map<Pkg, List<AllowedStates>>
     val aiConfidenceThreshold: Int = 10,
     val aiReinforcementRate: Float = 1.0f,
-    
     val iconPack: IconPack = IconPack.MaterialYou
 )
 

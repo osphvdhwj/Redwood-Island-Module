@@ -100,7 +100,11 @@ class SystemUIA15Hooks {
                 val hapticsManager = IslandHapticsManager(context, settingsManager)
                 val networkMonitor = IslandNetworkMonitor()
                 val mediaManager = IslandMediaManager(context, scope)
-                val hardwareMonitor = IslandHardwareMonitor(scope)
+                val hardwareMonitor = IslandHardwareMonitor(context, scope)
+                val neuralCore = IslandNeuralCore(context)
+                val ipcClient = IslandIPCClient.get(context)
+                val backupManager = IslandBackupManager(context, ipcClient)
+                val locationManager = IslandLocationManager(context)
 
                 controller = IslandController(
                     context,
@@ -109,7 +113,10 @@ class SystemUIA15Hooks {
                     hardwareMonitor,
                     eventBus,
                     hapticsManager,
-                    networkMonitor
+                    networkMonitor,
+                    neuralCore,
+                    backupManager,
+                    locationManager
                 )
             } catch (e: Throwable) {
                 XposedBridge.log("$TAG ❌: Controller bootstrap failed: ${e.message}")

@@ -86,6 +86,7 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
                     color = Color.White.copy(alpha = 0.1f),
                     startAngle = 0f,
                     sweepAngle = 360f,
+                    useCenter = false,
                     topLeft = arcTopLeft,
                     size = arcSize,
                     style = Stroke(strokeW)
@@ -97,6 +98,7 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
                         color = baseColor,
                         startAngle = -90f,
                         sweepAngle = 360f * progressPercent,
+                        useCenter = false,
                         topLeft = arcTopLeft,
                         size = arcSize,
                         style = Stroke(strokeW, cap = StrokeCap.Round)
@@ -112,6 +114,7 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
                         ),
                         startAngle = laserRotation,
                         sweepAngle = 90f,
+                        useCenter = false,
                         topLeft = arcTopLeft,
                         size = arcSize,
                         style = Stroke(strokeW * 1.5f, cap = StrokeCap.Round)

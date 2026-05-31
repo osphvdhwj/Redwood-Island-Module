@@ -49,9 +49,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideIslandHardwareMonitor(): IslandHardwareMonitor {
+    fun provideIslandHardwareMonitor(@ApplicationContext context: Context): IslandHardwareMonitor {
         val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         return IslandHardwareMonitor(
+            context = context,
             scope = scope,
             onHardwareUpdate = {}
         )

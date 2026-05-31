@@ -26,6 +26,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -254,7 +256,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                 if (settings.liveBridgeEnabled && settings.magneticEdgeDocking) {
                                     val screenWidth = configuration.screenWidthDp.toFloat()
                                     val currentGlobalX = view.bridgeOffsetX.floatValue
-                                    val targetX = if (currentGlobalX > 0) 140f else -140f // Snap to side
+                                    val targetX = if (currentGlobalX > 0) 140f else -140f 
                                     scope.launch {
                                         Animatable(view.bridgeOffsetX.floatValue).animateTo(targetX, spring(dampingRatio = 0.55f)) { view.bridgeOffsetX.floatValue = value }
                                     }
@@ -323,7 +325,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                         
                         // Metaball Shader Overlay
                         if (!isLowLatency && settings.enableMetaballTear && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU && 
-                            state == IslandState.TYPE_SPLIT && metaballTearProgress.value > 0.01f) {
+                            state == IslandState.TYPE_SPLIT && view.metaballTearProgress.value > 0.01f) {
                             
                             val density = LocalDensity.current
                             val splitCenter = with(density) {
@@ -363,7 +365,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                             },
                             label = "UI Transition"
                         ) { s ->
-                            // ... (Model rendering logic remains same as before)
                             when (s) {
                                 IslandState.TYPE_3_MAX -> { 
                                     when (model) { 
@@ -429,7 +430,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                             .border(1.dp, Color.White.copy(0.4f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.AttachFile, null, tint = Color.White, modifier = Modifier.size(10.dp))
+                        Icon(androidx.compose.material.icons.Icons.Default.AttachFile, null, tint = Color.White, modifier = Modifier.size(10.dp))
                     }
                 }
             }

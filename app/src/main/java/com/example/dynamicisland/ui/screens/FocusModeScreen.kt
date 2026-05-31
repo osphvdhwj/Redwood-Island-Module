@@ -32,7 +32,9 @@ fun FocusModeScreen(prefs: SharedPreferences) {
             description = "Intelligently filter notifications when using productive apps.",
             icon = Icons.Default.FilterCenterFocus,
             checked = prefs.getBoolean("ENABLE_FOCUS_MODE", false),
-            onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context) { putBoolean("ENABLE_FOCUS_MODE", it) } }
+            onCheckedChange = { value -> 
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("ENABLE_FOCUS_MODE", value) }) 
+            }
         )
 
         if (prefs.getBoolean("ENABLE_FOCUS_MODE", false)) {
@@ -44,13 +46,11 @@ fun FocusModeScreen(prefs: SharedPreferences) {
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
             )
             
-            // Re-using AppPicker logic if available, or just a simple multi-select
             SettingsMenuLink(
                 title = "Select Productive Apps",
                 description = "Define your work/study apps.",
                 icon = Icons.Default.AppRegistration,
                 onClick = {
-                    // Trigger AppPickerActivity with Focus role
                     val intent = android.content.Intent(context, AppPickerActivity::class.java).apply {
                         putExtra("role", "focus")
                     }
@@ -62,7 +62,7 @@ fun FocusModeScreen(prefs: SharedPreferences) {
             SettingsSwitch(
                 title = "Allow Calls",
                 description = "Always show incoming calls even in focus mode.",
-                checked = true, // Force on for safety for now
+                checked = true, 
                 onCheckedChange = {}
             )
             SettingsSwitch(

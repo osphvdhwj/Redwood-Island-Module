@@ -57,7 +57,9 @@ fun DataStorageScreen(prefs: SharedPreferences, backupManager: IslandBackupManag
             title = "Automatic Backup",
             description = "Periodically save settings to local storage.",
             checked = prefs.getBoolean("AUTO_BACKUP_ENABLED", false),
-            onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context) { putBoolean("AUTO_BACKUP_ENABLED", it) } }
+            onCheckedChange = { value -> 
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("AUTO_BACKUP_ENABLED", value) }) 
+            }
         )
         
         if (prefs.getBoolean("AUTO_BACKUP_ENABLED", false)) {
@@ -67,7 +69,9 @@ fun DataStorageScreen(prefs: SharedPreferences, backupManager: IslandBackupManag
                 value = prefs.getInt("AUTO_BACKUP_FREQ_DAYS", 7).toFloat(),
                 defaultValue = 7f,
                 valueRange = 1f..30f,
-                onValueChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context) { putInt("AUTO_BACKUP_FREQ_DAYS", it.toInt()) } }
+                onValueChange = { value -> 
+                    NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putInt("AUTO_BACKUP_FREQ_DAYS", value.toInt()) }) 
+                }
             )
         }
 
@@ -77,7 +81,6 @@ fun DataStorageScreen(prefs: SharedPreferences, backupManager: IslandBackupManag
             description = prefs.getString("STASH_STORAGE_PATH", "/sdcard/DynamicIsland/Archive") ?: "/sdcard/DynamicIsland/Archive",
             icon = Icons.Default.Folder,
             onClick = {
-                // In a real app we'd show a folder picker, for now just show toast
                 Toast.makeText(context, "Folder picker not implemented, using default path.", Toast.LENGTH_SHORT).show()
             }
         )
@@ -87,7 +90,9 @@ fun DataStorageScreen(prefs: SharedPreferences, backupManager: IslandBackupManag
             title = "Enable Paperclip",
             description = "Show a tiny clip icon on the Island when items are stashed.",
             checked = prefs.getBoolean("ENABLE_CLIPBOARD_PAPERCLIP", true),
-            onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context) { putBoolean("ENABLE_CLIPBOARD_PAPERCLIP", it) } }
+            onCheckedChange = { value -> 
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("ENABLE_CLIPBOARD_PAPERCLIP", value) }) 
+            }
         )
 
         if (showRestoreDialog) {

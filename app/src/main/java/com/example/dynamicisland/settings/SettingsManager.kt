@@ -30,118 +30,31 @@ class SettingsManager(private val context: Context) {
     }
 
     enum class SettingKey {
-        // === Appearance ===
-        USE_LIQUID_GLASS, DYNAMIC_COLORS, ACCENT_COLOR, BLUR_INTENSITY,
-        PILL_RADIUS, ANIM_SPEED, RING_IDLE, PILL_SHAPE,
-        DYNAMIC_GRADIENT, GLOW_EFFECT, DOT_MODE, ELASTIC_STRETCH,
-        SHADOW_CASTING, CONTENT_AWARE_BLUR, TIME_BASED_THEMES,
-        HIGH_CONTRAST_MODE, ICON_PACK_INTEGRATION,
-        
-        // --- Ultimate Refinement: Appearance ---
-        ENABLE_METABALL_TEAR, PHYSICS_STYLE, CONTENT_TRANSITION_STYLE,
-        RING_PULSE_STYLE, AESTHETIC_STYLE, MONOCHROME_ICONS,
-
-        // === Notifications & Detection ===
-        OTP_DETECTION, LINK_INTERCEPT, TRANSLATION, BARCODE, NAVIGATION,
-        NOTIFICATION_COALESCING, APP_PERMISSION_CHECKER,
-
-        // === Gaming HUD ===
-        GAMING_HUD, SHOW_FPS, SHOW_CPU_TEMP, GAMING_DASHBOARD_OVERLAY,
-
-        // === Media & Audio ===
-        MEDIA_ARTWORK_BLUR, WAVEFORM_ENABLED, AMBIENT_REACTIVE,
-        AUDIO_SENSITIVITY, BPM_PULSE, LIVE_MUSIC_VISUALIZER,
-        NOW_PLAYING, LIVE_CAPTION, VOICE_MEMO_TRANSCRIPTION,
-        MUSIC_VISUALIZER_STYLE,
-
-        // === Haptics ===
-        HAPTIC_FEEDBACK, HAPTIC_INTENSITY, RING_CADENCE_VIBRATION,
-        HAPTIC_MORSE_ALERTS,
-
-        // === Advanced Triggers & Sensors ===
-        RING_MEDIA_VISIBLE, RING_BATTERY_VISIBLE, RING_DOWNLOAD_VISIBLE,
-        RING_BLUETOOTH_VISIBLE, RING_HOTSPOT_VISIBLE, RING_DATA_VISIBLE,
-        INVISIBLE_RING_TOUCH_PASSTHROUGH, ANTI_BURN_IN_ENABLED, ANTI_BURN_IN_INTENSITY,
-        WIFI_ALERT_DURATION, BT_ALERT_DURATION, HOTSPOT_ALERT_DURATION, DATA_ALERT_DURATION,
-        LIVE_DOWNLOAD_TRACKING, NETWORK_SPEED_RING,
-        
-        // --- Ultimate Refinement: Sensors ---
-        ENABLE_LOCATION_AWARENESS, ENABLE_TIME_THEMES, DAY_THEME_COLORS, NIGHT_THEME_COLORS,
-
-        // === Smart AI Gestures ===
-        SMART_GESTURES_ENABLED, SMART_MEDIA_OVERRIDE, 
-        SMART_GAMING_OVERRIDE, SMART_CALL_OVERRIDE,
-
-        // === State Constraint Engine ===
-        ALLOW_MUSIC_MID, ALLOW_MUSIC_MAX,
-        ALLOW_CHARGING_MINI, ALLOW_CHARGING_MID,
-        ALLOW_NOTIF_MINI, ALLOW_NOTIF_MID, ALLOW_NOTIF_MAX,
-        ALLOW_CALL_MID, ALLOW_CALL_MAX,
-        ALLOW_TASK_MINI, ALLOW_TASK_MID,
-
-        // === Floating / Freeform Windows ===
-        FREEFORM_LAUNCH_ENABLED, FREEFORM_SMART_GESTURE,
-        ENABLE_FREEFORM_PORTAL_ANIM,
-
-        // === Global Controls ===
-        ISLAND_ENABLED, ISLAND_ON_LOCKSCREEN, FEATURES_ON_LOCKSCREEN,
-        ALLOWED_MUSIC_APPS, ALLOWED_MEDIA_APPS, ALLOWED_NOTES_APPS,
-        ALLOWED_NOTIFICATION_APPS,
-        SWIPE_LEFT_ACTION, SWIPE_RIGHT_ACTION,
-        
-        // --- Ultimate Refinement: Focus Mode ---
-        ENABLE_FOCUS_MODE, PRODUCTIVE_APPS,
-
-        // === Call & Communication ===
-        CALL_SCREEN_TRANSCRIPT, SILENT_RING_MODE_SWITCH,
-
-        // === Weather & Environment ===
-        WEATHER_MOOD_RING, AT_A_GLANCE,
-
-        // === Split & Multi-Event ===
-        SPLIT_PILL_ENABLED, MERGE_SIMULTANEOUS_EVENTS,
-        MULTI_ISLAND_STACK,
-
-        // === Continuity Camera ===
-        CONTINUITY_CAMERA_ACTIONS,
-
-        // === Focus & DND ===
-        FOCUS_MODE_PILL,
-
-        // === App Roles ===
-        ROLE_CALLING_APP, ROLE_GAME_LAUNCHER,
-
-        // === Styles ===
-        CALL_STYLE, CHARGING_STYLE, BATTERY_STYLE,
-        
-        // --- Ultimate Refinement: Dashboard ---
-        ENABLE_MAX_WIDGETS, SHOW_VITALS_RAM, SHOW_VITALS_CPU,
-        SHOW_VITALS_NET, SHOW_VITALS_FPS, SHOW_VITALS_BAT_CYCLES,
-        SHORTCUT_LAYOUT,
-
-        // --- Ultimate Refinement: Data & Storage ---
-        AUTO_BACKUP_ENABLED, AUTO_BACKUP_FREQ_DAYS, STASH_STORAGE_PATH,
-        ENABLE_CLIPBOARD_PAPERCLIP,
-        
-        // --- Ultimate Refinement: Performance ---
-        ENABLE_LOW_LATENCY_MODE,
-        
-        // --- Ultimate Refinement: Per-App ---
-        HIDE_ISLAND_PER_APP, HIDE_STATES_PER_APP_JSON,
-        HIDE_ON_SCREENSHOT, HIDE_ON_SCREEN_RECORD,
-
-        // === The Final 'Aura & Bridge' Core ===
-        LIVE_BRIDGE_ENABLED, MAGNETIC_EDGE_DOCKING, GEMINI_AURA_ENABLED,
-        ROLLING_TYPOGRAPHY_ENABLED, PARSE_DELIVERY_NOTIFICATIONS,
-        WARP_CHARGE_ANIMATION, VELOCITY_SQUISH_ENABLED, INLINE_REPLY_ENABLED,
-        
+        DESIGN_LANGUAGE, LIVE_BRIDGE_ENABLED, MAGNETIC_EDGE_DOCKING,
+        DYNAMIC_COLORS, ACCENT_COLOR, BLUR_INTENSITY, GEMINI_AURA_ENABLED,
+        ROLLING_TYPOGRAPHY_ENABLED, AESTHETIC_STYLE, MONOCHROME_ICONS,
+        PARSE_DELIVERY_NOTIFICATIONS, WARP_CHARGE_ANIMATION,
+        BATTERY_AWARE_ANIMATION, NOW_PLAYING, MUSIC_VISUALIZER_STYLE,
+        WAVEFORM_ENABLED, ANIMATION_SPEED, PHYSICS_STYLE,
+        CONTENT_TRANSITION_STYLE, VELOCITY_SQUISH_ENABLED,
+        INLINE_REPLY_ENABLED, ENABLE_MAX_WIDGETS, SHOW_VITALS_RAM,
+        SHOW_VITALS_CPU, SHOW_VITALS_NET, SHOW_VITALS_FPS,
+        SHOW_VITALS_BAT_CYCLES, SHORTCUT_LAYOUT,
         ASSIST_BRIDGE_ENABLED, ASSIST_BRIDGE_TARGET,
         LENS_BRIDGE_ENABLED, LENS_BRIDGE_TARGET,
-        
-        PER_APP_GESTURES_JSON, PER_APP_STATES_JSON,
-        AI_CONFIDENCE_THRESHOLD, AI_REINFORCEMENT_RATE,
-
-        ICON_PACK
+        ISLAND_ENABLED, RING_IDLE, PILL_SHAPE, PILL_RADIUS,
+        HIDE_ON_SCREENSHOT, HIDE_ON_SCREEN_RECORD, HIDE_ISLAND_PER_APP,
+        ENABLE_FOCUS_MODE, PRODUCTIVE_APPS, ENABLE_LOW_LATENCY_MODE,
+        ENABLE_CLIPBOARD_PAPERCLIP,
+        OTP_DETECTION, LINK_INTERCEPT, TRANSLATION, BARCODE, NAVIGATION,
+        NOTIFICATION_COALESCING, APP_PERMISSION_CHECKER, GAMING_HUD,
+        SHOW_FPS_HUD, SHOW_CPU_TEMP_HUD, HAPTIC_FEEDBACK, HAPTIC_INTENSITY,
+        RING_CADENCE_VIBRATION, ISLAND_ON_LOCKSCREEN, LOCKSCREEN_FEATURES,
+        ALLOWED_NOTIFICATION_APPS, ROLE_CALLING_APP, ALLOWED_MUSIC_APPS,
+        ALLOWED_MEDIA_APPS, ALLOWED_NOTES_APPS, CALL_STYLE,
+        CHARGING_STYLE, BATTERY_STYLE, RING_PULSE_STYLE,
+        AUTO_BACKUP_ENABLED, AUTO_BACKUP_FREQ_DAYS, STASH_STORAGE_PATH,
+        AI_CONFIDENCE_THRESHOLD, AI_REINFORCEMENT_RATE, ICON_PACK
     }
 
     fun getBoolean(key: SettingKey, default: Boolean): Boolean =
@@ -207,139 +120,29 @@ class SettingsManager(private val context: Context) {
     fun exportAiData(): String? = ipcClient.exportAiData()
 
     fun getSettingsState(): SettingsState {
-        val iconPackName = getString(SettingKey.ICON_PACK, "MATERIAL_YOU") ?: "MATERIAL_YOU"
+        val iconPackId = getString(SettingKey.ICON_PACK, "MATERIAL_YOU") ?: "MATERIAL_YOU"
         return SettingsState(
-            // Appearance
-            designLanguage = if (getBoolean(SettingKey.USE_LIQUID_GLASS, false)) DesignLanguage.APPLE_LIQUID_GLASS else DesignLanguage.MATERIAL_YOU,
+            designLanguage = try { DesignLanguage.valueOf(getString(SettingKey.DESIGN_LANGUAGE, "MATERIAL_YOU") ?: "MATERIAL_YOU") } catch(e: Exception) { DesignLanguage.MATERIAL_YOU },
+            liveBridgeEnabled = getBoolean(SettingKey.LIVE_BRIDGE_ENABLED, false),
+            magneticEdgeDocking = getBoolean(SettingKey.MAGNETIC_EDGE_DOCKING, true),
             dynamicColors = getBoolean(SettingKey.DYNAMIC_COLORS, true),
             customAccentColor = Color(getInt(SettingKey.ACCENT_COLOR, 0xFF6750A4.toInt())),
             blurIntensity = getFloat(SettingKey.BLUR_INTENSITY, 15f),
-            pillCornerRadius = getFloat(SettingKey.PILL_RADIUS, 100f),
-            animationSpeed = try { AnimationSpeed.valueOf(getString(SettingKey.ANIM_SPEED, "NORMAL") ?: "NORMAL") } catch(e: Exception) { AnimationSpeed.NORMAL },
-            showRingIdle = getBoolean(SettingKey.RING_IDLE, true),
-            pillShape = getString(SettingKey.PILL_SHAPE, "pill") ?: "pill",
-            dynamicGradient = getBoolean(SettingKey.DYNAMIC_GRADIENT, true),
-            glowEffect = getBoolean(SettingKey.GLOW_EFFECT, true),
-            dotMode = getBoolean(SettingKey.DOT_MODE, false),
-            elasticStretch = getBoolean(SettingKey.ELASTIC_STRETCH, true),
-            shadowCasting = getBoolean(SettingKey.SHADOW_CASTING, true),
-            contentAwareBlur = getBoolean(SettingKey.CONTENT_AWARE_BLUR, true),
-            timeBasedThemes = getBoolean(SettingKey.TIME_BASED_THEMES, false),
-            highContrastMode = getBoolean(SettingKey.HIGH_CONTRAST_MODE, false),
-            iconPackIntegration = getBoolean(SettingKey.ICON_PACK_INTEGRATION, false),
-
-            // --- Ultimate Refinement: Appearance ---
-            enableMetaballTear = getBoolean(SettingKey.ENABLE_METABALL_TEAR, true),
-            physicsStyle = try { PhysicsStyle.valueOf(getString(SettingKey.PHYSICS_STYLE, "APPLE") ?: "APPLE") } catch(e: Exception) { PhysicsStyle.APPLE },
-            contentTransitionStyle = try { ContentTransitionStyle.valueOf(getString(SettingKey.CONTENT_TRANSITION_STYLE, "SLIDE") ?: "SLIDE") } catch(e: Exception) { ContentTransitionStyle.SLIDE },
-            ringPulseStyle = try { RingPulseStyle.valueOf(getString(SettingKey.RING_PULSE_STYLE, "BREATH") ?: "BREATH") } catch(e: Exception) { RingPulseStyle.BREATH },
+            geminiAuraEnabled = getBoolean(SettingKey.GEMINI_AURA_ENABLED, true),
+            rollingTypographyEnabled = getBoolean(SettingKey.ROLLING_TYPOGRAPHY_ENABLED, true),
             aestheticStyle = try { AestheticStyle.valueOf(getString(SettingKey.AESTHETIC_STYLE, "GLASS") ?: "GLASS") } catch(e: Exception) { AestheticStyle.GLASS },
             monochromeIcons = getBoolean(SettingKey.MONOCHROME_ICONS, false),
-
-            // Notifications & Detection
-            otpDetection = getBoolean(SettingKey.OTP_DETECTION, true),
-            linkIntercept = getBoolean(SettingKey.LINK_INTERCEPT, true),
-            translation = getBoolean(SettingKey.TRANSLATION, true),
-            barcode = getBoolean(SettingKey.BARCODE, true),
-            navigation = getBoolean(SettingKey.NAVIGATION, true),
-            notificationCoalescing = getBoolean(SettingKey.NOTIFICATION_COALESCING, true),
-            appPermissionChecker = getBoolean(SettingKey.APP_PERMISSION_CHECKER, true),
-
-            // Gaming HUD
-            gamingHud = getBoolean(SettingKey.GAMING_HUD, true),
-            showFps = getBoolean(SettingKey.SHOW_FPS, false),
-            showCpuTemp = getBoolean(SettingKey.SHOW_CPU_TEMP, false),
-            gamingDashboardOverlay = getBoolean(SettingKey.GAMING_DASHBOARD_OVERLAY, false),
-
-            // Media & Audio
-            mediaArtworkBlur = getBoolean(SettingKey.MEDIA_ARTWORK_BLUR, true),
-            waveformEnabled = getBoolean(SettingKey.WAVEFORM_ENABLED, true),
-            ambientReactiveRing = getBoolean(SettingKey.AMBIENT_REACTIVE, true),
-            audioSensitivity = getFloat(SettingKey.AUDIO_SENSITIVITY, 0.5f),
-            bpmPulse = getBoolean(SettingKey.BPM_PULSE, true),
-            liveMusicVisualizer = getBoolean(SettingKey.LIVE_MUSIC_VISUALIZER, false),
+            parseDeliveryNotifications = getBoolean(SettingKey.PARSE_DELIVERY_NOTIFICATIONS, true),
+            warpChargeAnimation = getBoolean(SettingKey.WARP_CHARGE_ANIMATION, true),
+            batteryAwareAnimation = getBoolean(SettingKey.BATTERY_AWARE_ANIMATION, true),
             nowPlaying = getBoolean(SettingKey.NOW_PLAYING, true),
-            liveCaption = getBoolean(SettingKey.LIVE_CAPTION, false),
-            voiceMemoTranscription = getBoolean(SettingKey.VOICE_MEMO_TRANSCRIPTION, true),
             musicVisualizerStyle = getString(SettingKey.MUSIC_VISUALIZER_STYLE, "NEURAL_CIRCLE") ?: "NEURAL_CIRCLE",
-
-            // Haptics
-            hapticFeedback = getBoolean(SettingKey.HAPTIC_FEEDBACK, true),
-            hapticIntensity = getFloat(SettingKey.HAPTIC_INTENSITY, 1f),
-            ringCadenceVibration = getBoolean(SettingKey.RING_CADENCE_VIBRATION, true),
-            hapticMorseAlerts = getBoolean(SettingKey.HAPTIC_MORSE_ALERTS, false),
-
-            // Advanced Triggers & Sensors
-            ringMediaVisible = getBoolean(SettingKey.RING_MEDIA_VISIBLE, true),
-            ringBatteryVisible = getBoolean(SettingKey.RING_BATTERY_VISIBLE, true),
-            ringDownloadVisible = getBoolean(SettingKey.RING_DOWNLOAD_VISIBLE, true),
-            ringBluetoothVisible = getBoolean(SettingKey.RING_BLUETOOTH_VISIBLE, true),
-            ringHotspotVisible = getBoolean(SettingKey.RING_HOTSPOT_VISIBLE, true),
-            ringDataVisible = getBoolean(SettingKey.RING_DATA_VISIBLE, true),
-            invisibleRingTouchPassthrough = getBoolean(SettingKey.INVISIBLE_RING_TOUCH_PASSTHROUGH, true),
-            antiBurnInEnabled = getBoolean(SettingKey.ANTI_BURN_IN_ENABLED, true),
-            antiBurnInIntensity = getFloat(SettingKey.ANTI_BURN_IN_INTENSITY, 1.5f),
-            wifiAlertDuration = getInt(SettingKey.WIFI_ALERT_DURATION, 3),
-            btAlertDuration = getInt(SettingKey.BT_ALERT_DURATION, 3),
-            hotspotAlertDuration = getInt(SettingKey.HOTSPOT_ALERT_DURATION, 5),
-            dataAlertDuration = getInt(SettingKey.DATA_ALERT_DURATION, 3),
-            liveDownloadTracking = getBoolean(SettingKey.LIVE_DOWNLOAD_TRACKING, true),
-            networkSpeedRing = getBoolean(SettingKey.NETWORK_SPEED_RING, true),
-            
-            // --- Ultimate Refinement: Sensors ---
-            enableLocationAwareness = getBoolean(SettingKey.ENABLE_LOCATION_AWARENESS, false),
-            enableTimeThemes = getBoolean(SettingKey.ENABLE_TIME_THEMES, false),
-            dayThemeColors = getString(SettingKey.DAY_THEME_COLORS, "#6750A4") ?: "#6750A4",
-            nightThemeColors = getString(SettingKey.NIGHT_THEME_COLORS, "#1E1E2E") ?: "#1E1E2E",
-
-            // Smart AI Gestures
-            smartGesturesEnabled = getBoolean(SettingKey.SMART_GESTURES_ENABLED, true),
-            smartMediaOverride = getBoolean(SettingKey.SMART_MEDIA_OVERRIDE, true),
-            smartGamingOverride = getBoolean(SettingKey.SMART_GAMING_OVERRIDE, true),
-            smartCallOverride = getBoolean(SettingKey.SMART_CALL_OVERRIDE, true),
-
-            // State Constraint Engine
-            allowMusicMid = getBoolean(SettingKey.ALLOW_MUSIC_MID, true),
-            allowMusicMax = getBoolean(SettingKey.ALLOW_MUSIC_MAX, true),
-            allowChargingMini = getBoolean(SettingKey.ALLOW_CHARGING_MINI, true),
-            allowChargingMid = getBoolean(SettingKey.ALLOW_CHARGING_MID, true),
-            allowNotifMini = getBoolean(SettingKey.ALLOW_NOTIF_MINI, true),
-            allowNotifMid = getBoolean(SettingKey.ALLOW_NOTIF_MID, true),
-            allowNotifMax = getBoolean(SettingKey.ALLOW_NOTIF_MAX, true),
-            allowCallMid = getBoolean(SettingKey.ALLOW_CALL_MID, true),
-            allowCallMax = getBoolean(SettingKey.ALLOW_CALL_MAX, true),
-            allowTaskMini = getBoolean(SettingKey.ALLOW_TASK_MINI, true),
-            allowTaskMid = getBoolean(SettingKey.ALLOW_TASK_MID, true),
-
-            // Floating / Freeform Windows
-            freeformLaunchEnabled = getBoolean(SettingKey.FREEFORM_LAUNCH_ENABLED, true),
-            freeformSmartGesture = getBoolean(SettingKey.FREEFORM_SMART_GESTURE, true),
-            enableFreeformPortalAnim = getBoolean(SettingKey.ENABLE_FREEFORM_PORTAL_ANIM, true),
-
-            // Global Controls
-            islandEnabled = getBoolean(SettingKey.ISLAND_ENABLED, true),
-            islandOnLockscreen = getBoolean(SettingKey.ISLAND_ON_LOCKSCREEN, true),
-            allowedNotificationApps = getStringSet(SettingKey.ALLOWED_NOTIFICATION_APPS, emptySet()),
-            swipeLeftAction = getString(SettingKey.SWIPE_LEFT_ACTION, "dismiss") ?: "dismiss",
-            swipeRightAction = getString(SettingKey.SWIPE_RIGHT_ACTION, "next_track") ?: "next_track",
-            
-            // --- Ultimate Refinement: Focus Mode ---
-            enableFocusMode = getBoolean(SettingKey.ENABLE_FOCUS_MODE, false),
-            productiveApps = getStringSet(SettingKey.PRODUCTIVE_APPS, emptySet()),
-
-            // App Roles
-            roleCallingApp = getString(SettingKey.ROLE_CALLING_APP, "") ?: "",
-            roleGameLauncher = getString(SettingKey.ROLE_GAME_LAUNCHER, "") ?: "",
-            allowedMusicApps = getStringSet(SettingKey.ALLOWED_MUSIC_APPS, emptySet()),
-            allowedMediaApps = getStringSet(SettingKey.ALLOWED_MEDIA_APPS, emptySet()),
-            allowedNotesApps = getStringSet(SettingKey.ALLOWED_NOTES_APPS, emptySet()),
-
-            // Styles
-            callStyle = try { CallStyle.valueOf(getString(SettingKey.CALL_STYLE, "IOS") ?: "IOS") } catch(e: Exception) { CallStyle.IOS },
-            chargingStyle = try { ChargingStyle.valueOf(getString(SettingKey.CHARGING_STYLE, "RING") ?: "RING") } catch(e: Exception) { ChargingStyle.RING },
-            batteryStyle = try { BatteryStyle.valueOf(getString(SettingKey.BATTERY_STYLE, "PILL") ?: "PILL") } catch(e: Exception) { BatteryStyle.PILL },
-            
-            // --- Ultimate Refinement: Dashboard ---
+            waveformEnabled = getBoolean(SettingKey.WAVEFORM_ENABLED, true),
+            animationSpeed = try { AnimationSpeed.valueOf(getString(SettingKey.ANIMATION_SPEED, "NORMAL") ?: "NORMAL") } catch(e: Exception) { AnimationSpeed.NORMAL },
+            physicsStyle = try { PhysicsStyle.valueOf(getString(SettingKey.PHYSICS_STYLE, "APPLE") ?: "APPLE") } catch(e: Exception) { PhysicsStyle.APPLE },
+            contentTransitionStyle = try { ContentTransitionStyle.valueOf(getString(SettingKey.CONTENT_TRANSITION_STYLE, "SLIDE") ?: "SLIDE") } catch(e: Exception) { ContentTransitionStyle.SLIDE },
+            velocitySquishEnabled = getBoolean(SettingKey.VELOCITY_SQUISH_ENABLED, true),
+            inlineReplyEnabled = getBoolean(SettingKey.INLINE_REPLY_ENABLED, true),
             enableMaxWidgets = getBoolean(SettingKey.ENABLE_MAX_WIDGETS, true),
             showVitalsRam = getBoolean(SettingKey.SHOW_VITALS_RAM, true),
             showVitalsCpu = getBoolean(SettingKey.SHOW_VITALS_CPU, true),
@@ -347,43 +150,51 @@ class SettingsManager(private val context: Context) {
             showVitalsFps = getBoolean(SettingKey.SHOW_VITALS_FPS, true),
             showVitalsBatCycles = getBoolean(SettingKey.SHOW_VITALS_BAT_CYCLES, true),
             shortcutLayout = try { ShortcutLayout.valueOf(getString(SettingKey.SHORTCUT_LAYOUT, "GRID") ?: "GRID") } catch(e: Exception) { ShortcutLayout.GRID },
-
-            // --- Ultimate Refinement: Data & Storage ---
-            autoBackupEnabled = getBoolean(SettingKey.AUTO_BACKUP_ENABLED, false),
-            autoBackupFreqDays = getInt(SettingKey.AUTO_BACKUP_FREQ_DAYS, 7),
-            stashStoragePath = getString(SettingKey.STASH_STORAGE_PATH, "/sdcard/DynamicIsland/Archive") ?: "/sdcard/DynamicIsland/Archive",
-            enableClipboardPaperclip = getBoolean(SettingKey.ENABLE_CLIPBOARD_PAPERCLIP, true),
-            
-            // --- Ultimate Refinement: Performance ---
-            enableLowLatencyMode = getBoolean(SettingKey.ENABLE_LOW_LATENCY_MODE, false),
-            
-            // --- Ultimate Refinement: Privacy ---
-            hideOnScreenshot = getBoolean(SettingKey.HIDE_ON_SCREENSHOT, true),
-            hideOnScreenRecord = getBoolean(SettingKey.HIDE_ON_SCREEN_RECORD, true),
-            hideIslandPerApp = getStringSet(SettingKey.HIDE_ISLAND_PER_APP, emptySet()),
-            hideStatesPerAppJson = getString(SettingKey.HIDE_STATES_PER_APP_JSON, "{}") ?: "{}",
-
-            // --- The Final 'Aura & Bridge' Core ---
-            liveBridgeEnabled = getBoolean(SettingKey.LIVE_BRIDGE_ENABLED, false),
-            magneticEdgeDocking = getBoolean(SettingKey.MAGNETIC_EDGE_DOCKING, true),
-            geminiAuraEnabled = getBoolean(SettingKey.GEMINI_AURA_ENABLED, true),
-            rollingTypographyEnabled = getBoolean(SettingKey.ROLLING_TYPOGRAPHY_ENABLED, true),
-            parseDeliveryNotifications = getBoolean(SettingKey.PARSE_DELIVERY_NOTIFICATIONS, true),
-            warpChargeAnimation = getBoolean(SettingKey.WARP_CHARGE_ANIMATION, true),
-            velocitySquishEnabled = getBoolean(SettingKey.VELOCITY_SQUISH_ENABLED, true),
-            inlineReplyEnabled = getBoolean(SettingKey.INLINE_REPLY_ENABLED, true),
-
             assistBridgeEnabled = getBoolean(SettingKey.ASSIST_BRIDGE_ENABLED, false),
             assistBridgeTarget = getString(SettingKey.ASSIST_BRIDGE_TARGET, "com.brave.browser") ?: "com.brave.browser",
             lensBridgeEnabled = getBoolean(SettingKey.LENS_BRIDGE_ENABLED, false),
             lensBridgeTarget = getString(SettingKey.LENS_BRIDGE_TARGET, "com.brave.browser") ?: "com.brave.browser",
-
-            perAppGesturesJson = getString(SettingKey.PER_APP_GESTURES_JSON, "{}") ?: "{}",
-            perAppStatesJson = getString(SettingKey.PER_APP_STATES_JSON, "{}") ?: "{}",
+            islandEnabled = getBoolean(SettingKey.ISLAND_ENABLED, true),
+            showRingIdle = getBoolean(SettingKey.RING_IDLE, true),
+            pillShape = getString(SettingKey.PILL_SHAPE, "pill") ?: "pill",
+            pillCornerRadius = getFloat(SettingKey.PILL_RADIUS, 100f),
+            hideOnScreenshot = getBoolean(SettingKey.HIDE_ON_SCREENSHOT, true),
+            hideOnScreenRecord = getBoolean(SettingKey.HIDE_ON_SCREEN_RECORD, true),
+            hideIslandPerApp = getStringSet(SettingKey.HIDE_ISLAND_PER_APP, emptySet()),
+            enableFocusMode = getBoolean(SettingKey.ENABLE_FOCUS_MODE, false),
+            productiveApps = getStringSet(SettingKey.PRODUCTIVE_APPS, emptySet()),
+            enableLowLatencyMode = getBoolean(SettingKey.ENABLE_LOW_LATENCY_MODE, false),
+            enableClipboardPaperclip = getBoolean(SettingKey.ENABLE_CLIPBOARD_PAPERCLIP, true),
+            otpDetection = getBoolean(SettingKey.OTP_DETECTION, true),
+            linkIntercept = getBoolean(SettingKey.LINK_INTERCEPT, true),
+            translation = getBoolean(SettingKey.TRANSLATION, true),
+            barcode = getBoolean(SettingKey.BARCODE, true),
+            navigation = getBoolean(SettingKey.NAVIGATION, true),
+            notificationCoalescing = getBoolean(SettingKey.NOTIFICATION_COALESCING, true),
+            appPermissionChecker = getBoolean(SettingKey.APP_PERMISSION_CHECKER, true),
+            gamingHud = getBoolean(SettingKey.GAMING_HUD, true),
+            showFpsHUD = getBoolean(SettingKey.SHOW_FPS_HUD, false),
+            showCpuTempHUD = getBoolean(SettingKey.SHOW_CPU_TEMP_HUD, false),
+            hapticFeedback = getBoolean(SettingKey.HAPTIC_FEEDBACK, true),
+            hapticIntensity = getFloat(SettingKey.HAPTIC_INTENSITY, 1f),
+            ringCadenceVibration = getBoolean(SettingKey.RING_CADENCE_VIBRATION, true),
+            islandOnLockscreen = getBoolean(SettingKey.ISLAND_ON_LOCKSCREEN, true),
+            lockscreenFeatures = getStringSet(SettingKey.LOCKSCREEN_FEATURES, setOf("music", "notifications")),
+            allowedNotificationApps = getStringSet(SettingKey.ALLOWED_NOTIFICATION_APPS, emptySet()),
+            roleCallingApp = getString(SettingKey.ROLE_CALLING_APP, "") ?: "",
+            allowedMusicApps = getStringSet(SettingKey.ALLOWED_MUSIC_APPS, emptySet()),
+            allowedMediaApps = getStringSet(SettingKey.ALLOWED_MEDIA_APPS, emptySet()),
+            allowedNotesApps = getStringSet(SettingKey.ALLOWED_NOTES_APPS, emptySet()),
+            callStyle = try { CallStyle.valueOf(getString(SettingKey.CALL_STYLE, "IOS") ?: "IOS") } catch(e: Exception) { CallStyle.IOS },
+            chargingStyle = try { ChargingStyle.valueOf(getString(SettingKey.CHARGING_STYLE, "RING") ?: "RING") } catch(e: Exception) { ChargingStyle.RING },
+            batteryStyle = try { BatteryStyle.valueOf(getString(SettingKey.BATTERY_STYLE, "PILL") ?: "PILL") } catch(e: Exception) { BatteryStyle.PILL },
+            ringPulseStyle = try { RingPulseStyle.valueOf(getString(SettingKey.RING_PULSE_STYLE, "BREATH") ?: "BREATH") } catch(e: Exception) { RingPulseStyle.BREATH },
+            autoBackupEnabled = getBoolean(SettingKey.AUTO_BACKUP_ENABLED, false),
+            autoBackupFreqDays = getInt(SettingKey.AUTO_BACKUP_FREQ_DAYS, 7),
+            stashStoragePath = getString(SettingKey.STASH_STORAGE_PATH, "/sdcard/DynamicIsland/Archive") ?: "/sdcard/DynamicIsland/Archive",
             aiConfidenceThreshold = getInt(SettingKey.AI_CONFIDENCE_THRESHOLD, 10),
             aiReinforcementRate = getFloat(SettingKey.AI_REINFORCEMENT_RATE, 1.0f),
-
-            iconPack = try { IconPack.valueOf(iconPackName) } catch (e: Exception) { IconPack.MATERIAL_YOU }
-            )
+            iconPack = IconPack.fromString(iconPackId)
+        )
     }
 }

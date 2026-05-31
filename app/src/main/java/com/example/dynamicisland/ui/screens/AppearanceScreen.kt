@@ -28,6 +28,7 @@ import com.example.dynamicisland.ui.components.*
 import com.example.dynamicisland.settings.AestheticStyle
 import com.example.dynamicisland.settings.PhysicsStyle
 import com.example.dynamicisland.settings.ContentTransitionStyle
+import androidx.compose.foundation.border
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +46,7 @@ fun AppearanceScreen(prefs: SharedPreferences) {
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         
-        // --- LIVE SANDBOX PREVIEW (Pillar 5) ---
+        // --- LIVE SANDBOX PREVIEW ---
         SettingsCategoryHeader("Live Sandbox Preview")
         Surface(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -53,7 +54,6 @@ fun AppearanceScreen(prefs: SharedPreferences) {
             color = Color.Black
         ) {
             Box(modifier = Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
-                // Mini Island Mock
                 Box(
                     modifier = Modifier
                         .size(width = 180.dp, height = 36.dp)
@@ -69,7 +69,7 @@ fun AppearanceScreen(prefs: SharedPreferences) {
         SettingsCategoryHeader("Visual Surfaces")
         SettingsChoiceChip("Aesthetic Mode", aestheticStyle, listOf("GLASS", "VOID_BLACK")) {
             aestheticStyle = it
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("AESTHETIC_STYLE", it) })
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putString("AESTHETIC_STYLE", it) })
         }
 
         if (aestheticStyle == "GLASS") {
@@ -80,7 +80,7 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                 valueRange = 5f..40f,
                 onValueChange = { 
                     blurIntensity = it
-                    NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("blur_intensity", it) })
+                    NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putFloat("blur_intensity", it) })
                 }
             )
         }
@@ -90,24 +90,26 @@ fun AppearanceScreen(prefs: SharedPreferences) {
             description = "Force app icons to adopt a consistent chalk style.", 
             checked = prefs.getBoolean("MONOCHROME_ICONS", false),
             icon = Icons.Default.InvertColors,
-            onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context) { putBoolean("MONOCHROME_ICONS", it) } }
+            onCheckedChange = { value ->
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("MONOCHROME_ICONS", value) }) 
+            }
         )
 
         SettingsCategoryHeader("Icon Engine (Pillar 5)")
         val currentIconPack = prefs.getString("ICON_PACK", "MATERIAL_YOU") ?: "MATERIAL_YOU"
         SettingsChoiceChip("Icon Set", currentIconPack, listOf("MATERIAL_YOU", "IOS", "OXYGEN_OS", "ONE_UI", "AMOLED_CYBERPUNK", "CUPERTINO_GLASS")) {
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("ICON_PACK", it) })
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putString("ICON_PACK", it) })
         }
 
         SettingsCategoryHeader("Motion & Physics (Pillar 4)")
         SettingsChoiceChip("Physics Profile", physicsStyle, listOf("APPLE", "OXYGEN_OS")) {
             physicsStyle = it
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("PHYSICS_STYLE", it) })
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putString("PHYSICS_STYLE", it) })
         }
         
         SettingsChoiceChip("Content Transition", transitionStyle, listOf("SLIDE", "FADE_SCALE", "FLIP")) {
             transitionStyle = it
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("CONTENT_TRANSITION_STYLE", it) })
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putString("CONTENT_TRANSITION_STYLE", it) })
         }
 
         SettingsSwitch(
@@ -115,17 +117,19 @@ fun AppearanceScreen(prefs: SharedPreferences) {
             description = "Liquid drop effect when the Island splits.", 
             checked = prefs.getBoolean("ENABLE_METABALL_TEAR", true),
             icon = Icons.Default.Waves,
-            onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context) { putBoolean("ENABLE_METABALL_TEAR", it) } }
+            onCheckedChange = { value ->
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("ENABLE_METABALL_TEAR", value) }) 
+            }
         )
 
         SettingsCategoryHeader("Component Studio")
         SettingsChoiceChip("Call UI", callStyle, listOf("IOS", "MINIMAL", "MODERN")) {
             callStyle = it
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("call_style", it) })
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putString("call_style", it) })
         }
         SettingsChoiceChip("Charging UI", chargingStyle, listOf("RING", "WAVE", "CUBE")) {
             chargingStyle = it
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("charging_style", it) })
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putString("charging_style", it) })
         }
 
         Spacer(modifier = Modifier.height(120.dp))
