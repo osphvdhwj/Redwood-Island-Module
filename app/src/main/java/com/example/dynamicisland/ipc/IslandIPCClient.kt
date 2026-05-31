@@ -129,6 +129,14 @@ class IslandIPCClient private constructor(private val context: Context) {
         callProvider("PUT_JSON", key, Bundle().apply { putString("v", json.toString()) })
     }
 
+    fun clearAiMemory(): Boolean {
+        return callProvider("CLEAR_AI_MEMORY", null, null)?.getBoolean("ok", false) ?: false
+    }
+
+    fun exportAiData(): String? {
+        return callProvider("EXPORT_AI_DATA", null, null)?.getString("v")
+    }
+
     /**
      * Atomic bulk write — sends all key-value pairs in a single IPC transaction.
      * Use this instead of multiple individual puts to guarantee atomicity and

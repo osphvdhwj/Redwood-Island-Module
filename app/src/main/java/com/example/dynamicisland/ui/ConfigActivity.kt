@@ -103,7 +103,7 @@ fun ConfigScreenNav(prefs: android.content.SharedPreferences, settingsViewModel:
                     0 -> LayoutScreen(prefs)
                     1 -> AppearanceScreen(prefs)
                     2 -> InteractionsTab(prefs)
-                    3 -> AdvancedTriggersScreen(prefs)
+                    3 -> AdvancedTriggersScreen(prefs, settingsViewModel)
                     4 -> SettingsScreen(settingsViewModel)
                 }
             }

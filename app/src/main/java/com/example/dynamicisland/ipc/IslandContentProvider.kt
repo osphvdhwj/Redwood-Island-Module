@@ -305,6 +305,18 @@ class IslandContentProvider : ContentProvider() {
                     result.putBoolean("ok", false)
                 }
             }
+
+            "CLEAR_AI_MEMORY" -> {
+                context?.let { 
+                    com.example.dynamicisland.manager.IslandNeuralCore(it).clearMemory()
+                    result.putBoolean("ok", true)
+                }
+            }
+            "EXPORT_AI_DATA" -> {
+                context?.let {
+                    result.putString("v", com.example.dynamicisland.manager.IslandNeuralCore(it).exportData())
+                }
+            }
         }
         return result
     }

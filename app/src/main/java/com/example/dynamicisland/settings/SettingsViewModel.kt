@@ -36,4 +36,8 @@ class SettingsViewModel(private val settingsManager: SettingsManager) {
         loadAllSettings()
         settingsManager.broadcastUpdate()
     }
+
+    fun clearAiMemory(): Boolean = settingsManager.clearAiMemory()
+
+    fun exportAiData(): String? = settingsManager.exportAiData()
 }

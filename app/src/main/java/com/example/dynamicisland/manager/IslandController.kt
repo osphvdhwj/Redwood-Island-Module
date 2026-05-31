@@ -46,7 +46,8 @@ class IslandController @Inject constructor(
     private val hardwareMonitor: IslandHardwareMonitor,
     private val eventBus: IslandEventBus,
     private val hapticsManager: IslandHapticsManager,
-    private val networkMonitor: IslandNetworkMonitor
+    private val networkMonitor: IslandNetworkMonitor,
+    private val neuralCore: IslandNeuralCore
 ) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val activeExternalActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
@@ -385,6 +386,8 @@ class IslandController @Inject constructor(
             if (smartAction != null) {
                 android.util.Log.d("IslandController", "🚀 Smart AI Gesture triggered: $smartAction")
                 executeSmartAction(smartAction)
+                // 🧠 Reinforce AI learning
+                neuralCore.reinforce(topAppPackage, _lastIslandState.name, currentMedia?.isPlaying == true, gesture.name, smartAction)
             } else {
                 // Fallback to static user configuration
                 val stateKey = when (_lastIslandState) {
@@ -405,7 +408,11 @@ class IslandController @Inject constructor(
                     else -> "none"
                 }
                 val action = settingsManager.getRawString("${stateKey}_$suffix", "NONE")
-                if (action != "NONE") executeSmartAction(action)
+                if (action != "NONE") {
+                    executeSmartAction(action)
+                    // 🧠 Reinforce AI learning for manual actions to improve future predictions
+                    neuralCore.reinforce(topAppPackage, _lastIslandState.name, currentMedia?.isPlaying == true, gesture.name, action)
+                }
             }
         }
 
@@ -464,7 +471,15 @@ class IslandController @Inject constructor(
             }
             if (pkg != null) return "OPEN_FREEFORM_APP"
         }
-        return null
+
+        // 🧠 5. AI NEURAL CORE PREDICTION
+        // If the AI has learned a strong pattern for this context, use it.
+        return neuralCore.predict(
+            pkg = topAppPackage,
+            islandState = _lastIslandState.name,
+            isMediaPlaying = currentMedia?.isPlaying == true,
+            gesture = gesture.name
+        )
     }
 
     private fun executeSmartAction(actionName: String) {

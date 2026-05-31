@@ -15,7 +15,7 @@ import com.example.dynamicisland.manager.NewConfigManager
 import com.example.dynamicisland.ui.components.*
 
 @Composable
-fun AdvancedTriggersScreen(prefs: SharedPreferences) {
+fun AdvancedTriggersScreen(prefs: SharedPreferences, viewModel: com.example.dynamicisland.settings.SettingsViewModel) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -108,6 +108,62 @@ fun AdvancedTriggersScreen(prefs: SharedPreferences) {
                 defaultValue = 1.5f,
                 valueRange = 1f..3f,
                 onValueChange = { value -> NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat("anti_burn_in_intensity", value) }) }
+            )
+        }
+
+        SettingsCategoryHeader("Island Neural Core (AI)")
+        Text(
+            text = "The AI learns your habits over time to predict gestures and optimize performance. You can reset its memory or export the learned data below.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+        )
+
+        var showExportDialog by remember { mutableStateOf(false) }
+        var exportContent by remember { mutableStateOf("") }
+
+        SettingsMenuLink(
+            title = "Clear AI Memory",
+            description = "Reset all learned behavioral patterns.",
+            icon = Icons.Default.DeleteSweep,
+            onClick = {
+                val ok = viewModel.clearAiMemory()
+                if (ok) android.widget.Toast.makeText(context, "AI Memory Cleared", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        )
+
+        SettingsMenuLink(
+            title = "Export AI Data",
+            description = "Save learned weights as a JSON string.",
+            icon = Icons.Default.Share,
+            onClick = {
+                val data = viewModel.exportAiData()
+                if (data != null) {
+                    exportContent = data
+                    showExportDialog = true
+                }
+            }
+        )
+
+        if (showExportDialog) {
+            AlertDialog(
+                onDismissRequest = { showExportDialog = false },
+                title = { Text("Exported AI Data") },
+                text = {
+                    Box(modifier = Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState())) {
+                        Text(exportContent, style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("AI Data", exportContent))
+                        showExportDialog = false
+                    }) { Text("Copy to Clipboard") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showExportDialog = false }) { Text("Close") }
+                }
             )
         }
 

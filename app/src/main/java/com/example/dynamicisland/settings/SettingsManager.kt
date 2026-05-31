@@ -163,6 +163,10 @@ class SettingsManager(private val context: Context) {
         prefs.edit().clear().apply()
     }
 
+    fun clearAiMemory(): Boolean = ipcClient.clearAiMemory()
+
+    fun exportAiData(): String? = ipcClient.exportAiData()
+
     fun getSettingsState(): SettingsState {
         val iconPackName = getString(SettingKey.ICON_PACK, "MATERIAL_YOU") ?: "MATERIAL_YOU"
         return SettingsState(
