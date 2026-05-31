@@ -102,7 +102,6 @@ data class SettingsState(
     val quickSettingsTile: Boolean = true,
     val digitalWellbeingIntegration: Boolean = false,
     val rootAdbFeatures: Boolean = false,
-    val iconPack: IconPack = IconPack.MaterialYou,
 
     // === Accessibility ===
     val talkbackIntegration: Boolean = true,
@@ -278,7 +277,9 @@ data class SettingsState(
     val perAppGesturesJson: String = "{}", // Map<Pkg, Map<Gesture, Action>>
     val perAppStatesJson: String = "{}", // Map<Pkg, List<AllowedStates>>
     val aiConfidenceThreshold: Int = 10,
-    val aiReinforcementRate: Float = 1.0f
+    val aiReinforcementRate: Float = 1.0f,
+    
+    val iconPack: IconPack = IconPack.MaterialYou
 )
 
 enum class DesignLanguage { MATERIAL_YOU, APPLE_LIQUID_GLASS }
@@ -291,4 +292,3 @@ enum class ContentTransitionStyle { SLIDE, FADE_SCALE, FLIP }
 enum class RingPulseStyle { BREATH, LASER, NONE }
 enum class AestheticStyle { GLASS, VOID_BLACK }
 enum class ShortcutLayout { GRID, CAROUSEL }
-enum class IconPack { MaterialYou, iOS, OxygenOS, OneUI }

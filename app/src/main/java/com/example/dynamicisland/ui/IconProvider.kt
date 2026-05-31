@@ -29,6 +29,9 @@ object IconProvider {
             is IconPack.CupertinoGlass -> getCupertinoIcon(logicalIcon)
             is IconPack.MaterialYou -> getMaterialYouIcon(logicalIcon)
             is IconPack.AmoledCyberpunk -> getCyberpunkIcon(logicalIcon)
+            is IconPack.iOS -> getCupertinoIcon(logicalIcon) // Fallback to Cupertino
+            is IconPack.OxygenOS -> getMaterialYouIcon(logicalIcon) // Fallback to Material
+            is IconPack.OneUI -> getMaterialYouIcon(logicalIcon) // Fallback to Material
         }
     }
 

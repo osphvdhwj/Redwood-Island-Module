@@ -207,7 +207,7 @@ class SettingsManager(private val context: Context) {
     fun exportAiData(): String? = ipcClient.exportAiData()
 
     fun getSettingsState(): SettingsState {
-        val iconPackName = getString(SettingKey.ICON_PACK, "MaterialYou") ?: "MaterialYou"
+        val iconPackName = getString(SettingKey.ICON_PACK, "MATERIAL_YOU") ?: "MATERIAL_YOU"
         return SettingsState(
             // Appearance
             designLanguage = if (getBoolean(SettingKey.USE_LIQUID_GLASS, false)) DesignLanguage.APPLE_LIQUID_GLASS else DesignLanguage.MATERIAL_YOU,
@@ -383,7 +383,7 @@ class SettingsManager(private val context: Context) {
             aiConfidenceThreshold = getInt(SettingKey.AI_CONFIDENCE_THRESHOLD, 10),
             aiReinforcementRate = getFloat(SettingKey.AI_REINFORCEMENT_RATE, 1.0f),
 
-            iconPack = try { IconPack.valueOf(iconPackName) } catch (e: Exception) { IconPack.MaterialYou }
+            iconPack = try { IconPack.valueOf(iconPackName) } catch (e: Exception) { IconPack.MATERIAL_YOU }
             )
     }
 }

@@ -93,6 +93,12 @@ fun AppearanceScreen(prefs: SharedPreferences) {
             onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context) { putBoolean("MONOCHROME_ICONS", it) } }
         )
 
+        SettingsCategoryHeader("Icon Engine (Pillar 5)")
+        val currentIconPack = prefs.getString("ICON_PACK", "MATERIAL_YOU") ?: "MATERIAL_YOU"
+        SettingsChoiceChip("Icon Set", currentIconPack, listOf("MATERIAL_YOU", "IOS", "OXYGEN_OS", "ONE_UI", "AMOLED_CYBERPUNK", "CUPERTINO_GLASS")) {
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("ICON_PACK", it) })
+        }
+
         SettingsCategoryHeader("Motion & Physics (Pillar 4)")
         SettingsChoiceChip("Physics Profile", physicsStyle, listOf("APPLE", "OXYGEN_OS")) {
             physicsStyle = it
