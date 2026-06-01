@@ -15,6 +15,7 @@ import com.example.dynamicisland.model.*
 import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +33,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -55,6 +57,8 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
     var localIsLiked by remember(music.title, music.isLiked) { mutableStateOf(music.isLiked) }
     var localIsShuffled by remember(music.title, music.isShuffled) { mutableStateOf(music.isShuffled) }
     var localRepeatMode by remember(music.title, music.repeatMode) { mutableIntStateOf(music.repeatMode) }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "music_max_anim")
 
     LaunchedEffect(music) {
         try {
@@ -82,7 +86,7 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
         }
         
         // --- Layer 2: Ambient Beat Pulse (Ethereal) ---
-        val ambientPulse = rememberInfiniteTransition(label = "ambient").animateFloat(
+        val ambientPulse by infiniteTransition.animateFloat(
             initialValue = 0.4f, targetValue = 0.6f,
             animationSpec = infiniteRepeatable(tween(2500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
             label = "p"
@@ -93,7 +97,7 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(dominantColor.copy(alpha = ambientPulse.value), Color.Transparent)
+                        colors = listOf(dominantColor.copy(alpha = ambientPulse), Color.Transparent)
                     )
                 )
         )
