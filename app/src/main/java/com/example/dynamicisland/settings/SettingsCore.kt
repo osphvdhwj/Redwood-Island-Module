@@ -9,6 +9,7 @@ import org.json.JSONObject
 /**
  * ULTIMATE SETTINGS CORE
  * Unified file to prevent symbol resolution errors in Kotlin IR.
+ * This file contains all enums, the SettingsState data class, and the SettingsManager.
  */
 
 enum class DesignLanguage { MATERIAL_YOU, APPLE_LIQUID_GLASS }
@@ -22,10 +23,38 @@ enum class RingPulseStyle { BREATH, LASER, NONE }
 enum class AestheticStyle { GLASS, VOID_BLACK }
 enum class ShortcutLayout { GRID, CAROUSEL }
 
+/**
+ * Pro-Grade Icon Engine (Pillar 5)
+ */
+sealed class IconPack(val id: String) {
+    object MaterialYou : IconPack("MATERIAL_YOU")
+    object iOS : IconPack("IOS")
+    object OxygenOS : IconPack("OXYGEN_OS")
+    object OneUI : IconPack("ONE_UI")
+    object AmoledCyberpunk : IconPack("AMOLED_CYBERPUNK")
+    object CupertinoGlass : IconPack("CUPERTINO_GLASS")
+
+    companion object {
+        fun fromString(id: String): IconPack {
+            return when (id.uppercase()) {
+                "IOS" -> iOS
+                "OXYGEN_OS" -> OxygenOS
+                "ONE_UI" -> OneUI
+                "AMOLED_CYBERPUNK" -> AmoledCyberpunk
+                "CUPERTINO_GLASS" -> CupertinoGlass
+                else -> MaterialYou
+            }
+        }
+    }
+}
+
 data class SettingsState(
+    // === Pillar 1: Dual-Mode Architecture ===
     val designLanguage: DesignLanguage = DesignLanguage.MATERIAL_YOU,
     val liveBridgeEnabled: Boolean = false,
     val magneticEdgeDocking: Boolean = true,
+    
+    // === Pillar 2: Ethereal Visuals ===
     val dynamicColors: Boolean = true,
     val customAccentColor: Color = Color(0xFF6750A4),
     val blurIntensity: Float = 15f,
@@ -34,10 +63,27 @@ data class SettingsState(
     val aestheticStyle: AestheticStyle = AestheticStyle.GLASS,
     val monochromeIcons: Boolean = false,
     val enableMetaballTear: Boolean = true,
+    val dynamicGradient: Boolean = true,
+    
+    // === Pillar 3: Advanced Live Activities ===
+    val parseDeliveryNotifications: Boolean = true,
+    val warpChargeAnimation: Boolean = true,
+    val batteryAwareAnimation: Boolean = true,
+    val nowPlaying: Boolean = true,
+    val musicVisualizerStyle: String = "NEURAL_CIRCLE",
+    val waveformEnabled: Boolean = true,
+    val mediaArtworkBlur: Boolean = true,
+    val bpmPulse: Boolean = true,
+    val ambientReactiveRing: Boolean = true,
+
+    // === Pillar 4: Fluid Physics & Gestures ===
+    val animationSpeed: AnimationSpeed = AnimationSpeed.NORMAL,
     val physicsStyle: PhysicsStyle = PhysicsStyle.APPLE,
     val contentTransitionStyle: ContentTransitionStyle = ContentTransitionStyle.SLIDE,
     val velocitySquishEnabled: Boolean = true,
     val inlineReplyEnabled: Boolean = true,
+    
+    // === Pillar 5: Dashboard & Widgets ===
     val enableMaxWidgets: Boolean = true,
     val showVitalsRam: Boolean = true,
     val showVitalsCpu: Boolean = true,
@@ -45,11 +91,42 @@ data class SettingsState(
     val showVitalsFps: Boolean = true,
     val showVitalsBatCycles: Boolean = true,
     val shortcutLayout: ShortcutLayout = ShortcutLayout.GRID,
+    
+    // === Pillar 6: DeGoogled Bridge ===
     val assistBridgeEnabled: Boolean = false,
     val assistBridgeTarget: String = "com.brave.browser",
     val lensBridgeEnabled: Boolean = false,
     val lensBridgeTarget: String = "com.brave.browser",
+
+    // --- AI & Prediction ---
+    val predictionTint: Boolean = true,
+    val predictiveActions: Boolean = true,
+    val autoDismissDelay: Int = 5,
+    val contextualSuggestions: Boolean = true,
+    val gestureLearning: Boolean = true,
+    val aiConfidenceThreshold: Int = 10,
+    val aiReinforcementRate: Float = 1.0f,
+
+    // --- State Constraints ---
+    val allowMusicMid: Boolean = true,
+    val allowMusicMax: Boolean = true,
+    val allowChargingMini: Boolean = true,
+    val allowChargingMid: Boolean = true,
+    val allowNotifMini: Boolean = true,
+    val allowNotifMid: Boolean = true,
+    val allowNotifMax: Boolean = true,
+    val allowCallMid: Boolean = true,
+    val allowCallMax: Boolean = true,
+    val allowTaskMini: Boolean = true,
+    val allowTaskMid: Boolean = true,
+
+    // --- Global Controls & Privacy ---
     val islandEnabled: Boolean = true,
+    val islandOnLockscreen: Boolean = true,
+    val lockscreenFeatures: Set<String> = setOf("music", "notifications"),
+    val allowedNotificationApps: Set<String> = emptySet(),
+    val swipeLeftAction: String = "dismiss",
+    val swipeRightAction: String = "next_track",
     val showRingIdle: Boolean = true,
     val pillShape: String = "pill",
     val pillCornerRadius: Float = 100f,
@@ -62,6 +139,9 @@ data class SettingsState(
     val enableClipboardPaperclip: Boolean = true,
     val clipboardCleaner: Boolean = true,
     val privacyDotsEnabled: Boolean = false,
+    val dozeModeOptimisation: Boolean = true,
+    
+    // --- Detection Toggles ---
     val otpDetection: Boolean = true,
     val linkIntercept: Boolean = true,
     val translation: Boolean = true,
@@ -70,28 +150,10 @@ data class SettingsState(
     val notificationCoalescing: Boolean = true,
     val appPermissionChecker: Boolean = true,
     val gamingHud: Boolean = true,
-    val hapticFeedback: Boolean = true,
-    val hapticIntensity: Float = 1f,
-    val ringCadenceVibration: Boolean = true,
-    val islandOnLockscreen: Boolean = true,
-    val lockscreenFeatures: Set<String> = setOf("music", "notifications"),
-    val allowedNotificationApps: Set<String> = emptySet(),
-    val swipeLeftAction: String = "dismiss",
-    val swipeRightAction: String = "next_track",
-    val roleCallingApp: String = "",
-    val allowedMusicApps: Set<String> = emptySet(),
-    val allowedMediaApps: Set<String> = emptySet(),
-    val allowedNotesApps: Set<String> = emptySet(),
-    val callStyle: CallStyle = CallStyle.IOS,
-    val chargingStyle: ChargingStyle = ChargingStyle.RING,
-    val batteryStyle: BatteryStyle = BatteryStyle.PILL,
-    val ringPulseStyle: RingPulseStyle = RingPulseStyle.BREATH,
-    val autoBackupEnabled: Boolean = false,
-    val autoBackupFreqDays: Int = 7,
-    val stashStoragePath: String = "/sdcard/DynamicIsland/Archive",
-    val aiConfidenceThreshold: Int = 10,
-    val aiReinforcementRate: Float = 1.0f,
-    val iconPack: IconPack = IconPack.MaterialYou,
+    val showFpsHUD: Boolean = false,
+    val showCpuTempHUD: Boolean = false,
+
+    // --- Connectivity & Durations ---
     val wifiAlertDuration: Int = 3,
     val btAlertDuration: Int = 3,
     val hotspotAlertDuration: Int = 5,
@@ -100,33 +162,32 @@ data class SettingsState(
     val ringBatteryVisible: Boolean = true,
     val ringDataVisible: Boolean = true,
     val invisibleRingTouchPassthrough: Boolean = true,
-    val antiBurnInEnabled: Boolean = true,
-    val antiBurnInIntensity: Float = 1.5f,
-    val smartGesturesEnabled: Boolean = true,
-    val smartCallOverride: Boolean = true,
-    val smartMediaOverride: Boolean = true,
-    val smartGamingOverride: Boolean = true,
-    val freeformSmartGesture: Boolean = true,
-    val freeformLaunchEnabled: Boolean = true,
+    
+    // --- Haptics ---
+    val hapticFeedback: Boolean = true,
+    val hapticIntensity: Float = 1f,
+    val ringCadenceVibration: Boolean = true,
+    val hapticMorseAlerts: Boolean = false,
+
+    // --- Roles & Storage ---
+    val roleCallingApp: String = "",
+    val allowedMusicApps: Set<String> = emptySet(),
+    val allowedMediaApps: Set<String> = emptySet(),
+    val allowedNotesApps: Set<String> = emptySet(),
+    val autoBackupEnabled: Boolean = false,
+    val autoBackupFreqDays: Int = 7,
+    val stashStoragePath: String = "/sdcard/DynamicIsland/Archive",
     val talkbackIntegration: Boolean = true,
     val proximityWake: Boolean = false,
     val timerIntegration: Boolean = true,
-    val allowChargingMini: Boolean = true,
-    val allowChargingMid: Boolean = true,
-    val allowNotifMini: Boolean = true,
-    val allowNotifMid: Boolean = true,
-    val allowNotifMax: Boolean = true,
-    val allowCallMid: Boolean = true,
-    val allowCallMax: Boolean = true,
-    val allowTaskMini: Boolean = true,
-    val allowTaskMid: Boolean = true,
-    val dynamicGradient: Boolean = true,
     val splitPillEnabled: Boolean = true,
-    val nowPlaying: Boolean = true,
-    val mediaArtworkBlur: Boolean = true,
-    val waveformEnabled: Boolean = true,
-    val bpmPulse: Boolean = true,
-    val musicVisualizerStyle: String = "NEURAL_CIRCLE"
+
+    // --- Styles ---
+    val callStyle: CallStyle = CallStyle.IOS,
+    val chargingStyle: ChargingStyle = ChargingStyle.RING,
+    val batteryStyle: BatteryStyle = BatteryStyle.PILL,
+    val ringPulseStyle: RingPulseStyle = RingPulseStyle.BREATH,
+    val iconPack: IconPack = IconPack.MaterialYou
 )
 
 class SettingsManager(private val context: Context) {
@@ -180,7 +241,10 @@ class SettingsManager(private val context: Context) {
         ALLOW_NOTIF_MINI, ALLOW_NOTIF_MID, ALLOW_NOTIF_MAX,
         ALLOW_CALL_MID, ALLOW_CALL_MAX, ALLOW_TASK_MINI, ALLOW_TASK_MID,
         DYNAMIC_GRADIENT, SPLIT_PILL_ENABLED, CLIPBOARD_CLEANER, 
-        ENABLE_METABALL_TEAR, MEDIA_ARTWORK_BLUR, BPM_PULSE
+        ENABLE_METABALL_TEAR, MEDIA_ARTWORK_BLUR, BPM_PULSE, AMBIENT_REACTIVE,
+        PREDICTION_TINT, PREDICTIVE_ACTIONS, AUTO_DISMISS_DELAY,
+        CONTEXTUAL_SUGGESTIONS, GESTURE_LEARNING, DOZE_MODE_OPTIMISATION,
+        PRIVACY_DOTS_ENABLED, SHOW_FPS_HUD, SHOW_CPU_TEMP_HUD
     }
 
     fun getBoolean(key: SettingKey, default: Boolean): Boolean =
@@ -259,12 +323,16 @@ class SettingsManager(private val context: Context) {
             aestheticStyle = try { AestheticStyle.valueOf(getString(SettingKey.AESTHETIC_STYLE, "GLASS") ?: "GLASS") } catch(e: Exception) { AestheticStyle.GLASS },
             monochromeIcons = getBoolean(SettingKey.MONOCHROME_ICONS, false),
             enableMetaballTear = getBoolean(SettingKey.ENABLE_METABALL_TEAR, true),
+            dynamicGradient = getBoolean(SettingKey.DYNAMIC_GRADIENT, true),
             parseDeliveryNotifications = getBoolean(SettingKey.PARSE_DELIVERY_NOTIFICATIONS, true),
             warpChargeAnimation = getBoolean(SettingKey.WARP_CHARGE_ANIMATION, true),
             batteryAwareAnimation = getBoolean(SettingKey.BATTERY_AWARE_ANIMATION, true),
             nowPlaying = getBoolean(SettingKey.NOW_PLAYING, true),
             musicVisualizerStyle = getString(SettingKey.MUSIC_VISUALIZER_STYLE, "NEURAL_CIRCLE") ?: "NEURAL_CIRCLE",
             waveformEnabled = getBoolean(SettingKey.WAVEFORM_ENABLED, true),
+            mediaArtworkBlur = getBoolean(SettingKey.MEDIA_ARTWORK_BLUR, true),
+            bpmPulse = getBoolean(SettingKey.BPM_PULSE, true),
+            ambientReactiveRing = getBoolean(SettingKey.AMBIENT_REACTIVE, true),
             animationSpeed = try { AnimationSpeed.valueOf(getString(SettingKey.ANIMATION_SPEED, "NORMAL") ?: "NORMAL") } catch(e: Exception) { AnimationSpeed.NORMAL },
             physicsStyle = try { PhysicsStyle.valueOf(getString(SettingKey.PHYSICS_STYLE, "APPLE") ?: "APPLE") } catch(e: Exception) { PhysicsStyle.APPLE },
             contentTransitionStyle = try { ContentTransitionStyle.valueOf(getString(SettingKey.CONTENT_TRANSITION_STYLE, "SLIDE") ?: "SLIDE") } catch(e: Exception) { ContentTransitionStyle.SLIDE },
@@ -281,7 +349,30 @@ class SettingsManager(private val context: Context) {
             assistBridgeTarget = getString(SettingKey.ASSIST_BRIDGE_TARGET, "com.brave.browser") ?: "com.brave.browser",
             lensBridgeEnabled = getBoolean(SettingKey.LENS_BRIDGE_ENABLED, false),
             lensBridgeTarget = getString(SettingKey.LENS_BRIDGE_TARGET, "com.brave.browser") ?: "com.brave.browser",
+            predictionTint = getBoolean(SettingKey.PREDICTION_TINT, true),
+            predictiveActions = getBoolean(SettingKey.PREDICTIVE_ACTIONS, true),
+            autoDismissDelay = getInt(SettingKey.AUTO_DISMISS_DELAY, 5),
+            contextualSuggestions = getBoolean(SettingKey.CONTEXTUAL_SUGGESTIONS, true),
+            gestureLearning = getBoolean(SettingKey.GESTURE_LEARNING, true),
+            aiConfidenceThreshold = getInt(SettingKey.AI_CONFIDENCE_THRESHOLD, 10),
+            aiReinforcementRate = getFloat(SettingKey.AI_REINFORCEMENT_RATE, 1.0f),
+            allowMusicMid = getBoolean(SettingKey.ALLOW_MUSIC_MID, true),
+            allowMusicMax = getBoolean(SettingKey.ALLOW_MUSIC_MAX, true),
+            allowChargingMini = getBoolean(SettingKey.ALLOW_CHARGING_MINI, true),
+            allowChargingMid = getBoolean(SettingKey.ALLOW_CHARGING_MID, true),
+            allowNotifMini = getBoolean(SettingKey.ALLOW_NOTIF_MINI, true),
+            allowNotifMid = getBoolean(SettingKey.ALLOW_NOTIF_MID, true),
+            allowNotifMax = getBoolean(SettingKey.ALLOW_NOTIF_MAX, true),
+            allowCallMid = getBoolean(SettingKey.ALLOW_CALL_MID, true),
+            allowCallMax = getBoolean(SettingKey.ALLOW_CALL_MAX, true),
+            allowTaskMini = getBoolean(SettingKey.ALLOW_TASK_MINI, true),
+            allowTaskMid = getBoolean(SettingKey.ALLOW_TASK_MID, true),
             islandEnabled = getBoolean(SettingKey.ISLAND_ENABLED, true),
+            islandOnLockscreen = getBoolean(SettingKey.ISLAND_ON_LOCKSCREEN, true),
+            lockscreenFeatures = getStringSet(SettingKey.LOCKSCREEN_FEATURES, setOf("music", "notifications")),
+            allowedNotificationApps = getStringSet(SettingKey.ALLOWED_NOTIFICATION_APPS, emptySet()),
+            swipeLeftAction = getString(SettingKey.SWIPE_LEFT_ACTION, "dismiss") ?: "dismiss",
+            swipeRightAction = getString(SettingKey.SWIPE_RIGHT_ACTION, "next_track") ?: "next_track",
             showRingIdle = getBoolean(SettingKey.RING_IDLE, true),
             pillShape = getString(SettingKey.PILL_SHAPE, "pill") ?: "pill",
             pillCornerRadius = getFloat(SettingKey.PILL_RADIUS, 100f),
@@ -293,6 +384,8 @@ class SettingsManager(private val context: Context) {
             enableLowLatencyMode = getBoolean(SettingKey.ENABLE_LOW_LATENCY_MODE, false),
             enableClipboardPaperclip = getBoolean(SettingKey.ENABLE_CLIPBOARD_PAPERCLIP, true),
             clipboardCleaner = getBoolean(SettingKey.CLIPBOARD_CLEANER, true),
+            privacyDotsEnabled = getBoolean(SettingKey.PRIVACY_DOTS_ENABLED, false),
+            dozeModeOptimisation = getBoolean(SettingKey.DOZE_MODE_OPTIMISATION, true),
             otpDetection = getBoolean(SettingKey.OTP_DETECTION, true),
             linkIntercept = getBoolean(SettingKey.LINK_INTERCEPT, true),
             translation = getBoolean(SettingKey.TRANSLATION, true),
@@ -301,12 +394,20 @@ class SettingsManager(private val context: Context) {
             notificationCoalescing = getBoolean(SettingKey.NOTIFICATION_COALESCING, true),
             appPermissionChecker = getBoolean(SettingKey.APP_PERMISSION_CHECKER, true),
             gamingHud = getBoolean(SettingKey.GAMING_HUD, true),
+            showFpsHUD = getBoolean(SettingKey.SHOW_FPS_HUD, false),
+            showCpuTempHUD = getBoolean(SettingKey.SHOW_CPU_TEMP_HUD, false),
+            wifiAlertDuration = getInt(SettingKey.WIFI_ALERT_DURATION, 3),
+            btAlertDuration = getInt(SettingKey.BT_ALERT_DURATION, 3),
+            hotspotAlertDuration = getInt(SettingKey.HOTSPOT_ALERT_DURATION, 5),
+            dataAlertDuration = getInt(SettingKey.DATA_ALERT_DURATION, 3),
+            ringMediaVisible = getBoolean(SettingKey.RING_MEDIA_VISIBLE, true),
+            ringBatteryVisible = getBoolean(SettingKey.RING_BATTERY_VISIBLE, true),
+            ringDataVisible = getBoolean(SettingKey.RING_DATA_VISIBLE, true),
+            invisibleRingTouchPassthrough = getBoolean(SettingKey.INVISIBLE_RING_TOUCH_PASSTHROUGH, true),
             hapticFeedback = getBoolean(SettingKey.HAPTIC_FEEDBACK, true),
             hapticIntensity = getFloat(SettingKey.HAPTIC_INTENSITY, 1f),
             ringCadenceVibration = getBoolean(SettingKey.RING_CADENCE_VIBRATION, true),
-            islandOnLockscreen = getBoolean(SettingKey.ISLAND_ON_LOCKSCREEN, true),
-            lockscreenFeatures = getStringSet(SettingKey.LOCKSCREEN_FEATURES, setOf("music", "notifications")),
-            allowedNotificationApps = getStringSet(SettingKey.ALLOWED_NOTIFICATION_APPS, emptySet()),
+            hapticMorseAlerts = getBoolean(SettingKey.HAPTIC_MORSE_ALERTS, false),
             roleCallingApp = getString(SettingKey.ROLE_CALLING_APP, "") ?: "",
             allowedMusicApps = getStringSet(SettingKey.ALLOWED_MUSIC_APPS, emptySet()),
             allowedMediaApps = getStringSet(SettingKey.ALLOWED_MEDIA_APPS, emptySet()),
@@ -318,41 +419,11 @@ class SettingsManager(private val context: Context) {
             autoBackupEnabled = getBoolean(SettingKey.AUTO_BACKUP_ENABLED, false),
             autoBackupFreqDays = getInt(SettingKey.AUTO_BACKUP_FREQ_DAYS, 7),
             stashStoragePath = getString(SettingKey.STASH_STORAGE_PATH, "/sdcard/DynamicIsland/Archive") ?: "/sdcard/DynamicIsland/Archive",
-            aiConfidenceThreshold = getInt(SettingKey.AI_CONFIDENCE_THRESHOLD, 10),
-            aiReinforcementRate = getFloat(SettingKey.AI_REINFORCEMENT_RATE, 1.0f),
-            iconPack = IconPack.fromString(iconPackId),
-            wifiAlertDuration = getInt(SettingKey.WIFI_ALERT_DURATION, 3),
-            btAlertDuration = getInt(SettingKey.BT_ALERT_DURATION, 3),
-            hotspotAlertDuration = getInt(SettingKey.HOTSPOT_ALERT_DURATION, 5),
-            dataAlertDuration = getInt(SettingKey.DATA_ALERT_DURATION, 3),
-            ringMediaVisible = getBoolean(SettingKey.RING_MEDIA_VISIBLE, true),
-            ringBatteryVisible = getBoolean(SettingKey.RING_BATTERY_VISIBLE, true),
-            ringDataVisible = getBoolean(SettingKey.RING_DATA_VISIBLE, true),
-            invisibleRingTouchPassthrough = getBoolean(SettingKey.INVISIBLE_RING_TOUCH_PASSTHROUGH, true),
-            antiBurnInEnabled = getBoolean(SettingKey.ANTI_BURN_IN_ENABLED, true),
-            antiBurnInIntensity = getFloat(SettingKey.ANTI_BURN_IN_INTENSITY, 1.5f),
-            smartGesturesEnabled = getBoolean(SettingKey.SMART_GESTURES_ENABLED, true),
-            smartCallOverride = getBoolean(SettingKey.SMART_CALL_OVERRIDE, true),
-            smartMediaOverride = getBoolean(SettingKey.SMART_MEDIA_OVERRIDE, true),
-            smartGamingOverride = getBoolean(SettingKey.SMART_GAMING_OVERRIDE, true),
-            freeformSmartGesture = getBoolean(SettingKey.FREEFORM_SMART_GESTURE, true),
-            freeformLaunchEnabled = getBoolean(SettingKey.FREEFORM_LAUNCH_ENABLED, true),
             talkbackIntegration = getBoolean(SettingKey.TALKBACK_INTEGRATION, true),
             proximityWake = getBoolean(SettingKey.PROXIMITY_WAKE, false),
             timerIntegration = getBoolean(SettingKey.TIMER_INTEGRATION, true),
-            allowChargingMini = getBoolean(SettingKey.ALLOW_CHARGING_MINI, true),
-            allowChargingMid = getBoolean(SettingKey.ALLOW_CHARGING_MID, true),
-            allowNotifMini = getBoolean(SettingKey.ALLOW_NOTIF_MINI, true),
-            allowNotifMid = getBoolean(SettingKey.ALLOW_NOTIF_MID, true),
-            allowNotifMax = getBoolean(SettingKey.ALLOW_NOTIF_MAX, true),
-            allowCallMid = getBoolean(SettingKey.ALLOW_CALL_MID, true),
-            allowCallMax = getBoolean(SettingKey.ALLOW_CALL_MAX, true),
-            allowTaskMini = getBoolean(SettingKey.ALLOW_TASK_MINI, true),
-            allowTaskMid = getBoolean(SettingKey.ALLOW_TASK_MID, true),
-            dynamicGradient = getBoolean(SettingKey.DYNAMIC_GRADIENT, true),
             splitPillEnabled = getBoolean(SettingKey.SPLIT_PILL_ENABLED, true),
-            mediaArtworkBlur = getBoolean(SettingKey.MEDIA_ARTWORK_BLUR, true),
-            bpmPulse = getBoolean(SettingKey.BPM_PULSE, true)
+            iconPack = IconPack.fromString(iconPackId)
         )
     }
 }
