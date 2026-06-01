@@ -17,7 +17,6 @@ enum class ShortcutLayout { GRID, CAROUSEL }
  * THE DEFINITIVE SETTINGS STATE
  */
 data class SettingsState(
-    // Appearance
     val designLanguage: DesignLanguage = DesignLanguage.MATERIAL_YOU,
     val dynamicColors: Boolean = true,
     val customAccentColor: Color = Color(0xFF6750A4),
@@ -38,16 +37,10 @@ data class SettingsState(
     val aestheticStyle: AestheticStyle = AestheticStyle.GLASS,
     val monochromeIcons: Boolean = false,
     val enableMetaballTear: Boolean = true,
-
-    // Dual-Mode Architecture
     val liveBridgeEnabled: Boolean = false,
     val magneticEdgeDocking: Boolean = true,
-
-    // Advanced Visuals
     val geminiAuraEnabled: Boolean = true,
     val rollingTypographyEnabled: Boolean = true,
-
-    // Advanced Live Activities
     val parseDeliveryNotifications: Boolean = true,
     val warpChargeAnimation: Boolean = true,
     val batteryAwareAnimation: Boolean = true,
@@ -57,14 +50,11 @@ data class SettingsState(
     val mediaArtworkBlur: Boolean = true,
     val bpmPulse: Boolean = true,
     val ambientReactiveRing: Boolean = true,
-
-    // Physics & Gestures
+    val ambientReactive: Boolean = true, // for legacy code
     val physicsStyle: PhysicsStyle = PhysicsStyle.APPLE,
     val contentTransitionStyle: ContentTransitionStyle = ContentTransitionStyle.SLIDE,
     val velocitySquishEnabled: Boolean = true,
     val inlineReplyEnabled: Boolean = true,
-
-    // Dashboard & Widgets
     val enableMaxWidgets: Boolean = true,
     val showVitalsRam: Boolean = true,
     val showVitalsCpu: Boolean = true,
@@ -72,14 +62,10 @@ data class SettingsState(
     val showVitalsFps: Boolean = true,
     val showVitalsBatCycles: Boolean = true,
     val shortcutLayout: ShortcutLayout = ShortcutLayout.GRID,
-
-    // DeGoogled Bridge
     val assistBridgeEnabled: Boolean = false,
     val assistBridgeTarget: String = "com.brave.browser",
     val lensBridgeEnabled: Boolean = false,
     val lensBridgeTarget: String = "com.brave.browser",
-
-    // Smart AI & Prediction
     val smartGesturesEnabled: Boolean = true,
     val smartCallOverride: Boolean = true,
     val smartMediaOverride: Boolean = true,
@@ -91,8 +77,6 @@ data class SettingsState(
     val gestureLearning: Boolean = true,
     val aiConfidenceThreshold: Int = 10,
     val aiReinforcementRate: Float = 1.0f,
-
-    // State Constraints
     val allowMusicMid: Boolean = true,
     val allowMusicMax: Boolean = true,
     val allowChargingMini: Boolean = true,
@@ -104,13 +88,6 @@ data class SettingsState(
     val allowCallMax: Boolean = true,
     val allowTaskMini: Boolean = true,
     val allowTaskMid: Boolean = true,
-
-    // Floating Windows
-    val freeformLaunchEnabled: Boolean = true,
-    val freeformSmartGesture: Boolean = true,
-    val enableFreeformPortalAnim: Boolean = true,
-
-    // Global Controls & Privacy
     val islandEnabled: Boolean = true,
     val islandOnLockscreen: Boolean = true,
     val lockscreenFeatures: Set<String> = setOf("music", "notifications"),
@@ -127,8 +104,6 @@ data class SettingsState(
     val clipboardCleaner: Boolean = true,
     val privacyDotsEnabled: Boolean = false,
     val dozeModeOptimisation: Boolean = true,
-
-    // Connectivity & Durations
     val otpDetection: Boolean = true,
     val linkIntercept: Boolean = true,
     val translation: Boolean = true,
@@ -137,8 +112,8 @@ data class SettingsState(
     val notificationCoalescing: Boolean = true,
     val appPermissionChecker: Boolean = true,
     val gamingHud: Boolean = true,
-    val showFpsHUD: Boolean = false,
-    val showCpuTempHUD: Boolean = false,
+    val showFps: Boolean = false,
+    val showCpuTemp: Boolean = false,
     val wifiAlertDuration: Int = 3,
     val btAlertDuration: Int = 3,
     val hotspotAlertDuration: Int = 5,
@@ -149,18 +124,18 @@ data class SettingsState(
     val invisibleRingTouchPassthrough: Boolean = true,
     val antiBurnInEnabled: Boolean = true,
     val antiBurnInIntensity: Float = 1.5f,
-
-    // Haptics
     val hapticFeedback: Boolean = true,
     val hapticIntensity: Float = 1f,
     val ringCadenceVibration: Boolean = true,
     val hapticMorseAlerts: Boolean = false,
-
-    // Roles & Storage
     val roleCallingApp: String = "",
     val allowedMusicApps: Set<String> = emptySet(),
     val allowedMediaApps: Set<String> = emptySet(),
     val allowedNotesApps: Set<String> = emptySet(),
+    val callStyle: CallStyle = CallStyle.IOS,
+    val chargingStyle: ChargingStyle = ChargingStyle.RING,
+    val batteryStyle: BatteryStyle = BatteryStyle.PILL,
+    val ringPulseStyle: RingPulseStyle = RingPulseStyle.BREATH,
     val autoBackupEnabled: Boolean = false,
     val autoBackupFreqDays: Int = 7,
     val stashStoragePath: String = "/sdcard/DynamicIsland/Archive",
@@ -168,11 +143,5 @@ data class SettingsState(
     val proximityWake: Boolean = false,
     val timerIntegration: Boolean = true,
     val splitPillEnabled: Boolean = true,
-
-    // Styles & IconPack
-    val callStyle: CallStyle = CallStyle.IOS,
-    val chargingStyle: ChargingStyle = ChargingStyle.RING,
-    val batteryStyle: BatteryStyle = BatteryStyle.PILL,
-    val ringPulseStyle: RingPulseStyle = RingPulseStyle.BREATH,
     val iconPack: IconPack = IconPack.MaterialYou
 )
