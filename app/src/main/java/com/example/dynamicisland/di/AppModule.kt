@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.dynamicisland.manager.IslandHardwareMonitor
 import com.example.dynamicisland.manager.IslandMediaManager
 import com.example.dynamicisland.settings.SettingsManager
+import com.example.dynamicisland.ipc.IslandIPCClient
 import com.example.dynamicisland.system.hook.AospEventProvider
 import com.example.dynamicisland.system.hook.SystemEventProvider
 import dagger.Module
@@ -24,6 +25,12 @@ object AppModule {
     @Singleton
     fun provideSettingsManager(@ApplicationContext context: Context): SettingsManager {
         return SettingsManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideIslandIPCClient(@ApplicationContext context: Context): IslandIPCClient {
+        return IslandIPCClient.get(context)
     }
 
     @Provides
