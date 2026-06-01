@@ -102,7 +102,6 @@ class SettingsManager(private val context: Context) {
         WIFI_ALERT_DURATION, BT_ALERT_DURATION, HOTSPOT_ALERT_DURATION,
         DATA_ALERT_DURATION, RING_MEDIA_VISIBLE, RING_BATTERY_VISIBLE,
         RING_DATA_VISIBLE, INVISIBLE_RING_TOUCH_PASSTHROUGH,
-        ANTI_BURN_IN_ENABLED, ANTI_BURN_IN_INTENSITY,
 
         // Haptics
         HAPTIC_FEEDBACK, HAPTIC_INTENSITY, RING_CADENCE_VIBRATION,
@@ -181,8 +180,8 @@ class SettingsManager(private val context: Context) {
     fun exportAiData(): String? = ipcClient.exportAiData()
 
     /**
-     * NAMED PARAMETER CONSTRUCTOR
-     * Explicitly maps all fields to ensure zero compilation errors.
+     * MAPPED SETTINGS STATE
+     * Fully synchronized with SettingsState.kt using NAMED parameters.
      */
     fun getSettingsState(): SettingsState {
         val iconPackId = getString(SettingKey.ICON_PACK, "MATERIAL_YOU") ?: "MATERIAL_YOU"

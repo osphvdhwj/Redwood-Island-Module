@@ -1,7 +1,6 @@
 package com.example.dynamicisland.settings
 
 import androidx.compose.runtime.*
-import com.example.dynamicisland.settings.SettingsManager.SettingKey
 
 class SettingsViewModel(private val settingsManager: SettingsManager) {
     var state by mutableStateOf(SettingsState())
@@ -15,7 +14,7 @@ class SettingsViewModel(private val settingsManager: SettingsManager) {
         state = settingsManager.getSettingsState()
     }
 
-    fun <T> updateSetting(key: SettingKey, value: T) {
+    fun <T> updateSetting(key: SettingsManager.SettingKey, value: T) {
         when (value) {
             is Boolean -> settingsManager.putBoolean(key, value)
             is Int -> settingsManager.putInt(key, value)
