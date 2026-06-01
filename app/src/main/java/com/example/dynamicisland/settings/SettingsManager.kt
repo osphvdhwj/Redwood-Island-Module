@@ -29,54 +29,74 @@ class SettingsManager(private val context: Context) {
         } catch (e: Exception) {}
     }
 
+    /**
+     * DEDUPLICATED SETTING KEYS
+     * Mapping for all persistent preferences.
+     */
     enum class SettingKey {
         DESIGN_LANGUAGE, DYNAMIC_COLORS, ACCENT_COLOR, BLUR_INTENSITY,
-        PILL_RADIUS, ANIM_SPEED, RING_IDLE, PILL_SHAPE,
+        PILL_RADIUS, ANIMATION_SPEED, SHOW_RING_IDLE, PILL_SHAPE,
         DYNAMIC_GRADIENT, GLOW_EFFECT, DOT_MODE, ELASTIC_STRETCH,
         SHADOW_CASTING, CONTENT_AWARE_BLUR, TIME_BASED_THEMES,
         HIGH_CONTRAST_MODE, ICON_PACK_INTEGRATION, AESTHETIC_STYLE,
         MONOCHROME_ICONS, ENABLE_METABALL_TEAR,
+        
         LIVE_BRIDGE_ENABLED, MAGNETIC_EDGE_DOCKING,
         GEMINI_AURA_ENABLED, ROLLING_TYPOGRAPHY_ENABLED,
+        
         PARSE_DELIVERY_NOTIFICATIONS, WARP_CHARGE_ANIMATION,
         BATTERY_AWARE_ANIMATION, NOW_PLAYING, MUSIC_VISUALIZER_STYLE,
         WAVEFORM_ENABLED, MEDIA_ARTWORK_BLUR, BPM_PULSE,
         AMBIENT_REACTIVE_RING, AMBIENT_REACTIVE,
+        
         PHYSICS_STYLE, CONTENT_TRANSITION_STYLE, VELOCITY_SQUISH_ENABLED,
-        INLINE_REPLY_ENABLED, ENABLE_MAX_WIDGETS,
-        SHOW_VITALS_RAM, SHOW_VITALS_CPU, SHOW_VITALS_NET,
-        SHOW_VITALS_FPS, SHOW_VITALS_BAT_CYCLES, SHORTCUT_LAYOUT,
+        INLINE_REPLY_ENABLED,
+        
+        ENABLE_MAX_WIDGETS, SHOW_VITALS_RAM, SHOW_VITALS_CPU,
+        SHOW_VITALS_NET, SHOW_VITALS_FPS, SHOW_VITALS_BAT_CYCLES,
+        SHORTCUT_LAYOUT,
+        
         ASSIST_BRIDGE_ENABLED, ASSIST_BRIDGE_TARGET,
         LENS_BRIDGE_ENABLED, LENS_BRIDGE_TARGET,
-        SMART_GESTURES_ENABLED, SMART_CALL_OVERRIDE,
-        SMART_MEDIA_OVERRIDE, SMART_GAMING_OVERRIDE,
-        PREDICTION_TINT, PREDICTIVE_ACTIONS, AUTO_DISMISS_DELAY,
-        CONTEXTUAL_SUGGESTIONS, GESTURE_LEARNING,
+        
+        SMART_GESTURES_ENABLED, SMART_CALL_OVERRIDE, SMART_MEDIA_OVERRIDE,
+        SMART_GAMING_OVERRIDE, PREDICTION_TINT, PREDICTIVE_ACTIONS,
+        AUTO_DISMISS_DELAY, CONTEXTUAL_SUGGESTIONS, GESTURE_LEARNING,
         AI_CONFIDENCE_THRESHOLD, AI_REINFORCEMENT_RATE,
+        
         ALLOW_MUSIC_MID, ALLOW_MUSIC_MAX, ALLOW_CHARGING_MINI,
         ALLOW_CHARGING_MID, ALLOW_NOTIF_MINI, ALLOW_NOTIF_MID,
         ALLOW_NOTIF_MAX, ALLOW_CALL_MID, ALLOW_CALL_MAX,
         ALLOW_TASK_MINI, ALLOW_TASK_MID,
+        
+        FREEFORM_LAUNCH_ENABLED, FREEFORM_SMART_GESTURE,
+        ENABLE_FREEFORM_PORTAL_ANIM, TALKBACK_INTEGRATION,
+        PROXIMITY_WAKE, TIMER_INTEGRATION,
+        
         ISLAND_ENABLED, ISLAND_ON_LOCKSCREEN, LOCKSCREEN_FEATURES,
         ALLOWED_NOTIFICATION_APPS, SWIPE_LEFT_ACTION, SWIPE_RIGHT_ACTION,
         HIDE_ON_SCREENSHOT, HIDE_ON_SCREEN_RECORD, HIDE_ISLAND_PER_APP,
         ENABLE_FOCUS_MODE, PRODUCTIVE_APPS, ENABLE_LOW_LATENCY_MODE,
         ENABLE_CLIPBOARD_PAPERCLIP, CLIPBOARD_CLEANER, PRIVACY_DOTS_ENABLED,
-        DOZE_MODE_OPTIMISATION, OTP_DETECTION, LINK_INTERCEPT,
-        TRANSLATION, BARCODE, NAVIGATION, NOTIFICATION_COALESCING,
-        APP_PERMISSION_CHECKER, GAMING_HUD, SHOW_FPS, SHOW_CPU_TEMP,
+        DOZE_MODE_OPTIMISATION,
+        
+        OTP_DETECTION, LINK_INTERCEPT, TRANSLATION, BARCODE, NAVIGATION,
+        NOTIFICATION_COALESCING, APP_PERMISSION_CHECKER, GAMING_HUD,
+        SHOW_FPS, SHOW_CPU_TEMP,
+        
         WIFI_ALERT_DURATION, BT_ALERT_DURATION, HOTSPOT_ALERT_DURATION,
         DATA_ALERT_DURATION, RING_MEDIA_VISIBLE, RING_BATTERY_VISIBLE,
         RING_DATA_VISIBLE, INVISIBLE_RING_TOUCH_PASSTHROUGH,
-        ANTI_BURN_IN_ENABLED, ANTI_BURN_IN_INTENSITY,
+        
         HAPTIC_FEEDBACK, HAPTIC_INTENSITY, RING_CADENCE_VIBRATION,
-        HAPTIC_MORSE_ALERTS, ROLE_CALLING_APP, ALLOWED_MUSIC_APPS,
-        ALLOWED_MEDIA_APPS, ALLOWED_NOTES_APPS, CALL_STYLE,
-        CHARGING_STYLE, BATTERY_STYLE, RING_PULSE_STYLE,
+        HAPTIC_MORSE_ALERTS,
+        
+        ROLE_CALLING_APP, ALLOWED_MUSIC_APPS, ALLOWED_MEDIA_APPS,
+        ALLOWED_NOTES_APPS,
+        
+        CALL_STYLE, CHARGING_STYLE, BATTERY_STYLE, RING_PULSE_STYLE,
         AUTO_BACKUP_ENABLED, AUTO_BACKUP_FREQ_DAYS, STASH_STORAGE_PATH,
-        TALKBACK_INTEGRATION, PROXIMITY_WAKE, TIMER_INTEGRATION,
-        SPLIT_PILL_ENABLED, ICON_PACK, ENABLE_FREEFORM_PORTAL_ANIM, TIME_BASED_THEMES,
-        HIGH_CONTRAST_MODE, ICON_PACK_INTEGRATION, SHOW_RING_IDLE
+        SPLIT_PILL_ENABLED, ICON_PACK
     }
 
     fun getBoolean(key: SettingKey, default: Boolean): Boolean =
@@ -141,6 +161,10 @@ class SettingsManager(private val context: Context) {
 
     fun exportAiData(): String? = ipcClient.exportAiData()
 
+    /**
+     * MAPPED SETTINGS STATE
+     * Fully synchronized with SettingsState.kt
+     */
     fun getSettingsState(): SettingsState {
         val iconPackId = getString(SettingKey.ICON_PACK, "MATERIAL_YOU") ?: "MATERIAL_YOU"
         return SettingsState(
@@ -149,7 +173,7 @@ class SettingsManager(private val context: Context) {
             customAccentColor = Color(getInt(SettingKey.ACCENT_COLOR, 0xFF6750A4.toInt())),
             blurIntensity = getFloat(SettingKey.BLUR_INTENSITY, 15f),
             pillCornerRadius = getFloat(SettingKey.PILL_RADIUS, 100f),
-            animationSpeed = try { AnimationSpeed.valueOf(getString(SettingKey.ANIM_SPEED, "NORMAL") ?: "NORMAL") } catch(e: Exception) { AnimationSpeed.NORMAL },
+            animationSpeed = try { AnimationSpeed.valueOf(getString(SettingKey.ANIMATION_SPEED, "NORMAL") ?: "NORMAL") } catch(e: Exception) { AnimationSpeed.NORMAL },
             showRingIdle = getBoolean(SettingKey.SHOW_RING_IDLE, true),
             pillShape = getString(SettingKey.PILL_SHAPE, "pill") ?: "pill",
             dynamicGradient = getBoolean(SettingKey.DYNAMIC_GRADIENT, true),
@@ -215,12 +239,20 @@ class SettingsManager(private val context: Context) {
             allowCallMax = getBoolean(SettingKey.ALLOW_CALL_MAX, true),
             allowTaskMini = getBoolean(SettingKey.ALLOW_TASK_MINI, true),
             allowTaskMid = getBoolean(SettingKey.ALLOW_TASK_MID, true),
+            freeformLaunchEnabled = getBoolean(SettingKey.FREEFORM_LAUNCH_ENABLED, true),
+            freeformSmartGesture = getBoolean(SettingKey.FREEFORM_SMART_GESTURE, true),
+            enableFreeformPortalAnim = getBoolean(SettingKey.ENABLE_FREEFORM_PORTAL_ANIM, true),
+            talkbackIntegration = getBoolean(SettingKey.TALKBACK_INTEGRATION, true),
+            proximityWake = getBoolean(SettingKey.PROXIMITY_WAKE, false),
+            timerIntegration = getBoolean(SettingKey.TIMER_INTEGRATION, true),
             islandEnabled = getBoolean(SettingKey.ISLAND_ENABLED, true),
             islandOnLockscreen = getBoolean(SettingKey.ISLAND_ON_LOCKSCREEN, true),
             lockscreenFeatures = getStringSet(SettingKey.LOCKSCREEN_FEATURES, setOf("music", "notifications")),
             allowedNotificationApps = getStringSet(SettingKey.ALLOWED_NOTIFICATION_APPS, emptySet()),
             swipeLeftAction = getString(SettingKey.SWIPE_LEFT_ACTION, "dismiss") ?: "dismiss",
             swipeRightAction = getString(SettingKey.SWIPE_RIGHT_ACTION, "next_track") ?: "next_track",
+            showFps = getBoolean(SettingKey.SHOW_FPS, false),
+            showCpuTemp = getBoolean(SettingKey.SHOW_CPU_TEMP, false),
             hideOnScreenshot = getBoolean(SettingKey.HIDE_ON_SCREENSHOT, true),
             hideOnScreenRecord = getBoolean(SettingKey.HIDE_ON_SCREEN_RECORD, true),
             hideIslandPerApp = getStringSet(SettingKey.HIDE_ISLAND_PER_APP, emptySet()),
@@ -239,8 +271,6 @@ class SettingsManager(private val context: Context) {
             notificationCoalescing = getBoolean(SettingKey.NOTIFICATION_COALESCING, true),
             appPermissionChecker = getBoolean(SettingKey.APP_PERMISSION_CHECKER, true),
             gamingHud = getBoolean(SettingKey.GAMING_HUD, true),
-            showFps = getBoolean(SettingKey.SHOW_FPS, false),
-            showCpuTemp = getBoolean(SettingKey.SHOW_CPU_TEMP, false),
             wifiAlertDuration = getInt(SettingKey.WIFI_ALERT_DURATION, 3),
             btAlertDuration = getInt(SettingKey.BT_ALERT_DURATION, 3),
             hotspotAlertDuration = getInt(SettingKey.HOTSPOT_ALERT_DURATION, 5),
@@ -266,12 +296,8 @@ class SettingsManager(private val context: Context) {
             autoBackupEnabled = getBoolean(SettingKey.AUTO_BACKUP_ENABLED, false),
             autoBackupFreqDays = getInt(SettingKey.AUTO_BACKUP_FREQ_DAYS, 7),
             stashStoragePath = getString(SettingKey.STASH_STORAGE_PATH, "/sdcard/DynamicIsland/Archive") ?: "/sdcard/DynamicIsland/Archive",
-            talkbackIntegration = getBoolean(SettingKey.TALKBACK_INTEGRATION, true),
-            proximityWake = getBoolean(SettingKey.PROXIMITY_WAKE, false),
-            timerIntegration = getBoolean(SettingKey.TIMER_INTEGRATION, true),
             splitPillEnabled = getBoolean(SettingKey.SPLIT_PILL_ENABLED, true),
-            iconPack = IconPack.fromString(iconPackId),
-            enableFreeformPortalAnim = getBoolean(SettingKey.ENABLE_FREEFORM_PORTAL_ANIM, true)
+            iconPack = IconPack.fromString(iconPackId)
         )
     }
 }

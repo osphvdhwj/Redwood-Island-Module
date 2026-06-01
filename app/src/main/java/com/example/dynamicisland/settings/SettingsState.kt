@@ -57,7 +57,7 @@ data class SettingsState(
     val mediaArtworkBlur: Boolean = true,
     val bpmPulse: Boolean = true,
     val ambientReactiveRing: Boolean = true,
-    val ambientReactive: Boolean = true, // legacy compatibility
+    val ambientReactive: Boolean = true,
 
     // Fluid Physics & Gestures (Pillar 4)
     val physicsStyle: PhysicsStyle = PhysicsStyle.APPLE,
@@ -134,6 +134,16 @@ data class SettingsState(
     val privacyDotsEnabled: Boolean = false,
     val dozeModeOptimisation: Boolean = true,
 
+    // Detection & Alerts
+    val otpDetection: Boolean = true,
+    val linkIntercept: Boolean = true,
+    val translation: Boolean = true,
+    val barcode: Boolean = true,
+    val navigation: Boolean = true,
+    val notificationCoalescing: Boolean = true,
+    val appPermissionChecker: Boolean = true,
+    val gamingHud: Boolean = true,
+
     // Connectivity & Durations
     val wifiAlertDuration: Int = 3,
     val btAlertDuration: Int = 3,
@@ -162,7 +172,7 @@ data class SettingsState(
     val stashStoragePath: String = "/sdcard/DynamicIsland/Archive",
     val splitPillEnabled: Boolean = true,
 
-    // Styles & Core
+    // Styles & Enums
     val callStyle: CallStyle = CallStyle.IOS,
     val chargingStyle: ChargingStyle = ChargingStyle.RING,
     val batteryStyle: BatteryStyle = BatteryStyle.PILL,
