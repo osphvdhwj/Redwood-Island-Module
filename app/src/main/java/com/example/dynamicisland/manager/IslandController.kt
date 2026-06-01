@@ -22,7 +22,7 @@ import com.example.dynamicisland.accessibility.IslandAccessibilityManager
 import com.example.dynamicisland.sensors.ProximityWakeManager
 import com.example.dynamicisland.privacy.ClipboardCleaner
 import com.example.dynamicisland.settings.*
-import com.example.dynamicisland.ipc.IslandState
+import com.example.dynamicisland.ipc.*
 import com.example.dynamicisland.gesture.IslandGesture
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.mutableStateOf
@@ -301,7 +301,7 @@ class IslandController @Inject constructor(
                 }
                 "com.example.dynamicisland.NOTIFICATION_CAUGHT" -> {
                     val pkg = intent.getStringExtra("pkg") ?: ""
-                    val notif = if (android.os.Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra("notification", android.app.Notification::class.java) else intent.getParcelableExtra("notification")
+                    val notif = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra("notification", android.app.Notification::class.java) else intent.getParcelableExtra("notification")
                     if (notif != null) notificationManager.processIncomingNotification(pkg, notif)
                 }
             }
@@ -436,7 +436,7 @@ class IslandController @Inject constructor(
         this.windowParams = params
         view.controller = this
 
-        view.onVolumeDrag = { pct -> hardwareManager.launchAudioOutputSwitcher(null) }
+        view.onVolumeDrag = { pct -> }
         view.onBrightnessDrag = { pct -> }
         view.onAppPinnedClick = { pkg -> actionManager.launchAppIntent(pkg, false) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() } }
         view.onQsTileClick = { tileSpec -> actionManager.handleQSTileClick(tileSpec) { } }

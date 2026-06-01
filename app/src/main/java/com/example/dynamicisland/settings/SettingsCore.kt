@@ -49,12 +49,9 @@ sealed class IconPack(val id: String) {
 }
 
 data class SettingsState(
-    // === Pillar 1: Dual-Mode Architecture ===
     val designLanguage: DesignLanguage = DesignLanguage.MATERIAL_YOU,
     val liveBridgeEnabled: Boolean = false,
     val magneticEdgeDocking: Boolean = true,
-    
-    // === Pillar 2: Ethereal Visuals ===
     val dynamicColors: Boolean = true,
     val customAccentColor: Color = Color(0xFF6750A4),
     val blurIntensity: Float = 15f,
@@ -64,8 +61,6 @@ data class SettingsState(
     val monochromeIcons: Boolean = false,
     val enableMetaballTear: Boolean = true,
     val dynamicGradient: Boolean = true,
-    
-    // === Pillar 3: Advanced Live Activities ===
     val parseDeliveryNotifications: Boolean = true,
     val warpChargeAnimation: Boolean = true,
     val batteryAwareAnimation: Boolean = true,
@@ -75,15 +70,11 @@ data class SettingsState(
     val mediaArtworkBlur: Boolean = true,
     val bpmPulse: Boolean = true,
     val ambientReactiveRing: Boolean = true,
-
-    // === Pillar 4: Fluid Physics & Gestures ===
     val animationSpeed: AnimationSpeed = AnimationSpeed.NORMAL,
     val physicsStyle: PhysicsStyle = PhysicsStyle.APPLE,
     val contentTransitionStyle: ContentTransitionStyle = ContentTransitionStyle.SLIDE,
     val velocitySquishEnabled: Boolean = true,
     val inlineReplyEnabled: Boolean = true,
-    
-    // === Pillar 5: Dashboard & Widgets ===
     val enableMaxWidgets: Boolean = true,
     val showVitalsRam: Boolean = true,
     val showVitalsCpu: Boolean = true,
@@ -91,14 +82,10 @@ data class SettingsState(
     val showVitalsFps: Boolean = true,
     val showVitalsBatCycles: Boolean = true,
     val shortcutLayout: ShortcutLayout = ShortcutLayout.GRID,
-    
-    // === Pillar 6: DeGoogled Bridge ===
     val assistBridgeEnabled: Boolean = false,
     val assistBridgeTarget: String = "com.brave.browser",
     val lensBridgeEnabled: Boolean = false,
     val lensBridgeTarget: String = "com.brave.browser",
-
-    // --- AI & Prediction ---
     val predictionTint: Boolean = true,
     val predictiveActions: Boolean = true,
     val autoDismissDelay: Int = 5,
@@ -106,8 +93,6 @@ data class SettingsState(
     val gestureLearning: Boolean = true,
     val aiConfidenceThreshold: Int = 10,
     val aiReinforcementRate: Float = 1.0f,
-
-    // --- State Constraints ---
     val allowMusicMid: Boolean = true,
     val allowMusicMax: Boolean = true,
     val allowChargingMini: Boolean = true,
@@ -119,8 +104,6 @@ data class SettingsState(
     val allowCallMax: Boolean = true,
     val allowTaskMini: Boolean = true,
     val allowTaskMid: Boolean = true,
-
-    // --- Global Controls & Privacy ---
     val islandEnabled: Boolean = true,
     val islandOnLockscreen: Boolean = true,
     val lockscreenFeatures: Set<String> = setOf("music", "notifications"),
@@ -140,8 +123,6 @@ data class SettingsState(
     val clipboardCleaner: Boolean = true,
     val privacyDotsEnabled: Boolean = false,
     val dozeModeOptimisation: Boolean = true,
-    
-    // --- Detection Toggles ---
     val otpDetection: Boolean = true,
     val linkIntercept: Boolean = true,
     val translation: Boolean = true,
@@ -152,8 +133,6 @@ data class SettingsState(
     val gamingHud: Boolean = true,
     val showFpsHUD: Boolean = false,
     val showCpuTempHUD: Boolean = false,
-
-    // --- Connectivity & Durations ---
     val wifiAlertDuration: Int = 3,
     val btAlertDuration: Int = 3,
     val hotspotAlertDuration: Int = 5,
@@ -162,18 +141,18 @@ data class SettingsState(
     val ringBatteryVisible: Boolean = true,
     val ringDataVisible: Boolean = true,
     val invisibleRingTouchPassthrough: Boolean = true,
-    
-    // --- Haptics ---
     val hapticFeedback: Boolean = true,
     val hapticIntensity: Float = 1f,
     val ringCadenceVibration: Boolean = true,
     val hapticMorseAlerts: Boolean = false,
-
-    // --- Roles & Storage ---
     val roleCallingApp: String = "",
     val allowedMusicApps: Set<String> = emptySet(),
     val allowedMediaApps: Set<String> = emptySet(),
     val allowedNotesApps: Set<String> = emptySet(),
+    val callStyle: CallStyle = CallStyle.IOS,
+    val chargingStyle: ChargingStyle = ChargingStyle.RING,
+    val batteryStyle: BatteryStyle = BatteryStyle.PILL,
+    val ringPulseStyle: RingPulseStyle = RingPulseStyle.BREATH,
     val autoBackupEnabled: Boolean = false,
     val autoBackupFreqDays: Int = 7,
     val stashStoragePath: String = "/sdcard/DynamicIsland/Archive",
@@ -181,12 +160,6 @@ data class SettingsState(
     val proximityWake: Boolean = false,
     val timerIntegration: Boolean = true,
     val splitPillEnabled: Boolean = true,
-
-    // --- Styles ---
-    val callStyle: CallStyle = CallStyle.IOS,
-    val chargingStyle: ChargingStyle = ChargingStyle.RING,
-    val batteryStyle: BatteryStyle = BatteryStyle.PILL,
-    val ringPulseStyle: RingPulseStyle = RingPulseStyle.BREATH,
     val iconPack: IconPack = IconPack.MaterialYou
 )
 
@@ -210,41 +183,39 @@ class SettingsManager(private val context: Context) {
         DESIGN_LANGUAGE, LIVE_BRIDGE_ENABLED, MAGNETIC_EDGE_DOCKING,
         DYNAMIC_COLORS, ACCENT_COLOR, BLUR_INTENSITY, GEMINI_AURA_ENABLED,
         ROLLING_TYPOGRAPHY_ENABLED, AESTHETIC_STYLE, MONOCHROME_ICONS,
+        ENABLE_METABALL_TEAR, DYNAMIC_GRADIENT,
         PARSE_DELIVERY_NOTIFICATIONS, WARP_CHARGE_ANIMATION,
         BATTERY_AWARE_ANIMATION, NOW_PLAYING, MUSIC_VISUALIZER_STYLE,
-        WAVEFORM_ENABLED, ANIMATION_SPEED, PHYSICS_STYLE,
-        CONTENT_TRANSITION_STYLE, VELOCITY_SQUISH_ENABLED,
-        INLINE_REPLY_ENABLED, ENABLE_MAX_WIDGETS, SHOW_VITALS_RAM,
-        SHOW_VITALS_CPU, SHOW_VITALS_NET, SHOW_VITALS_FPS,
+        WAVEFORM_ENABLED, MEDIA_ARTWORK_BLUR, BPM_PULSE, AMBIENT_REACTIVE,
+        ANIMATION_SPEED, PHYSICS_STYLE, CONTENT_TRANSITION_STYLE,
+        VELOCITY_SQUISH_ENABLED, INLINE_REPLY_ENABLED, ENABLE_MAX_WIDGETS,
+        SHOW_VITALS_RAM, SHOW_VITALS_CPU, SHOW_VITALS_NET, SHOW_VITALS_FPS,
         SHOW_VITALS_BAT_CYCLES, SHORTCUT_LAYOUT,
         ASSIST_BRIDGE_ENABLED, ASSIST_BRIDGE_TARGET,
         LENS_BRIDGE_ENABLED, LENS_BRIDGE_TARGET,
-        ISLAND_ENABLED, RING_IDLE, PILL_SHAPE, PILL_RADIUS,
+        PREDICTION_TINT, PREDICTIVE_ACTIONS, AUTO_DISMISS_DELAY,
+        CONTEXTUAL_SUGGESTIONS, GESTURE_LEARNING, AI_CONFIDENCE_THRESHOLD,
+        AI_REINFORCEMENT_RATE, ALLOW_MUSIC_MID, ALLOW_MUSIC_MAX,
+        ALLOW_CHARGING_MINI, ALLOW_CHARGING_MID, ALLOW_NOTIF_MINI,
+        ALLOW_NOTIF_MID, ALLOW_NOTIF_MAX, ALLOW_CALL_MID, ALLOW_CALL_MAX,
+        ALLOW_TASK_MINI, ALLOW_TASK_MID, ISLAND_ENABLED, ISLAND_ON_LOCKSCREEN,
+        LOCKSCREEN_FEATURES, ALLOWED_NOTIFICATION_APPS, SWIPE_LEFT_ACTION,
+        SWIPE_RIGHT_ACTION, SHOW_RING_IDLE, PILL_SHAPE, PILL_RADIUS,
         HIDE_ON_SCREENSHOT, HIDE_ON_SCREEN_RECORD, HIDE_ISLAND_PER_APP,
         ENABLE_FOCUS_MODE, PRODUCTIVE_APPS, ENABLE_LOW_LATENCY_MODE,
-        ENABLE_CLIPBOARD_PAPERCLIP, OTP_DETECTION, LINK_INTERCEPT, 
-        TRANSLATION, BARCODE, NAVIGATION, NOTIFICATION_COALESCING, 
-        APP_PERMISSION_CHECKER, GAMING_HUD, HAPTIC_FEEDBACK, 
-        HAPTIC_INTENSITY, RING_CADENCE_VIBRATION, ISLAND_ON_LOCKSCREEN, 
-        LOCKSCREEN_FEATURES, ALLOWED_NOTIFICATION_APPS, ROLE_CALLING_APP, 
-        ALLOWED_MUSIC_APPS, ALLOWED_MEDIA_APPS, ALLOWED_NOTES_APPS, CALL_STYLE,
-        CHARGING_STYLE, BATTERY_STYLE, RING_PULSE_STYLE,
+        ENABLE_CLIPBOARD_PAPERCLIP, CLIPBOARD_CLEANER, PRIVACY_DOTS_ENABLED,
+        DOZE_MODE_OPTIMISATION, OTP_DETECTION, LINK_INTERCEPT, TRANSLATION,
+        BARCODE, NAVIGATION, NOTIFICATION_COALESCING, APP_PERMISSION_CHECKER,
+        GAMING_HUD, SHOW_FPS_HUD, SHOW_CPU_TEMP_HUD, WIFI_ALERT_DURATION,
+        BT_ALERT_DURATION, HOTSPOT_ALERT_DURATION, DATA_ALERT_DURATION,
+        RING_MEDIA_VISIBLE, RING_BATTERY_VISIBLE, RING_DATA_VISIBLE,
+        INVISIBLE_RING_TOUCH_PASSTHROUGH, HAPTIC_FEEDBACK, HAPTIC_INTENSITY,
+        RING_CADENCE_VIBRATION, HAPTIC_MORSE_ALERTS, ROLE_CALLING_APP,
+        ALLOWED_MUSIC_APPS, ALLOWED_MEDIA_APPS, ALLOWED_NOTES_APPS,
+        CALL_STYLE, CHARGING_STYLE, BATTERY_STYLE, RING_PULSE_STYLE,
         AUTO_BACKUP_ENABLED, AUTO_BACKUP_FREQ_DAYS, STASH_STORAGE_PATH,
-        AI_CONFIDENCE_THRESHOLD, AI_REINFORCEMENT_RATE, ICON_PACK,
-        WIFI_ALERT_DURATION, BT_ALERT_DURATION, HOTSPOT_ALERT_DURATION,
-        DATA_ALERT_DURATION, RING_MEDIA_VISIBLE, RING_BATTERY_VISIBLE,
-        RING_DATA_VISIBLE, INVISIBLE_RING_TOUCH_PASSTHROUGH, ANTI_BURN_IN_ENABLED,
-        ANTI_BURN_IN_INTENSITY, SMART_GESTURES_ENABLED, SMART_CALL_OVERRIDE,
-        SMART_MEDIA_OVERRIDE, SMART_GAMING_OVERRIDE, FREEFORM_SMART_GESTURE,
-        FREEFORM_LAUNCH_ENABLED, TALKBACK_INTEGRATION, PROXIMITY_WAKE,
-        TIMER_INTEGRATION, ALLOW_CHARGING_MINI, ALLOW_CHARGING_MID,
-        ALLOW_NOTIF_MINI, ALLOW_NOTIF_MID, ALLOW_NOTIF_MAX,
-        ALLOW_CALL_MID, ALLOW_CALL_MAX, ALLOW_TASK_MINI, ALLOW_TASK_MID,
-        DYNAMIC_GRADIENT, SPLIT_PILL_ENABLED, CLIPBOARD_CLEANER, 
-        ENABLE_METABALL_TEAR, MEDIA_ARTWORK_BLUR, BPM_PULSE, AMBIENT_REACTIVE,
-        PREDICTION_TINT, PREDICTIVE_ACTIONS, AUTO_DISMISS_DELAY,
-        CONTEXTUAL_SUGGESTIONS, GESTURE_LEARNING, DOZE_MODE_OPTIMISATION,
-        PRIVACY_DOTS_ENABLED, SHOW_FPS_HUD, SHOW_CPU_TEMP_HUD
+        TALKBACK_INTEGRATION, PROXIMITY_WAKE, TIMER_INTEGRATION,
+        SPLIT_PILL_ENABLED, ICON_PACK
     }
 
     fun getBoolean(key: SettingKey, default: Boolean): Boolean =
@@ -373,7 +344,7 @@ class SettingsManager(private val context: Context) {
             allowedNotificationApps = getStringSet(SettingKey.ALLOWED_NOTIFICATION_APPS, emptySet()),
             swipeLeftAction = getString(SettingKey.SWIPE_LEFT_ACTION, "dismiss") ?: "dismiss",
             swipeRightAction = getString(SettingKey.SWIPE_RIGHT_ACTION, "next_track") ?: "next_track",
-            showRingIdle = getBoolean(SettingKey.RING_IDLE, true),
+            showRingIdle = getBoolean(SettingKey.SHOW_RING_IDLE, true),
             pillShape = getString(SettingKey.PILL_SHAPE, "pill") ?: "pill",
             pillCornerRadius = getFloat(SettingKey.PILL_RADIUS, 100f),
             hideOnScreenshot = getBoolean(SettingKey.HIDE_ON_SCREENSHOT, true),
