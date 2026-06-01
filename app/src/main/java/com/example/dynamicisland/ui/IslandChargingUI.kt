@@ -103,7 +103,6 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
                 }
             }
             com.example.dynamicisland.settings.ChargingStyle.CUBE -> {
-                // Classic solid block pulse
                 val pulseScale by infiniteTransition.animateFloat(initialValue = 0.9f, targetValue = 1.1f, animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse), label = "pulse")
                 Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }.background(color.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).border(2.dp, color, RoundedCornerShape(12.dp)))
             }
@@ -150,11 +149,12 @@ fun DynamicIslandView.ChargingMax(charging: LiveActivityModel.Charging) {
         modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center
     ) {
+        // Aesthetic Radial Glow
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .blur(30.dp)
-                .background(Brush.radialGradient(listOf(batteryColor.copy(alpha = 0.2f), Color.Transparent)))
+                .blur(40.dp)
+                .background(Brush.radialGradient(listOf(batteryColor.copy(alpha = 0.25f), Color.Transparent)))
         )
 
         Row(
@@ -162,66 +162,102 @@ fun DynamicIslandView.ChargingMax(charging: LiveActivityModel.Charging) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Left: Animated Pulse Icon
             Box(contentAlignment = Alignment.Center) {
-                Box(modifier = Modifier.size(48.dp).background(batteryColor.copy(alpha = 0.2f), CircleShape).blur(12.dp))
+                val infiniteGlow = rememberInfiniteTransition(label = "bg").animateFloat(0.1f, 0.4f, infiniteRepeatable(tween(1500), RepeatMode.Reverse), label = "g")
+                Box(modifier = Modifier.size(64.dp).background(batteryColor.copy(alpha = infiniteGlow.value), CircleShape).blur(20.dp))
                 Icon(
                     imageVector = IconProvider.getIcon(IconProvider.LogicalIcon.BATTERY_CHARGING, LocalIconPack.current),
                     contentDescription = "Charging",
                     tint = batteryColor,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(44.dp)
                 )
             }
 
+            // Center: Large Rolling Percentage
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 RollingNumberText(
-                    value = "${displayedLevel}%",
+                    value = "${displayedLevel}",
                     style = TextStyle(
                         color = Color.White,
-                        fontSize = 48.sp, 
-                        fontWeight = FontWeight.Black
+                        fontSize = 56.sp, 
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = (-2).sp
                     ),
                     modifier = Modifier.alpha(alphaAnim.value)
                 )
                 Text(
-                    text = "Charging",
-                    color = batteryColor,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.sp
+                    text = "PERCENT CHARGED",
+                    color = batteryColor.copy(alpha = 0.8f),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp
                 )
             }
 
-            Box(modifier = Modifier.scale(1.3f)) { 
-                LiquidBatteryCanvas(level = charging.level, color = batteryColor, isCharging = true)
+            // Right: High-Fidelity Liquid Battery
+            Box(modifier = Modifier.scale(1.4f)) { 
+                LiquidBatteryCanvas(level = charging.level, color = batteryColor, isCharging = true, useWarpEffect = true)
             }
         }
     }
 }
 
 @Composable
-fun LiquidBatteryCanvas(level: Int, color: Color, isCharging: Boolean) {
+fun LiquidBatteryCanvas(level: Int, color: Color, isCharging: Boolean, useWarpEffect: Boolean = false) {
     val targetFill = level / 100f
     val animatedFill by animateFloatAsState(targetValue = targetFill, animationSpec = tween(1500, easing = FastOutSlowInEasing), label = "fill")
     
+    val infiniteTransition = rememberInfiniteTransition(label = "liquid")
+    val waveOffset by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(if(useWarpEffect) 1200 else 2500, easing = LinearEasing), RepeatMode.Restart),
+        label = "wave"
+    )
+
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.width(46.dp).height(24.dp).border(2.dp, Color.White.copy(alpha=0.3f), RoundedCornerShape(6.dp)).padding(3.dp)) {
+        Box(modifier = Modifier.width(48.dp).height(26.dp).border(2.5.dp, Color.White.copy(alpha=0.35f), RoundedCornerShape(7.dp)).padding(3.5.dp)) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val path = androidx.compose.ui.graphics.Path().apply {
                     addRoundRect(
                         androidx.compose.ui.geometry.RoundRect(
                             rect = androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx())
                         )
                     )
                 }
                 clipPath(path) {
-                    drawRect(color = color, topLeft = androidx.compose.ui.geometry.Offset.Zero, size = androidx.compose.ui.geometry.Size(size.width * animatedFill, size.height))
+                    // Liquid Wave Logic
+                    val wPath = androidx.compose.ui.graphics.Path()
+                    val h = size.height
+                    val w = size.width
+                    val fillW = w * animatedFill
+                    
+                    wPath.moveTo(0f, h)
+                    for (i in 0..fillW.toInt()) {
+                        val waveHeight = if(useWarpEffect) 4f else 2f
+                        val y = h - (h * (i.toFloat() / fillW).coerceIn(0f, 1f) * 0.05f) - (h * 0.95f * animatedFill) + 
+                                sin((i.toFloat() / 15f + waveOffset * 2 * PI.toFloat()).toDouble()).toFloat() * waveHeight
+                        wPath.lineTo(i.toFloat(), y)
+                    }
+                    wPath.lineTo(fillW, h)
+                    wPath.close()
+                    
+                    drawPath(
+                        path = wPath,
+                        brush = Brush.verticalGradient(listOf(color, color.copy(alpha = 0.7f)))
+                    )
                 }
             }
             if (isCharging) {
-                Icon(imageVector = IconProvider.getIcon(IconProvider.LogicalIcon.ADD, LocalIconPack.current), contentDescription=null, tint=Color.Black.copy(alpha=0.6f), modifier = Modifier.align(Alignment.Center).size(16.dp))
+                Icon(
+                    imageVector = IconProvider.getIcon(IconProvider.LogicalIcon.ADD, LocalIconPack.current), 
+                    contentDescription=null, 
+                    tint=Color.Black.copy(alpha=0.5f), 
+                    modifier = Modifier.align(Alignment.Center).size(15.dp)
+                )
             }
         }
-        Box(modifier = Modifier.width(4.dp).height(10.dp).background(Color.White.copy(alpha=0.3f), RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp)))
+        Box(modifier = Modifier.width(4.5.dp).height(11.dp).background(Color.White.copy(alpha=0.35f), RoundedCornerShape(topEnd = 3.5.dp, bottomEnd = 3.5.dp)))
     }
 }

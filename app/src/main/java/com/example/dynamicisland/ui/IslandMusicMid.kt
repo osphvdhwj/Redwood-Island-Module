@@ -40,14 +40,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.R
 import com.example.dynamicisland.model.LiveActivityModel
+import com.example.dynamicisland.ui.components.text.RollingNumberText
+import androidx.compose.ui.text.TextStyle
 
 @Composable
 fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
+    val view = this
     val dominantColor = music.dominantColor?.let { Color(it) } ?: Color.White
     val theme = LocalIslandTheme.current
     
     var artPressed by remember { mutableStateOf(false) }
-    val artScale by animateFloatAsState(if(artPressed) 0.90f else 1f, IslandPhysics.springFloat, label="art")
+    val artScale by animateFloatAsState(if(artPressed) 0.90f else 1f, spring(dampingRatio = 0.6f, stiffness = 400f), label="art")
 
     Row(
         modifier = Modifier
@@ -58,11 +61,11 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
         // --- Left: Album Art with Shadow ---
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(44.dp)
                 .scale(artScale)
-                .shadow(8.dp, CircleShape)
+                .shadow(10.dp, CircleShape)
                 .clip(CircleShape)
-                .background(Color(0xFF1A1A1A))
+                .background(Color(0xFF121212))
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(); artPressed = true
@@ -80,55 +83,58 @@ fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {
             }
         }
 
-        Spacer(Modifier.width(14.dp))
+        Spacer(Modifier.width(12.dp))
 
-        // --- Middle: Scrolling Titles ---
+        // --- Middle: Scrolling Titles & Rolling Time ---
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = music.title,
                 color = Color.White,
                 fontSize = 15.sp,
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.Black,
                 maxLines = 1,
-                modifier = Modifier.safeMarquee(islandState.value)
+                overflow = TextOverflow.Ellipsis
             )
-            Text(
-                text = music.artist,
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                modifier = Modifier.safeMarquee(islandState.value)
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RollingNumberText(
+                    value = formatTime(view.currentMediaPos.longValue),
+                    style = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                )
+                Text(
+                    text = " • ${music.artist}",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
 
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(8.dp))
 
         // --- Right: Fluid Controls ---
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_prev_vector),
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.size(18.dp).squishClickable { onPrevClick?.invoke() }
-            )
+            IconButton(onClick = { view.onPrevClick?.invoke() }, modifier = Modifier.size(28.dp)) {
+                Icon(painterResource(R.drawable.ic_prev_vector), null, tint = Color.White.copy(0.7f), modifier = Modifier.size(16.dp))
+            }
 
-            Icon(
-                painter = if (music.isPlaying) painterResource(R.drawable.ic_pause_vector) else painterResource(R.drawable.ic_play_vector),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(30.dp).squishClickable { onPlayPauseClick?.invoke() }
-            )
+            IconButton(
+                onClick = { view.onPlayPauseClick?.invoke() },
+                modifier = Modifier.size(36.dp).background(Color.White.copy(0.1f), CircleShape)
+            ) {
+                Icon(
+                    painter = if (music.isPlaying) painterResource(R.drawable.ic_pause_vector) else painterResource(R.drawable.ic_play_vector),
+                    null, tint = Color.White, modifier = Modifier.size(20.dp)
+                )
+            }
 
-            Icon(
-                painter = painterResource(R.drawable.ic_next_vector),
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.size(18.dp).squishClickable { onNextClick?.invoke() }
-            )
+            IconButton(onClick = { view.onNextClick?.invoke() }, modifier = Modifier.size(28.dp)) {
+                Icon(painterResource(R.drawable.ic_next_vector), null, tint = Color.White.copy(0.7f), modifier = Modifier.size(16.dp))
+            }
         }
     }
 }

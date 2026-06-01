@@ -140,9 +140,15 @@ class SystemUIA15Hooks {
                     islandViewRef = WeakReference(islandView)
 
                     // 💎 PRO-GRADE OVERLAY PARAMETERS
+                    val settings = ctrl.settingsState
+                    val density = context.resources.displayMetrics.density
+                    
+                    // 🌓 PILLAR 1: Dual-Mode Architecture
+                    val windowH = if (settings.liveBridgeEnabled) WindowManager.LayoutParams.MATCH_PARENT else (320 * density).toInt()
+
                     val params = WindowManager.LayoutParams(
                         WindowManager.LayoutParams.MATCH_PARENT,
-                        (320 * context.resources.displayMetrics.density).toInt(), // Constrained height (320dp)
+                        windowH,
                         2017, // WindowManager.LayoutParams.TYPE_STATUS_BAR_SUB_PANEL
                         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
@@ -154,7 +160,7 @@ class SystemUIA15Hooks {
                                 WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                         PixelFormat.TRANSLUCENT
                     ).apply {
-                        gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                        gravity = if (settings.liveBridgeEnabled) Gravity.CENTER else (Gravity.TOP or Gravity.CENTER_HORIZONTAL)
                         title = "RedwoodDynamicIsland"
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS

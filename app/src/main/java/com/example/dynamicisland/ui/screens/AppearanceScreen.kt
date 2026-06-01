@@ -1,10 +1,9 @@
 package com.example.dynamicisland.ui.screens
 
-import android.content.Intent
 import android.content.SharedPreferences
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -18,31 +17,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.dynamicisland.manager.NewConfigManager
+import com.example.dynamicisland.settings.*
+import com.example.dynamicisland.settings.SettingsManager.SettingKey
 import com.example.dynamicisland.ui.components.*
-import com.example.dynamicisland.settings.AestheticStyle
-import com.example.dynamicisland.settings.PhysicsStyle
-import com.example.dynamicisland.settings.ContentTransitionStyle
-import androidx.compose.foundation.border
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppearanceScreen(prefs: SharedPreferences) {
+fun AppearanceScreen(viewModel: SettingsViewModel) {
+    val state = viewModel.state
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
-    var blurIntensity by remember { mutableFloatStateOf(prefs.getFloat("blur_intensity", 15f)) }
-    var aestheticStyle by remember { mutableStateOf(prefs.getString("AESTHETIC_STYLE", "GLASS") ?: "GLASS") }
-    var physicsStyle by remember { mutableStateOf(prefs.getString("PHYSICS_STYLE", "APPLE") ?: "APPLE") }
-    var transitionStyle by remember { mutableStateOf(prefs.getString("CONTENT_TRANSITION_STYLE", "SLIDE") ?: "SLIDE") }
-    
-    var callStyle by remember { mutableStateOf(prefs.getString("call_style", "IOS") ?: "IOS") }
-    var chargingStyle by remember { mutableStateOf(prefs.getString("charging_style", "RING") ?: "RING") }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         
@@ -58,7 +43,7 @@ fun AppearanceScreen(prefs: SharedPreferences) {
                     modifier = Modifier
                         .size(width = 180.dp, height = 36.dp)
                         .clip(CircleShape)
-                        .background(if (aestheticStyle == "VOID_BLACK") Color.Black else Color.White.copy(0.1f))
+                        .background(if (state.aestheticStyle == AestheticStyle.VOID_BLACK) Color.Black else Color.White.copy(0.1f))
                         .border(0.5.dp, Color.White.copy(0.2f), CircleShape)
                 ) {
                     Text("Live Preview", color = Color.White, modifier = Modifier.align(Alignment.Center), fontSize = 12.sp)
@@ -67,69 +52,59 @@ fun AppearanceScreen(prefs: SharedPreferences) {
         }
 
         SettingsCategoryHeader("Visual Surfaces")
-        SettingsChoiceChip("Aesthetic Mode", aestheticStyle, listOf("GLASS", "VOID_BLACK")) {
-            aestheticStyle = it
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putString("AESTHETIC_STYLE", it) })
+        SettingsChoiceChip("Aesthetic Mode", state.aestheticStyle.name, listOf("GLASS", "VOID_BLACK")) {
+            viewModel.updateSetting(SettingKey.AESTHETIC_STYLE, it)
         }
 
-        if (aestheticStyle == "GLASS") {
+        if (state.aestheticStyle == AestheticStyle.GLASS) {
             SettingsSlider(
                 title = "Frosted Intensity", 
-                value = blurIntensity, 
+                value = state.blurIntensity, 
                 defaultValue = 15f,
                 valueRange = 5f..40f,
-                onValueChange = { 
-                    blurIntensity = it
-                    NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putFloat("blur_intensity", it) })
-                }
+                onValueChange = { viewModel.updateSetting(SettingKey.BLUR_INTENSITY, it) }
             )
         }
 
         SettingsSwitch(
             title = "Monochrome Icons", 
             description = "Force app icons to adopt a consistent chalk style.", 
-            checked = prefs.getBoolean("MONOCHROME_ICONS", false),
+            checked = state.monochromeIcons,
             icon = Icons.Default.InvertColors,
-            onCheckedChange = { value ->
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("MONOCHROME_ICONS", value) }) 
-            }
+            onCheckedChange = { viewModel.updateSetting(SettingKey.MONOCHROME_ICONS, it) }
         )
 
         SettingsCategoryHeader("Icon Engine (Pillar 5)")
-        val currentIconPack = prefs.getString("ICON_PACK", "MATERIAL_YOU") ?: "MATERIAL_YOU"
-        SettingsChoiceChip("Icon Set", currentIconPack, listOf("MATERIAL_YOU", "IOS", "OXYGEN_OS", "ONE_UI", "AMOLED_CYBERPUNK", "CUPERTINO_GLASS")) {
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putString("ICON_PACK", it) })
+        SettingsChoiceChip("Icon Set", state.iconPack.id, listOf("MATERIAL_YOU", "IOS", "OXYGEN_OS", "ONE_UI", "AMOLED_CYBERPUNK", "CUPERTINO_GLASS")) {
+            viewModel.updateSetting(SettingKey.ICON_PACK, it)
         }
 
         SettingsCategoryHeader("Motion & Physics (Pillar 4)")
-        SettingsChoiceChip("Physics Profile", physicsStyle, listOf("APPLE", "OXYGEN_OS")) {
-            physicsStyle = it
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putString("PHYSICS_STYLE", it) })
+        SettingsChoiceChip("Physics Profile", state.physicsStyle.name, listOf("APPLE", "OXYGEN_OS")) {
+            viewModel.updateSetting(SettingKey.PHYSICS_STYLE, it)
         }
         
-        SettingsChoiceChip("Content Transition", transitionStyle, listOf("SLIDE", "FADE_SCALE", "FLIP")) {
-            transitionStyle = it
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putString("CONTENT_TRANSITION_STYLE", it) })
+        SettingsChoiceChip("Content Transition", state.contentTransitionStyle.name, listOf("SLIDE", "FADE_SCALE", "FLIP")) {
+            viewModel.updateSetting(SettingKey.CONTENT_TRANSITION_STYLE, it)
         }
 
         SettingsSwitch(
             title = "Metaball Tear", 
             description = "Liquid drop effect when the Island splits.", 
-            checked = prefs.getBoolean("ENABLE_METABALL_TEAR", true),
+            checked = state.enableMetaballTear,
             icon = Icons.Default.Waves,
-            onCheckedChange = { value ->
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("ENABLE_METABALL_TEAR", value) }) 
-            }
+            onCheckedChange = { viewModel.updateSetting(SettingKey.ENABLE_METABALL_TEAR, it) }
         )
 
         SettingsCategoryHeader("Component Studio")
-        SettingsChoiceChip("Call UI", callStyle, listOf("IOS", "MINIMAL", "MODERN")) {
-            callStyle = it
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putString("call_style", it) })
+        SettingsChoiceChip("Call UI", state.callStyle.name, listOf("IOS", "MINIMAL", "MODERN")) {
+            viewModel.updateSetting(SettingKey.CALL_STYLE, it)
         }
-        SettingsChoiceChip("Charging UI", chargingStyle, listOf("RING", "WAVE", "CUBE")) {
-            chargingStyle = it
-            NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putString("charging_style", it) })
+        SettingsChoiceChip("Charging UI", state.chargingStyle.name, listOf("RING", "WAVE", "CUBE")) {
+            viewModel.updateSetting(SettingKey.CHARGING_STYLE, it)
+        }
+        SettingsChoiceChip("Battery Style", state.batteryStyle.name, listOf("PILL", "GAUGE", "DIGITAL")) {
+            viewModel.updateSetting(SettingKey.BATTERY_STYLE, it)
         }
 
         Spacer(modifier = Modifier.height(120.dp))

@@ -29,24 +29,6 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     val scope = rememberCoroutineScope()
     val prefs = context.getSharedPreferences("island_prefs", android.content.Context.MODE_PRIVATE)
 
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
-        if (uri != null) {
-            scope.launch {
-                val success = ConfigBackupManager.exportConfig(context, prefs, uri)
-                Toast.makeText(context, if (success) "Configuration Exported" else "Export Failed", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        if (uri != null) {
-            scope.launch {
-                val success = ConfigBackupManager.importConfig(context, prefs, uri)
-                Toast.makeText(context, if (success) "Configuration Imported! Restarting Engine..." else "Import Failed", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -137,23 +119,6 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                Button(
-                    onClick = { exportLauncher.launch("island_config.json") },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Export")
-                }
-                Button(
-                    onClick = { importLauncher.launch(arrayOf("application/json")) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Import")
-                }
-            }
-
             Button(
                 onClick = { viewModel.resetAll() },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),

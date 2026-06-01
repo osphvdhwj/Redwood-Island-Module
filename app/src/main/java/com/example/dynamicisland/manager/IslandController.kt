@@ -439,6 +439,10 @@ class IslandController @Inject constructor(
         view.onBrightnessDrag = { pct -> }
         view.onAppPinnedClick = { pkg -> actionManager.launchAppIntent(pkg, false) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() } }
         view.onQsTileClick = { tileSpec -> actionManager.handleQSTileClick(tileSpec) { } }
+        view.onAudioOutputClick = { 
+            val pkg = (view.activeModel.value as? LiveActivityModel.Music)?.appPackageName
+            actionManager.launchAudioOutputSwitcher(pkg)
+        }
         view.onReplySend = { text ->
             val data = Intent().apply { putExtra("reply_text", text) }
             executeSmartAction("SEND_REPLY", data)

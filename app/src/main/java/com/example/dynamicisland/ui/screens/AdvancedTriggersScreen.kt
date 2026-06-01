@@ -47,6 +47,27 @@ fun AdvancedTriggersScreen(prefs: SharedPreferences, viewModel: SettingsViewMode
             }
         )
 
+        SettingsCategoryHeader("DeGoogled Bridge (Pillar 6)")
+        SettingsSwitch(
+            title = "Assistant Interceptor",
+            description = "Route 'Assist' gesture to Brave Browser via Island Aura.",
+            icon = Icons.Default.Assistant,
+            checked = prefs.getBoolean("assistBridgeEnabled", false),
+            onCheckedChange = { value ->
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("assistBridgeEnabled", value) })
+            }
+        )
+        if (prefs.getBoolean("assistBridgeEnabled", false)) {
+            SettingsMenuLink(
+                title = "Assistant Target",
+                description = prefs.getString("assistBridgeTarget", "com.brave.browser") ?: "com.brave.browser",
+                icon = Icons.Default.Link,
+                onClick = {
+                    Toast.makeText(context, "App selection not implemented yet.", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+
         SettingsCategoryHeader("App Visibility Rules")
         SettingsMenuLink(
             title = "Hide Island Per App",
