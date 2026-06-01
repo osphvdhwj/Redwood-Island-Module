@@ -7,162 +7,12 @@ import com.example.dynamicisland.ipc.IslandIPCClient
 import org.json.JSONObject
 
 /**
- * ULTIMATE SETTINGS CORE
- * Unified file to prevent symbol resolution errors in Kotlin IR.
- * This file contains all enums, the SettingsState data class, and the SettingsManager.
+ * Pro-Grade Settings Manager
+ * 
+ * AUTOMATIC BRIDGE:
+ * - In the module app: Reads/Writes to local SharedPreferences.
+ * - In SystemUI: Reads from the IslandIPCClient (ContentProvider).
  */
-
-enum class DesignLanguage { MATERIAL_YOU, APPLE_LIQUID_GLASS }
-enum class AnimationSpeed { SLOW, NORMAL, FAST }
-enum class CallStyle { IOS, MINIMAL, MODERN }
-enum class ChargingStyle { RING, WAVE, CUBE }
-enum class BatteryStyle { PILL, GAUGE, DIGITAL }
-enum class PhysicsStyle { APPLE, OXYGEN_OS }
-enum class ContentTransitionStyle { SLIDE, FADE_SCALE, FLIP }
-enum class RingPulseStyle { BREATH, LASER, NONE }
-enum class AestheticStyle { GLASS, VOID_BLACK }
-enum class ShortcutLayout { GRID, CAROUSEL }
-
-/**
- * Pro-Grade Icon Engine (Pillar 5)
- */
-sealed class IconPack(val id: String) {
-    object MaterialYou : IconPack("MATERIAL_YOU")
-    object iOS : IconPack("IOS")
-    object OxygenOS : IconPack("OXYGEN_OS")
-    object OneUI : IconPack("ONE_UI")
-    object AmoledCyberpunk : IconPack("AMOLED_CYBERPUNK")
-    object CupertinoGlass : IconPack("CUPERTINO_GLASS")
-
-    companion object {
-        fun fromString(id: String): IconPack {
-            return when (id.uppercase()) {
-                "IOS" -> iOS
-                "OXYGEN_OS" -> OxygenOS
-                "ONE_UI" -> OneUI
-                "AMOLED_CYBERPUNK" -> AmoledCyberpunk
-                "CUPERTINO_GLASS" -> CupertinoGlass
-                else -> MaterialYou
-            }
-        }
-    }
-}
-
-data class SettingsState(
-    val designLanguage: DesignLanguage = DesignLanguage.MATERIAL_YOU,
-    val liveBridgeEnabled: Boolean = false,
-    val magneticEdgeDocking: Boolean = true,
-    val dynamicColors: Boolean = true,
-    val customAccentColor: Color = Color(0xFF6750A4),
-    val blurIntensity: Float = 15f,
-    val geminiAuraEnabled: Boolean = true,
-    val rollingTypographyEnabled: Boolean = true,
-    val aestheticStyle: AestheticStyle = AestheticStyle.GLASS,
-    val monochromeIcons: Boolean = false,
-    val enableMetaballTear: Boolean = true,
-    val dynamicGradient: Boolean = true,
-    val parseDeliveryNotifications: Boolean = true,
-    val warpChargeAnimation: Boolean = true,
-    val batteryAwareAnimation: Boolean = true,
-    val nowPlaying: Boolean = true,
-    val musicVisualizerStyle: String = "NEURAL_CIRCLE",
-    val waveformEnabled: Boolean = true,
-    val mediaArtworkBlur: Boolean = true,
-    val bpmPulse: Boolean = true,
-    val ambientReactiveRing: Boolean = true,
-    val animationSpeed: AnimationSpeed = AnimationSpeed.NORMAL,
-    val physicsStyle: PhysicsStyle = PhysicsStyle.APPLE,
-    val contentTransitionStyle: ContentTransitionStyle = ContentTransitionStyle.SLIDE,
-    val velocitySquishEnabled: Boolean = true,
-    val inlineReplyEnabled: Boolean = true,
-    val enableMaxWidgets: Boolean = true,
-    val showVitalsRam: Boolean = true,
-    val showVitalsCpu: Boolean = true,
-    val showVitalsNet: Boolean = true,
-    val showVitalsFps: Boolean = true,
-    val showVitalsBatCycles: Boolean = true,
-    val shortcutLayout: ShortcutLayout = ShortcutLayout.GRID,
-    val assistBridgeEnabled: Boolean = false,
-    val assistBridgeTarget: String = "com.brave.browser",
-    val lensBridgeEnabled: Boolean = false,
-    val lensBridgeTarget: String = "com.brave.browser",
-    val predictionTint: Boolean = true,
-    val predictiveActions: Boolean = true,
-    val autoDismissDelay: Int = 5,
-    val contextualSuggestions: Boolean = true,
-    val gestureLearning: Boolean = true,
-    val aiConfidenceThreshold: Int = 10,
-    val aiReinforcementRate: Float = 1.0f,
-    val allowMusicMid: Boolean = true,
-    val allowMusicMax: Boolean = true,
-    val allowChargingMini: Boolean = true,
-    val allowChargingMid: Boolean = true,
-    val allowNotifMini: Boolean = true,
-    val allowNotifMid: Boolean = true,
-    val allowNotifMax: Boolean = true,
-    val allowCallMid: Boolean = true,
-    val allowCallMax: Boolean = true,
-    val allowTaskMini: Boolean = true,
-    val allowTaskMid: Boolean = true,
-    val islandEnabled: Boolean = true,
-    val islandOnLockscreen: Boolean = true,
-    val lockscreenFeatures: Set<String> = setOf("music", "notifications"),
-    val allowedNotificationApps: Set<String> = emptySet(),
-    val swipeLeftAction: String = "dismiss",
-    val swipeRightAction: String = "next_track",
-    val showRingIdle: Boolean = true,
-    val pillShape: String = "pill",
-    val pillCornerRadius: Float = 100f,
-    val hideOnScreenshot: Boolean = true,
-    val hideOnScreenRecord: Boolean = true,
-    val hideIslandPerApp: Set<String> = emptySet(),
-    val enableFocusMode: Boolean = false,
-    val productiveApps: Set<String> = emptySet(),
-    val enableLowLatencyMode: Boolean = false,
-    val enableClipboardPaperclip: Boolean = true,
-    val clipboardCleaner: Boolean = true,
-    val privacyDotsEnabled: Boolean = false,
-    val dozeModeOptimisation: Boolean = true,
-    val otpDetection: Boolean = true,
-    val linkIntercept: Boolean = true,
-    val translation: Boolean = true,
-    val barcode: Boolean = true,
-    val navigation: Boolean = true,
-    val notificationCoalescing: Boolean = true,
-    val appPermissionChecker: Boolean = true,
-    val gamingHud: Boolean = true,
-    val showFpsHUD: Boolean = false,
-    val showCpuTempHUD: Boolean = false,
-    val wifiAlertDuration: Int = 3,
-    val btAlertDuration: Int = 3,
-    val hotspotAlertDuration: Int = 5,
-    val dataAlertDuration: Int = 3,
-    val ringMediaVisible: Boolean = true,
-    val ringBatteryVisible: Boolean = true,
-    val ringDataVisible: Boolean = true,
-    val invisibleRingTouchPassthrough: Boolean = true,
-    val hapticFeedback: Boolean = true,
-    val hapticIntensity: Float = 1f,
-    val ringCadenceVibration: Boolean = true,
-    val hapticMorseAlerts: Boolean = false,
-    val roleCallingApp: String = "",
-    val allowedMusicApps: Set<String> = emptySet(),
-    val allowedMediaApps: Set<String> = emptySet(),
-    val allowedNotesApps: Set<String> = emptySet(),
-    val callStyle: CallStyle = CallStyle.IOS,
-    val chargingStyle: ChargingStyle = ChargingStyle.RING,
-    val batteryStyle: BatteryStyle = BatteryStyle.PILL,
-    val ringPulseStyle: RingPulseStyle = RingPulseStyle.BREATH,
-    val autoBackupEnabled: Boolean = false,
-    val autoBackupFreqDays: Int = 7,
-    val stashStoragePath: String = "/sdcard/DynamicIsland/Archive",
-    val talkbackIntegration: Boolean = true,
-    val proximityWake: Boolean = false,
-    val timerIntegration: Boolean = true,
-    val splitPillEnabled: Boolean = true,
-    val iconPack: IconPack = IconPack.MaterialYou
-)
-
 class SettingsManager(private val context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
@@ -186,7 +36,7 @@ class SettingsManager(private val context: Context) {
         ENABLE_METABALL_TEAR, DYNAMIC_GRADIENT,
         PARSE_DELIVERY_NOTIFICATIONS, WARP_CHARGE_ANIMATION,
         BATTERY_AWARE_ANIMATION, NOW_PLAYING, MUSIC_VISUALIZER_STYLE,
-        WAVEFORM_ENABLED, MEDIA_ARTWORK_BLUR, BPM_PULSE, AMBIENT_REACTIVE,
+        WAVEFORM_ENABLED, MEDIA_ARTWORK_BLUR, BPM_PULSE, AMBIENT_REACTIVE_RING,
         ANIMATION_SPEED, PHYSICS_STYLE, CONTENT_TRANSITION_STYLE,
         VELOCITY_SQUISH_ENABLED, INLINE_REPLY_ENABLED, ENABLE_MAX_WIDGETS,
         SHOW_VITALS_RAM, SHOW_VITALS_CPU, SHOW_VITALS_NET, SHOW_VITALS_FPS,
@@ -206,7 +56,7 @@ class SettingsManager(private val context: Context) {
         ENABLE_CLIPBOARD_PAPERCLIP, CLIPBOARD_CLEANER, PRIVACY_DOTS_ENABLED,
         DOZE_MODE_OPTIMISATION, OTP_DETECTION, LINK_INTERCEPT, TRANSLATION,
         BARCODE, NAVIGATION, NOTIFICATION_COALESCING, APP_PERMISSION_CHECKER,
-        GAMING_HUD, SHOW_FPS_HUD, SHOW_CPU_TEMP_HUD, WIFI_ALERT_DURATION,
+        GAMING_HUD, SHOW_FPS, SHOW_CPU_TEMP, WIFI_ALERT_DURATION,
         BT_ALERT_DURATION, HOTSPOT_ALERT_DURATION, DATA_ALERT_DURATION,
         RING_MEDIA_VISIBLE, RING_BATTERY_VISIBLE, RING_DATA_VISIBLE,
         INVISIBLE_RING_TOUCH_PASSTHROUGH, HAPTIC_FEEDBACK, HAPTIC_INTENSITY,
@@ -303,7 +153,7 @@ class SettingsManager(private val context: Context) {
             waveformEnabled = getBoolean(SettingKey.WAVEFORM_ENABLED, true),
             mediaArtworkBlur = getBoolean(SettingKey.MEDIA_ARTWORK_BLUR, true),
             bpmPulse = getBoolean(SettingKey.BPM_PULSE, true),
-            ambientReactiveRing = getBoolean(SettingKey.AMBIENT_REACTIVE, true),
+            ambientReactiveRing = getBoolean(SettingKey.AMBIENT_REACTIVE_RING, true),
             animationSpeed = try { AnimationSpeed.valueOf(getString(SettingKey.ANIMATION_SPEED, "NORMAL") ?: "NORMAL") } catch(e: Exception) { AnimationSpeed.NORMAL },
             physicsStyle = try { PhysicsStyle.valueOf(getString(SettingKey.PHYSICS_STYLE, "APPLE") ?: "APPLE") } catch(e: Exception) { PhysicsStyle.APPLE },
             contentTransitionStyle = try { ContentTransitionStyle.valueOf(getString(SettingKey.CONTENT_TRANSITION_STYLE, "SLIDE") ?: "SLIDE") } catch(e: Exception) { ContentTransitionStyle.SLIDE },
@@ -365,8 +215,8 @@ class SettingsManager(private val context: Context) {
             notificationCoalescing = getBoolean(SettingKey.NOTIFICATION_COALESCING, true),
             appPermissionChecker = getBoolean(SettingKey.APP_PERMISSION_CHECKER, true),
             gamingHud = getBoolean(SettingKey.GAMING_HUD, true),
-            showFpsHUD = getBoolean(SettingKey.SHOW_FPS_HUD, false),
-            showCpuTempHUD = getBoolean(SettingKey.SHOW_CPU_TEMP_HUD, false),
+            showFps = getBoolean(SettingKey.SHOW_FPS, false),
+            showCpuTemp = getBoolean(SettingKey.SHOW_CPU_TEMP, false),
             wifiAlertDuration = getInt(SettingKey.WIFI_ALERT_DURATION, 3),
             btAlertDuration = getInt(SettingKey.BT_ALERT_DURATION, 3),
             hotspotAlertDuration = getInt(SettingKey.HOTSPOT_ALERT_DURATION, 5),
