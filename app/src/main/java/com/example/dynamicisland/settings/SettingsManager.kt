@@ -7,166 +7,16 @@ import com.example.dynamicisland.ipc.IslandIPCClient
 import org.json.JSONObject
 
 /**
- * THE DEFINITIVE SETTINGS ARCHITECTURE
- * Consolidated into one file to eliminate symbol resolution ambiguities.
+ * Pro-Grade Settings Manager
+ * 
+ * AUTOMATIC BRIDGE:
+ * - In the module app: Reads/Writes to local SharedPreferences.
+ * - In SystemUI: Reads from the IslandIPCClient (ContentProvider).
  */
-
-enum class DesignLanguage { MATERIAL_YOU, APPLE_LIQUID_GLASS }
-enum class AnimationSpeed { SLOW, NORMAL, FAST }
-enum class CallStyle { IOS, MINIMAL, MODERN }
-enum class ChargingStyle { RING, WAVE, CUBE }
-enum class BatteryStyle { PILL, GAUGE, DIGITAL }
-enum class PhysicsStyle { APPLE, OXYGEN_OS }
-enum class ContentTransitionStyle { SLIDE, FADE_SCALE, FLIP }
-enum class RingPulseStyle { BREATH, LASER, NONE }
-enum class AestheticStyle { GLASS, VOID_BLACK }
-enum class ShortcutLayout { GRID, CAROUSEL }
-
-sealed class IconPack(val id: String) {
-    object MaterialYou : IconPack("MATERIAL_YOU")
-    object iOS : IconPack("IOS")
-    object OxygenOS : IconPack("OXYGEN_OS")
-    object OneUI : IconPack("ONE_UI")
-    object AmoledCyberpunk : IconPack("AMOLED_CYBERPUNK")
-    object CupertinoGlass : IconPack("CUPERTINO_GLASS")
-    companion object {
-        fun fromString(id: String): IconPack = when (id.uppercase()) {
-            "IOS" -> iOS; "OXYGEN_OS" -> OxygenOS; "ONE_UI" -> OneUI
-            "AMOLED_CYBERPUNK" -> AmoledCyberpunk; "CUPERTINO_GLASS" -> CupertinoGlass
-            else -> MaterialYou
-        }
-    }
-}
-
-data class SettingsState(
-    val designLanguage: DesignLanguage = DesignLanguage.MATERIAL_YOU,
-    val liveBridgeEnabled: Boolean = false,
-    val magneticEdgeDocking: Boolean = true,
-    val dynamicColors: Boolean = true,
-    val customAccentColor: Color = Color(0xFF6750A4),
-    val blurIntensity: Float = 15f,
-    val geminiAuraEnabled: Boolean = true,
-    val rollingTypographyEnabled: Boolean = true,
-    val aestheticStyle: AestheticStyle = AestheticStyle.GLASS,
-    val monochromeIcons: Boolean = false,
-    val enableMetaballTear: Boolean = true,
-    val dynamicGradient: Boolean = true,
-    val parseDeliveryNotifications: Boolean = true,
-    val warpChargeAnimation: Boolean = true,
-    val batteryAwareAnimation: Boolean = true,
-    val nowPlaying: Boolean = true,
-    val musicVisualizerStyle: String = "NEURAL_CIRCLE",
-    val waveformEnabled: Boolean = true,
-    val mediaArtworkBlur: Boolean = true,
-    val bpmPulse: Boolean = true,
-    val ambientReactiveRing: Boolean = true,
-    val ambientReactive: Boolean = true,
-    val animationSpeed: AnimationSpeed = AnimationSpeed.NORMAL,
-    val physicsStyle: PhysicsStyle = PhysicsStyle.APPLE,
-    val contentTransitionStyle: ContentTransitionStyle = ContentTransitionStyle.SLIDE,
-    val velocitySquishEnabled: Boolean = true,
-    val inlineReplyEnabled: Boolean = true,
-    val enableMaxWidgets: Boolean = true,
-    val showVitalsRam: Boolean = true,
-    val showVitalsCpu: Boolean = true,
-    val showVitalsNet: Boolean = true,
-    val showVitalsFps: Boolean = true,
-    val showVitalsBatCycles: Boolean = true,
-    val shortcutLayout: ShortcutLayout = ShortcutLayout.GRID,
-    val assistBridgeEnabled: Boolean = false,
-    val assistBridgeTarget: String = "com.brave.browser",
-    val lensBridgeEnabled: Boolean = false,
-    val lensBridgeTarget: String = "com.brave.browser",
-    val smartGesturesEnabled: Boolean = true,
-    val smartCallOverride: Boolean = true,
-    val smartMediaOverride: Boolean = true,
-    val smartGamingOverride: Boolean = true,
-    val predictionTint: Boolean = true,
-    val predictiveActions: Boolean = true,
-    val autoDismissDelay: Int = 5,
-    val contextualSuggestions: Boolean = true,
-    val gestureLearning: Boolean = true,
-    val aiConfidenceThreshold: Int = 10,
-    val aiReinforcementRate: Float = 1.0f,
-    val allowMusicMid: Boolean = true,
-    val allowMusicMax: Boolean = true,
-    val allowChargingMini: Boolean = true,
-    val allowChargingMid: Boolean = true,
-    val allowNotifMini: Boolean = true,
-    val allowNotifMid: Boolean = true,
-    val allowNotifMax: Boolean = true,
-    val allowCallMid: Boolean = true,
-    val allowCallMax: Boolean = true,
-    val allowTaskMini: Boolean = true,
-    val allowTaskMid: Boolean = true,
-    val islandEnabled: Boolean = true,
-    val islandOnLockscreen: Boolean = true,
-    val lockscreenFeatures: Set<String> = setOf("music", "notifications"),
-    val allowedNotificationApps: Set<String> = emptySet(),
-    val swipeLeftAction: String = "dismiss",
-    val swipeRightAction: String = "next_track",
-    val showRingIdle: Boolean = true,
-    val pillShape: String = "pill",
-    val pillCornerRadius: Float = 100f,
-    val hideOnScreenshot: Boolean = true,
-    val hideOnScreenRecord: Boolean = true,
-    val hideIslandPerApp: Set<String> = emptySet(),
-    val enableFocusMode: Boolean = false,
-    val productiveApps: Set<String> = emptySet(),
-    val enableLowLatencyMode: Boolean = false,
-    val enableClipboardPaperclip: Boolean = true,
-    val clipboardCleaner: Boolean = true,
-    val privacyDotsEnabled: Boolean = false,
-    val dozeModeOptimisation: Boolean = true,
-    val otpDetection: Boolean = true,
-    val linkIntercept: Boolean = true,
-    val translation: Boolean = true,
-    val barcode: Boolean = true,
-    val navigation: Boolean = true,
-    val notificationCoalescing: Boolean = true,
-    val appPermissionChecker: Boolean = true,
-    val gamingHud: Boolean = true,
-    val showFps: Boolean = false,
-    val showCpuTemp: Boolean = false,
-    val wifiAlertDuration: Int = 3,
-    val btAlertDuration: Int = 3,
-    val hotspotAlertDuration: Int = 5,
-    val dataAlertDuration: Int = 3,
-    val ringMediaVisible: Boolean = true,
-    val ringBatteryVisible: Boolean = true,
-    val ringDataVisible: Boolean = true,
-    val invisibleRingTouchPassthrough: Boolean = true,
-    val antiBurnInEnabled: Boolean = true,
-    val antiBurnInIntensity: Float = 1.5f,
-    val hapticFeedback: Boolean = true,
-    val hapticIntensity: Float = 1f,
-    val ringCadenceVibration: Boolean = true,
-    val hapticMorseAlerts: Boolean = false,
-    val roleCallingApp: String = "",
-    val allowedMusicApps: Set<String> = emptySet(),
-    val allowedMediaApps: Set<String> = emptySet(),
-    val allowedNotesApps: Set<String> = emptySet(),
-    val callStyle: CallStyle = CallStyle.IOS,
-    val chargingStyle: ChargingStyle = ChargingStyle.RING,
-    val batteryStyle: BatteryStyle = BatteryStyle.PILL,
-    val ringPulseStyle: RingPulseStyle = RingPulseStyle.BREATH,
-    val autoBackupEnabled: Boolean = false,
-    val autoBackupFreqDays: Int = 7,
-    val stashStoragePath: String = "/sdcard/DynamicIsland/Archive",
-    val talkbackIntegration: Boolean = true,
-    val proximityWake: Boolean = false,
-    val timerIntegration: Boolean = true,
-    val splitPillEnabled: Boolean = true,
-    val iconPack: IconPack = IconPack.MaterialYou,
-    val enableFreeformPortalAnim: Boolean = true,
-    val timeBasedThemes: Boolean = false,
-    val highContrastMode: Boolean = false,
-    val iconPackIntegration: Boolean = false
-)
-
 class SettingsManager(private val context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+
     private val isSystemUI = context.packageName == "com.android.systemui"
     private val ipcClient by lazy { IslandIPCClient.get(context) }
 
@@ -179,74 +29,162 @@ class SettingsManager(private val context: Context) {
         } catch (e: Exception) {}
     }
 
+    /**
+     * DEDUPLICATED SETTING KEYS
+     * Mapping for all persistent preferences.
+     */
     enum class SettingKey {
+        // Core Visuals
         DESIGN_LANGUAGE, DYNAMIC_COLORS, ACCENT_COLOR, BLUR_INTENSITY,
         PILL_RADIUS, ANIMATION_SPEED, SHOW_RING_IDLE, PILL_SHAPE,
         DYNAMIC_GRADIENT, GLOW_EFFECT, DOT_MODE, ELASTIC_STRETCH,
         SHADOW_CASTING, CONTENT_AWARE_BLUR, TIME_BASED_THEMES,
         HIGH_CONTRAST_MODE, ICON_PACK_INTEGRATION, AESTHETIC_STYLE,
         MONOCHROME_ICONS, ENABLE_METABALL_TEAR,
+
+        // Dual-Mode (Pillar 1)
         LIVE_BRIDGE_ENABLED, MAGNETIC_EDGE_DOCKING,
+
+        // Aura & Typography (Pillar 2)
         GEMINI_AURA_ENABLED, ROLLING_TYPOGRAPHY_ENABLED,
+
+        // Advanced Integrations (Pillar 3)
         PARSE_DELIVERY_NOTIFICATIONS, WARP_CHARGE_ANIMATION,
         BATTERY_AWARE_ANIMATION, NOW_PLAYING, MUSIC_VISUALIZER_STYLE,
         WAVEFORM_ENABLED, MEDIA_ARTWORK_BLUR, BPM_PULSE,
         AMBIENT_REACTIVE_RING, AMBIENT_REACTIVE,
+
+        // Physics & Gestures (Pillar 4)
         PHYSICS_STYLE, CONTENT_TRANSITION_STYLE, VELOCITY_SQUISH_ENABLED,
-        INLINE_REPLY_ENABLED, ENABLE_MAX_WIDGETS,
-        SHOW_VITALS_RAM, SHOW_VITALS_CPU, SHOW_VITALS_NET,
-        SHOW_VITALS_FPS, SHOW_VITALS_BAT_CYCLES, SHORTCUT_LAYOUT,
+        INLINE_REPLY_ENABLED,
+
+        // Dashboard & Widgets (Pillar 5)
+        ENABLE_MAX_WIDGETS, SHOW_VITALS_RAM, SHOW_VITALS_CPU,
+        SHOW_VITALS_NET, SHOW_VITALS_FPS, SHOW_VITALS_BAT_CYCLES,
+        SHORTCUT_LAYOUT,
+
+        // DeGoogled (Pillar 6)
         ASSIST_BRIDGE_ENABLED, ASSIST_BRIDGE_TARGET,
         LENS_BRIDGE_ENABLED, LENS_BRIDGE_TARGET,
+
+        // AI Core
         SMART_GESTURES_ENABLED, SMART_CALL_OVERRIDE,
         SMART_MEDIA_OVERRIDE, SMART_GAMING_OVERRIDE,
         PREDICTION_TINT, PREDICTIVE_ACTIONS, AUTO_DISMISS_DELAY,
         CONTEXTUAL_SUGGESTIONS, GESTURE_LEARNING,
         AI_CONFIDENCE_THRESHOLD, AI_REINFORCEMENT_RATE,
+
+        // Constraints
         ALLOW_MUSIC_MID, ALLOW_MUSIC_MAX, ALLOW_CHARGING_MINI,
         ALLOW_CHARGING_MID, ALLOW_NOTIF_MINI, ALLOW_NOTIF_MID,
         ALLOW_NOTIF_MAX, ALLOW_CALL_MID, ALLOW_CALL_MAX,
         ALLOW_TASK_MINI, ALLOW_TASK_MID,
+
+        // Floating & Accessibility
+        FREEFORM_LAUNCH_ENABLED, FREEFORM_SMART_GESTURE,
+        ENABLE_FREEFORM_PORTAL_ANIM, TALKBACK_INTEGRATION,
+        PROXIMITY_WAKE, TIMER_INTEGRATION,
+
+        // Global & Privacy
         ISLAND_ENABLED, ISLAND_ON_LOCKSCREEN, LOCKSCREEN_FEATURES,
         ALLOWED_NOTIFICATION_APPS, SWIPE_LEFT_ACTION, SWIPE_RIGHT_ACTION,
         HIDE_ON_SCREENSHOT, HIDE_ON_SCREEN_RECORD, HIDE_ISLAND_PER_APP,
         ENABLE_FOCUS_MODE, PRODUCTIVE_APPS, ENABLE_LOW_LATENCY_MODE,
         ENABLE_CLIPBOARD_PAPERCLIP, CLIPBOARD_CLEANER, PRIVACY_DOTS_ENABLED,
-        DOZE_MODE_OPTIMISATION, OTP_DETECTION, LINK_INTERCEPT, TRANSLATION,
-        BARCODE, NAVIGATION, NOTIFICATION_COALESCING, APP_PERMISSION_CHECKER,
-        GAMING_HUD, SHOW_FPS, SHOW_CPU_TEMP, WIFI_ALERT_DURATION,
-        BT_ALERT_DURATION, HOTSPOT_ALERT_DURATION, DATA_ALERT_DURATION,
-        RING_MEDIA_VISIBLE, RING_BATTERY_VISIBLE, RING_DATA_VISIBLE,
-        INVISIBLE_RING_TOUCH_PASSTHROUGH, ANTI_BURN_IN_ENABLED, ANTI_BURN_IN_INTENSITY,
+        DOZE_MODE_OPTIMISATION,
+
+        // Detection & HUD
+        OTP_DETECTION, LINK_INTERCEPT, TRANSLATION, BARCODE, NAVIGATION,
+        NOTIFICATION_COALESCING, APP_PERMISSION_CHECKER, GAMING_HUD,
+        SHOW_FPS, SHOW_CPU_TEMP,
+
+        // Alerts & Connection
+        WIFI_ALERT_DURATION, BT_ALERT_DURATION, HOTSPOT_ALERT_DURATION,
+        DATA_ALERT_DURATION, RING_MEDIA_VISIBLE, RING_BATTERY_VISIBLE,
+        RING_DATA_VISIBLE, INVISIBLE_RING_TOUCH_PASSTHROUGH,
+
+        // Haptics
         HAPTIC_FEEDBACK, HAPTIC_INTENSITY, RING_CADENCE_VIBRATION,
-        HAPTIC_MORSE_ALERTS, ROLE_CALLING_APP, ALLOWED_MUSIC_APPS,
-        ALLOWED_MEDIA_APPS, ALLOWED_NOTES_APPS, CALL_STYLE,
-        CHARGING_STYLE, BATTERY_STYLE, RING_PULSE_STYLE,
+        HAPTIC_MORSE_ALERTS,
+
+        // Role Mapping
+        ROLE_CALLING_APP, ALLOWED_MUSIC_APPS, ALLOWED_MEDIA_APPS,
+        ALLOWED_NOTES_APPS,
+
+        // Persistence & Storage
+        CALL_STYLE, CHARGING_STYLE, BATTERY_STYLE, RING_PULSE_STYLE,
         AUTO_BACKUP_ENABLED, AUTO_BACKUP_FREQ_DAYS, STASH_STORAGE_PATH,
-        TALKBACK_INTEGRATION, PROXIMITY_WAKE, TIMER_INTEGRATION,
-        SPLIT_PILL_ENABLED, ICON_PACK, ENABLE_FREEFORM_PORTAL_ANIM
+        SPLIT_PILL_ENABLED, ICON_PACK
     }
 
-    fun getBoolean(key: SettingKey, d: Boolean): Boolean = if (isSystemUI) ipcClient.getBoolean(key.name, d) else prefs.getBoolean(key.name, d)
-    fun putBoolean(key: SettingKey, v: Boolean) { prefs.edit().putBoolean(key.name, v).apply(); ipcClient.putBoolean(key.name, v) }
-    fun getInt(key: SettingKey, d: Int): Int = if (isSystemUI) ipcClient.getInt(key.name, d) else prefs.getInt(key.name, d)
-    fun putInt(key: SettingKey, v: Int) { prefs.edit().putInt(key.name, v).apply(); ipcClient.putInt(key.name, v) }
-    fun getFloat(key: SettingKey, d: Float): Float = if (isSystemUI) ipcClient.getFloat(key.name, d) else prefs.getFloat(key.name, d)
-    fun putFloat(key: SettingKey, v: Float) { prefs.edit().putFloat(key.name, v).apply(); ipcClient.putFloat(key.name, v) }
-    fun getString(key: SettingKey, d: String?): String? = if (isSystemUI) ipcClient.getString(key.name, d ?: "") else prefs.getString(key.name, d)
-    fun getRawString(k: String, d: String): String = if (isSystemUI) ipcClient.getString(k, d) else prefs.getString(k, d) ?: d
-    fun putString(key: SettingKey, v: String) { prefs.edit().putString(key.name, v).apply(); ipcClient.putString(key.name, v) }
-    fun getStringSet(key: SettingKey, d: Set<String>): Set<String> {
-        val raw = ipcClient.getString(key.name, "")
-        return if (raw.isEmpty()) { if (isSystemUI) d else prefs.getStringSet(key.name, d) ?: d } else raw.split(",").toSet()
+    fun getBoolean(key: SettingKey, default: Boolean): Boolean =
+        if (isSystemUI) ipcClient.getBoolean(key.name, default)
+        else prefs.getBoolean(key.name, default)
+
+    fun putBoolean(key: SettingKey, value: Boolean) {
+        prefs.edit().putBoolean(key.name, value).apply()
+        ipcClient.putBoolean(key.name, value)
     }
-    fun putStringSet(key: SettingKey, v: Set<String>) { prefs.edit().putStringSet(key.name, v).apply(); ipcClient.putString(key.name, v.joinToString(",")) }
-    fun resetAll() { prefs.edit().clear().apply() }
+
+    fun getInt(key: SettingKey, default: Int): Int =
+        if (isSystemUI) ipcClient.getInt(key.name, default)
+        else prefs.getInt(key.name, default)
+
+    fun putInt(key: SettingKey, value: Int) {
+        prefs.edit().putInt(key.name, value).apply()
+        ipcClient.putInt(key.name, value)
+    }
+
+    fun getFloat(key: SettingKey, default: Float): Float =
+        if (isSystemUI) ipcClient.getFloat(key.name, default)
+        else prefs.getFloat(key.name, default)
+
+    fun putFloat(key: SettingKey, value: Float) {
+        prefs.edit().putFloat(key.name, value).apply()
+        ipcClient.putFloat(key.name, value)
+    }
+
+    fun getString(key: SettingKey, default: String?): String? =
+        if (isSystemUI) ipcClient.getString(key.name, default ?: "")
+        else prefs.getString(key.name, default)
+
+    fun getRawString(keyName: String, default: String): String =
+        if (isSystemUI) ipcClient.getString(keyName, default)
+        else prefs.getString(keyName, default) ?: default
+
+    fun putString(key: SettingKey, value: String) {
+        prefs.edit().putString(key.name, value).apply()
+        ipcClient.putString(key.name, value)
+    }
+
+    fun getStringSet(key: SettingKey, default: Set<String>): Set<String> {
+        val raw = ipcClient.getString(key.name, "")
+        return if (raw.isEmpty()) {
+            if (isSystemUI) default else prefs.getStringSet(key.name, default) ?: default
+        } else {
+            raw.split(",").toSet()
+        }
+    }
+
+    fun putStringSet(key: SettingKey, values: Set<String>) {
+        prefs.edit().putStringSet(key.name, values).apply()
+        ipcClient.putString(key.name, values.joinToString(","))
+    }
+
+    fun resetAll() {
+        prefs.edit().clear().apply()
+    }
+
     fun clearAiMemory(): Boolean = ipcClient.clearAiMemory()
+
     fun exportAiData(): String? = ipcClient.exportAiData()
 
+    /**
+     * NAMED PARAMETER CONSTRUCTOR
+     * Explicitly maps all fields to ensure zero compilation errors.
+     */
     fun getSettingsState(): SettingsState {
-        val packId = getString(SettingKey.ICON_PACK, "MATERIAL_YOU") ?: "MATERIAL_YOU"
+        val iconPackId = getString(SettingKey.ICON_PACK, "MATERIAL_YOU") ?: "MATERIAL_YOU"
         return SettingsState(
             designLanguage = try { DesignLanguage.valueOf(getString(SettingKey.DESIGN_LANGUAGE, "MATERIAL_YOU") ?: "MATERIAL_YOU") } catch(e: Exception) { DesignLanguage.MATERIAL_YOU },
             dynamicColors = getBoolean(SettingKey.DYNAMIC_COLORS, true),
@@ -374,7 +312,7 @@ class SettingsManager(private val context: Context) {
             proximityWake = getBoolean(SettingKey.PROXIMITY_WAKE, false),
             timerIntegration = getBoolean(SettingKey.TIMER_INTEGRATION, true),
             splitPillEnabled = getBoolean(SettingKey.SPLIT_PILL_ENABLED, true),
-            iconPack = IconPack.fromString(packId),
+            iconPack = IconPack.fromString(iconPackId),
             freeformLaunchEnabled = getBoolean(SettingKey.FREEFORM_LAUNCH_ENABLED, true),
             freeformSmartGesture = getBoolean(SettingKey.FREEFORM_SMART_GESTURE, true),
             enableFreeformPortalAnim = getBoolean(SettingKey.ENABLE_FREEFORM_PORTAL_ANIM, true)
