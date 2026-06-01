@@ -173,8 +173,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         setViewTreeLifecycleOwner(this)
         setViewTreeViewModelStoreOwner(this)
         setViewTreeSavedStateRegistryOwner(this)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         savedStateRegistryController.performRestore(null)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
 
         val composeView = ComposeView(context).apply {
             setContent {

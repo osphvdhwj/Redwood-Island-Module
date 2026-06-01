@@ -429,8 +429,7 @@ class IslandController @Inject constructor(
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
         val view = DynamicIslandView(context, moduleContext)
         view.id = android.view.View.generateViewId()
-        val lifecycleOwner = ComposeLifecycleOwner()
-        lifecycleOwner.onCreate(); lifecycleOwner.attachToView(view); lifecycleOwner.onStart(); lifecycleOwner.onResume()
+        // DynamicIslandView already sets itself as LifecycleOwner internally.
         this.islandView = view
         this.windowManager = wm
         this.windowParams = params
