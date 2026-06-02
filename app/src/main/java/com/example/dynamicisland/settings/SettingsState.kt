@@ -44,6 +44,7 @@ data class SettingsState(
     val liveBridgeEnabled: Boolean = false,
     val magneticEdgeDocking: Boolean = true,
     val navIslandMode: Boolean = false,
+    val isNavIslandFloating: Boolean = false,
     val oneHandModeEnabled: Boolean = true,
     val navIslandBatteryColoring: Boolean = true,
 
@@ -132,6 +133,7 @@ data class SettingsState(
     val hideIslandPerApp: Set<String> = emptySet(),
     val enableFocusMode: Boolean = false,
     val productiveApps: Set<String> = emptySet(),
+    val pinnedApps: Set<String> = emptySet(),
     val enableLowLatencyMode: Boolean = false,
     val enableClipboardPaperclip: Boolean = true,
     val clipboardCleaner: Boolean = true,

@@ -44,7 +44,7 @@ class SettingsManager(private val context: Context) {
 
         // Dual-Mode (Pillar 1)
         LIVE_BRIDGE_ENABLED, MAGNETIC_EDGE_DOCKING,
-        NAV_ISLAND_MODE, ONE_HAND_MODE_ENABLED,
+        NAV_ISLAND_MODE, IS_NAV_ISLAND_FLOATING, ONE_HAND_MODE_ENABLED,
         NAV_ISLAND_BATTERY_COLORING,
 
         // Aura & Typography (Pillar 2)
@@ -91,7 +91,7 @@ class SettingsManager(private val context: Context) {
         ISLAND_ENABLED, ISLAND_ON_LOCKSCREEN, LOCKSCREEN_FEATURES,
         ALLOWED_NOTIFICATION_APPS, SWIPE_LEFT_ACTION, SWIPE_RIGHT_ACTION,
         HIDE_ON_SCREENSHOT, HIDE_ON_SCREEN_RECORD, HIDE_ISLAND_PER_APP,
-        ENABLE_FOCUS_MODE, PRODUCTIVE_APPS, ENABLE_LOW_LATENCY_MODE,
+        ENABLE_FOCUS_MODE, PRODUCTIVE_APPS, PINNED_APPS, ENABLE_LOW_LATENCY_MODE,
         ENABLE_CLIPBOARD_PAPERCLIP, CLIPBOARD_CLEANER, PRIVACY_DOTS_ENABLED,
         DOZE_MODE_OPTIMISATION,
 
@@ -212,6 +212,7 @@ class SettingsManager(private val context: Context) {
             liveBridgeEnabled = getBoolean(SettingKey.LIVE_BRIDGE_ENABLED, false),
             magneticEdgeDocking = getBoolean(SettingKey.MAGNETIC_EDGE_DOCKING, true),
             navIslandMode = getBoolean(SettingKey.NAV_ISLAND_MODE, false),
+            isNavIslandFloating = getBoolean(SettingKey.IS_NAV_ISLAND_FLOATING, false),
             oneHandModeEnabled = getBoolean(SettingKey.ONE_HAND_MODE_ENABLED, true),
             navIslandBatteryColoring = getBoolean(SettingKey.NAV_ISLAND_BATTERY_COLORING, true),
             geminiAuraEnabled = getBoolean(SettingKey.GEMINI_AURA_ENABLED, true),
@@ -274,6 +275,7 @@ class SettingsManager(private val context: Context) {
             hideIslandPerApp = getStringSet(SettingKey.HIDE_ISLAND_PER_APP, emptySet()),
             enableFocusMode = getBoolean(SettingKey.ENABLE_FOCUS_MODE, false),
             productiveApps = getStringSet(SettingKey.PRODUCTIVE_APPS, emptySet()),
+            pinnedApps = (0..7).mapNotNull { getRawString("pinned_app_$it", "").takeIf { p -> p.isNotEmpty() } }.toSet(),
             enableLowLatencyMode = getBoolean(SettingKey.ENABLE_LOW_LATENCY_MODE, false),
             enableClipboardPaperclip = getBoolean(SettingKey.ENABLE_CLIPBOARD_PAPERCLIP, true),
             clipboardCleaner = getBoolean(SettingKey.CLIPBOARD_CLEANER, true),

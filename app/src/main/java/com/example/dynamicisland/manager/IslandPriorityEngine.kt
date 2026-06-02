@@ -120,8 +120,13 @@ object IslandPriorityEngine {
             return PriorityResult(IslandState.TYPE_0_RING, currentWeather, null, true)
         }
 
-        // 10. DEFAULT IDLE (Camera Cutout Ring)
-        return PriorityResult(IslandState.TYPE_0_RING, null, null, true)
+        // 10. DEFAULT IDLE (Nav Island / Camera Cutout Ring)
+        return if (settings.navIslandMode) {
+             // 🌓 NAV ISLAND PILLAR: Persistent App Launcher when idle
+             PriorityResult(IslandState.TYPE_1_MINI, LiveActivityModel.Dashboard(pinnedApps = settings.pinnedApps.toList()), null, false)
+        } else {
+             PriorityResult(IslandState.TYPE_0_RING, null, null, true)
+        }
     }
 
     private fun constrainState(

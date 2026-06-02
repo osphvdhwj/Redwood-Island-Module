@@ -165,6 +165,12 @@ class SystemUIA15Hooks {
                             settings.navIslandMode -> (Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
                             else -> (Gravity.TOP or Gravity.CENTER_HORIZONTAL)
                         }
+                        
+                        // 📏 NAV ISLAND: Attached vs Floating
+                        if (settings.navIslandMode && !settings.liveBridgeEnabled) {
+                            y = if (settings.isNavIslandFloating) (32 * density).toInt() else 0
+                        }
+                        
                         title = "RedwoodDynamicIsland"
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS

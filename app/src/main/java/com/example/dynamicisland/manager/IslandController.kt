@@ -104,6 +104,15 @@ class IslandController @Inject constructor(
             networkMonitor.startMonitoring(scope) { speed -> }
         } else networkMonitor.stopMonitoring()
 
+        islandView?.let { v ->
+            val targetY = if (state.navIslandMode) 32f else 48f
+            v.ringY.value = targetY
+            v.miniY.value = targetY
+            v.midY.value = targetY
+            v.maxY.value = targetY
+            v.cubeY.value = targetY
+        }
+
         evaluatePriority()
     }
     
@@ -170,6 +179,7 @@ class IslandController @Inject constructor(
     private var _lastIslandState = IslandState.TYPE_0_RING
     private var _lastActiveModel: LiveActivityModel? = null
     private var _lastSplitModel: LiveActivityModel? = null
+    private var moduleIndex = 0 // 🌓 NAV ISLAND: Current selected module index
 
     private var currentCall: LiveActivityModel.Call? = null
     private var currentMedia: LiveActivityModel.Music? = null
@@ -366,8 +376,34 @@ class IslandController @Inject constructor(
             settings = settingsState
         )
 
-        // Visibility Filter for Ring
         var finalState = result.islandState
+        var finalActiveModel = result.activeModel
+        var finalSplitModel = result.splitModel
+
+        // 🌓 NAV ISLAND: Module Cycle Override
+        if (settingsState.navIslandMode && moduleIndex != 0) {
+            val available = mutableListOf<LiveActivityModel>()
+            // Base Idle Launcher
+            available.add(LiveActivityModel.Dashboard(pinnedApps = settingsState.pinnedApps.toList()))
+            // Active Media
+            currentMedia?.let { if (mediaManager.isMediaEnabled) available.add(it) }
+            // Active Call
+            currentCall?.let { available.add(it) }
+            // Active Alerts
+            transientModel?.let { available.add(it) }
+
+            if (available.size > 1) {
+                val idx = abs(moduleIndex) % available.size
+                finalActiveModel = available[idx]
+                finalState = when (finalActiveModel) {
+                     is LiveActivityModel.Music -> IslandState.TYPE_2_MID
+                     is LiveActivityModel.Call -> IslandState.TYPE_2_MID
+                     is LiveActivityModel.Dashboard -> IslandState.TYPE_1_MINI
+                     else -> IslandState.TYPE_2_MID
+                }
+            }
+        }
+
         if (finalState == IslandState.TYPE_0_RING) {
             val isRingAllowed = when {
                 currentMedia != null -> settingsState.ringMediaVisible
@@ -377,14 +413,14 @@ class IslandController @Inject constructor(
             if (!isRingAllowed) finalState = IslandState.HIDDEN
         }
 
-        if (finalState == _lastIslandState && result.activeModel == _lastActiveModel && result.splitModel == _lastSplitModel) return
+        if (finalState == _lastIslandState && finalActiveModel == _lastActiveModel && finalSplitModel == _lastSplitModel) return
 
         userForceCollapsed = result.userForceCollapsed
         _lastIslandState = finalState
-        _lastActiveModel = result.activeModel
-        _lastSplitModel = result.splitModel
+        _lastActiveModel = finalActiveModel
+        _lastSplitModel = finalSplitModel
 
-        eventBus.emit(IslandIntent.SyncState(finalState, result.activeModel, result.splitModel))
+        eventBus.emit(IslandIntent.SyncState(finalState, finalActiveModel, finalSplitModel))
         triggerTransitionHaptic(finalState)
         updateWindowHeight(finalState)
     }
@@ -518,6 +554,19 @@ class IslandController @Inject constructor(
             }
         }
 
+        if (settingsState.navIslandMode && gesture == IslandGesture.LONG_PRESS) {
+            return "OPEN_DASHBOARD"
+        }
+
+        // 📏 NAV ISLAND: Swipe Up to FLOAT
+        if (settingsState.navIslandMode && !settingsState.isNavIslandFloating && gesture == IslandGesture.SWIPE_UP) {
+             return "NAV_ISLAND_FLOAT"
+        }
+
+        if (settingsState.navIslandMode && (gesture == IslandGesture.SWIPE_LEFT || gesture == IslandGesture.SWIPE_RIGHT)) {
+            return if (gesture == IslandGesture.SWIPE_LEFT) "CYCLE_PREV" else "CYCLE_NEXT"
+        }
+
         if (settingsState.navIslandMode && settingsState.oneHandModeEnabled && gesture == IslandGesture.SWIPE_DOWN) {
             return "TRIGGER_ONE_HAND_MODE"
         }
@@ -569,7 +618,11 @@ class IslandController @Inject constructor(
                 }
                 if (pkg != null) actionManager.launchAppIntent(pkg, true) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() }
             }
-            "FORCE_DISMISS" -> { userForceCollapsed = true; _lastIslandState = IslandState.HIDDEN; evaluatePriority() }
+            "FORCE_DISMISS" -> { 
+                userForceCollapsed = true; _lastIslandState = IslandState.HIDDEN; 
+                if (settingsState.navIslandMode) actionManager.exitOneHandMode()
+                evaluatePriority() 
+            }
             "LAUNCH_SETTINGS" -> actionManager.launchAppIntent("com.android.settings", false) { userForceCollapsed = true; _lastIslandState = IslandState.TYPE_0_RING; evaluatePriority() }
             "SEND_REPLY" -> {
                 val stack = _lastActiveModel as? LiveActivityModel.NotificationStack ?: return
@@ -590,6 +643,12 @@ class IslandController @Inject constructor(
             }
             "TRIGGER_ONE_HAND_MODE" -> {
                 actionManager.triggerOneHandMode()
+            }
+            "CYCLE_NEXT" -> { moduleIndex++; evaluatePriority() }
+            "CYCLE_PREV" -> { moduleIndex--; evaluatePriority() }
+            "NAV_ISLAND_FLOAT" -> {
+                settingsManager.putBoolean(SettingsManager.SettingKey.IS_NAV_ISLAND_FLOATING, true)
+                loadAndApplySettings()
             }
         }
     }

@@ -78,24 +78,30 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
                 val strokeW = ringThickness.value.dp.toPx()
 
                 if (settings.navIslandMode) {
-                    // 🌓 NAV ISLAND PILLAR: Horizontal Battery length/color visualization
+                    // 🌓 NAV ISLAND PILLAR: Hooked to Android Nav Pill
                     val fillWidth = size.width * currentProgress.coerceIn(0f, 1f)
-                    val barHeight = 8.dp.toPx()
+                    
+                    // Adjust dimensions based on whether we are resting (attached) or floating
+                    val barHeight = if (settings.isNavIslandFloating) 8.dp.toPx() else 4.dp.toPx()
+                    val barWidth = if (settings.isNavIslandFloating) size.width else (size.width * 0.4f).coerceAtLeast(72.dp.toPx())
                     val cornerR = barHeight / 2
                     
-                    // Background Bar
+                    val xOffset = (size.width - barWidth) / 2
+                    val yOffset = size.height - barHeight - (if (settings.isNavIslandFloating) 0f else 8.dp.toPx())
+
+                    // Background Bar (Subtle)
                     drawRoundRect(
-                        color = Color.White.copy(alpha = 0.1f),
-                        topLeft = Offset(0f, size.height - barHeight),
-                        size = androidx.compose.ui.geometry.Size(size.width, barHeight),
+                        color = Color.White.copy(alpha = 0.2f),
+                        topLeft = Offset(xOffset, yOffset),
+                        size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerR, cornerR)
                     )
                     
-                    // Foreground Battery Fill
+                    // Foreground Battery Fill (With Dynamic Colors)
                     drawRoundRect(
-                        brush = Brush.horizontalGradient(listOf(baseColor, baseColor.copy(alpha = 0.6f))),
-                        topLeft = Offset(0f, size.height - barHeight),
-                        size = androidx.compose.ui.geometry.Size(fillWidth, barHeight),
+                        brush = Brush.horizontalGradient(listOf(baseColor, baseColor.copy(alpha = 0.7f))),
+                        topLeft = Offset(xOffset, yOffset),
+                        size = androidx.compose.ui.geometry.Size(fillWidth.coerceAtMost(barWidth), barHeight),
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerR, cornerR)
                     )
                 } else {

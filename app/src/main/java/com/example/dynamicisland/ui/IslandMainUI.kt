@@ -66,6 +66,7 @@ import com.example.dynamicisland.ui.animations.IslandUiState
 import com.example.dynamicisland.ui.animations.updateIslandTransition
 import androidx.compose.foundation.Canvas
 import com.example.dynamicisland.ui.design.geminiAura
+import com.example.dynamicisland.ui.design.BottomAuraPanel
 
 import com.example.dynamicisland.performance.metaballFluid
 
@@ -106,7 +107,9 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         targetState = uiState,
         isCyberpunk = isCyberpunk,
         physicsStyle = settings.physicsStyle,
-        miniWidth = if (state == IslandState.TYPE_2_MID) view.midW.value else if (state == IslandState.TYPE_CUBE) view.cubeW.value else view.miniW.value,
+        miniWidth = if (state == IslandState.TYPE_2_MID) view.midW.value else if (state == IslandState.TYPE_CUBE) view.cubeW.value else {
+             if (settings.navIslandMode && model is LiveActivityModel.Dashboard) 280f else view.miniW.value
+        },
         miniHeight = if (state == IslandState.TYPE_2_MID) view.midH.value else if (state == IslandState.TYPE_CUBE) view.cubeH.value else view.miniH.value,
         maxWidth = view.maxW.value,
         maxHeight = if (view.activeModel.value is LiveActivityModel.Music) (view.maxH.value * 0.70f) else view.maxH.value,
@@ -268,6 +271,10 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                 } else if (dragOffsetY < -40f) {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     view.onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
+                                } else if (abs(dragOffsetX) > 60f) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    if (dragOffsetX > 0) view.onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT)
+                                    else view.onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
                                 }
                                 scope.launch { view.elasticScale.animateTo(1f, spring(dampingRatio = 0.55f, stiffness = 300f)) }
                             },
@@ -395,6 +402,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                         is LiveActivityModel.Music -> MusicMini(model)
                                         is LiveActivityModel.General -> GeneralMini(model)
                                         is LiveActivityModel.HardwareMonitor -> HardwareGaugeMini(model)
+                                        is LiveActivityModel.Dashboard -> if (settings.navIslandMode) NavLauncherMini(model) else {}
                                         else -> {} 
                                     } 
                                 }
@@ -418,6 +426,11 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                     }
                 }
                 if (state == IslandState.TYPE_0_RING) { RingUI(model) }
+
+                // 🌓 NAV ISLAND PILLAR: Bottom Gemini Aura Panel
+                if (settings.navIslandMode && settings.geminiAuraEnabled && (model?.id?.contains("assistant") == true || model?.id?.contains("ai") == true)) {
+                    BottomAuraPanel()
+                }
 
                 // 📎 Clipboard Paperclip Indicator
                 if (settings.enableClipboardPaperclip && view.clipboardStashCount.intValue > 0 && state != IslandState.HIDDEN) {

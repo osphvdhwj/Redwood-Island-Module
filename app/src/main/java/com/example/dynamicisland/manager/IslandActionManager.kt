@@ -157,4 +157,11 @@ class IslandActionManager(
              } catch(e2: Exception) {}
         }
     }
+
+    fun exitOneHandMode() {
+        try {
+            Runtime.getRuntime().exec("cmd onehanded stop")
+            context.sendBroadcast(Intent("com.android.systemui.action.STOP_ONE_HANDED_MODE").setPackage("com.android.systemui"))
+        } catch (e: Exception) {}
+    }
 }
