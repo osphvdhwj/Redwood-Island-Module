@@ -44,6 +44,8 @@ class SettingsManager(private val context: Context) {
 
         // Dual-Mode (Pillar 1)
         LIVE_BRIDGE_ENABLED, MAGNETIC_EDGE_DOCKING,
+        NAV_ISLAND_MODE, ONE_HAND_MODE_ENABLED,
+        NAV_ISLAND_BATTERY_COLORING,
 
         // Aura & Typography (Pillar 2)
         GEMINI_AURA_ENABLED, ROLLING_TYPOGRAPHY_ENABLED,
@@ -209,6 +211,9 @@ class SettingsManager(private val context: Context) {
             enableMetaballTear = getBoolean(SettingKey.ENABLE_METABALL_TEAR, true),
             liveBridgeEnabled = getBoolean(SettingKey.LIVE_BRIDGE_ENABLED, false),
             magneticEdgeDocking = getBoolean(SettingKey.MAGNETIC_EDGE_DOCKING, true),
+            navIslandMode = getBoolean(SettingKey.NAV_ISLAND_MODE, false),
+            oneHandModeEnabled = getBoolean(SettingKey.ONE_HAND_MODE_ENABLED, true),
+            navIslandBatteryColoring = getBoolean(SettingKey.NAV_ISLAND_BATTERY_COLORING, true),
             geminiAuraEnabled = getBoolean(SettingKey.GEMINI_AURA_ENABLED, true),
             rollingTypographyEnabled = getBoolean(SettingKey.ROLLING_TYPOGRAPHY_ENABLED, true),
             parseDeliveryNotifications = getBoolean(SettingKey.PARSE_DELIVERY_NOTIFICATIONS, true),

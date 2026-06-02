@@ -52,6 +52,22 @@ fun AppearanceScreen(viewModel: SettingsViewModel) {
         }
 
         SettingsCategoryHeader("Visual Surfaces")
+        SettingsSwitch(
+            title = "Nav Island Mode",
+            description = "Anchor the interface to the bottom of the screen.",
+            icon = Icons.Default.VerticalAlignBottom,
+            checked = state.navIslandMode,
+            onCheckedChange = { viewModel.updateSetting(SettingKey.NAV_ISLAND_MODE, it) }
+        )
+        if (state.navIslandMode) {
+            SettingsSwitch(
+                title = "One-Hand Mode Integration",
+                description = "Swipe down on the bottom pill to trigger system one-hand mode.",
+                icon = Icons.Default.BackHand,
+                checked = state.oneHandModeEnabled,
+                onCheckedChange = { viewModel.updateSetting(SettingKey.ONE_HAND_MODE_ENABLED, it) }
+            )
+        }
         SettingsChoiceChip("Aesthetic Mode", state.aestheticStyle.name, listOf("GLASS", "VOID_BLACK")) {
             viewModel.updateSetting(SettingKey.AESTHETIC_STYLE, it)
         }

@@ -160,7 +160,11 @@ class SystemUIA15Hooks {
                                 WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                         PixelFormat.TRANSLUCENT
                     ).apply {
-                        gravity = if (settings.liveBridgeEnabled) Gravity.CENTER else (Gravity.TOP or Gravity.CENTER_HORIZONTAL)
+                        gravity = when {
+                            settings.liveBridgeEnabled -> Gravity.CENTER
+                            settings.navIslandMode -> (Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+                            else -> (Gravity.TOP or Gravity.CENTER_HORIZONTAL)
+                        }
                         title = "RedwoodDynamicIsland"
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS

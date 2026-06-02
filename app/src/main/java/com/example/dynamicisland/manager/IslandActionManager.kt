@@ -139,4 +139,22 @@ class IslandActionManager(
             }
         }
     }
+
+    fun triggerOneHandMode() {
+        try {
+            // Attempt to trigger AOSP One-Handed mode via reflection
+            val shellClazz = Class.forName("com.android.wm.shell.onehanded.OneHandedController")
+            // This usually requires a reference to the singleton, which we'd get from a hook
+            // Fallback: Trigger via system shortcut intent or broadcast
+            context.sendBroadcast(Intent("com.android.systemui.action.TOGGLE_ONE_HANDED_MODE").setPackage("com.android.systemui"))
+            
+            // Second Fallback: Shell command (as we are in SU context potentially or SystemUI)
+            Runtime.getRuntime().exec("cmd onehanded start")
+        } catch (e: Exception) {
+             // Third Fallback: MIUI specific if detected
+             try {
+                 context.sendBroadcast(Intent("com.miui.action.ONE_HANDED_MODE").setPackage("com.android.systemui"))
+             } catch(e2: Exception) {}
+        }
+    }
 }

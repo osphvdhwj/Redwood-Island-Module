@@ -404,9 +404,9 @@ class IslandController @Inject constructor(
         val isInteractive = when (state) {
             IslandState.TYPE_2_MID, IslandState.TYPE_3_MAX, IslandState.TYPE_CUBE, IslandState.TYPE_SPLIT -> true
             else -> false
-        } || (islandView?.calibrationMode?.value == true)
+        } || (islandView?.calibrationMode?.value == true) || settingsState.liveBridgeEnabled
         
-        val newFlags = if (isInteractive) {
+        val newFlags = if (isInteractive && state != IslandState.HIDDEN) {
              wp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
         } else {
              val settings = settingsState
@@ -518,6 +518,10 @@ class IslandController @Inject constructor(
             }
         }
 
+        if (settingsState.navIslandMode && settingsState.oneHandModeEnabled && gesture == IslandGesture.SWIPE_DOWN) {
+            return "TRIGGER_ONE_HAND_MODE"
+        }
+
         if (settingsState.freeformLaunchEnabled && settingsState.freeformSmartGesture && gesture == IslandGesture.SWIPE_DOWN) {
             return "OPEN_FREEFORM_APP"
         }
@@ -584,6 +588,9 @@ class IslandController @Inject constructor(
                     } catch (e: Exception) {}
                 }
             }
+            "TRIGGER_ONE_HAND_MODE" -> {
+                actionManager.triggerOneHandMode()
+            }
         }
     }
 
@@ -600,7 +607,10 @@ class IslandController @Inject constructor(
         if (isSystemProcess) {
             weatherManager.startPolling()
             connectivityManager.startListening()
-            locationManager.startMonitoring(scope) { geo -> }
+            locationManager.startMonitoring(scope) { geofence ->
+                 android.util.Log.d("IslandController", "📍 Geofence changed: $geofence")
+                 evaluatePriority() // Refresh Island based on new location context
+            }
             backupManager.performAutoBackup()
             scope.launch {
                 storageManager.stashHistory.collect { list ->

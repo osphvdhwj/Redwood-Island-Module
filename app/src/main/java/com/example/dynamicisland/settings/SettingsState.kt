@@ -43,6 +43,9 @@ data class SettingsState(
     // Dual-Mode Architecture (Pillar 1)
     val liveBridgeEnabled: Boolean = false,
     val magneticEdgeDocking: Boolean = true,
+    val navIslandMode: Boolean = false,
+    val oneHandModeEnabled: Boolean = true,
+    val navIslandBatteryColoring: Boolean = true,
 
     // Advanced Visuals (Pillar 2)
     val geminiAuraEnabled: Boolean = true,

@@ -76,49 +76,74 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
                 }
 
                 val strokeW = ringThickness.value.dp.toPx()
-                val inset = strokeW / 2
-                val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
-                val arcTopLeft = Offset(inset, inset)
-                val progressPercent = currentProgress.coerceIn(0f, 1f)
 
-                // Background Ring
-                drawArc(
-                    color = Color.White.copy(alpha = 0.1f),
-                    startAngle = 0f,
-                    sweepAngle = 360f,
-                    useCenter = false,
-                    topLeft = arcTopLeft,
-                    size = arcSize,
-                    style = Stroke(strokeW)
-                )
+                if (settings.navIslandMode) {
+                    // 🌓 NAV ISLAND PILLAR: Horizontal Battery length/color visualization
+                    val fillWidth = size.width * currentProgress.coerceIn(0f, 1f)
+                    val barHeight = 8.dp.toPx()
+                    val cornerR = barHeight / 2
+                    
+                    // Background Bar
+                    drawRoundRect(
+                        color = Color.White.copy(alpha = 0.1f),
+                        topLeft = Offset(0f, size.height - barHeight),
+                        size = androidx.compose.ui.geometry.Size(size.width, barHeight),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerR, cornerR)
+                    )
+                    
+                    // Foreground Battery Fill
+                    drawRoundRect(
+                        brush = Brush.horizontalGradient(listOf(baseColor, baseColor.copy(alpha = 0.6f))),
+                        topLeft = Offset(0f, size.height - barHeight),
+                        size = androidx.compose.ui.geometry.Size(fillWidth, barHeight),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerR, cornerR)
+                    )
+                } else {
+                    // Legacy Ring Mode
+                    val inset = strokeW / 2
+                    val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
+                    val arcTopLeft = Offset(inset, inset)
+                    val progressPercent = currentProgress.coerceIn(0f, 1f)
 
-                // Progress Arc
-                if (progressPercent > 0.01f) {
+                    // Background Ring
                     drawArc(
-                        color = baseColor,
-                        startAngle = -90f,
-                        sweepAngle = 360f * progressPercent,
+                        color = Color.White.copy(alpha = 0.1f),
+                        startAngle = 0f,
+                        sweepAngle = 360f,
                         useCenter = false,
                         topLeft = arcTopLeft,
                         size = arcSize,
-                        style = Stroke(strokeW, cap = StrokeCap.Round)
+                        style = Stroke(strokeW)
                     )
-                }
 
-                // Laser Style Border
-                if (pulseStyle == RingPulseStyle.LASER) {
-                    drawArc(
-                        brush = Brush.sweepGradient(
-                            colors = listOf(baseColor, Color.Transparent, baseColor),
-                            center = center
-                        ),
-                        startAngle = laserRotation,
-                        sweepAngle = 90f,
-                        useCenter = false,
-                        topLeft = arcTopLeft,
-                        size = arcSize,
-                        style = Stroke(strokeW * 1.5f, cap = StrokeCap.Round)
-                    )
+                    // Progress Arc
+                    if (progressPercent > 0.01f) {
+                        drawArc(
+                            color = baseColor,
+                            startAngle = -90f,
+                            sweepAngle = 360f * progressPercent,
+                            useCenter = false,
+                            topLeft = arcTopLeft,
+                            size = arcSize,
+                            style = Stroke(strokeW, cap = StrokeCap.Round)
+                        )
+                    }
+
+                    // Laser Style Border
+                    if (pulseStyle == RingPulseStyle.LASER) {
+                        drawArc(
+                            brush = Brush.sweepGradient(
+                                colors = listOf(baseColor, Color.Transparent, baseColor),
+                                center = center
+                            ),
+                            startAngle = laserRotation,
+                            sweepAngle = 90f,
+                            useCenter = false,
+                            topLeft = arcTopLeft,
+                            size = arcSize,
+                            style = Stroke(strokeW * 1.5f, cap = StrokeCap.Round)
+                        )
+                    }
                 }
             }
         }
