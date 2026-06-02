@@ -38,7 +38,9 @@ object BatteryPlugin {
                 lastLevel = percent
                 
                 val wattage = calculateWattage()
-                onBatteryChanged?.invoke(percent, isCharging, getBatteryColor(percent), wattage)
+                scope.launch(Dispatchers.Main) {
+                    onBatteryChanged?.invoke(percent, isCharging, getBatteryColor(percent), wattage)
+                }
                 
                 managePollingJob(isCharging)
             }
@@ -52,7 +54,9 @@ object BatteryPlugin {
                     delay(3000) 
                     val wattage = calculateWattage()
                     lastLevel?.let { level ->
-                        onBatteryChanged?.invoke(level, true, getBatteryColor(level), wattage)
+                        withContext(Dispatchers.Main) {
+                            onBatteryChanged?.invoke(level, true, getBatteryColor(level), wattage)
+                        }
                     }
                 }
             }

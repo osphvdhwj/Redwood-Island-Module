@@ -1,6 +1,7 @@
 package com.example.dynamicisland.manager
 
 import android.content.Context
+import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.io.File
 import javax.inject.Inject
@@ -17,6 +18,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 class IslandNeuralCore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val weightsFile = File(context.filesDir, "neural_weights.json")
     private var weights = JSONObject()
 
@@ -31,7 +33,12 @@ class IslandNeuralCore @Inject constructor(
     }
 
     private fun saveWeights() {
-        try { weightsFile.writeText(weights.toString(2)) } catch (e: Exception) {}
+        scope.launch {
+            try {
+                val data = weights.toString(2)
+                weightsFile.writeText(data)
+            } catch (e: Exception) {}
+        }
     }
 
     /**

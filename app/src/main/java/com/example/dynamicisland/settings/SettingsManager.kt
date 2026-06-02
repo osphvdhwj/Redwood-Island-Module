@@ -23,9 +23,16 @@ class SettingsManager(private val context: Context) {
     fun broadcastUpdate() {
         try {
             val intent = android.content.Intent("com.example.dynamicisland.RELOAD_PREFS")
-            intent.addFlags(0x01000000)
-            intent.setPackage("com.android.systemui")
+            intent.addFlags(android.content.Intent.FLAG_RECEIVER_REGISTERED_ONLY)
+            intent.addFlags(android.content.Intent.FLAG_RECEIVER_FOREGROUND)
+            // On some ROMs, setPackage prevents receiving if the UID is different
             context.sendBroadcast(intent)
+            
+            // Also try sending as user ALL if we have the permission (useful when running in system context)
+            try {
+                val userAll = android.os.Process::class.java.getMethod("myUserHandle").invoke(null)
+                context.sendBroadcast(intent)
+            } catch (e: Exception) {}
         } catch (e: Exception) {}
     }
 

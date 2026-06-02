@@ -105,7 +105,10 @@ class IslandController @Inject constructor(
         } else networkMonitor.stopMonitoring()
 
         islandView?.let { v ->
-            val targetY = if (state.navIslandMode) 32f else 48f
+            val targetY = if (settingsState.navIslandMode) {
+                if (settingsState.isNavIslandFloating) 32f else 0f
+            } else 48f
+            
             v.ringY.value = targetY
             v.miniY.value = targetY
             v.midY.value = targetY
@@ -185,9 +188,7 @@ class IslandController @Inject constructor(
     private var currentMedia: LiveActivityModel.Music? = null
     private var currentWeather: LiveActivityModel.WeatherMood? = null
     var currentHardware: LiveActivityModel.HardwareMonitor? = null
-    private var transientModel: LiveActivityModel? = null
 
-    private var transientJob: Job? = null
     private var userForceCollapsed = false
     private var wasCharging = false
     private var topAppPackage = ""
@@ -232,8 +233,16 @@ class IslandController @Inject constructor(
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                Intent.ACTION_SCREEN_OFF -> { mediaManager.isScreenOn = false; hardwareMonitor.isScreenOn = false }
-                Intent.ACTION_SCREEN_ON -> { mediaManager.isScreenOn = true; hardwareMonitor.isScreenOn = true; evaluatePriority() }
+                Intent.ACTION_SCREEN_OFF -> { 
+                    mediaManager.isScreenOn = false
+                    hardwareMonitor.isScreenOn = false
+                    evaluatePriority() // Hide the Island
+                }
+                Intent.ACTION_SCREEN_ON -> { 
+                    mediaManager.isScreenOn = true
+                    hardwareMonitor.isScreenOn = true
+                    evaluatePriority() 
+                }
             }
         }
     }
@@ -331,25 +340,21 @@ class IslandController @Inject constructor(
             updateWindowHeight(IslandState.HIDDEN)
             return
         }
+
+        // 💤 SCREEN OFF / AOD CHECK
+        if (!mediaManager.isScreenOn && !settingsState.islandOnLockscreen) {
+            _lastIslandState = IslandState.HIDDEN
+            eventBus.emit(IslandIntent.SyncState(IslandState.HIDDEN, null, null))
+            updateWindowHeight(IslandState.HIDDEN)
+            return
+        }
         
         if (islandView?.calibrationMode?.value == true) { updateWindowHeight(IslandState.TYPE_2_MID); return }
 
-        // 🛡️ ULTIMATE PRIVACY & CONTEXT CHECKS
-        if (isSystemRecording && settingsState.hideOnScreenRecord) {
-            _lastIslandState = IslandState.HIDDEN
-            eventBus.emit(IslandIntent.SyncState(IslandState.HIDDEN, null, null))
-            updateWindowHeight(IslandState.HIDDEN)
-            return
-        }
-
-        if (isScreenshotActive && settingsState.hideOnScreenshot) {
-            _lastIslandState = IslandState.HIDDEN
-            eventBus.emit(IslandIntent.SyncState(IslandState.HIDDEN, null, null))
-            updateWindowHeight(IslandState.HIDDEN)
-            return
-        }
-
-        if (settingsState.hideIslandPerApp.contains(topAppPackage)) {
+        // 🛡️ ULTIMATE PRIVACY & CONTEXT OVERRIDES
+        if ((isSystemRecording && settingsState.hideOnScreenRecord) || 
+            (isScreenshotActive && settingsState.hideOnScreenshot) || 
+            settingsState.hideIslandPerApp.contains(topAppPackage)) {
             _lastIslandState = IslandState.HIDDEN
             eventBus.emit(IslandIntent.SyncState(IslandState.HIDDEN, null, null))
             updateWindowHeight(IslandState.HIDDEN)
@@ -358,7 +363,8 @@ class IslandController @Inject constructor(
 
         // 🎯 FOCUS MODE FILTER
         if (settingsState.enableFocusMode && settingsState.productiveApps.contains(topAppPackage)) {
-             if (transientModel != null && !transientModel!!.isCritical && currentCall == null) {
+             // Only break focus for calls or extremely high priority (manual check for now)
+             if (currentCall == null) {
                   _lastIslandState = IslandState.TYPE_0_RING
                   eventBus.emit(IslandIntent.SyncState(IslandState.TYPE_0_RING, null, null))
                   updateWindowHeight(IslandState.TYPE_0_RING)
@@ -366,43 +372,26 @@ class IslandController @Inject constructor(
              }
         }
 
-        val result = IslandPriorityEngine.evaluatePriority(
-            context = context, windowManager = windowManager, topAppPackage = topAppPackage,
-            isPanelExpanded = isPanelExpanded, currentCall = currentCall, transientModel = transientModel,
-            activeExternalActivity = activeExternalActivities.values.firstOrNull(),
-            currentMedia = currentMedia, currentHardware = currentHardware, currentWeather = currentWeather,
-            isMediaEnabled = mediaManager.isMediaEnabled, userForceCollapsed = userForceCollapsed,
-            currentActiveModel = _lastActiveModel, currentVisualState = _lastIslandState,
-            settings = settingsState
+        // 🧠 SYNC ENGINE CONTEXT
+        val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        IslandPriorityEngineV2.updateContext(
+            gaming = currentHardware?.isGamingModeOn == true || topAppPackage.contains("game"),
+            panelExpanded = isPanelExpanded,
+            landscape = isLandscape,
+            navMode = settingsState.navIslandMode,
+            pinned = settingsState.pinnedApps.toList(),
+            mIndex = moduleIndex
         )
 
+        // SYNC EVENTS
+        currentCall?.let { IslandPriorityEngineV2.post(IslandPriorityEngineV2.buildCallEvent(it)) } ?: IslandPriorityEngineV2.dismiss("sys_call")
+        currentMedia?.let { if (mediaManager.isMediaEnabled) IslandPriorityEngineV2.post(IslandPriorityEngineV2.buildMusicEvent(it)) } ?: IslandPriorityEngineV2.dismiss("media_main")
+        
+        // EVALUATE
+        val result = IslandPriorityEngineV2.evaluate()
         var finalState = result.islandState
-        var finalActiveModel = result.activeModel
-        var finalSplitModel = result.splitModel
-
-        // 🌓 NAV ISLAND: Module Cycle Override
-        if (settingsState.navIslandMode && moduleIndex != 0) {
-            val available = mutableListOf<LiveActivityModel>()
-            // Base Idle Launcher
-            available.add(LiveActivityModel.Dashboard(pinnedApps = settingsState.pinnedApps.toList()))
-            // Active Media
-            currentMedia?.let { if (mediaManager.isMediaEnabled) available.add(it) }
-            // Active Call
-            currentCall?.let { available.add(it) }
-            // Active Alerts
-            transientModel?.let { available.add(it) }
-
-            if (available.size > 1) {
-                val idx = abs(moduleIndex) % available.size
-                finalActiveModel = available[idx]
-                finalState = when (finalActiveModel) {
-                     is LiveActivityModel.Music -> IslandState.TYPE_2_MID
-                     is LiveActivityModel.Call -> IslandState.TYPE_2_MID
-                     is LiveActivityModel.Dashboard -> IslandState.TYPE_1_MINI
-                     else -> IslandState.TYPE_2_MID
-                }
-            }
-        }
+        var finalActiveModel = result.winningEvent?.model
+        var finalSplitModel = result.splitEvent?.model
 
         if (finalState == IslandState.TYPE_0_RING) {
             val isRingAllowed = when {
@@ -415,7 +404,6 @@ class IslandController @Inject constructor(
 
         if (finalState == _lastIslandState && finalActiveModel == _lastActiveModel && finalSplitModel == _lastSplitModel) return
 
-        userForceCollapsed = result.userForceCollapsed
         _lastIslandState = finalState
         _lastActiveModel = finalActiveModel
         _lastSplitModel = finalSplitModel
@@ -460,6 +448,8 @@ class IslandController @Inject constructor(
     }
 
     var windowParams: WindowManager.LayoutParams? = null
+
+    private var currentViewSyncJob: Job? = null
 
     fun createIslandView(wm: WindowManager, params: WindowManager.LayoutParams?): android.view.View {
         val moduleContext = try { context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) } catch (e: Exception) { context }
@@ -513,17 +503,32 @@ class IslandController @Inject constructor(
             }
         }
 
-        scope.launch {
+        currentViewSyncJob?.cancel()
+        currentViewSyncJob = scope.launch {
             eventBus.intents.collect { intent ->
                 if (intent is IslandIntent.SyncState) {
                     view.islandState.value = intent.state
                     view.activeModel.value = intent.activeModel
                     view.splitModel.value = intent.splitModel
                     mediaManager.isIslandVisible = intent.state != IslandState.HIDDEN && intent.state != IslandState.TYPE_0_RING
+                    hardwareMonitor.isDashboardOpen = intent.state == IslandState.TYPE_3_MAX
                 }
             }
         }
         return view
+    }
+
+    fun destroy() {
+        try {
+            context.unregisterReceiver(screenStateReceiver)
+            context.unregisterReceiver(ecosystemReceiver)
+            context.unregisterComponentCallbacks(componentCallbacks)
+            callManager.destroy()
+            mediaManager.stop()
+            networkMonitor.stopMonitoring()
+            BatteryPlugin.stop(context)
+            scope.cancel()
+        } catch (e: Exception) {}
     }
 
     private fun evaluateSmartGesture(gesture: IslandGesture): String? {
@@ -655,9 +660,20 @@ class IslandController @Inject constructor(
 
     internal fun postTransientNotification(model: LiveActivityModel, durationMs: Long = 5000L) {
         if (!isSystemProcess) return
-        triggerTransitionHaptic(_lastIslandState)
-        transientJob?.cancel(); transientModel = model; evaluatePriority()
-        transientJob = scope.launch { delay(durationMs); transientModel = null; evaluatePriority() }
+        
+        val event = when (model) {
+            is LiveActivityModel.SystemAlert -> IslandPriorityEngineV2.buildAlertEvent(model)
+            is LiveActivityModel.OngoingTask -> IslandPriorityEngineV2.buildDownloadEvent(model)
+            is LiveActivityModel.General -> {
+                if (model.id.contains("connectivity")) IslandPriorityEngineV2.buildConnectivityEvent(model)
+                else IslandPriorityEngineV2.buildHardwareToggleEvent(model)
+            }
+            is LiveActivityModel.Charging -> IslandPriorityEngineV2.buildChargingEvent(model)
+            else -> IslandPriorityEngineV2.IslandEvent(model.id, model, 1000f, ttlMs = durationMs, targetState = IslandState.TYPE_1_MINI)
+        }
+
+        IslandPriorityEngineV2.post(event)
+        evaluatePriority()
     }
 
     init {
@@ -666,6 +682,7 @@ class IslandController @Inject constructor(
         if (isSystemProcess) {
             weatherManager.startPolling()
             connectivityManager.startListening()
+            callManager.startMonitoring()
             locationManager.startMonitoring(scope) { geofence ->
                  android.util.Log.d("IslandController", "📍 Geofence changed: $geofence")
                  evaluatePriority() // Refresh Island based on new location context

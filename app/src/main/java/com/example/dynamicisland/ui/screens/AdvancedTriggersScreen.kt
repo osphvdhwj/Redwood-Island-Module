@@ -181,6 +181,20 @@ fun AdvancedTriggersScreen(prefs: SharedPreferences, viewModel: SettingsViewMode
         }
 
         SettingsCategoryHeader("Performance")
+        SettingsMenuLink(
+            title = "Optimize Battery Usage",
+            description = "Ensure the engine stays active in the background.",
+            icon = Icons.Default.BatteryChargingFull,
+            onClick = {
+                try {
+                    val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, android.net.Uri.parse("package:${context.packageName}"))
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    val intent = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    context.startActivity(intent)
+                }
+            }
+        )
         SettingsSwitch(
             title = "Low-Latency Mode",
             description = "Disable blur and heavy physics for maximum FPS.",

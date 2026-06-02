@@ -53,8 +53,10 @@ class IslandNotificationManager(
                 actions.add(RemoteNotificationAction(action.title.toString(), action.actionIntent, isReply))
             }
 
+            val notificationId = "${packageName}_${title}_${text}".hashCode().toString()
+
             val simpleNotif = SimpleNotification(
-                id = UUID.randomUUID().toString(),
+                id = notificationId,
                 title = title,
                 text = text,
                 timestamp = System.currentTimeMillis(),
@@ -115,7 +117,15 @@ class IslandNotificationManager(
 
             // 📦 FEATURE 4: Smart Coalescing (Stacking)
             val list = notificationMap.getOrPut(packageName) { mutableListOf() }
-            if (list.size > 3) {
+            
+            // 🔄 UPDATE LOGIC: If notification exists, replace it to update timestamp
+            val existingIdx = list.indexOfFirst { it.id == notificationId }
+            if (existingIdx != -1) {
+                val old = list.removeAt(existingIdx)
+                old.avatar?.recycle()
+            }
+            
+            if (list.size >= 3) {
                 val old = list.removeAt(0) // Keep last 3
                 old.avatar?.recycle()
             }
@@ -130,5 +140,21 @@ class IslandNotificationManager(
             )
             onNotificationStackCaught(stack)
         }
+    }
+
+    fun dismissNotification(packageName: String) {
+        val list = notificationMap[packageName] ?: return
+        list.forEach { it.avatar?.recycle() }
+        notificationMap.remove(packageName)
+        
+        // Emit empty stack to trigger priority re-evaluation
+        onNotificationStackCaught(
+            LiveActivityModel.NotificationStack(
+                id = "stack_$packageName",
+                pkgName = packageName,
+                notifications = emptyList(),
+                totalCount = 0
+            )
+        )
     }
 }

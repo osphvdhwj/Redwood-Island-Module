@@ -23,7 +23,8 @@ data class IslandAnimationValues(
     val xOffset: Float,
     val borderColor: Color,
     val alpha: Float,
-    val scale: Float
+    val scale: Float,
+    val rotation: Float
 )
 
 @Composable
@@ -43,26 +44,15 @@ fun updateIslandTransition(
 ): IslandAnimationValues {
     val transition = updateTransition(targetState = targetState, label = "IslandTransition")
 
-    val damping = if (physicsStyle == PhysicsStyle.OXYGEN_OS) 0.5f else 0.85f
-    val stiffness = if (physicsStyle == PhysicsStyle.OXYGEN_OS) 600f else 300f
+    // 💎 PRO-GRADE PHYSICS: High stiffness, Low damping for "Snap & Bounciness"
+    val damping = if (physicsStyle == PhysicsStyle.OXYGEN_OS) 0.55f else 0.75f
+    val stiffness = if (physicsStyle == PhysicsStyle.OXYGEN_OS) 800f else 450f
 
-    val springSpecDp = spring<Dp>(
-        dampingRatio = damping,
-        stiffness = stiffness
-    )
-    val springSpecFloat = spring<Float>(
-        dampingRatio = damping,
-        stiffness = stiffness
-    )
-    val springSpecColor = spring<Color>(
-        dampingRatio = damping,
-        stiffness = stiffness
-    )
+    val springSpecDp = spring<Dp>(dampingRatio = damping, stiffness = stiffness)
+    val springSpecFloat = spring<Float>(dampingRatio = damping, stiffness = stiffness)
+    val springSpecColor = spring<Color>(dampingRatio = damping, stiffness = stiffness)
 
-    val width by transition.animateDp(
-        transitionSpec = { springSpecDp },
-        label = "width"
-    ) { state ->
+    val width by transition.animateDp(transitionSpec = { springSpecDp }, label = "width") { state ->
         when (state) {
             IslandUiState.COMPACT -> miniWidth.dp
             IslandUiState.MAX_PILL -> maxWidth.dp
@@ -72,10 +62,7 @@ fun updateIslandTransition(
         }
     }
 
-    val height by transition.animateDp(
-        transitionSpec = { springSpecDp },
-        label = "height"
-    ) { state ->
+    val height by transition.animateDp(transitionSpec = { springSpecDp }, label = "height") { state ->
         when (state) {
             IslandUiState.COMPACT -> miniHeight.dp
             IslandUiState.MAX_PILL -> maxHeight.dp
@@ -85,10 +72,7 @@ fun updateIslandTransition(
         }
     }
 
-    val cornerRadius by transition.animateDp(
-        transitionSpec = { springSpecDp },
-        label = "cornerRadius"
-    ) { state ->
+    val cornerRadius by transition.animateDp(transitionSpec = { springSpecDp }, label = "cornerRadius") { state ->
         when (state) {
             IslandUiState.MAX_PILL -> maxRadius.dp
             IslandUiState.NOTIFICATION_RING -> ringRadius.dp
@@ -97,54 +81,35 @@ fun updateIslandTransition(
         }
     }
 
-    val xOffset by transition.animateFloat(
-        transitionSpec = { springSpecFloat },
-        label = "xOffset"
-    ) { state ->
+    val rotation by transition.animateFloat(
+        transitionSpec = { 
+            // 🌀 WOBBLE EFFECT: Overshoot slightly on change
+            keyframes { durationMillis = 400; 0f at 0; 2f at 100; -1f at 250; 0f at 400 }
+        },
+        label = "rotation"
+    ) { 0f }
+
+    val xOffset by transition.animateFloat(transitionSpec = { springSpecFloat }, label = "xOffset") { state ->
         when (state) {
             IslandUiState.SPLIT_PILL -> 24f
             else -> 0f
         }
     }
 
-    val borderColor by transition.animateColor(
-        transitionSpec = { springSpecColor },
-        label = "borderColor"
-    ) { state ->
-        if (state == IslandUiState.NOTIFICATION_RING && isCyberpunk) {
-            Color(0xFF00FFFF)
-        } else {
-            Color.Transparent
-        }
+    val borderColor by transition.animateColor(transitionSpec = { springSpecColor }, label = "borderColor") { state ->
+        if (state == IslandUiState.NOTIFICATION_RING && isCyberpunk) Color(0xFF00FFFF) else Color.Transparent
     }
 
-    val alpha by transition.animateFloat(
-        transitionSpec = { tween(durationMillis = 300) },
-        label = "alpha"
-    ) { state ->
+    val alpha by transition.animateFloat(transitionSpec = { tween(300) }, label = "alpha") { state ->
         if (state == IslandUiState.HIDDEN) 0f else 1f
     }
 
     val scale by transition.animateFloat(
-        transitionSpec = { 
-            if (targetState == IslandUiState.HIDDEN) {
-                tween(durationMillis = 350, easing = FastOutLinearInEasing)
-            } else {
-                springSpecFloat
-            }
-        },
+        transitionSpec = { if (targetState == IslandUiState.HIDDEN) tween(350) else springSpecFloat },
         label = "scale"
     ) { state ->
         if (state == IslandUiState.HIDDEN) 0f else 1f
     }
 
-    return IslandAnimationValues(
-        width = width,
-        height = height,
-        cornerRadius = cornerRadius,
-        xOffset = xOffset,
-        borderColor = borderColor,
-        alpha = alpha,
-        scale = scale
-    )
+    return IslandAnimationValues(width, height, cornerRadius, xOffset, borderColor, alpha, scale, rotation)
 }

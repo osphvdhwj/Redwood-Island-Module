@@ -69,11 +69,18 @@ fun AppPickerScreen(
     var filterType by remember { mutableStateOf("all") }
     val selectedApps = remember { mutableStateListOf<String>().apply { addAll(initialSelection) } }
     
-    val allApps = remember {
-        pm.getInstalledApplications(0)
+    var allApps by remember { mutableStateOf<List<ApplicationInfo>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            allApps = pm.getInstalledApplications(0)
+            isLoading = false
+        }
     }
 
-    val filteredApps = remember(searchQuery, filterType) {
+    val filteredApps = remember(searchQuery, filterType, allApps) {
+        if (isLoading) return@remember emptyList()
         var list = allApps.filter {
             val label = it.loadLabel(pm).toString()
             label.contains(searchQuery, ignoreCase = true) || it.packageName.contains(searchQuery, ignoreCase = true)
@@ -138,18 +145,24 @@ fun AppPickerScreen(
             }
         }
     ) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-            items(filteredApps) { app ->
-                val isSelected = selectedApps.contains(app.packageName)
-                AppItem(
-                    appInfo = app,
-                    isSelected = isSelected,
-                    showCheckbox = isMultiSelect
-                ) { pkg ->
-                    if (isMultiSelect) {
-                        if (isSelected) selectedApps.remove(pkg) else selectedApps.add(pkg)
-                    } else {
-                        onDone(setOf(pkg))
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+                items(filteredApps) { app ->
+                    val isSelected = selectedApps.contains(app.packageName)
+                    AppItem(
+                        appInfo = app,
+                        isSelected = isSelected,
+                        showCheckbox = isMultiSelect
+                    ) { pkg ->
+                        if (isMultiSelect) {
+                            if (isSelected) selectedApps.remove(pkg) else selectedApps.add(pkg)
+                        } else {
+                            onDone(setOf(pkg))
+                        }
                     }
                 }
             }

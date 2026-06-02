@@ -183,28 +183,16 @@ object SystemEventsHook {
         val title = extras.getString(android.app.Notification.EXTRA_TITLE) ?: ""
         val isOngoing = (notification.flags and android.app.Notification.FLAG_ONGOING_EVENT) != 0
 
-        // ── Live activity (ongoing notification with progress) ────────────────
-        if (isOngoing && pkgName != "com.android.systemui" && pkgName != "android") {
-            val now  = System.currentTimeMillis()
-            val last = lastBroadcastMap[pkgName]
-            if (title != (last?.second ?: "") || now - (last?.first ?: 0L) > 1000) {
-                lastBroadcastMap[pkgName] = Pair(now, title)
-
-                val progress    = extras.getInt(android.app.Notification.EXTRA_PROGRESS, -1)
-                val progressMax = extras.getInt(android.app.Notification.EXTRA_PROGRESS_MAX, -1)
-
-                ctx.sendBroadcastAsUser(
-                    Intent("com.example.dynamicisland.LIVE_ACTIVITY_CAUGHT").apply {
-                        setPackage("com.android.systemui")
-                        putExtra("pkg",  pkgName)
-                        putExtra("title", title)
-                        putExtra("text",  text)
-                        if (progress    != -1) putExtra("progress",    progress)
-                        if (progressMax != -1) putExtra("progressMax", progressMax)
-                    },
-                    userAll
-                )
-            }
+        // ── Standard & Live Notifications ──────────────────────────────────
+        if (pkgName != "com.android.systemui" && pkgName != "android") {
+            ctx.sendBroadcastAsUser(
+                Intent("com.example.dynamicisland.NOTIFICATION_CAUGHT").apply {
+                    setPackage("com.android.systemui")
+                    putExtra("pkg", pkgName)
+                    putExtra("notification", notification)
+                },
+                userAll
+            )
         }
 
         // ── OTP extraction (multilingual, context-aware) ──────────────────

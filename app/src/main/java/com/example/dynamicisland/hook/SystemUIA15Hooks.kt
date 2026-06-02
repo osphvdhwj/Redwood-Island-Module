@@ -93,7 +93,9 @@ class SystemUIA15Hooks {
         }
 
         private fun ensureControllerInitialized(context: Context) {
-            if (controller != null) return
+            if (controller != null) {
+                try { controller?.destroy() } catch (e: Exception) {}
+            }
             try {
                 XposedBridge.log("$TAG: Powering up the Island Engine Brain...")
                 val eventBus = IslandEventBus()
@@ -304,10 +306,31 @@ class SystemUIA15Hooks {
                 IslandHookEngine.hookAllMethodsByName(pipelineClass, lpparam.classLoader, "addCollectionListener", object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         val listener = param.args.firstOrNull() ?: return
+                        
+                        // ON ADDED
                         IslandHookEngine.hookAllMethodsByName(listener.javaClass.name, lpparam.classLoader, "onEntryAdded", object : XC_MethodHook() {
                             override fun afterHookedMethod(innerParam: MethodHookParam) {
                                 val entry = innerParam.args.firstOrNull() ?: return
                                 processNativeNotification(entry)
+                            }
+                        })
+
+                        // ON UPDATED (Progress bars, track names, etc)
+                        IslandHookEngine.hookAllMethodsByName(listener.javaClass.name, lpparam.classLoader, "onEntryUpdated", object : XC_MethodHook() {
+                            override fun afterHookedMethod(innerParam: MethodHookParam) {
+                                val entry = innerParam.args.firstOrNull() ?: return
+                                processNativeNotification(entry)
+                            }
+                        })
+
+                        // ON REMOVED (Dismissal)
+                        IslandHookEngine.hookAllMethodsByName(listener.javaClass.name, lpparam.classLoader, "onEntryRemoved", object : XC_MethodHook() {
+                            override fun afterHookedMethod(innerParam: MethodHookParam) {
+                                val entry = innerParam.args.firstOrNull() ?: return
+                                try {
+                                    val sbn = XposedHelpers.callMethod(entry, "getSbn") as android.service.notification.StatusBarNotification
+                                    controller?.notificationManager?.dismissNotification(sbn.packageName)
+                                } catch (e: Exception) {}
                             }
                         })
                     }
