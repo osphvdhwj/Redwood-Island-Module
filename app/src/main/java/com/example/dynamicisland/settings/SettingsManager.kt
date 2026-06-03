@@ -52,10 +52,13 @@ class SettingsManager(private val context: Context) {
         // Dual-Mode (Pillar 1)
         LIVE_BRIDGE_ENABLED, MAGNETIC_EDGE_DOCKING,
         NAV_ISLAND_MODE, IS_NAV_ISLAND_FLOATING, ONE_HAND_MODE_ENABLED,
-        NAV_ISLAND_BATTERY_COLORING,
+        NAV_ISLAND_BATTERY_COLORING, REDWOOD_ENABLED,
+        NAV_ISLAND_DULL_BACKGROUND, NAV_ISLAND_SHOW_PIPE_INDICATOR,
+        NAV_ISLAND_MUSIC_BAR_MORPH, NAV_ISLAND_PANIC_TILE,
 
         // Aura & Typography (Pillar 2)
         GEMINI_AURA_ENABLED, ROLLING_TYPOGRAPHY_ENABLED,
+        THERMAL_THROTTLING_ENABLED,
 
         // Advanced Integrations (Pillar 3)
         PARSE_DELIVERY_NOTIFICATIONS, WARP_CHARGE_ANIMATION,
@@ -115,7 +118,7 @@ class SettingsManager(private val context: Context) {
 
         // Haptics
         HAPTIC_FEEDBACK, HAPTIC_INTENSITY, RING_CADENCE_VIBRATION,
-        HAPTIC_MORSE_ALERTS,
+        HAPTIC_MORSE_ALERTS, SYNC_PULSE_VIBRATION,
 
         // Role Mapping
         ROLE_CALLING_APP, ALLOWED_MUSIC_APPS, ALLOWED_MEDIA_APPS,
@@ -246,8 +249,14 @@ class SettingsManager(private val context: Context) {
             isNavIslandFloating = getBoolean(SettingKey.IS_NAV_ISLAND_FLOATING, false),
             oneHandModeEnabled = getBoolean(SettingKey.ONE_HAND_MODE_ENABLED, true),
             navIslandBatteryColoring = getBoolean(SettingKey.NAV_ISLAND_BATTERY_COLORING, true),
+            redwoodEnabled = getBoolean(SettingKey.REDWOOD_ENABLED, true),
+            navIslandDullBackground = getBoolean(SettingKey.NAV_ISLAND_DULL_BACKGROUND, true),
+            navIslandShowPipeIndicator = getBoolean(SettingKey.NAV_ISLAND_SHOW_PIPE_INDICATOR, true),
+            navIslandMusicBarMorph = getBoolean(SettingKey.NAV_ISLAND_MUSIC_BAR_MORPH, true),
+            navIslandPanicTile = getBoolean(SettingKey.NAV_ISLAND_PANIC_TILE, true),
             geminiAuraEnabled = getBoolean(SettingKey.GEMINI_AURA_ENABLED, true),
             rollingTypographyEnabled = getBoolean(SettingKey.ROLLING_TYPOGRAPHY_ENABLED, true),
+            thermalThrottlingEnabled = getBoolean(SettingKey.THERMAL_THROTTLING_ENABLED, true),
             parseDeliveryNotifications = getBoolean(SettingKey.PARSE_DELIVERY_NOTIFICATIONS, true),
             warpChargeAnimation = getBoolean(SettingKey.WARP_CHARGE_ANIMATION, true),
             batteryAwareAnimation = getBoolean(SettingKey.BATTERY_AWARE_ANIMATION, true),
@@ -336,6 +345,7 @@ class SettingsManager(private val context: Context) {
             hapticIntensity = getFloat(SettingKey.HAPTIC_INTENSITY, 1f),
             ringCadenceVibration = getBoolean(SettingKey.RING_CADENCE_VIBRATION, true),
             hapticMorseAlerts = getBoolean(SettingKey.HAPTIC_MORSE_ALERTS, false),
+            syncPulseVibration = getBoolean(SettingKey.SYNC_PULSE_VIBRATION, false),
             roleCallingApp = getString(SettingKey.ROLE_CALLING_APP, "") ?: "",
             allowedMusicApps = getStringSet(SettingKey.ALLOWED_MUSIC_APPS, emptySet()),
             allowedMediaApps = getStringSet(SettingKey.ALLOWED_MEDIA_APPS, emptySet()),

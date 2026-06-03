@@ -67,7 +67,45 @@ fun AppearanceScreen(viewModel: SettingsViewModel) {
                 checked = state.oneHandModeEnabled,
                 onCheckedChange = { viewModel.updateSetting(SettingKey.ONE_HAND_MODE_ENABLED, it) }
             )
+            SettingsSwitch(
+                title = "Dull Background",
+                description = "Keep a subtle background behind the pill for better visibility.",
+                icon = Icons.Default.Visibility,
+                checked = state.navIslandDullBackground,
+                onCheckedChange = { viewModel.updateSetting(SettingKey.NAV_ISLAND_DULL_BACKGROUND, it) }
+            )
+            SettingsSwitch(
+                title = "Pipe Indicator",
+                description = "Show a '|' vertical bar at the current battery level.",
+                icon = Icons.Default.FormatQuote,
+                checked = state.navIslandShowPipeIndicator,
+                onCheckedChange = { viewModel.updateSetting(SettingKey.NAV_ISLAND_SHOW_PIPE_INDICATOR, it) }
+            )
+            SettingsSwitch(
+                title = "Music Bar Morph",
+                description = "The Pill stretches to become the background for music controls.",
+                icon = Icons.Default.MusicNote,
+                checked = state.navIslandMusicBarMorph,
+                onCheckedChange = { viewModel.updateSetting(SettingKey.NAV_ISLAND_MUSIC_BAR_MORPH, it) }
+            )
         }
+
+        SettingsCategoryHeader("Haptics")
+        SettingsSwitch(
+            title = "Haptic Feedback",
+            description = "Vibrate on island transitions and gestures.",
+            icon = Icons.Default.Vibration,
+            checked = state.hapticFeedback,
+            onCheckedChange = { viewModel.updateSetting(SettingKey.HAPTIC_FEEDBACK, it) }
+        )
+        SettingsSwitch(
+            title = "Sync Pulse Vibration",
+            description = "Feel a heartbeat when both islands pulse together on battery change.",
+            icon = Icons.Default.MonitorHeart,
+            checked = state.syncPulseVibration,
+            onCheckedChange = { viewModel.updateSetting(SettingKey.SYNC_PULSE_VIBRATION, it) }
+        )
+
         SettingsChoiceChip("Aesthetic Mode", state.aestheticStyle.name, listOf("GLASS", "VOID_BLACK")) {
             viewModel.updateSetting(SettingKey.AESTHETIC_STYLE, it)
         }

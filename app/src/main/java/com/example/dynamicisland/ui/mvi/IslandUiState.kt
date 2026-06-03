@@ -43,5 +43,6 @@ data class IslandUiState(
     
     // Performance & Lifecycle
     val isScreenOn: Boolean = true,
-    val isPowerSaveMode: Boolean = false
+    val isPowerSaveMode: Boolean = false,
+    val isBatteryPulsing: Boolean = false
 )

@@ -1,33 +1,40 @@
 package com.example.dynamicisland
-import com.example.dynamicisland.ui.ConfigActivity
 
-import android.content.Intent
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import com.example.dynamicisland.manager.IslandController
+import javax.inject.Inject
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class IslandTileService : TileService() {
+    
+    @Inject
+    lateinit var controller: IslandController
+
     override fun onStartListening() {
         super.onStartListening()
-        qsTile.state = Tile.STATE_ACTIVE
+        updateTileState()
+    }
+
+    private fun updateTileState() {
+        val isEnabled = controller.settingsState.islandEnabled
+        qsTile.state = if (isEnabled) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+        qsTile.label = "Redwood Island"
+        qsTile.subtitle = if (isEnabled) "Enabled" else "Disabled"
         qsTile.updateTile()
     }
 
-    @Suppress("DEPRECATION")
     override fun onClick() {
         super.onClick()
-        // Open the Config App when the user taps the QS Tile
-        val intent = Intent(this, ConfigActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val currentState = controller.settingsState.islandEnabled
+        
+        // PANIC BUTTON: Toggle the global enabled state
+        // This will trigger the controller to remove/add windows immediately
+        controller.updateSettings { 
+            it.copy(islandEnabled = !currentState) 
         }
-        if (android.os.Build.VERSION.SDK_INT >= 34) {
-            val pendingIntent = android.app.PendingIntent.getActivity(
-                this, 0, intent,
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-            )
-            startActivityAndCollapse(pendingIntent)
-        } else {
-            @Suppress("DEPRECATION", "StartActivityAndCollapseDeprecated")
-            startActivityAndCollapse(intent)
-        }
+        
+        updateTileState()
     }
 }

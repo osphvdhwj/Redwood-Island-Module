@@ -48,10 +48,15 @@ data class SettingsState(
     val isNavIslandFloating: Boolean = false,
     val oneHandModeEnabled: Boolean = true,
     val navIslandBatteryColoring: Boolean = true,
+    val navIslandDullBackground: Boolean = true,
+    val navIslandShowPipeIndicator: Boolean = true,
+    val navIslandMusicBarMorph: Boolean = true, // Pill stretches to become background
+    val navIslandPanicTile: Boolean = true,
 
     // Advanced Visuals (Pillar 2)
     val geminiAuraEnabled: Boolean = true,
     val rollingTypographyEnabled: Boolean = true,
+    val thermalThrottlingEnabled: Boolean = true, // Throttle animations on high temp
 
     // Advanced Live Activities (Pillar 3)
     val parseDeliveryNotifications: Boolean = true,
@@ -122,6 +127,7 @@ data class SettingsState(
 
     // Global Controls & Privacy
     val islandEnabled: Boolean = true,
+    val redwoodEnabled: Boolean = true, // Top Island toggle
     val islandOnLockscreen: Boolean = true,
     val lockscreenFeatures: Set<String> = setOf("music", "notifications"),
     val allowedNotificationApps: Set<String> = emptySet(),
@@ -168,6 +174,7 @@ data class SettingsState(
     val hapticIntensity: Float = 1f,
     val ringCadenceVibration: Boolean = true,
     val hapticMorseAlerts: Boolean = false,
+    val syncPulseVibration: Boolean = false, // Sync pulse between Top/Bottom
 
     // Roles & Storage
     val roleCallingApp: String = "",

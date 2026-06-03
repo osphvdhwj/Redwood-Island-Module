@@ -154,6 +154,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
 
     val globalBatteryLevel = mutableIntStateOf(100)
     val globalIsCharging = mutableStateOf(false)
+    val isBatteryPulsing = mutableStateOf(false)
     val gamingFps = mutableFloatStateOf(0f)
     val currentMediaPos = mutableLongStateOf(0L)
 
@@ -218,6 +219,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             translationY = pixelShiftY.value
                         }
                     ) {
+                        RingUI(isBatteryPulsing.value)
                         IslandUI(islandState.value)
                     }
                 }
@@ -248,5 +250,13 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     fun updateBattery(level: Int, isCharging: Boolean) {
         globalBatteryLevel.intValue = level
         globalIsCharging.value = isCharging
+    }
+
+    fun triggerBatteryPulse() {
+        CoroutineScope(AndroidUiDispatcher.Main).launch {
+            isBatteryPulsing.value = true
+            delay(1000)
+            isBatteryPulsing.value = false
+        }
     }
 }

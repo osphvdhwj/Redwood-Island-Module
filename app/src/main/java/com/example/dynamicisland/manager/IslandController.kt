@@ -179,7 +179,26 @@ class IslandController @Inject constructor(
             currentHardware.value = it
             evaluatePriority() 
         }
+
+        // 🔋 BATTERY SYNERGY ENGINE
+        BatteryPlugin.start(context)
+        BatteryPlugin.onBatteryChanged = { level, isCharging, color, wattage ->
+            if (wasCharging != isCharging || level != lastLevel) {
+                // 1-second Pulse Synergy on change
+                scope.launch {
+                    eventBus.emit(IslandIntent.BatteryPulse(level))
+                    if (settingsState.syncPulseVibration) {
+                        hapticsManager.triggerCustomHaptic(200L) // Pulse feel
+                    }
+                }
+            }
+            wasCharging = isCharging
+            lastLevel = level
+            evaluatePriority()
+        }
     }
+
+    private var lastLevel = -1
 
     fun setSystemRecordingState(active: Boolean) {
         isSystemRecordingActive = active
@@ -202,6 +221,19 @@ class IslandController @Inject constructor(
     fun loadAndApplySettings() {
         settingsState = settingsManager.getSettingsState()
         applySettings(settingsState)
+    }
+
+    fun updateSettings(transform: (SettingsState) -> SettingsState) {
+        val newState = transform(settingsState)
+        // Persist key changes (this is simplified, ideally we'd diff and only save changed keys)
+        // For the Panic Tile, we only care about islandEnabled
+        if (newState.islandEnabled != settingsState.islandEnabled) {
+            settingsManager.putBoolean(SettingsManager.SettingKey.ISLAND_ENABLED, newState.islandEnabled)
+        }
+        // ... add other key syncs if needed or implement a generic diff-saver in SettingsManager
+        
+        loadAndApplySettings()
+        settingsManager.broadcastUpdate()
     }
 
     private fun applySettings(state: SettingsState) {
@@ -317,10 +349,19 @@ class IslandController @Inject constructor(
                 v.viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
                 scope.launch(syncJob) {
                     eventBus.intents.collect { intent ->
-                        if (intent is IslandIntent.SyncState) {
-                            view.islandState.value = intent.state
-                            view.activeModel.value = intent.activeModel
-                            view.splitModel.value = intent.splitModel
+                        when (intent) {
+                            is IslandIntent.SyncState -> {
+                                view.islandState.value = intent.state
+                                view.activeModel.value = intent.activeModel
+                                view.splitModel.value = intent.splitModel
+                            }
+                            is IslandIntent.BatteryPulse -> {
+                                view.triggerBatteryPulse()
+                            }
+                            is IslandIntent.UpdateBattery -> {
+                                view.updateBattery(intent.level, intent.isCharging)
+                            }
+                            else -> {}
                         }
                     }
                 }

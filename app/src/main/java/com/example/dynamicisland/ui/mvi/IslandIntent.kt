@@ -15,6 +15,7 @@ sealed class IslandIntent {
     data class RemoveActivity(val activityId: String) : IslandIntent()
     
     data class UpdateBattery(val level: Int, val isCharging: Boolean) : IslandIntent()
+    data class BatteryPulse(val level: Int) : IslandIntent()
     data class UpdateVolume(val volume: Int) : IslandIntent()
     data class UpdateBrightness(val brightness: Int, val isAuto: Boolean) : IslandIntent()
     data class UpdateRingerMode(val mode: Int) : IslandIntent()

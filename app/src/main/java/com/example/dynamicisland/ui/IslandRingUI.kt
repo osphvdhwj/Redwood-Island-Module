@@ -21,19 +21,33 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 @Composable
-fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
+fun DynamicIslandView.RingUI(isPulsing: Boolean) {
+    val model = activeModel.value
     val musicModel = model as? LiveActivityModel.Music
     val weatherModel = model as? LiveActivityModel.WeatherMood
     val settings = controller?.settingsState ?: com.example.dynamicisland.settings.SettingsState()
     
     val isMedia = musicModel != null && musicModel.isPlaying
-    val shouldShowRing = isMedia || globalIsCharging.value || weatherModel != null || true
+    val shouldShowRing = (isMedia || globalIsCharging.value || weatherModel != null || settings.showRingIdle) && settings.islandEnabled
 
     if (shouldShowRing) {
         val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
 
         val pulseStyle = settings.ringPulseStyle
         
+        // --- 💓 SYNERGY PULSE ANIMATION ---
+        val pulseScale by animateFloatAsState(
+            targetValue = if (isPulsing) 1.15f else 1.0f,
+            animationSpec = spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessMediumLow),
+            label = "pulse_scale"
+        )
+        
+        val pulseAlpha by animateFloatAsState(
+            targetValue = if (isPulsing) 1.0f else 0.0f,
+            animationSpec = tween(500),
+            label = "pulse_alpha"
+        )
+
         val breathScale by rememberInfiniteTransition(label = "ring_pulse").animateFloat(
             initialValue  = if (pulseStyle == RingPulseStyle.BREATH) 0.96f else 1.0f,
             targetValue   = 1.0f,
@@ -63,8 +77,9 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    scaleX = breathScale
-                    scaleY = breathScale
+                    val baseScale = if (isPulsing) pulseScale else breathScale
+                    scaleX = baseScale
+                    scaleY = baseScale
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -91,31 +106,36 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
 
                 if (settings.navIslandMode) {
                     // 🌓 NAV ISLAND PILLAR: Hooked to Android Nav Pill
+                    val isNavMusic = musicModel != null && settings.navIslandMusicBarMorph
                     val fillProgress = currentProgress.coerceIn(0f, 1f)
                     
-                    val barHeight = if (settings.isNavIslandFloating) 8.dp.toPx() else 4.dp.toPx()
-                    val barWidth = if (settings.isNavIslandFloating) size.width else (size.width * 0.35f).coerceAtLeast(64.dp.toPx())
-                    val cornerR = barHeight / 2
+                    val targetBarHeight = if (isNavMusic) 64.dp.toPx() else (if (settings.isNavIslandFloating) 8.dp.toPx() else 4.dp.toPx())
+                    val targetBarWidth = if (isNavMusic) size.width - 32.dp.toPx() else (if (settings.isNavIslandFloating) size.width else (size.width * 0.35f).coerceAtLeast(64.dp.toPx()))
+                    
+                    val barHeight = targetBarHeight
+                    val barWidth = targetBarWidth
+                    val cornerR = if (isNavMusic) 24.dp.toPx() else barHeight / 2
                     
                     val xOffset = (size.width - barWidth) / 2
-                    val yOffset = size.height - barHeight - (if (settings.isNavIslandFloating) 0f else 8.dp.toPx())
+                    val yOffset = size.height - barHeight - (if (isNavMusic) 12.dp.toPx() else (if (settings.isNavIslandFloating) 0f else 8.dp.toPx()))
 
-                    // Background Bar (Ethereal Glass)
+                    // Background Bar (Dull Color for Visibility)
+                    val bgAlpha = if (settings.navIslandDullBackground) 0.3f else 0.15f
                     drawRoundRect(
-                        color = Color.White.copy(alpha = 0.15f),
+                        color = Color.White.copy(alpha = bgAlpha),
                         topLeft = Offset(xOffset, yOffset),
                         size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerR, cornerR)
                     )
                     
-                    // Outer Glow (for low or charging)
-                    if (currentBatteryLevel <= 20 || globalIsCharging.value) {
-                         drawRoundRect(
-                             color = baseColor.copy(alpha = 0.3f),
-                             topLeft = Offset(xOffset - 2.dp.toPx(), yOffset - 2.dp.toPx()),
-                             size = androidx.compose.ui.geometry.Size(barWidth + 4.dp.toPx(), barHeight + 4.dp.toPx()),
-                             cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerR + 2.dp.toPx(), cornerR + 2.dp.toPx())
-                         )
+                    // Synergy Pulse Glow
+                    if (isPulsing) {
+                        drawRoundRect(
+                            color = baseColor.copy(alpha = pulseAlpha * 0.4f),
+                            topLeft = Offset(xOffset - 4.dp.toPx(), yOffset - 4.dp.toPx()),
+                            size = androidx.compose.ui.geometry.Size(barWidth + 8.dp.toPx(), barHeight + 8.dp.toPx()),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerR + 4.dp.toPx(), cornerR + 4.dp.toPx())
+                        )
                     }
 
                     // Foreground Battery Fill (Liquid Gradient)
@@ -129,12 +149,37 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
                         size = androidx.compose.ui.geometry.Size(barWidth * fillProgress, barHeight),
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerR, cornerR)
                     )
-                } else {
-                    // Legacy Ring Mode
+
+                    // 🏷️ PIPE INDICATOR (|)
+                    if (settings.navIslandShowPipeIndicator) {
+                        val pipeX = xOffset + (barWidth * fillProgress)
+                        drawLine(
+                            color = Color.White,
+                            start = Offset(pipeX, yOffset - 2.dp.toPx()),
+                            end = Offset(pipeX, yOffset + barHeight + 2.dp.toPx()),
+                            strokeWidth = 2.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+                    }
+                } else if (settings.redwoodEnabled) {
+                    // Redwood Ring Mode
                     val inset = strokeW / 2
                     val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeW, size.height - strokeW)
                     val arcTopLeft = Offset(inset, inset)
                     val progressPercent = currentProgress.coerceIn(0f, 1f)
+
+                    // Synergy Pulse Glow for Ring
+                    if (isPulsing) {
+                        drawArc(
+                            color = baseColor.copy(alpha = pulseAlpha * 0.5f),
+                            startAngle = 0f,
+                            sweepAngle = 360f,
+                            useCenter = false,
+                            topLeft = Offset(arcTopLeft.x - 4.dp.toPx(), arcTopLeft.y - 4.dp.toPx()),
+                            size = androidx.compose.ui.geometry.Size(arcSize.width + 8.dp.toPx(), arcSize.height + 8.dp.toPx()),
+                            style = Stroke(strokeW + 4.dp.toPx())
+                        )
+                    }
 
                     // Background Ring
                     drawArc(

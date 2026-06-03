@@ -80,6 +80,15 @@ class IslandViewModel @Inject constructor(
                     isCharging = intent.isCharging
                 )
                 
+                is IslandIntent.BatteryPulse -> {
+                    viewModelScope.launch {
+                        _uiState.update { it.copy(isBatteryPulsing = true) }
+                        kotlinx.coroutines.delay(1000)
+                        _uiState.update { it.copy(isBatteryPulsing = false) }
+                    }
+                    currentState.copy(batteryLevel = intent.level)
+                }
+
                 is IslandIntent.UpdateVolume -> currentState.copy(volume = intent.volume)
                 
                 is IslandIntent.UpdateBrightness -> currentState.copy(
