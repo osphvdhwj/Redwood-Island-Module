@@ -24,7 +24,8 @@ data class IslandAnimationValues(
     val borderColor: Color,
     val alpha: Float,
     val scale: Float,
-    val rotation: Float
+    val rotation: Float,
+    val glowIntensity: Float
 )
 
 @Composable
@@ -44,9 +45,18 @@ fun updateIslandTransition(
 ): IslandAnimationValues {
     val transition = updateTransition(targetState = targetState, label = "IslandTransition")
 
-    // 💎 PRO-GRADE PHYSICS: High stiffness, Low damping for "Snap & Bounciness"
-    val damping = if (physicsStyle == PhysicsStyle.OXYGEN_OS) 0.55f else 0.75f
-    val stiffness = if (physicsStyle == PhysicsStyle.OXYGEN_OS) 800f else 450f
+    // 💎 LIQUID PHYSICS: High-Grade Fluid Motion
+    // Apple uses a custom spring with high stiffness (around 1000) and very specific damping (0.8 - 0.9)
+    val damping = when (physicsStyle) {
+        PhysicsStyle.APPLE -> 0.85f
+        PhysicsStyle.OXYGEN_OS -> 0.65f
+        else -> 0.75f
+    }
+    val stiffness = when (physicsStyle) {
+        PhysicsStyle.APPLE -> 1200f
+        PhysicsStyle.OXYGEN_OS -> 800f
+        else -> 450f
+    }
 
     val springSpecDp = spring<Dp>(dampingRatio = damping, stiffness = stiffness)
     val springSpecFloat = spring<Float>(dampingRatio = damping, stiffness = stiffness)
@@ -83,8 +93,12 @@ fun updateIslandTransition(
 
     val rotation by transition.animateFloat(
         transitionSpec = { 
-            // 🌀 WOBBLE EFFECT: Overshoot slightly on change
-            keyframes { durationMillis = 400; 0f at 0; 2f at 100; -1f at 250; 0f at 400 }
+            if (targetState == IslandUiState.MAX_PILL) {
+                // 🌪️ Subtle tilt on expansion
+                keyframes { durationMillis = 400; 0f at 0; 1.5f at 150; 0f at 400 }
+            } else {
+                spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessLow)
+            }
         },
         label = "rotation"
     ) { 0f }
@@ -97,19 +111,30 @@ fun updateIslandTransition(
     }
 
     val borderColor by transition.animateColor(transitionSpec = { springSpecColor }, label = "borderColor") { state ->
-        if (state == IslandUiState.NOTIFICATION_RING && isCyberpunk) Color(0xFF00FFFF) else Color.Transparent
+        if (state == IslandUiState.NOTIFICATION_RING && isCyberpunk) Color(0xFF00FFFF).copy(alpha=0.6f) else Color.White.copy(alpha=0.08f)
     }
 
-    val alpha by transition.animateFloat(transitionSpec = { tween(300) }, label = "alpha") { state ->
+    val alpha by transition.animateFloat(transitionSpec = { tween(350, easing = LinearOutSlowInEasing) }, label = "alpha") { state ->
         if (state == IslandUiState.HIDDEN) 0f else 1f
     }
 
     val scale by transition.animateFloat(
-        transitionSpec = { if (targetState == IslandUiState.HIDDEN) tween(350) else springSpecFloat },
+        transitionSpec = { if (targetState == IslandUiState.HIDDEN) tween(300) else springSpecFloat },
         label = "scale"
     ) { state ->
-        if (state == IslandUiState.HIDDEN) 0f else 1f
+        if (state == IslandUiState.HIDDEN) 0.85f else 1f
     }
+    
+    val glowIntensity by animateFloatAsState(
+        targetValue = if (targetState == IslandUiState.NOTIFICATION_RING) 1f else 0f,
+        animationSpec = infiniteRepeatable(tween(1500, easing = SineOverShoot), RepeatMode.Reverse),
+        label = "glow"
+    )
 
-    return IslandAnimationValues(width, height, cornerRadius, xOffset, borderColor, alpha, scale, rotation)
+    return IslandAnimationValues(width, height, cornerRadius, xOffset, borderColor, alpha, scale, rotation, glowIntensity)
+}
+
+private val SineOverShoot = Easing { x -> 
+    val c4 = (2 * Math.PI) / 3
+    if (x == 0f) 0f else if (x == 1f) 1f else Math.pow(2.0, -10 * x.toDouble()).toFloat() * Math.sin((x * 10 - 0.75) * c4).toFloat() + 1f
 }

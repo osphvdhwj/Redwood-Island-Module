@@ -4,26 +4,37 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.media.AudioManager
+import android.net.Uri
 import com.example.dynamicisland.model.*
 import com.example.dynamicisland.ui.DynamicIslandView
 import com.example.dynamicisland.ipc.IslandState
+import kotlinx.coroutines.*
+import java.io.InputStream
 
 class IslandCallManager(
     private val context: Context,
     private val audioManager: AudioManager,
+    private val scope: CoroutineScope,
     private val onCallStateChanged: (LiveActivityModel.Call?) -> Unit
 ) {
     private var currentCall: LiveActivityModel.Call? = null
     var userCallingApp: String? = null
     
-    // 🎛️ NEW: Listens to our highly-efficient Framework Hook instead of Polling!
     private val callReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             if (intent.action == "com.example.dynamicisland.CALL_STATE_CHANGED") {
                 val state = intent.getStringExtra("state") ?: return
                 val caller = intent.getStringExtra("caller") ?: "Unknown Caller"
-                val source = intent.getStringExtra("pkg")?.let {
+                val number = intent.getStringExtra("number")
+                val photoUri = intent.getStringExtra("photoUri")
+                val relLabel = intent.getStringExtra("relationLabel")
+                val isSpam = intent.getBooleanExtra("isSpam", false)
+                val pkg = intent.getStringExtra("pkg")
+                
+                val source = pkg?.let {
                     when {
                         it.contains("whatsapp") -> "WhatsApp"
                         it.contains("telegram") -> "Telegram"
@@ -32,23 +43,48 @@ class IslandCallManager(
                     }
                 } ?: if (userCallingApp != null) "Default" else null
                 
-                when (state) {
-                    "RINGING" -> {
-                        currentCall = LiveActivityModel.Call(state = "RINGING", callerName = caller, startTime = 0L, sourceApp = source)
+                if (state == "DISCONNECTED") {
+                    currentCall?.contactPhoto?.recycle()
+                    currentCall = null
+                    onCallStateChanged(null)
+                    return
+                }
+
+                scope.launch {
+                    val photoBmp = photoUri?.let { loadContactPhoto(it) }
+                    
+                    val startTime = if (state == "ONGOING") {
+                        if (currentCall?.state == "ONGOING") currentCall!!.startTime else System.currentTimeMillis()
+                    } else 0L
+
+                    val newCall = LiveActivityModel.Call(
+                        callerName = caller,
+                        phoneNumber = number,
+                        state = state,
+                        startTime = startTime,
+                        sourceApp = source,
+                        photoUri = photoUri,
+                        contactPhoto = photoBmp,
+                        relationLabel = relLabel,
+                        isSpam = isSpam
+                    )
+                    
+                    currentCall = newCall
+                    withContext(Dispatchers.Main) {
                         onCallStateChanged(currentCall)
-                    }
-                    "ONGOING" -> {
-                        // Only reset start time if it wasn't already ongoing
-                        val startTime = if (currentCall?.state == "ONGOING") currentCall!!.startTime else System.currentTimeMillis()
-                        currentCall = LiveActivityModel.Call(state = "ONGOING", callerName = caller, startTime = startTime, sourceApp = source)
-                        onCallStateChanged(currentCall)
-                    }
-                    "DISCONNECTED" -> {
-                        currentCall = null
-                        onCallStateChanged(null)
                     }
                 }
             }
+        }
+    }
+
+    private suspend fun loadContactPhoto(uriStr: String): Bitmap? = withContext(Dispatchers.IO) {
+        try {
+            val uri = Uri.parse(uriStr)
+            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
+            BitmapFactory.decodeStream(inputStream)
+        } catch (e: Exception) {
+            null
         }
     }
 
@@ -67,12 +103,10 @@ class IslandCallManager(
         try {
             val tm = context.getSystemService(Context.TELECOM_SERVICE) as android.telecom.TelecomManager
             tm.showInCallScreen(false) 
-            // 🚀 FIX: Correct syntax for Compose state variables
             islandView?.islandState?.value = IslandState.TYPE_1_MINI
         } catch (e: Exception) {
             val intent = Intent(Intent.ACTION_DIAL).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
             context.startActivity(intent)
-            // 🚀 FIX: Correct syntax for Compose state variables
             islandView?.islandState?.value = IslandState.TYPE_1_MINI
         }
     }
@@ -94,6 +128,7 @@ class IslandCallManager(
     fun destroy() {
         try {
             context.unregisterReceiver(callReceiver)
+            currentCall?.contactPhoto?.recycle()
         } catch (e: Exception) {}
     }
 }

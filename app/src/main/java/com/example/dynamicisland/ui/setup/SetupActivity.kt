@@ -36,6 +36,8 @@ import com.example.dynamicisland.ui.ConfigActivity
 import com.example.dynamicisland.ui.design.IslandColors
 import com.example.dynamicisland.ui.design.RedwoodTheme
 import com.example.dynamicisland.ui.design.glassmorphicCard
+import com.example.dynamicisland.ui.design.glassmorphicCard
+import com.example.dynamicisland.util.IslandProcessUtils
 import kotlinx.coroutines.launch
 
 /**
@@ -43,14 +45,7 @@ import kotlinx.coroutines.launch
  * Automatically skips unnecessary permissions when LSPosed is detected.
  */
 class SetupActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            RedwoodTheme {
-                SetupScreen()
-            }
-        }
-    }
+// ... (rest remains similar)
 }
 
 @Composable
@@ -58,9 +53,23 @@ fun SetupScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
-    // In Top-Grade mode, we only really need battery optimization bypass
     var hasBattery by remember { mutableStateOf(isIgnoringBatteryOptimizations(context)) }
-    val pagerState = rememberPagerState(pageCount = { 3 })
+    var hasRoot by remember { mutableStateOf(false) }
+    
+    // Detection for HyperOS / MIUI
+    val isHyperOS = remember { 
+        val brand = android.os.Build.BRAND.lowercase()
+        val manufacturer = android.os.Build.MANUFACTURER.lowercase()
+        brand.contains("xiaomi") || manufacturer.contains("xiaomi") || brand.contains("poco") || brand.contains("redmi")
+    }
+
+    val pagerState = rememberPagerState(pageCount = { if (isHyperOS) 5 else 4 })
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            hasRoot = IslandProcessUtils.isRootAvailable()
+        }
+    }
 
     val batteryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         hasBattery = isIgnoringBatteryOptimizations(context)
@@ -74,7 +83,11 @@ fun SetupScreen() {
         ) { page ->
             when (page) {
                 0 -> WelcomePage { scope.launch { pagerState.animateScrollToPage(1) } }
-                1 -> PermissionPage(
+                1 -> RootPage(
+                    isGranted = hasRoot,
+                    onNext = { scope.launch { pagerState.animateScrollToPage(2) } }
+                )
+                2 -> PermissionPage(
                     title = "System Stability",
                     description = "To keep the Island Engine running smoothly in the background, please disable battery optimizations.",
                     icon = Icons.Default.BatteryChargingFull,
@@ -88,28 +101,93 @@ fun SetupScreen() {
                             batteryLauncher.launch(intent)
                         }
                     },
-                    onNext = { scope.launch { pagerState.animateScrollToPage(2) } }
+                    onNext = { scope.launch { pagerState.animateScrollToPage(3) } }
                 )
-                2 -> CompletionPage {
-                    val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
-                    prefs.edit().putBoolean("has_completed_setup", true).apply()
-                    context.startActivity(Intent(context, ConfigActivity::class.java))
-                    (context as Activity).finish()
+                3 -> {
+                    if (isHyperOS) {
+                        MIUIPage { scope.launch { pagerState.animateScrollToPage(4) } }
+                    } else {
+                        CompletionPage { finishSetup(context) }
+                    }
                 }
+                4 -> CompletionPage { finishSetup(context) }
             }
         }
-        
-        // Pager Indicators
-        Row(
-            Modifier.height(50.dp).fillMaxWidth().align(Alignment.BottomCenter),
-            horizontalArrangement = Arrangement.Center
+// ...
+}
+
+private fun finishSetup(context: Context) {
+    val prefs = context.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
+    prefs.edit().putBoolean("has_completed_setup", true).apply()
+    context.startActivity(Intent(context, ConfigActivity::class.java))
+    (context as Activity).finish()
+}
+
+@Composable
+fun RootPage(isGranted: Boolean, onNext: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier.size(120.dp).glassmorphicCard(cornerRadius = 60.dp),
+            contentAlignment = Alignment.Center
         ) {
-            repeat(3) { iteration ->
-                val color = if (pagerState.currentPage == iteration) IslandColors.accentCyan else Color.White.copy(alpha = 0.2f)
-                Box(
-                    modifier = Modifier.padding(4.dp).clip(RoundedCornerShape(2.dp)).background(color).size(width = 24.dp, height = 4.dp)
-                )
-            }
+            Icon(
+                if (isGranted) Icons.Default.Terminal else Icons.Default.Shield, 
+                null, 
+                tint = if (isGranted) Color.Green else IslandColors.accentCyan, 
+                modifier = Modifier.size(56.dp)
+            )
+        }
+        Spacer(Modifier.height(32.dp))
+        Text("Environment Check", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+        Spacer(Modifier.height(16.dp))
+        Text(
+            if (isGranted) "Superuser access detected. Root-level stability features enabled." 
+            else "Root not detected via 'su'. Some advanced hardware triggers may require manual ADB setup.",
+            color = Color.White.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center,
+            lineHeight = 22.sp
+        )
+        Spacer(Modifier.height(64.dp))
+        Button(
+            onClick = onNext,
+            colors = ButtonDefaults.buttonColors(containerColor = if (isGranted) Color.Green.copy(alpha = 0.2f) else IslandColors.accentCyan),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth().height(56.dp)
+        ) {
+            Text(if (isGranted) "Proceed" else "Continue Anyway", color = if (isGranted) Color.Green else Color.Black, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun MIUIPage(onNext: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(Icons.Default.Warning, null, tint = Color.Yellow, modifier = Modifier.size(80.dp))
+        Spacer(Modifier.height(24.dp))
+        Text("HyperOS detected", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "MIUI/HyperOS requires 'Autostart' and 'No restrictions' in App Info for the Island to stay active during deep sleep.",
+            color = Color.White.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center,
+            lineHeight = 22.sp
+        )
+        Spacer(Modifier.height(48.dp))
+        Button(
+            onClick = onNext,
+            colors = ButtonDefaults.buttonColors(containerColor = IslandColors.accentCyan),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth().height(56.dp)
+        ) {
+            Text("I Understand", color = Color.Black, fontWeight = FontWeight.Bold)
         }
     }
 }

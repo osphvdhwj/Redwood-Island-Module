@@ -13,35 +13,40 @@ import dagger.hilt.android.qualifiers.ApplicationContext
  * 
  * A lightweight, on-device reinforcement learning engine.
  * Maps: [AppPackage + MediaState + VisualState] -> [Gesture] -> Confidence
- */
-@Singleton
-class IslandNeuralCore @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val weightsFile = File(context.filesDir, "neural_weights.json")
-    private var weights = JSONObject()
+ import kotlinx.coroutines.sync.Mutex
+ import kotlinx.coroutines.sync.withLock
+ import org.json.JSONObject
+ import java.io.File
+ // ...
+ @Singleton
+ class IslandNeuralCore @Inject constructor(
+     @ApplicationContext private val context: Context
+ ) {
+     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+     private val weightsFile = File(context.filesDir, "neural_weights.json")
+     private val mutex = Mutex()
+     private var weights = JSONObject()
 
-    init {
-        loadWeights()
-    }
+     init {
+         loadWeights()
+     }
 
-    private fun loadWeights() {
-        if (weightsFile.exists()) {
-            try { weights = JSONObject(weightsFile.readText()) } catch (e: Exception) { weights = JSONObject() }
-        }
-    }
+     private fun loadWeights() {
+         if (weightsFile.exists()) {
+             try { weights = JSONObject(weightsFile.readText()) } catch (e: Exception) { weights = JSONObject() }
+         }
+     }
 
-    private fun saveWeights() {
-        scope.launch {
-            try {
-                val data = weights.toString(2)
-                weightsFile.writeText(data)
-            } catch (e: Exception) {}
-        }
-    }
-
-    /**
+     private fun saveWeights() {
+         scope.launch {
+             mutex.withLock {
+                 try {
+                     val data = weights.toString(2)
+                     weightsFile.writeText(data)
+                 } catch (e: Exception) {}
+             }
+         }
+     }
      * Reinforce a positive interaction.
      * Every time an action is successfully executed, we increase its weight in this context.
      */

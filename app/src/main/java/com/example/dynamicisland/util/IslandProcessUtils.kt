@@ -16,4 +16,16 @@ object IslandProcessUtils {
             false
         }
     }
+
+    /**
+     * Checks if the device has root access available.
+     */
+    fun isRootAvailable(): Boolean {
+        return try {
+            val p = Runtime.getRuntime().exec("su -c id")
+            p.waitFor() == 0
+        } catch (e: Exception) {
+            false
+        }
+    }
 }

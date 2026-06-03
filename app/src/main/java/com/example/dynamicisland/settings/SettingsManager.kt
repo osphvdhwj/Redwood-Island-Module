@@ -124,7 +124,31 @@ class SettingsManager(private val context: Context) {
         // Persistence & Storage
         CALL_STYLE, CHARGING_STYLE, BATTERY_STYLE, RING_PULSE_STYLE,
         AUTO_BACKUP_ENABLED, AUTO_BACKUP_FREQ_DAYS, STASH_STORAGE_PATH,
-        SPLIT_PILL_ENABLED, ICON_PACK
+        SPLIT_PILL_ENABLED, ICON_PACK,
+        SQUISH_INTENSITY,
+        
+        // Calibration
+        POS_RING_X, POS_RING_Y, POS_MINI_X, POS_MINI_Y,
+        POS_MID_X, POS_MID_Y, POS_MAX_X, POS_MAX_Y
+    }
+
+    fun saveLayoutPositions(
+        ring: android.graphics.PointF,
+        mini: android.graphics.PointF,
+        mid: android.graphics.PointF,
+        max: android.graphics.PointF
+    ) {
+        prefs.edit().apply {
+            putFloat(SettingKey.POS_RING_X.name, ring.x)
+            putFloat(SettingKey.POS_RING_Y.name, ring.y)
+            putFloat(SettingKey.POS_MINI_X.name, mini.x)
+            putFloat(SettingKey.POS_MINI_Y.name, mini.y)
+            putFloat(SettingKey.POS_MID_X.name, mid.x)
+            putFloat(SettingKey.POS_MID_Y.name, mid.y)
+            putFloat(SettingKey.POS_MAX_X.name, max.x)
+            putFloat(SettingKey.POS_MAX_Y.name, max.y)
+        }.apply()
+        broadcastUpdate()
     }
 
     fun getBoolean(key: SettingKey, default: Boolean): Boolean =
@@ -328,6 +352,7 @@ class SettingsManager(private val context: Context) {
             timerIntegration = getBoolean(SettingKey.TIMER_INTEGRATION, true),
             splitPillEnabled = getBoolean(SettingKey.SPLIT_PILL_ENABLED, true),
             iconPack = IconPack.fromString(iconPackId),
+            squishIntensity = getFloat(SettingKey.SQUISH_INTENSITY, 1.0f),
             freeformLaunchEnabled = getBoolean(SettingKey.FREEFORM_LAUNCH_ENABLED, true),
             freeformSmartGesture = getBoolean(SettingKey.FREEFORM_SMART_GESTURE, true),
             enableFreeformPortalAnim = getBoolean(SettingKey.ENABLE_FREEFORM_PORTAL_ANIM, true)

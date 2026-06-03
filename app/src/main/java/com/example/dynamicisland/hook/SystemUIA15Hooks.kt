@@ -127,15 +127,21 @@ class SystemUIA15Hooks {
         }
 
         private fun addIslandWindow(context: Context, wm: WindowManager) {
-            if (isWindowAdded) return
-            
             Handler(Looper.getMainLooper()).post {
                 try {
                     val ctrl = controller ?: return@post
                     
+                    // 🛡️ ANTI-LEAK: Remove existing view if present
+                    islandViewRef?.get()?.let { existing ->
+                        try { wm.removeView(existing) } catch (e: Exception) {}
+                    }
+
                     val moduleContext = try { 
                         context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY) 
-                    } catch (e: Exception) { context }
+                    } catch (e: Exception) { 
+                        XposedBridge.log("$TAG ⚠️: Package context creation failed, using SystemUI context")
+                        context 
+                    }
 
                     val islandView = DynamicIslandView(context, moduleContext)
                     ctrl.islandView = islandView
@@ -145,13 +151,12 @@ class SystemUIA15Hooks {
                     val settings = ctrl.settingsState
                     val density = context.resources.displayMetrics.density
                     
-                    // 🌓 PILLAR 1: Dual-Mode Architecture
                     val windowH = if (settings.liveBridgeEnabled) WindowManager.LayoutParams.MATCH_PARENT else (320 * density).toInt()
 
                     val params = WindowManager.LayoutParams(
                         WindowManager.LayoutParams.MATCH_PARENT,
                         windowH,
-                        2017, // WindowManager.LayoutParams.TYPE_STATUS_BAR_SUB_PANEL
+                        WindowManager.LayoutParams.TYPE_STATUS_BAR_SUB_PANEL,
                         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
@@ -168,7 +173,6 @@ class SystemUIA15Hooks {
                             else -> (Gravity.TOP or Gravity.CENTER_HORIZONTAL)
                         }
                         
-                        // 📏 NAV ISLAND: Attached vs Floating
                         if (settings.navIslandMode && !settings.liveBridgeEnabled) {
                             y = if (settings.isNavIslandFloating) (32 * density).toInt() else 0
                         }
@@ -177,14 +181,22 @@ class SystemUIA15Hooks {
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
                         }
-                        // Ensure it bypasses MIUI's aggressive status bar clipping
-                        XposedHelpers.setObjectField(this, "privateFlags", 
-                            (XposedHelpers.getIntField(this, "privateFlags") or 0x00000040)) // PRIVATE_FLAG_TRUSTED_OVERLAY
+                        
+                        // 🛡️ SECURITY: Mark as trusted overlay to bypass CLIP/Touch restrictions
+                        try {
+                            val privateFlagsField = WindowManager.LayoutParams::class.java.getField("privateFlags")
+                            var privateFlags = privateFlagsField.get(this) as Int
+                            privateFlags = privateFlags or 0x00000040 // PRIVATE_FLAG_TRUSTED_OVERLAY
+                            privateFlagsField.set(this, privateFlags)
+                        } catch (e: Exception) {
+                            // Fallback to older XposedHelpers method if reflection fails
+                            try { XposedHelpers.setObjectField(this, "privateFlags", (XposedHelpers.getIntField(this, "privateFlags") or 0x00000040)) } catch (e2: Exception) {}
+                        }
                     }
 
                     wm.addView(islandView, params)
                     isWindowAdded = true
-                    XposedBridge.log("$TAG ✅: Pro-Grade Global Overlay Window added successfully")
+                    XposedBridge.log("$TAG ✅: Pro-Grade Global Overlay Window added/re-synced")
                 } catch (e: Throwable) {
                     XposedBridge.log("$TAG ❌: Window creation failed — ${e.message}")
                 }

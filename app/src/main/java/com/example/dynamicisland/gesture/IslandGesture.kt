@@ -1,27 +1,37 @@
-// File: app/src/main/java/com/example/dynamicisland/gesture/IslandGesture.kt
 package com.example.dynamicisland.gesture
 
 /**
  * Every recognisable gesture for the Dynamic Island.
- * Used by IslandController for mapping and by ConfigScreens for settings UI.
+ * Expanded with multi-finger and custom library support.
  */
 enum class IslandGesture {
     // Basic touch gestures
     TAP,
     DOUBLE_TAP,
     LONG_PRESS,
-    SINGLE_TAP,       // same as TAP but kept for backwards compatibility
-    FORCE_PRESS,      // force / 3D touch
-    FORCE_TOUCH,      // alternative name
+    SINGLE_TAP,
+    FORCE_PRESS,
+    FORCE_TOUCH,
 
-    // Directional swipes
+    // Directional swipes (1-finger)
     SWIPE_LEFT,
     SWIPE_RIGHT,
     SWIPE_UP,
     SWIPE_DOWN,
 
-    // Quick‑settings tile clicks (prefix QS_CLICK_)
-    // These match the tile specs sent by SystemUI
+    // Multi-finger gestures
+    TWO_FINGER_TAP,
+    TWO_FINGER_SWIPE_UP,
+    TWO_FINGER_SWIPE_DOWN,
+    THREE_FINGER_TAP,
+    PINCH_IN,
+    PINCH_OUT,
+
+    // Custom / AI Reinforcement slots
+    CUSTOM_PATTERN_A,
+    CUSTOM_PATTERN_B,
+
+    // Quick‑settings tile clicks
     QS_CLICK_WIFI,
     QS_CLICK_BLUETOOTH,
     QS_CLICK_FLASHLIGHT,

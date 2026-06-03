@@ -82,7 +82,14 @@ class IslandConnectivityManager(
             addAction("android.hardware.usb.action.USB_STATE")
             addAction("android.net.wifi.WIFI_AP_STATE_CHANGED")
         }
-        context.registerReceiver(receiver, filter)
+        
+        val securePermission = "com.redwood.permission.SECURE_IPC"
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, securePermission, null, Context.RECEIVER_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            context.registerReceiver(receiver, filter, securePermission, null)
+        }
     }
 
     fun stopListening() {

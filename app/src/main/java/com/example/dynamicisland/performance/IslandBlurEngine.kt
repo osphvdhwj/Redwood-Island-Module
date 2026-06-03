@@ -57,8 +57,10 @@ class IslandBlurEngine private constructor(private val context: Context) {
 
     private val _wallpaperBlur  = MutableStateFlow<Bitmap?>(null)
     private val _wallpaperColor = MutableStateFlow<Int?>(null)
+    private val _vibrantColor   = MutableStateFlow<Int?>(null)
     val wallpaperBlur:  StateFlow<Bitmap?> = _wallpaperBlur.asStateFlow()
     val wallpaperColor: StateFlow<Int?>    = _wallpaperColor.asStateFlow()
+    val vibrantColor:   StateFlow<Int?>    = _vibrantColor.asStateFlow()
 
     // ── Internal ──────────────────────────────────────────────────────────────
 
@@ -165,6 +167,14 @@ class IslandBlurEngine private constructor(private val context: Context) {
         val cx = full.width / 2
         val sw = (full.width * 0.20f).toInt().coerceAtLeast(1)
         _wallpaperColor.value = averageColor(strip, cx - sw / 2, 0, sw, stripH)
+
+        // 🚀 VIBRANT COLOR EXTRACTION (PILLAR 2)
+        scope.launch {
+            try {
+                val palette = androidx.palette.graphics.Palette.from(strip).generate()
+                _vibrantColor.value = palette.getVibrantColor(palette.getDominantColor(Color.DKGRAY))
+            } catch (_: Exception) {}
+        }
     }
 
     // ── Blur implementations ──────────────────────────────────────────────────

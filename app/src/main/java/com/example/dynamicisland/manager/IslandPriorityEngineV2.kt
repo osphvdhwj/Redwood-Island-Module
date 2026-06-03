@@ -11,7 +11,7 @@ import kotlin.math.max
 import com.example.dynamicisland.ipc.IslandState
 
 /**
- * PRO-GRADE PRIORITY ENGINE (V2.1)
+ * PRO-GRADE PRIORITY ENGINE (V2.2)
  *
  * Weighted Scoring Engine with Situational Context Awareness.
  * Optimized for both Camera-Cutout and bottom-anchored Nav Island paradigms.
@@ -24,13 +24,16 @@ object IslandPriorityEngineV2 {
     private const val SCORE_PHONE_CALL_RINGING    = 10_000f
     private const val SCORE_PHONE_CALL_ACTIVE     = 8_000f
     private const val SCORE_CRITICAL_ALERT        = 7_500f   // Battery 5%, OTP
+    private const val SCORE_THERMAL_THROTTLE      = 6_000f   // Device overheating
     private const val SCORE_NAVIGATION_IMMINENT   = 7_000f   // Turn in < 100m
     private const val SCORE_NAVIGATION_UPCOMING   = 5_500f
     private const val SCORE_LOW_BATTERY_20        = 4_500f
     private const val SCORE_APP_TIMER_EXPIRY      = 4_000f
+    private const val SCORE_NOTIFICATION          = 3_800f   // Messaging beats music playing
     private const val SCORE_MUSIC_PLAYING         = 3_500f
     private const val SCORE_CHARGING_JUST_PLUGGED = 3_000f
     private const val SCORE_HARDWARE_TOGGLE       = 2_500f
+    private const val SCORE_ROM_FEATURE           = 2_000f   // Edge lighting, Subo, etc.
     private const val SCORE_DOWNLOAD_PROGRESS     = 2_000f
     private const val SCORE_CONNECTIVITY_EVENT    = 1_800f
     private const val SCORE_MUSIC_PAUSED          = 1_200f
@@ -70,6 +73,7 @@ object IslandPriorityEngineV2 {
     private const val MOD_PANEL_OPEN       = 0.0f
     private const val MOD_BATTERY_CRITICAL = 2.0f
     private const val MOD_REPEATED_EVENT   = 0.6f
+    private const val MOD_SPAM_CALL        = 0.2f
 
     // Internal State
     private val activeEvents   = ConcurrentHashMap<String, IslandEvent>()
@@ -181,9 +185,27 @@ object IslandPriorityEngineV2 {
     }
 
     // Builder Methods
-    fun buildCallEvent(call: LiveActivityModel.Call) = IslandEvent("sys_call", call, if (call.state == "RINGING") SCORE_PHONE_CALL_RINGING else SCORE_PHONE_CALL_ACTIVE, isSticky = true, isSuppressable = false, targetState = IslandState.TYPE_2_MID)
+    fun buildCallEvent(call: LiveActivityModel.Call): IslandEvent {
+        val score = if (call.state == "RINGING") SCORE_PHONE_CALL_RINGING else SCORE_PHONE_CALL_ACTIVE
+        val modifiers = mutableListOf<ContextModifier>()
+        if (call.isSpam) modifiers.add(ContextModifier("spam_penalty", MOD_SPAM_CALL))
+
+        return IslandEvent(
+            id = "sys_call",
+            model = call,
+            baseScore = score,
+            isSticky = true,
+            isSuppressable = call.isSpam, 
+            targetState = if (call.isSpam) IslandState.TYPE_1_MINI else IslandState.TYPE_2_MID,
+            contextModifiers = modifiers
+        )
+    }
+
     fun buildMusicEvent(music: LiveActivityModel.Music) = IslandEvent("media_main", music, if (music.isPlaying) SCORE_MUSIC_PLAYING else SCORE_MUSIC_PAUSED, isSticky = true, ttlMs = Long.MAX_VALUE, targetState = if (music.isPlaying) IslandState.TYPE_2_MID else IslandState.TYPE_0_RING)
     fun buildChargingEvent(c: LiveActivityModel.Charging) = IslandEvent("sys_battery", c, if (c.isPluggedIn) SCORE_CHARGING_JUST_PLUGGED else if (c.level <= 5) SCORE_CRITICAL_ALERT else SCORE_LOW_BATTERY_20, targetState = if (c.level <= 5 && !c.isPluggedIn) IslandState.TYPE_2_MID else IslandState.TYPE_CUBE)
+    fun buildNotificationStackEvent(stack: LiveActivityModel.NotificationStack) = IslandEvent(stack.id, stack, SCORE_NOTIFICATION, ttlMs = 8_000L, targetState = IslandState.TYPE_2_MID)
+    fun buildOngoingTaskEvent(task: LiveActivityModel.OngoingTask) = IslandEvent(task.id, task, SCORE_DOWNLOAD_PROGRESS, isSticky = true, targetState = IslandState.TYPE_1_MINI)
+    fun buildOtpEvent(otpModel: LiveActivityModel.Otp) = IslandEvent(otpModel.id, otpModel, SCORE_CRITICAL_ALERT, ttlMs = 30_000L, isSuppressable = false, targetState = IslandState.TYPE_2_MID)
     fun buildNavLauncherEvent() = IslandEvent("nav_launcher", LiveActivityModel.Dashboard(pinnedApps = pinnedApps), SCORE_NAV_LAUNCHER_IDLE, isSticky = true, ttlMs = Long.MAX_VALUE, targetState = IslandState.TYPE_1_MINI)
 }
 

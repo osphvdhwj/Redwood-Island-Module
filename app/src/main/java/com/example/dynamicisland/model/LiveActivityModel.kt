@@ -43,14 +43,19 @@ sealed class LiveActivityModel {
 
     data class Call(
         override val id: String = "sys_call",
-        override val type: ActivityType = ActivityType.CALL,   // now valid
+        override val type: ActivityType = ActivityType.CALL,
         override val isTransient: Boolean = false,
         override val isCritical: Boolean = true,
         override val isSensitive: Boolean = true,
         val callerName: String = "Unknown Caller",
-        val state: String = "ONGOING",                     // RINGING, ONGOING, ENDED
+        val phoneNumber: String? = null,
+        val state: String = "ONGOING",                     // RINGING, ONGOING, DISCONNECTED
         val startTime: Long = System.currentTimeMillis(),
-        val sourceApp: String? = null // e.g., "WhatsApp", "Telegram"
+        val sourceApp: String? = null,                     // e.g., "WhatsApp", "Telegram"
+        val photoUri: String? = null,
+        val contactPhoto: Bitmap? = null,
+        val relationLabel: String? = null,
+        val isSpam: Boolean = false
     ) : LiveActivityModel()
 
     data class Music(
@@ -87,6 +92,9 @@ sealed class LiveActivityModel {
         val cpuTempCelsius: Float,
         val cpuFreqMhz: Int,
         val isGamingModeOn: Boolean,
+        val fps: Float = 0f,
+        val frameMs: Float = 0f,
+        val jankPct: Float = 0f,
         val ramFreeBytes: Long = 0,
         val batteryCycles: Int = 0,
         override val isTransient: Boolean = false,

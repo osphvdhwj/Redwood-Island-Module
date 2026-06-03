@@ -2,7 +2,6 @@ package com.example.dynamicisland.ui
 import com.example.dynamicisland.R
 import com.example.dynamicisland.manager.*
 import com.example.dynamicisland.model.*
-import com.example.dynamicisland.manager.*
 
 import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -55,14 +54,24 @@ fun DynamicIslandView.GeneralMini(general: LiveActivityModel.General) {
 
 @Composable
 fun DynamicIslandView.HardwareGaugeMini(hw: LiveActivityModel.HardwareMonitor) { 
-    val tempColor = when { hw.cpuTempCelsius > 45f -> Color.Red; hw.cpuTempCelsius > 38f -> Color.Yellow; else -> Color.Green }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) { 
-        Icon(imageVector = Icons.Default.Info, contentDescription = "Hardware", tint = tempColor, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(8.dp))
-        androidx.compose.material3.LinearProgressIndicator(progress = { (hw.cpuTempCelsius / 60f).coerceIn(0f, 1f) }, modifier = Modifier.width(60.dp).height(6.dp).clip(RoundedCornerShape(3.dp)), color = tempColor, trackColor = Color.White.copy(alpha=0.2f))
-        Spacer(Modifier.width(8.dp))
-        Text(text = "${hw.cpuFreqMhz} MHz", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) 
-    } 
+    if (hw.isGamingModeOn) {
+        GamingHUDMini(
+            fps = hw.fps,
+            frameMs = hw.frameMs,
+            jankPct = hw.jankPct,
+            cpuTemp = hw.cpuTempCelsius,
+            cpuFreqMhz = hw.cpuFreqMhz
+        )
+    } else {
+        val tempColor = when { hw.cpuTempCelsius > 45f -> Color.Red; hw.cpuTempCelsius > 38f -> Color.Yellow; else -> Color.Green }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) { 
+            Icon(imageVector = Icons.Default.Info, contentDescription = "Hardware", tint = tempColor, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            androidx.compose.material3.LinearProgressIndicator(progress = { (hw.cpuTempCelsius / 60f).coerceIn(0f, 1f) }, modifier = Modifier.width(60.dp).height(6.dp).clip(RoundedCornerShape(3.dp)), color = tempColor, trackColor = Color.White.copy(alpha=0.2f))
+            Spacer(Modifier.width(8.dp))
+            Text(text = "${hw.cpuFreqMhz} MHz", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) 
+        } 
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

@@ -104,6 +104,14 @@ fun AppearanceScreen(viewModel: SettingsViewModel) {
             viewModel.updateSetting(SettingKey.CONTENT_TRANSITION_STYLE, it)
         }
 
+        SettingsSlider(
+            title = "Tactile Squish", 
+            value = state.squishIntensity, 
+            defaultValue = 1.0f,
+            valueRange = 0.0f..2.0f,
+            onValueChange = { viewModel.updateSetting(SettingKey.SQUISH_INTENSITY, it) }
+        )
+
         SettingsSwitch(
             title = "Metaball Tear", 
             description = "Liquid drop effect when the Island splits.", 

@@ -39,6 +39,7 @@ data class SettingsState(
     val aestheticStyle: AestheticStyle = AestheticStyle.GLASS,
     val monochromeIcons: Boolean = false,
     val enableMetaballTear: Boolean = true,
+    val squishIntensity: Float = 1.0f,
 
     // Dual-Mode Architecture (Pillar 1)
     val liveBridgeEnabled: Boolean = false,
