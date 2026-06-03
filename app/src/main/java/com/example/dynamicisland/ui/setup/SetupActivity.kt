@@ -36,7 +36,6 @@ import com.example.dynamicisland.ui.ConfigActivity
 import com.example.dynamicisland.ui.design.IslandColors
 import com.example.dynamicisland.ui.design.RedwoodTheme
 import com.example.dynamicisland.ui.design.glassmorphicCard
-import com.example.dynamicisland.ui.design.glassmorphicCard
 import com.example.dynamicisland.util.IslandProcessUtils
 import kotlinx.coroutines.launch
 
@@ -45,7 +44,14 @@ import kotlinx.coroutines.launch
  * Automatically skips unnecessary permissions when LSPosed is detected.
  */
 class SetupActivity : ComponentActivity() {
-// ... (rest remains similar)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            RedwoodTheme {
+                SetupScreen()
+            }
+        }
+    }
 }
 
 @Composable
@@ -56,7 +62,6 @@ fun SetupScreen() {
     var hasBattery by remember { mutableStateOf(isIgnoringBatteryOptimizations(context)) }
     var hasRoot by remember { mutableStateOf(false) }
     
-    // Detection for HyperOS / MIUI
     val isHyperOS = remember { 
         val brand = android.os.Build.BRAND.lowercase()
         val manufacturer = android.os.Build.MANUFACTURER.lowercase()
@@ -113,7 +118,20 @@ fun SetupScreen() {
                 4 -> CompletionPage { finishSetup(context) }
             }
         }
-// ...
+        
+        Row(
+            Modifier.height(50.dp).fillMaxWidth().align(Alignment.BottomCenter),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            val count = if (isHyperOS) 5 else 4
+            repeat(count) { iteration ->
+                val color = if (pagerState.currentPage == iteration) IslandColors.accentCyan else Color.White.copy(alpha = 0.2f)
+                Box(
+                    modifier = Modifier.padding(4.dp).clip(RoundedCornerShape(2.dp)).background(color).size(width = 24.dp, height = 4.dp)
+                )
+            }
+        }
+    }
 }
 
 private fun finishSetup(context: Context) {

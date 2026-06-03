@@ -1,6 +1,5 @@
 package com.example.dynamicisland.manager
 import com.example.dynamicisland.model.*
-import com.example.dynamicisland.ui.DynamicIslandView
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 
@@ -9,7 +8,6 @@ import android.content.Context
 import android.os.Bundle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 class IslandNotificationManager(
     private val context: Context,
@@ -25,7 +23,6 @@ class IslandNotificationManager(
         notificationMap.clear()
     }
 
-    // This function will be called directly by our Xposed Hook when a notification arrives
     fun processIncomingNotification(packageName: String, notification: Notification) {
         scope.launch {
             val extras: Bundle = notification.extras ?: return@launch
@@ -38,7 +35,7 @@ class IslandNotificationManager(
                 if (icon != null) {
                     val drawable = icon.loadDrawable(context)
                     if (drawable != null) {
-                        val bitmap = android.graphics.Bitmap.createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight, android.graphics.Bitmap.Config.ARGB_8888)
+                        val bitmap = android.graphics.Bitmap.createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1), android.graphics.Bitmap.Config.ARGB_8888)
                         val canvas = android.graphics.Canvas(bitmap)
                         drawable.setBounds(0, 0, canvas.width, canvas.height)
                         drawable.draw(canvas)
@@ -64,17 +61,64 @@ class IslandNotificationManager(
                 remoteActions = actions
             )
 
-            // ... (Navigation and Delivery features remain same) ...
+            // 🗺️ FEATURE 1: The Navigation Hijacker (Google Maps)
+            if (packageName == "com.google.android.apps.maps") {
+                if (title.isNotEmpty() && text.isNotEmpty()) {
+                    val navModel = LiveActivityModel.Navigation(
+                        id = "sys_navigation",
+                        instruction = text,
+                        distance = title,
+                        isCritical = true
+                    )
+                    onNavigationCaught(navModel)
+                    return@launch
+                }
+            }
+
+            // 🍔 FEATURE 1.5: Smart Delivery & Ride Tracking
+            val deliveryApps = listOf("com.application.zomato", "in.swiggy.android", "com.ubercab", "com.ubercab.eats")
+            if (deliveryApps.contains(packageName)) {
+                val etaRegex = Regex("(\\d+)\\s*(min|mins|minutes)")
+                val match = etaRegex.find(text)
+                if (match != null) {
+                    val etaMins = match.groupValues[1]
+                    val deliveryModel = LiveActivityModel.OngoingTask(
+                        id = "delivery_$packageName",
+                        pkgName = packageName,
+                        title = if (packageName.contains("uber")) "Ride Arriving" else "Order Arriving",
+                        text = "$etaMins mins away",
+                        progress = 100 - (etaMins.toInt().coerceIn(1, 60)), 
+                        progressMax = 100
+                    )
+                    onProgressCaught(deliveryModel)
+                    return@launch
+                }
+            }
+
+            // ⬇️ FEATURE 2: Global Progress
+            val progress = extras.getInt(Notification.EXTRA_PROGRESS, -1)
+            val progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, -1)
+            
+            if (progress >= 0 && progressMax > 0) {
+                val progressModel = LiveActivityModel.OngoingTask(
+                    id = "sys_progress_$packageName",
+                    pkgName = packageName,
+                    title = title.ifEmpty { "Downloading..." },
+                    text = text,
+                    progress = progress,
+                    progressMax = progressMax
+                )
+                onProgressCaught(progressModel)
+                return@launch
+            }
 
             // 📦 FEATURE 4: Smart Coalescing (Stacking)
             val list = notificationMap.getOrPut(packageName) { mutableListOf() }
             
-            // 🔄 UPDATE LOGIC: If notification exists, replace it to update timestamp
             val existingIdx = list.indexOfFirst { it.id == notificationId }
             if (existingIdx != -1) {
                 val old = list[existingIdx]
                 if (old.text == text && old.title == title) {
-                    // Content identical, skip update to prevent flickering
                     avatar?.recycle()
                     return@launch
                 }
@@ -83,7 +127,7 @@ class IslandNotificationManager(
             }
             
             if (list.size >= 3) {
-                val old = list.removeAt(0) // Keep last 3
+                val old = list.removeAt(0)
                 old.avatar?.recycle()
             }
             list.add(simpleNotif)
@@ -104,7 +148,6 @@ class IslandNotificationManager(
         list.forEach { it.avatar?.recycle() }
         notificationMap.remove(packageName)
         
-        // Emit empty stack to trigger priority re-evaluation
         onNotificationStackCaught(
             LiveActivityModel.NotificationStack(
                 id = "stack_$packageName",
