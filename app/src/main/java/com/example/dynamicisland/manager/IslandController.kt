@@ -5,6 +5,7 @@ import android.database.ContentObserver
 import android.graphics.Bitmap
 import android.media.AudioManager
 import android.os.*
+import android.util.LruCache
 import android.provider.Settings
 import android.view.WindowManager
 import android.util.Log
@@ -53,6 +54,9 @@ class IslandController @Inject constructor(
     private val activeExternalActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
     private val mediaBridge by lazy { MediaBridge(context, mediaManager) }
     private val blurEngine by lazy { IslandBlurEngine.get(context) }
+    
+    val actionManager by lazy { IslandActionManager(context, scope) }
+    val storageManager by lazy { IslandStorageManager(context) }
 
     // 🧠 SHARED KNOWLEDGE BASE (Synergy)
     // Caches non-volatile data to prevent redundant IPC/IO across Redwood and Nav Island
@@ -62,6 +66,9 @@ class IslandController @Inject constructor(
     private var _lastActiveModel: LiveActivityModel? = null
     private var _lastSplitModel: LiveActivityModel? = null
     private val _activeTheme = mutableStateOf(IslandTheme())
+    
+    val currentHardware = mutableStateOf<LiveActivityModel.HardwareMonitor?>(null)
+    val stashHistory get() = storageManager.stashHistory
 
     internal var islandView: DynamicIslandView? = null
     private var currentViewSyncJob: Job? = null
@@ -168,8 +175,28 @@ class IslandController @Inject constructor(
         }
         
         loadAndApplySettings()
-        hardwareMonitor.onHardwareUpdate = { evaluatePriority() }
-        locationManager.startPolling { evaluatePriority() }
+        hardwareMonitor.onHardwareUpdate = { 
+            currentHardware.value = it
+            evaluatePriority() 
+        }
+    }
+
+    fun setSystemRecordingState(active: Boolean) {
+        isSystemRecordingActive = active
+        evaluatePriority()
+    }
+
+    fun triggerAssistantAura(progress: Float) {
+        evaluatePriority()
+    }
+
+    fun interceptAssistant(): Boolean {
+        return settingsState.assistBridgeEnabled
+    }
+
+    fun setSystemScreenshotActive(active: Boolean) {
+        isScreenshotActiveInternal = active
+        evaluatePriority()
     }
 
     fun loadAndApplySettings() {
@@ -375,7 +402,7 @@ class IslandController @Inject constructor(
     }
 
     private val callManager = IslandCallManager(context, audioManager, scope) { evaluatePriority() }
-    private val notificationManager = IslandNotificationManager(context, scope, 
+    internal val notificationManager = IslandNotificationManager(context, scope, 
         onProgressCaught = { evaluatePriority() },
         onNavigationCaught = { postTransientNotification(it, 5000L) },
         onNotificationStackCaught = { evaluatePriority() }

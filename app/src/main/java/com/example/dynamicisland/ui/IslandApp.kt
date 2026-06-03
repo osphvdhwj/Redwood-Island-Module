@@ -19,7 +19,7 @@ import com.example.dynamicisland.ui.mvi.IslandViewModel
  * Strictly observes the StateFlow from IslandViewModel and renders the appropriate UI components.
  */
 @Composable
-fun IslandApp(viewModel: IslandViewModel) {
+fun DynamicIslandView.IslandApp(viewModel: IslandViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     
     // Position the island at the top center

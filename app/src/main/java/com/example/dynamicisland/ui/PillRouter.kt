@@ -1,6 +1,7 @@
 package com.example.dynamicisland.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.fillMaxSize
 import com.example.dynamicisland.ipc.IslandState
 import com.example.dynamicisland.model.*
 import com.example.dynamicisland.ui.mvi.IslandIntent

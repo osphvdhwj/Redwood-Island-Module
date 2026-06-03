@@ -156,7 +156,7 @@ class SystemUIA15Hooks {
                     val params = WindowManager.LayoutParams(
                         WindowManager.LayoutParams.MATCH_PARENT,
                         windowH,
-                        WindowManager.LayoutParams.TYPE_STATUS_BAR_SUB_PANEL,
+                        2017, // TYPE_STATUS_BAR_SUB_PANEL
                         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or

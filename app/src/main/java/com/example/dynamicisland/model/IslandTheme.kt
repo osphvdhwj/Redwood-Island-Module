@@ -57,7 +57,9 @@ data class IslandTheme(
     val springDamping: Float = 0.85f, // Critically damped (Apple style)
     val springStiffness: Float = 400f, // Snappy expansion
     val autoCollapseTimeMs: Long = 3000L,
-    val isGlassmorphism: Boolean = true // Toggles deep black vs translucent glass
+    val isGlassmorphism: Boolean = true, // Toggles deep black vs translucent glass
+    val accentColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.White,
+    val glowColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Transparent
 )
 
 val LocalIslandTheme = compositionLocalOf { IslandTheme() }

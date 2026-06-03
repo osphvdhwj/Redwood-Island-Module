@@ -25,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -60,7 +61,7 @@ fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp, isLowLaten
     this.background(Color.Black.copy(alpha = 0.9f))
 } else {
     this
-        .blur(blurRadius, edgeTreatment = androidx.compose.ui.draw.BlurContainer)
+        .blur(blurRadius, edgeTreatment = BlurredEdgeTreatment.Unbounded)
         .background(
             Brush.verticalGradient(
                 colors = listOf(

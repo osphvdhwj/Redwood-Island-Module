@@ -50,6 +50,14 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
             animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing), RepeatMode.Restart),
             label = "rotation"
         )
+        
+        val breathAnimation = rememberInfiniteTransition(label = "breath_anim")
+        val animatedBreath by breathAnimation.animateFloat(
+            initialValue = 0.8f,
+            targetValue = 1.2f,
+            animationSpec = infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            label = "breath"
+        )
 
         Box(
             modifier = Modifier
@@ -78,13 +86,7 @@ fun DynamicIslandView.RingUI(model: LiveActivityModel?) {
                 }
 
                 val strokeW = if (pulseStyle == RingPulseStyle.BREATH) {
-                    val breath by infiniteTransition.animateFloat(
-                        initialValue = ringThickness.value.dp.toPx() * 0.8f,
-                        targetValue = ringThickness.value.dp.toPx() * 1.2f,
-                        animationSpec = infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-                        label = "breath"
-                    )
-                    breath
+                    ringThickness.value.dp.toPx() * animatedBreath
                 } else ringThickness.value.dp.toPx()
 
                 if (settings.navIslandMode) {

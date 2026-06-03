@@ -61,7 +61,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
     val view = this
     val theme = LocalIslandTheme.current
     val settings = controller.settingsState
-    val stashItems by controller.stashHistory.collectAsState()
+    val stashItems by controller.stashHistory.collectAsState(initial = emptyList())
 
     Column(
         modifier = Modifier
@@ -114,8 +114,8 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
             if (settings.showVitalsCpu && hw != null) vitals.add { 
                 SystemVitalCard(Modifier.fillMaxWidth(), "CPU Temp", "${hw.cpuTempCelsius.toInt()}°C", (hw.cpuTempCelsius / 100f).coerceIn(0f, 1f), Color(0xFFFF9500), Icons.Default.Thermostat) 
             }
-            if (settings.showVitalsFps) vitals.add { 
-                SystemVitalCard(Modifier.fillMaxWidth(), "Performance", "${gamingFps.floatValue.toInt()} FPS", (gamingFps.floatValue / 120f).coerceIn(0f, 1f), Color(0xFF00FBFF), Icons.Default.Speed) 
+            if (settings.showVitalsFps && hw != null) vitals.add { 
+                SystemVitalCard(Modifier.fillMaxWidth(), "Performance", "${hw.fps.toInt()} FPS", (hw.fps / 120f).coerceIn(0f, 1f), Color(0xFF00FBFF), Icons.Default.Speed) 
             }
             if (settings.showVitalsBatCycles && hw != null) vitals.add { 
                 SystemVitalCard(Modifier.fillMaxWidth(), "Battery Cycles", "${hw.batteryCycles}", (hw.batteryCycles / 1000f).coerceIn(0f, 1f), Color(0xFFAF52DE), Icons.Default.Refresh) 

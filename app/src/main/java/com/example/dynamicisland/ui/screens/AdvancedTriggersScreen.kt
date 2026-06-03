@@ -1,6 +1,7 @@
 package com.example.dynamicisland.ui.screens
 
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
