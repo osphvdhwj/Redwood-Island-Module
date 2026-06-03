@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import com.example.dynamicisland.manager.*
+import com.example.dynamicisland.ipc.IslandIPCClient
 import com.example.dynamicisland.model.ActivityType
 import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.settings.SettingsManager
@@ -79,7 +80,7 @@ class SystemUIA15Hooks {
                 val mediaManager = IslandMediaManager(context, scope)
                 val hardwareMonitor = IslandHardwareMonitor(context, scope)
                 val neuralCore = IslandNeuralCore(context)
-                val ipcClient = IslandIPCClient.get(context)
+                val ipcClient: IslandIPCClient = IslandIPCClient.get(context)
                 val backupManager = IslandBackupManager(context, ipcClient)
                 val locationManager = IslandLocationManager(context)
 
