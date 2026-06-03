@@ -83,12 +83,16 @@ class SystemUIA15Hooks {
                 val backupManager = IslandBackupManager(context, ipcClient)
                 val locationManager = IslandLocationManager(context)
 
+                // 📸 CONTINUITY CAMERA (QR SCANNER)
+                val cameraScanner = ContinuityCameraScanner(context)
+
                 controller = IslandController(
                     context, settingsManager, mediaManager, hardwareMonitor,
                     eventBus, hapticsManager, networkMonitor, neuralCore,
                     backupManager, locationManager
                 ).apply {
                     start(context)
+                    if (settingsState.barcode) cameraScanner.start()
                 }
             } catch (e: Throwable) {
                 XposedBridge.log("$TAG ❌: Controller bootstrap failed: ${e.message}")
