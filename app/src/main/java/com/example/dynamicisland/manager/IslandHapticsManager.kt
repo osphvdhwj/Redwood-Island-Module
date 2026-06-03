@@ -8,10 +8,11 @@ import android.os.VibratorManager
 import com.example.dynamicisland.ipc.IslandState
 import javax.inject.Inject
 import javax.inject.Singleton
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 @Singleton
 class IslandHapticsManager @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val settingsManager: com.example.dynamicisland.settings.SettingsManager
 ) {
     private var lastHapticState: IslandState = IslandState.HIDDEN
