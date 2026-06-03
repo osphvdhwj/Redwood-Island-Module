@@ -72,7 +72,14 @@ class ContinuityCameraScanner(private val context: Context) {
     // ── Internal ──────────────────────────────────────────────────────────────
 
     private val scope         = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val barcodeClient = BarcodeScanning.getClient()
+    private val barcodeClient by lazy {
+        try {
+            com.google.mlkit.common.sdkinternal.MlKitContext.initializeIfNeeded(context)
+        } catch (e: Exception) {
+            // Ignore if already initialized or fails
+        }
+        BarcodeScanning.getClient()
+    }
     private val isRunning     = AtomicBoolean(false)
     private var isArmed       = true   // resets after each successful scan
 
