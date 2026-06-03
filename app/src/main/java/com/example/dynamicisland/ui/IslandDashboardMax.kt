@@ -23,7 +23,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -105,7 +104,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
 
         // --- Section 1: System Vitals (Togglable) ---
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            val hw = controller.currentHardware
+            val hw = controller.currentHardware.value
             val vitals = mutableListOf<@Composable () -> Unit>()
             
             if (settings.showVitalsRam && hw != null) vitals.add { 

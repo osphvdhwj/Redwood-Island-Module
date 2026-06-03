@@ -95,8 +95,8 @@ class IslandController @Inject constructor(
             blurEngine.vibrantColor.collect { vibrant ->
                 if (vibrant != null && settingsState.dynamicColors) {
                     val newTheme = _activeTheme.value.copy(
-                        accentColor = vibrant,
-                        glowColor = vibrant
+                        accentColor = Color(vibrant),
+                        glowColor = Color(vibrant)
                     )
                     _activeTheme.value = newTheme
                     islandView?.activeTheme?.value = newTheme
