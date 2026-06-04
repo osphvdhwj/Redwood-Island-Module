@@ -41,7 +41,7 @@ class IslandController @Inject constructor(
     @ApplicationContext internal val context: Context,
     private val settingsManager: SettingsManager,
     val mediaManager: IslandMediaManager,
-    private val hardwareMonitor: IslandHardwareMonitor,
+    private val hardwareRepository: com.example.dynamicisland.data.repository.HardwareRepository,
     private val hapticsManager: IslandHapticsManager,
     private val networkMonitor: IslandNetworkMonitor,
     private val neuralCore: IslandNeuralCore,
@@ -155,13 +155,13 @@ class IslandController @Inject constructor(
             when (intent.action) {
                 Intent.ACTION_SCREEN_ON -> { 
                     mediaManager.isScreenOn = true; 
-                    hardwareMonitor.isScreenOn = true; 
+                    hardwareRepository.isScreenOn = true; 
                     neuralCore.dispatch(IslandIntent.UpdateScreenState(true))
                     evaluatePriority() 
                 }
                 Intent.ACTION_SCREEN_OFF -> { 
                     mediaManager.isScreenOn = false; 
-                    hardwareMonitor.isScreenOn = false; 
+                    hardwareRepository.isScreenOn = false; 
                     neuralCore.dispatch(IslandIntent.UpdateScreenState(false))
                     evaluatePriority() 
                 }
@@ -183,14 +183,14 @@ class IslandController @Inject constructor(
         }
         
         loadAndApplySettings()
-        hardwareMonitor.onHardwareUpdate = { 
+        hardwareRepository.onHardwareUpdate = { 
             currentHardware.value = it
             evaluatePriority() 
         }
 
         // 🔋 BATTERY SYNERGY ENGINE
-        BatteryPlugin.start(context)
-        BatteryPlugin.onBatteryChanged = { level, isCharging, color, wattage ->
+        batteryRepository.start(context)
+        batteryRepository.onBatteryChanged = { level, isCharging, color, wattage ->
             if (wasCharging != isCharging || level != lastLevel) {
                 // 1-second Pulse Synergy on change
                 neuralCore.dispatch(IslandIntent.BatteryPulse(level))
@@ -272,7 +272,7 @@ class IslandController @Inject constructor(
 
         IslandPriorityEngineV2.updateContext(
             screenOn = mediaManager.isScreenOn,
-            gaming = hardwareMonitor.isGamingModeOn || topAppPackage.contains("game"),
+            gaming = hardwareRepository.isGamingModeOn || topAppPackage.contains("game"),
             panelExpanded = false, 
             landscape = isLandscape,
             navMode = settingsState.navIslandMode,
@@ -435,7 +435,7 @@ class IslandController @Inject constructor(
     fun destroy() {
         try { context.unregisterReceiver(screenStateReceiver) } catch (_: Exception) {}
         try { context.unregisterReceiver(ecosystemReceiver) } catch (_: Exception) {}
-        BatteryPlugin.destroy(context)
+        batteryRepository.destroy(context)
         scope.cancel()
         mediaManager.destroy()
         callManager.destroy()

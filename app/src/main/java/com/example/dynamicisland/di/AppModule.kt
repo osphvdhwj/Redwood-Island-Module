@@ -1,21 +1,15 @@
 package com.example.dynamicisland.di
 
 import android.content.Context
-import com.example.dynamicisland.manager.IslandHardwareMonitor
+import com.example.dynamicisland.data.repository.HardwareRepository
 import com.example.dynamicisland.manager.IslandMediaManager
 import com.example.dynamicisland.settings.SettingsManager
 import com.example.dynamicisland.ipc.IslandIPCClient
-import com.example.dynamicisland.system.hook.AospEventProvider
-import com.example.dynamicisland.system.hook.SystemEventProvider
+import com.example.dynamicisland.data.repository.BatteryRepository
+import com.example.dynamicisland.domain.dispatchers.DispatcherProvider
+import com.example.dynamicisland.domain.dispatchers.StandardDispatcherProvider
+import com.example.dynamicisland.data.repository.GameHubRepository
 import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -23,8 +17,32 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideDispatcherProvider(): DispatcherProvider {
+        return StandardDispatcherProvider()
+    }
+
+    @Provides
+    @Singleton
     fun provideSettingsManager(@ApplicationContext context: Context): SettingsManager {
         return SettingsManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBatteryRepository(
+        @ApplicationContext context: Context,
+        dispatchers: DispatcherProvider
+    ): BatteryRepository {
+        return BatteryRepository(context, dispatchers)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGameHubRepository(
+        @ApplicationContext context: Context,
+        dispatchers: DispatcherProvider
+    ): GameHubRepository {
+        return GameHubRepository(context, dispatchers)
     }
 
     @Provides
@@ -56,12 +74,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideIslandHardwareMonitor(@ApplicationContext context: Context): IslandHardwareMonitor {
-        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-        return IslandHardwareMonitor(
-            context = context,
-            scope = scope,
-            onHardwareUpdate = {}
-        )
+    fun provideHardwareRepository(
+        @ApplicationContext context: Context,
+        dispatchers: DispatcherProvider
+    ): HardwareRepository {
+        return HardwareRepository(context, dispatchers)
     }
 }

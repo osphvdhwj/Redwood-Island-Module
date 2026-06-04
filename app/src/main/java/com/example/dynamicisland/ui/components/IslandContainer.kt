@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.ipc.IslandState
+import com.example.dynamicisland.ui.design.VisualDialect
 import com.example.dynamicisland.ui.mvi.IslandUiState
 
 /**
@@ -30,6 +31,9 @@ fun IslandContainer(
     val screenWidthDp = configuration.screenWidthDp.toFloat()
     
     val dpPhysicsSpec = tween<Dp>(durationMillis = 200)
+
+    // Resolve Visual Dialect (Pillar 2: High-Fidelity Variety)
+    val dialect = VisualDialect.fromIconPack(state.settings.iconPack)
     
     // Determine target dimensions based on state
     val targetWidth = when (state.islandState) {
@@ -57,10 +61,10 @@ fun IslandContainer(
     }
 
     val targetRadius = (when (state.islandState) {
-        IslandState.TYPE_3_MAX -> 42.dp
-        IslandState.TYPE_2_MID -> 16.dp
-        IslandState.TYPE_CUBE -> 24.dp
-        IslandState.TYPE_ORBITAL -> 32.dp
+        IslandState.TYPE_3_MAX -> dialect.cornerRadius * 1.8f
+        IslandState.TYPE_2_MID -> dialect.cornerRadius
+        IslandState.TYPE_CUBE -> dialect.cornerRadius * 1.2f
+        IslandState.TYPE_ORBITAL -> dialect.cornerRadius * 1.5f
         IslandState.TYPE_BRUTALIST -> 0.dp
         else -> (targetHeight / 2).dp
     }).coerceAtLeast(0.dp)
@@ -74,16 +78,19 @@ fun IslandContainer(
 
     // Pillar 5: Strict Lifecycle Scopes. If screen is off, do not render to save battery.
     if (!isHidden && state.isScreenOn) {
-        val isBrutalist = state.islandState == IslandState.TYPE_BRUTALIST
-        val borderSize = if (isBrutalist) 3.dp else 2.dp
-        
         Box(
             modifier = Modifier
                 .width(animatedWidth)
                 .height(animatedHeight)
+                .shadow(
+                    elevation = dialect.glowRadius,
+                    shape = RoundedCornerShape(animatedRadius),
+                    ambientColor = dialect.glowColor,
+                    spotColor = dialect.glowColor
+                )
                 .clip(RoundedCornerShape(animatedRadius))
-                .background(Color.Black)
-                .border(borderSize, Color.White, RoundedCornerShape(animatedRadius)),
+                .background(Color.Black.copy(alpha = dialect.backgroundAlpha))
+                .border(dialect.borderWidth, dialect.borderColor, RoundedCornerShape(animatedRadius)),
             contentAlignment = Alignment.Center
         ) {
             content()

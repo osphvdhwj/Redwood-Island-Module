@@ -8,6 +8,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
+/**
+ * ELITE PROGRAMMATIC ASSETS
+ * Custom vector paths for industry-standard icon styles.
+ */
 object ProgrammaticIcons {
 
     // === MUSIC ICON VARIANTS ===
@@ -19,7 +23,6 @@ object ProgrammaticIcons {
         viewportWidth = 24f,
         viewportHeight = 24f
     ).path(fill = SolidColor(Color.White), pathFillType = PathFillType.EvenOdd) {
-        // Thick, deeply rounded double note (SF Style)
         moveTo(18f, 3f)
         curveTo(18f, 2.45f, 17.55f, 2f, 17f, 2f)
         curveTo(16.71f, 2f, 16.45f, 2.12f, 16.26f, 2.32f)
@@ -53,7 +56,6 @@ object ProgrammaticIcons {
         viewportWidth = 24f,
         viewportHeight = 24f
     ).path(fill = SolidColor(Color.White)) {
-        // Geometric M3 Style
         moveTo(12f, 3f)
         verticalLineTo(13.55f)
         curveTo(11.41f, 13.21f, 10.73f, 13f, 10f, 13f)
@@ -74,38 +76,23 @@ object ProgrammaticIcons {
         viewportWidth = 24f,
         viewportHeight = 24f
     ).path(fill = SolidColor(Color.White)) {
-        // Fractured, aggressive paths
-        // Top bar fragment
         moveTo(10f, 2f)
         lineTo(22f, 4f)
         lineTo(22f, 6f)
         lineTo(12f, 4.5f)
         close()
-        // Stem fragment with gap
         moveTo(10f, 4f)
         lineTo(10f, 16f)
         lineTo(8f, 16f)
         lineTo(8f, 5f)
         close()
-        // Sharp triangular note head
         moveTo(8f, 16f)
         lineTo(10f, 22f)
         lineTo(3f, 19f)
         close()
-        // Secondary stem fragment
-        moveTo(22f, 7f)
-        lineTo(22f, 14f)
-        lineTo(20f, 14f)
-        lineTo(20f, 8f)
-        close()
-        // Sharp triangular note head 2
-        moveTo(20f, 14f)
-        lineTo(22f, 19f)
-        lineTo(15f, 16f)
-        close()
     }.build()
 
-    // === BATTERY (CHARGING) ICON VARIANTS ===
+    // === BATTERY ICON VARIANTS ===
 
     val CupertinoBattery = ImageVector.Builder(
         name = "CupertinoBattery",
@@ -114,7 +101,6 @@ object ProgrammaticIcons {
         viewportWidth = 24f,
         viewportHeight = 24f
     ).path(fill = SolidColor(Color.White), pathFillType = PathFillType.EvenOdd) {
-        // Deeply rounded pill body (SF Style)
         moveTo(2f, 8f)
         curveTo(2f, 6.34f, 3.34f, 5f, 5f, 5f)
         horizontalLineTo(17f)
@@ -125,20 +111,10 @@ object ProgrammaticIcons {
         curveTo(3.34f, 19f, 2f, 17.66f, 2f, 16f)
         verticalLineTo(8f)
         close()
-        // Rounded tip
         moveTo(21f, 10f)
         curveTo(21.55f, 10f, 22f, 10.45f, 22f, 11f)
         verticalLineTo(13f)
         curveTo(22f, 13.55f, 21.55f, 14f, 21f, 14f)
-        close()
-        // Central bolt
-        moveTo(12.5f, 7f)
-        lineTo(8.5f, 12f)
-        horizontalLineTo(11f)
-        lineTo(9.5f, 17f)
-        lineTo(13.5f, 12f)
-        horizontalLineTo(11f)
-        lineTo(12.5f, 7f)
         close()
     }.build()
 
@@ -149,7 +125,6 @@ object ProgrammaticIcons {
         viewportWidth = 24f,
         viewportHeight = 24f
     ).path(fill = SolidColor(Color.White)) {
-        // Geometric shell aligned to grid
         moveTo(15.67f, 4f)
         horizontalLineTo(14f)
         verticalLineTo(2f)
@@ -164,15 +139,6 @@ object ProgrammaticIcons {
         verticalLineTo(5.33f)
         curveTo(17f, 4.6f, 16.4f, 4f, 15.67f, 4f)
         close()
-        // Internal Bolt
-        moveTo(14.5f, 11f)
-        lineTo(12.27f, 11f)
-        lineTo(13f, 7f)
-        lineTo(9.5f, 13f)
-        lineTo(11.73f, 13f)
-        lineTo(11f, 19f)
-        lineTo(14.5f, 11f)
-        close()
     }.build()
 
     val CyberpunkBattery = ImageVector.Builder(
@@ -182,7 +148,6 @@ object ProgrammaticIcons {
         viewportWidth = 24f,
         viewportHeight = 24f
     ).path(fill = SolidColor(Color.White)) {
-        // Hexagonal aggressive shell
         moveTo(3f, 6f)
         lineTo(18f, 6f)
         lineTo(20f, 9f)
@@ -192,26 +157,9 @@ object ProgrammaticIcons {
         lineTo(2f, 15f)
         lineTo(2f, 9f)
         close()
-        // Fractured inner gap
-        moveTo(4f, 8f)
-        lineTo(4f, 16f)
-        lineTo(17f, 16f)
-        lineTo(18.5f, 14f)
-        lineTo(18.5f, 10f)
-        lineTo(17f, 8f)
-        close()
-        // Disconnected neon bolt
-        moveTo(12f, 5f)
-        lineTo(8f, 13f)
-        lineTo(10f, 13f)
-        lineTo(9f, 20f)
-        lineTo(13f, 12f)
-        lineTo(11f, 12f)
-        lineTo(12f, 5f)
-        close()
     }.build()
 
-    // === NOTIFICATION BELL ICON VARIANTS ===
+    // === SYSTEM BELL VARIANTS ===
 
     val CupertinoBell = ImageVector.Builder(
         name = "CupertinoBell",
@@ -220,7 +168,6 @@ object ProgrammaticIcons {
         viewportWidth = 24f,
         viewportHeight = 24f
     ).path(fill = SolidColor(Color.White), pathFillType = PathFillType.EvenOdd) {
-        // Symmetrical wide bell (SF Style)
         moveTo(12f, 2f)
         curveTo(9.79f, 2f, 8f, 3.79f, 8f, 6f)
         verticalLineTo(11.29f)
@@ -234,11 +181,6 @@ object ProgrammaticIcons {
         verticalLineTo(6f)
         curveTo(16f, 3.79f, 14.21f, 2f, 12f, 2f)
         close()
-        // Rounded clapper
-        moveTo(10f, 19f)
-        curveTo(10f, 20.1f, 10.9f, 21f, 12f, 21f)
-        curveTo(13.1f, 21f, 14f, 20.1f, 14f, 19f)
-        close()
     }.build()
 
     val MaterialBell = ImageVector.Builder(
@@ -248,7 +190,6 @@ object ProgrammaticIcons {
         viewportWidth = 24f,
         viewportHeight = 24f
     ).path(fill = SolidColor(Color.White)) {
-        // M3 Bell with sharp clapper separation
         moveTo(12f, 22f)
         curveTo(13.1f, 22f, 14f, 21.1f, 14f, 20f)
         horizontalLineTo(10f)
@@ -261,13 +202,6 @@ object ProgrammaticIcons {
         curveTo(13.5f, 3.17f, 12.83f, 2.5f, 12f, 2.5f)
         curveTo(11.17f, 2.5f, 10.5f, 3.17f, 10.5f, 4f)
         verticalLineTo(4.68f)
-        curveTo(7.63f, 5.36f, 6f, 7.92f, 6f, 11f)
-        verticalLineTo(16f)
-        lineTo(4f, 18f)
-        verticalLineTo(19f)
-        horizontalLineTo(20f)
-        verticalLineTo(18f)
-        lineTo(18f, 16f)
         close()
     }.build()
 
@@ -278,7 +212,6 @@ object ProgrammaticIcons {
         viewportWidth = 24f,
         viewportHeight = 24f
     ).path(fill = SolidColor(Color.White)) {
-        // Trapezoidal aggressive bell
         moveTo(12f, 2f)
         lineTo(16f, 6f)
         lineTo(16f, 14f)
@@ -289,16 +222,144 @@ object ProgrammaticIcons {
         lineTo(8f, 14f)
         lineTo(8f, 6f)
         close()
-        // Fractured inner gap
-        moveTo(9.5f, 7f)
-        lineTo(14.5f, 7f)
-        lineTo(14.5f, 13f)
-        lineTo(9.5f, 13f)
+    }.build()
+
+    // === SYSTEM CONNECTIVITY VARIANTS ===
+
+    val OxygenWifi = ImageVector.Builder(
+        name = "OxygenWifi",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(stroke = SolidColor(Color.White), strokeWidth = 1.5f) {
+        moveTo(12f, 18f)
+        lineTo(12.01f, 18.01f)
+        moveTo(8.5f, 14.5f)
+        curveTo(10.43f, 12.57f, 13.57f, 12.57f, 15.5f, 14.5f)
+        moveTo(5f, 11f)
+        curveTo(8.87f, 7.13f, 15.13f, 7.13f, 19f, 11f)
+        moveTo(1.5f, 7.5f)
+        curveTo(7.3f, 1.7f, 16.7f, 1.7f, 22.5f, 7.5f)
+    }.build()
+
+    val CyberpunkWifi = ImageVector.Builder(
+        name = "CyberpunkWifi",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(fill = SolidColor(Color.White)) {
+        moveTo(12f, 21f)
+        lineTo(9f, 18f)
+        lineTo(12f, 15f)
+        lineTo(15f, 18f)
         close()
-        // Triangular clapper
-        moveTo(10f, 20f)
-        lineTo(14f, 20f)
-        lineTo(12f, 23f)
+        moveTo(6f, 15f)
+        lineTo(3f, 12f)
+        lineTo(21f, 12f)
+        lineTo(18f, 15f)
+        close()
+        moveTo(0f, 9f)
+        lineTo(24f, 9f)
+        lineTo(22f, 6f)
+        lineTo(2f, 6f)
+        close()
+    }.build()
+
+    // === PERFORMANCE VARIANTS ===
+
+    val FuturisticRAM = ImageVector.Builder(
+        name = "FuturisticRAM",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(stroke = SolidColor(Color.White), strokeWidth = 2f) {
+        moveTo(2f, 6f)
+        horizontalLineTo(22f)
+        verticalLineTo(18f)
+        horizontalLineTo(2f)
+        close()
+    }.path(fill = SolidColor(Color.White)) {
+        moveTo(4f, 18f)
+        verticalLineTo(21f)
+        horizontalLineTo(6f)
+        verticalLineTo(18f)
+        close()
+        moveTo(9f, 18f)
+        verticalLineTo(21f)
+        horizontalLineTo(11f)
+        verticalLineTo(18f)
+        close()
+        moveTo(14f, 18f)
+        verticalLineTo(21f)
+        horizontalLineTo(16f)
+        verticalLineTo(18f)
+        close()
+        moveTo(19f, 18f)
+        verticalLineTo(21f)
+        horizontalLineTo(21f)
+        verticalLineTo(18f)
+        close()
+    }.build()
+
+    val FuturisticCPU = ImageVector.Builder(
+        name = "FuturisticCPU",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(stroke = SolidColor(Color.White), strokeWidth = 2f) {
+        moveTo(5f, 5f)
+        horizontalLineTo(19f)
+        verticalLineTo(19f)
+        horizontalLineTo(5f)
+        close()
+    }.path(fill = SolidColor(Color.White)) {
+        // Top pins
+        moveTo(8f, 2f)
+        verticalLineTo(5f)
+        horizontalLineTo(9f)
+        verticalLineTo(2f)
+        close()
+        moveTo(15f, 2f)
+        verticalLineTo(5f)
+        horizontalLineTo(16f)
+        verticalLineTo(2f)
+        close()
+        // Right pins
+        moveTo(19f, 8f)
+        horizontalLineTo(22f)
+        verticalLineTo(9f)
+        horizontalLineTo(19f)
+        close()
+        moveTo(19f, 15f)
+        horizontalLineTo(22f)
+        verticalLineTo(16f)
+        horizontalLineTo(19f)
+        close()
+        // Bottom pins
+        moveTo(8f, 19f)
+        verticalLineTo(22f)
+        horizontalLineTo(9f)
+        verticalLineTo(19f)
+        close()
+        moveTo(15f, 19f)
+        verticalLineTo(22f)
+        horizontalLineTo(16f)
+        verticalLineTo(19f)
+        close()
+        // Left pins
+        moveTo(2f, 8f)
+        horizontalLineTo(5f)
+        verticalLineTo(9f)
+        horizontalLineTo(2f)
+        close()
+        moveTo(2f, 15f)
+        horizontalLineTo(5f)
+        verticalLineTo(16f)
+        horizontalLineTo(2f)
         close()
     }.build()
 }

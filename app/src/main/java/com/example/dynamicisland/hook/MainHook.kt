@@ -123,6 +123,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     private fun hookSystemUIProcess(lpparam: XC_LoadPackage.LoadPackageParam) {
         log("Applying SystemUI-process hooks (Consolidated A15)")
         SystemUIA15Hooks.init(lpparam)
+        GameSpaceHook.apply(lpparam)
     }
 
     // ── Intent resolver process ───────────────────────────────────────────────

@@ -1,27 +1,29 @@
 package com.example.dynamicisland.settings
 
 /**
- * Pro-Grade Icon Engine (Pillar 5)
+ * ELITE ICON ENGINE (Pillar 5)
  * Defines the visual soul of the Island's iconography.
+ * Expanded to support industry-standard custom ROM styles.
  */
-sealed class IconPack(val id: String) {
-    object MaterialYou : IconPack("MATERIAL_YOU")
-    object iOS : IconPack("IOS")
-    object OxygenOS : IconPack("OXYGEN_OS")
-    object OneUI : IconPack("ONE_UI")
-    object AmoledCyberpunk : IconPack("AMOLED_CYBERPUNK")
-    object CupertinoGlass : IconPack("CUPERTINO_GLASS")
+sealed class IconPack(val id: String, val displayName: String) {
+    object MaterialYou : IconPack("MATERIAL_YOU", "Material You")
+    object iOS : IconPack("IOS", "Cupertino Rounded")
+    object OxygenOS : IconPack("OXYGEN_OS", "Never Settle")
+    object OneUI : IconPack("ONE_UI", "Sam Style")
+    object Pixel : IconPack("PIXEL", "Circular")
+    object Outline : IconPack("OUTLINE", "Glass Outline")
+    object Futuristic : IconPack("FUTURISTIC", "Cyber-HUD")
+    object Minimal : IconPack("MINIMAL", "Dots & Lines")
+    object AmoledCyberpunk : IconPack("AMOLED_CYBERPUNK", "High Contrast")
 
     companion object {
+        val ALL = listOf(
+            MaterialYou, iOS, OxygenOS, OneUI, 
+            Pixel, Outline, Futuristic, Minimal, AmoledCyberpunk
+        )
+        
         fun fromString(id: String): IconPack {
-            return when (id.uppercase()) {
-                "IOS" -> iOS
-                "OXYGEN_OS" -> OxygenOS
-                "ONE_UI" -> OneUI
-                "AMOLED_CYBERPUNK" -> AmoledCyberpunk
-                "CUPERTINO_GLASS" -> CupertinoGlass
-                else -> MaterialYou
-            }
+            return ALL.find { it.id == id.uppercase() } ?: MaterialYou
         }
     }
 }

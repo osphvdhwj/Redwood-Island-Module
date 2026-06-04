@@ -51,14 +51,15 @@ import com.example.dynamicisland.model.LocalIslandTheme
 import com.example.dynamicisland.manager.StashedItem
 import com.example.dynamicisland.manager.StashType
 import com.example.dynamicisland.model.ActivityType
-import com.example.dynamicisland.settings.ShortcutLayout
-import com.example.dynamicisland.ui.components.MiniWeatherWidget
-import com.example.dynamicisland.ui.components.MiniCalendarWidget
+import com.example.dynamicisland.ui.design.VisualDialect
+import com.example.dynamicisland.settings.IconPack
 
 @Composable
 fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controller: IslandController) {
     val view = this
     val theme = LocalIslandTheme.current
+    val pack = LocalIconPack.current
+    val dialect = VisualDialect.fromIconPack(pack)
     val settings = controller.settingsState
     val stashItems by controller.stashHistory.collectAsState(initial = emptyList())
 
@@ -102,22 +103,22 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
             }
         }
 
-        // --- Section 1: System Vitals (Togglable) ---
+        // --- Section 1: System Vitals (Elite Dialect) ---
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             val hw = controller.currentHardware.value
             val vitals = mutableListOf<@Composable () -> Unit>()
             
             if (settings.showVitalsRam && hw != null) vitals.add { 
-                SystemVitalCard(Modifier.fillMaxWidth(), "Free RAM", formatRam(hw.ramFreeBytes), (hw.ramFreeBytes / 8589934592f).coerceIn(0f, 1f), Color(0xFF34C759), Icons.Default.Memory) 
+                SystemVitalCard(Modifier.fillMaxWidth(), "Free RAM", formatRam(hw.ramFreeBytes), (hw.ramFreeBytes / 8589934592f).coerceIn(0f, 1f), Color(0xFF34C759), IconProvider.LogicalIcon.RAM, pack, dialect) 
             }
             if (settings.showVitalsCpu && hw != null) vitals.add { 
-                SystemVitalCard(Modifier.fillMaxWidth(), "CPU Temp", "${hw.cpuTempCelsius.toInt()}°C", (hw.cpuTempCelsius / 100f).coerceIn(0f, 1f), Color(0xFFFF9500), Icons.Default.Thermostat) 
+                SystemVitalCard(Modifier.fillMaxWidth(), "CPU Temp", "${hw.cpuTempCelsius.toInt()}°C", (hw.cpuTempCelsius / 100f).coerceIn(0f, 1f), Color(0xFFFF9500), IconProvider.LogicalIcon.CPU, pack, dialect) 
             }
             if (settings.showVitalsFps && hw != null) vitals.add { 
-                SystemVitalCard(Modifier.fillMaxWidth(), "Performance", "${hw.fps.toInt()} FPS", (hw.fps / 120f).coerceIn(0f, 1f), Color(0xFF00FBFF), Icons.Default.Speed) 
+                SystemVitalCard(Modifier.fillMaxWidth(), "Performance", "${hw.fps.toInt()} FPS", (hw.fps / 120f).coerceIn(0f, 1f), Color(0xFF00FBFF), IconProvider.LogicalIcon.SPEED, pack, dialect) 
             }
             if (settings.showVitalsBatCycles && hw != null) vitals.add { 
-                SystemVitalCard(Modifier.fillMaxWidth(), "Battery Cycles", "${hw.batteryCycles}", (hw.batteryCycles / 1000f).coerceIn(0f, 1f), Color(0xFFAF52DE), Icons.Default.Refresh) 
+                SystemVitalCard(Modifier.fillMaxWidth(), "Battery Cycles", "${hw.batteryCycles}", (hw.batteryCycles / 1000f).coerceIn(0f, 1f), Color(0xFFAF52DE), IconProvider.LogicalIcon.SYNC, pack, dialect) 
             }
             
             vitals.chunked(2).forEach { pair ->
@@ -194,7 +195,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
             }
         }
 
-        // --- Section 4: Quick Settings Grid/Carousel (NEW) ---
+        // --- Section 4: Quick Settings (Elite Grid) ---
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Quick Actions", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
             
@@ -205,17 +206,24 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     items(view.qsTiles) { tile ->
-                        QSTileModern(tile, view.onQsTileClick)
+                        QSTileModern(tile, view.onQsTileClick, pack, dialect)
                     }
                 }
             } else {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    view.qsTiles.take(4).forEach { tile -> QSTileModern(tile, view.onQsTileClick) }
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    view.qsTiles.drop(4).take(4).forEach { tile -> QSTileModern(tile, view.onQsTileClick) }
-                    if (view.qsTiles.size < 8) {
-                        repeat(4 - (view.qsTiles.size - 4)) { Spacer(Modifier.size(64.dp)) }
+                // Elite Grid Implementation
+                val chunkedTiles = view.qsTiles.chunked(4)
+                chunkedTiles.forEach { rowTiles ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        rowTiles.forEach { tile ->
+                            QSTileModern(tile, view.onQsTileClick, pack, dialect)
+                        }
+                        // Pad row if not full
+                        if (rowTiles.size < 4) {
+                            repeat(4 - rowTiles.size) { Spacer(Modifier.width(64.dp)) }
+                        }
                     }
                 }
             }
@@ -319,13 +327,26 @@ fun SystemVitalCard(
     value: String,
     progress: Float,
     color: Color,
-    icon: Any
+    logicalIcon: IconProvider.LogicalIcon,
+    pack: IconPack,
+    dialect: VisualDialect
 ) {
+    val icon = IconProvider.getIcon(logicalIcon, pack)
+    
     Box(
         modifier = modifier
             .height(84.dp)
-            .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(24.dp))
-            .border(0.5.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
+            .shadow(
+                elevation = dialect.glowRadius,
+                shape = RoundedCornerShape(dialect.cornerRadius),
+                ambientColor = dialect.glowColor,
+                spotColor = dialect.glowColor
+            )
+            .background(
+                Color.White.copy(alpha = if (dialect.isGlassy) 0.12f else 0.05f), 
+                RoundedCornerShape(dialect.cornerRadius)
+            )
+            .border(dialect.borderWidth, dialect.borderColor, RoundedCornerShape(dialect.cornerRadius))
             .padding(12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -337,12 +358,7 @@ fun SystemVitalCard(
                     strokeWidth = 3.5.dp,
                     modifier = Modifier.fillMaxSize()
                 )
-                val iconModifier = Modifier.size(20.dp)
-                if (icon is androidx.compose.ui.graphics.painter.Painter) {
-                    Icon(icon, null, tint = color, modifier = iconModifier)
-                } else if (icon is ImageVector) {
-                    Icon(icon, null, tint = color, modifier = iconModifier)
-                }
+                Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
             }
             Column {
                 Text(label, color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
@@ -358,15 +374,19 @@ private fun formatRam(bytes: Long): String {
 }
 
 @Composable
-fun QSTileModern(tileSpec: String, onClick: ((String) -> Unit)?) {
-    val (icon, label) = when (tileSpec.lowercase()) {
-        "wifi" -> painterResource(R.drawable.ic_wifi_vector) to "Wi-Fi"
-        "bluetooth" -> painterResource(R.drawable.ic_bluetooth_vector) to "BT"
-        "torch" -> painterResource(R.drawable.ic_torch_vector) to "Torch"
-        "airplane" -> Icons.Default.Send to "Air" 
-        "location" -> Icons.Default.Place to "GPS"
-        else -> Icons.Default.Settings to "Sys"
+fun QSTileModern(tileSpec: String, onClick: ((String) -> Unit)?, pack: IconPack, dialect: VisualDialect) {
+    val logicalIcon = when (tileSpec.lowercase()) {
+        "wifi" -> IconProvider.LogicalIcon.WIFI
+        "bluetooth" -> IconProvider.LogicalIcon.BLUETOOTH
+        "torch" -> IconProvider.LogicalIcon.TORCH
+        "airplane" -> IconProvider.LogicalIcon.SYNC
+        "location" -> IconProvider.LogicalIcon.MAP
+        "data" -> IconProvider.LogicalIcon.DATA
+        "hotspot" -> IconProvider.LogicalIcon.HOTSPOT
+        else -> IconProvider.LogicalIcon.SETTINGS
     }
+    
+    val icon = IconProvider.getIcon(logicalIcon, pack)
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -375,17 +395,29 @@ fun QSTileModern(tileSpec: String, onClick: ((String) -> Unit)?) {
         Box(
             modifier = Modifier
                 .size(52.dp)
-                .background(Color.White.copy(alpha = 0.08f), CircleShape)
+                .shadow(
+                    elevation = dialect.glowRadius / 2,
+                    shape = CircleShape,
+                    ambientColor = dialect.glowColor,
+                    spotColor = dialect.glowColor
+                )
+                .background(Color.White.copy(alpha = if (dialect.isGlassy) 0.15f else 0.08f), CircleShape)
+                .border(dialect.borderWidth, dialect.borderColor, CircleShape)
                 .squishClickable { onClick?.invoke(tileSpec) },
             contentAlignment = Alignment.Center
         ) {
-            if (icon is androidx.compose.ui.graphics.painter.Painter) {
-                Icon(icon, null, tint = Color.White, modifier = Modifier.size(22.dp))
-            } else if (icon is ImageVector) {
-                Icon(icon, null, tint = Color.White, modifier = Modifier.size(22.dp))
-            }
+            Icon(icon, null, tint = Color.White, modifier = Modifier.size(22.dp))
         }
         Spacer(Modifier.height(6.dp))
+        val label = when (tileSpec.lowercase()) {
+            "wifi" -> "Wi-Fi"
+            "bluetooth" -> "BT"
+            "torch" -> "Torch"
+            "airplane" -> "Air"
+            "location" -> "GPS"
+            else -> tileSpec.take(4).capitalize()
+        }
         Text(label, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
     }
 }
+

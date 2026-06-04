@@ -4,12 +4,30 @@
 
 ## Project Core Philosophy
 Dual-island system utility for rooted Android (AOSP/HyperOS).
-- **Redwood Island (Top):** Dynamic Island system. Hooks to SystemUI but operates as a managed overlay to support large UI units (Dashboard/Max Pill) without crashing the Status Bar.
-- **Nav Island (Bottom):** One-of-a-kind utility that hooks directly into the Android Navigation Gesture Pill, customizing its appearance, physics, and behavior.
+- **Redwood Island (Top):** Dynamic Island system.
+- **Nav Island (Bottom):** Navigation Pill enhancement.
+- **Game Hub (Synergy):** Integration with Game Hub Version 15 (`io.chaldeaprjkt.gamespace`) featuring an AOSP OEM-Level Engine for extreme gaming performance.
 
 ---
 
-## Technical Specifications & Requirements
+## 🎮 Game Hub & OEM Engine (Version 15 Integration)
+The module now incorporates deep system-level optimizations previously exclusive to premium gaming phones (Xiaomi, ASUS, OnePlus).
+
+### 1. System Optimizer (Backend)
+- **Kernel Memory Boosting**: Forceful background process termination plus `drop_caches` and `compact_memory` kernel commands to maximize physical RAM.
+- **Filesystem Junk Cleaner**: Securely wipes app caches, system logs, tombstones, and obsolete Dalvik/ART .vdex files.
+- **Async Deep Scan**: Non-blocking I/O scan to identify large files (>50MB) and unused APKs.
+
+### 2. Hardware Controller (Security Backend)
+- **Clock Locking**: Snapdragon GPU clock locking and CPU governor switching (Battery, Balanced, Performance, Wild modes).
+- **Prop Spoofing**: Spoofs MIUI environment and Xiaomi product build to unlock 90/120 FPS in restricted games.
+
+### 3. Visual Dashboard (UI)
+- **Xiaomi 6.0 Style**: A sleek, minimal dashboard integrated into the Island overlay with live vitals and feature grid buttons.
+
+---
+
+## 🛠️ Technical Specifications & Requirements
 
 ### 1. Redwood Island (Top)
 - **Battery Ring:** A fully customizable ring showing battery percentage.
