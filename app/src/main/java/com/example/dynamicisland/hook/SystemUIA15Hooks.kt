@@ -73,6 +73,13 @@ class SystemUIA15Hooks {
             if (controller != null) return
             
             try {
+                // 🛠️ MANDATORY: Initialize ML Kit for SystemUI process
+                try {
+                    com.google.mlkit.common.sdkinternal.MlKitContext.initializeIfNeeded(context)
+                } catch (e: Exception) {
+                    XposedBridge.log("$TAG ⚠️: ML Kit initialization failed or already done: ${e.message}")
+                }
+
                 val eventBus = IslandEventBus()
                 val settingsManager = SettingsManager(context)
                 val hapticsManager = IslandHapticsManager(context, settingsManager)

@@ -43,12 +43,18 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
-        log("handleLoadPackage: ${lpparam.packageName}")
+        log("handleLoadPackage: ${lpparam.packageName} (process: ${lpparam.processName})")
         when (lpparam.packageName) {
-            "android"              -> hookAndroidProcess(lpparam)
+            "android", "system"    -> hookAndroidProcess(lpparam)
             "com.android.systemui" -> hookSystemUIProcess(lpparam)
             "com.android.intentresolver",
             "com.google.android.intentresolver" -> hookIntentResolver(lpparam)
+        }
+        
+        // Safety: If process is SystemUI but package was missed
+        if (lpparam.processName == "com.android.systemui" && lpparam.packageName == "system") {
+            log("Detected SystemUI process with 'system' package name, applying SystemUI hooks")
+            hookSystemUIProcess(lpparam)
         }
     }
 
