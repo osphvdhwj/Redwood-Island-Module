@@ -47,4 +47,26 @@ object XposedExtensions {
             null
         }
     }
+
+    fun setStaticObjectFieldSafe(clazz: Class<*>, fieldName: String, value: Any?) {
+        try {
+            XposedHelpers.setStaticObjectField(clazz, fieldName, value)
+        } catch (e: Throwable) {
+            XposedBridge.log("DynamicIsland ⚠️: Failed to set static field $fieldName on ${clazz.name}")
+        }
+    }
+
+    fun setAdditionalInstanceFieldSafe(obj: Any, key: String, value: Any?) {
+        try {
+            XposedHelpers.setAdditionalInstanceField(obj, key, value)
+        } catch (e: Throwable) {}
+    }
+
+    fun getAdditionalInstanceFieldSafe(obj: Any, key: String): Any? {
+        return try {
+            XposedHelpers.getAdditionalInstanceField(obj, key)
+        } catch (e: Throwable) {
+            null
+        }
+    }
 }

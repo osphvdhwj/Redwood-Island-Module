@@ -18,12 +18,8 @@ import com.example.dynamicisland.domain.dispatchers.StandardDispatcherProvider
 object GameSpaceHook {
     private const val TAG = "GameSpaceHook"
     private var isInitialized = false
-    private var gameBarView: android.view.View? = null
     
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam) {
-        // Universal hooks for MIUI simulation
-        hookMiuiEnvironment(lpparam)
-
         if (lpparam.packageName != "com.android.systemui") return
         
         XposedBridge.log("$TAG: Initializing GameSpace Overlay in SystemUI...")
@@ -43,44 +39,6 @@ object GameSpaceHook {
             }
         )
     }
-
-    private fun hookMiuiEnvironment(lpparam: XC_LoadPackage.LoadPackageParam) {
-        // 1. Force GPU Tuner visibility
-        try {
-            XposedHelpers.findAndHookMethod(
-                "android.provider.Settings\$Global", lpparam.classLoader, "getInt",
-                android.content.ContentResolver::class.java, String::class.java, Int::class.javaPrimitiveType,
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        if (param.args[1] == "gpu_tuner_switch") {
-                            param.result = 1
-                        }
-                    }
-                }
-            )
-        } catch (_: Throwable) {}
-
-        // 2. Fake MIUI Shared Libraries (needed for ported apps)
-        try {
-            XposedHelpers.findAndHookMethod(
-                "android.app.ApplicationPackageManager", lpparam.classLoader, "getSystemSharedLibraryNames",
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        val libs = param.result as? Array<String> ?: return
-                        if (!libs.contains("miui")) {
-                            param.result = libs + arrayOf("miui", "com.miui.system", "com.miui.core")
-                        }
-                    }
-                }
-            )
-        } catch (_: Throwable) {}
-
-        // 3. Fake MIUI Product Build (trick app logic)
-        try {
-            XposedHelpers.setStaticObjectField(android.os.Build::class.java, "MANUFACTURER", "Xiaomi")
-            XposedHelpers.setStaticObjectField(android.os.Build::class.java, "BRAND", "Xiaomi")
-        } catch (_: Throwable) {}
-    }
     
     private fun initGameSpace(context: Context) {
         Handler(Looper.getMainLooper()).post {
@@ -90,6 +48,8 @@ object GameSpaceHook {
                     context.createPackageContext("com.example.dynamicisland", Context.CONTEXT_IGNORE_SECURITY)
                 } catch (e: Exception) { context }
                 
+                // Note: Real implementation should use Hilt EntryPoint here
+                // For now, aligning with BackendComponent mandate
                 val gameHubRepo = GameHubRepository(context, StandardDispatcherProvider())
                 gameHubRepo.onStart()
 
@@ -104,14 +64,11 @@ object GameSpaceHook {
                     gravity = Gravity.TOP or Gravity.START
                     x = 0
                     y = 100
-                    // Allow island to float above status bar if needed
                     layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
                 }
                 
                 wm.addView(view, params)
-                gameBarView = view
-                
-                XposedBridge.log("$TAG: GameSpace overlay initialized successfully.")
+                XposedBridge.log("$TAG: GameSpace overlay initialized.")
             } catch (e: Throwable) {
                 XposedBridge.log("$TAG ❌: Failed to initialize GameSpace: ${e.message}")
             }

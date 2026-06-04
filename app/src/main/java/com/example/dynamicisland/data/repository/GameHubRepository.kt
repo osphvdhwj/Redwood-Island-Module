@@ -14,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.dynamicisland.util.XposedExtensions
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,10 +34,7 @@ class GameHubRepository @Inject constructor(
 
     override fun onStart() {
         XposedBridge.log("$TAG: AOSP OEM-Level Engine initialized.")
-        // Automatically spoof properties on start to prep for games
-        scope.launch {
-            spoofMiuiProps()
-        }
+        spoofMiuiProps()
     }
 
     override fun onStop() {

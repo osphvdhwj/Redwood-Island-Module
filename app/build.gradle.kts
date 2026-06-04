@@ -1,9 +1,9 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.dagger.hilt.android")
-    id("kotlin-kapt")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.kotlin.kapt)
 }
 
 android {
@@ -21,12 +21,10 @@ android {
         versionCode = 1
         versionName = "3.0"
 
-        // Reduce APK size by only supporting specific ABIs
         ndk {
             abiFilters.add("arm64-v8a")
         }
 
-        // Keep only English resources to save space
         resourceConfigurations.addAll(listOf("en"))
     }
 
@@ -51,7 +49,7 @@ android {
         release {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
-            isShrinkResources = true // Enable resource shrinking
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -70,46 +68,46 @@ android {
 
 dependencies {
     // Hilt DI
-    implementation("com.google.dagger:hilt-android:2.51.1")
-    kapt("com.google.dagger:hilt-android-compiler:2.51.1")
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
 
     // Jetpack Compose
-    implementation(platform("androidx.compose:compose-bom:2024.12.01"))
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    implementation("androidx.compose.material:material-icons-core")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("com.google.accompanist:accompanist-drawablepainter:0.36.0")
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.tooling.preview)
+    debugImplementation(libs.androidx.ui.tooling)
+    implementation(libs.androidx.material.icons.core)
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.accompanist.drawablepainter)
 
     // Image Loading
-    implementation("io.coil-kt.coil3:coil-compose:3.0.4")
+    implementation(libs.coil.compose)
 
     // System Components
-    implementation("androidx.palette:palette-ktx:1.0.0")
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation(libs.androidx.palette.ktx)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.work.runtime-ktx)
     
     // Concurrency
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation(libs.coroutines.android)
 
-    // Testing (Industry Standard)
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
-    testImplementation("io.mockk:mockk:1.13.10")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
-    testImplementation("com.google.truth:truth:1.4.2")
-    testImplementation("app.cash.turbine:turbine:1.1.0") // Testing flows
+    // Testing
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.mockk)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.google.truth)
+    testImplementation(libs.turbine)
 
-    // UI Components (Minimal)
-    implementation("androidx.appcompat:appcompat:1.7.0")
+    // UI Components
+    implementation(libs.androidx.appcompat)
 
     // ML Kit Intelligence
-    implementation("com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0")
-    implementation("com.google.mlkit:translate:17.0.3")
-    implementation("com.google.android.gms:play-services-mlkit-language-id:17.0.0")
+    implementation(libs.mlkit.barcode)
+    implementation(libs.mlkit.translate)
+    implementation(libs.mlkit.language)
 
     // Xposed API
-    compileOnly("de.robv.android.xposed:api:82")
+    compileOnly(libs.xposed.api)
 }
