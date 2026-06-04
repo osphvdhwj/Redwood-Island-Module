@@ -108,7 +108,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     var isSquished by remember { mutableStateOf(false) }
     val touchScale by animateFloatAsState(
         targetValue = if (isSquished) (1f - (0.08f * settings.squishIntensity)) else 1f, 
-        animationSpec = spring(dampingRatio = 0.5f, stiffness = 1000f),
+        animationSpec = tween(200),
         label = "squish"
     )
     
@@ -125,14 +125,14 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     val bgColor by animateColorAsState(
         targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else {
             if (settings.aestheticStyle == AestheticStyle.VOID_BLACK) Color.Black
-            else if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor).copy(alpha = 0.85f)
+            else if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor)
             else Color.Black
         },
-        animationSpec = spring(dampingRatio = 0.8f),
+        animationSpec = tween(200),
         label = "bgColor"
     )
 
-    val borderColor = if (settings.aestheticStyle == AestheticStyle.VOID_BLACK) Color.White.copy(alpha = 0.12f) else animValues.borderColor
+    val borderColor = if (settings.aestheticStyle == AestheticStyle.VOID_BLACK) Color.White else animValues.borderColor
 
     Row(
         modifier = Modifier
@@ -141,11 +141,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         horizontalArrangement = Arrangement.Center, 
         verticalAlignment = Alignment.Top
     ) {
-        val shadowElevation by animateDpAsState(
-            targetValue = if (isSquished) 2.dp else (if (state == IslandState.TYPE_0_RING || isLowLatency) 0.dp else 24.dp),
-            animationSpec = spring(dampingRatio = 0.7f)
-        )
-        
         Box(
             modifier = Modifier
                 .width(animatedWidth) 
@@ -156,22 +151,9 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                     rotationZ = animValues.rotation
                     transformOrigin = TransformOrigin(0.5f, 0.5f) 
                 }
-                .shadow(elevation = shadowElevation, shape = RoundedCornerShape(animatedRadius), spotColor = Color.Black)
                 .clip(RoundedCornerShape(animatedRadius))
-                .then(
-                    if (settings.designLanguage == com.example.dynamicisland.settings.DesignLanguage.APPLE_LIQUID_GLASS || settings.aestheticStyle == AestheticStyle.GLASS) {
-                        Modifier.glassBackground(blurRadius = settings.blurIntensity.dp, isLowLatency = isLowLatency)
-                    } else {
-                        Modifier.background(bgColor)
-                    }
-                )
-                .then(
-                    if (state == IslandState.TYPE_0_RING) {
-                        Modifier.border((0.5f + animValues.glowIntensity).dp, borderColor.copy(alpha = 0.1f + (0.5f * animValues.glowIntensity)), RoundedCornerShape(animatedRadius))
-                    } else {
-                        Modifier.border(0.5.dp, borderColor, RoundedCornerShape(animatedRadius))
-                    }
-                )
+                .background(bgColor)
+                .border(2.dp, Color.White, RoundedCornerShape(animatedRadius))
                 .geminiAura(enabled = settings.geminiAuraEnabled && (model?.id?.contains("assistant") == true || model?.id?.contains("ai") == true))
                 .pointerInput(Unit) {
                     awaitEachGesture { 
@@ -201,7 +183,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                                 if (dragOffsetX > 0) view.onGestureEvent?.invoke(IslandGesture.SWIPE_RIGHT)
                                 else view.onGestureEvent?.invoke(IslandGesture.SWIPE_LEFT)
                             }
-                            scope.launch { view.elasticScale.animateTo(1f, spring(0.55f, 300f)) }
+                            scope.launch { view.elasticScale.animateTo(1f, tween(200)) }
                         },
                         onDrag = { change, dragAmount -> 
                             change.consume()

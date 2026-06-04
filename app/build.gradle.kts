@@ -95,6 +95,13 @@ dependencies {
     // Concurrency
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
+    // Testing (Industry Standard)
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation("io.mockk:mockk:1.13.10")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    testImplementation("com.google.truth:truth:1.4.2")
+    testImplementation("app.cash.turbine:turbine:1.1.0") // Testing flows
+
     // UI Components (Minimal)
     implementation("androidx.appcompat:appcompat:1.7.0")
 

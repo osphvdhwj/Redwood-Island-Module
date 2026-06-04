@@ -17,7 +17,6 @@ import com.example.dynamicisland.model.LiveActivityModel
 import com.example.dynamicisland.settings.SettingsManager
 import com.example.dynamicisland.settings.SettingsState
 import com.example.dynamicisland.ui.DynamicIslandView
-import com.example.dynamicisland.ui.mvi.IslandEventBus
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
@@ -26,6 +25,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import java.lang.ref.WeakReference
+
+import com.example.dynamicisland.util.XposedExtensions
 
 class SystemUIA15Hooks {
     companion object {
@@ -41,24 +42,22 @@ class SystemUIA15Hooks {
         fun init(lpparam: XC_LoadPackage.LoadPackageParam) {
             if (lpparam.packageName != "com.android.systemui") return
             
-            XposedBridge.log("$TAG: 🚀 Initializing Dual-Window Island Architecture...")
+            XposedBridge.log("$TAG: 🚀 Initializing Dual-Window Island Architecture (Defensive Mode)...")
 
-            try {
-                XposedHelpers.findAndHookMethod(
-                    "com.android.systemui.statusbar.phone.CentralSurfacesImpl",
-                    lpparam.classLoader,
-                    "start",
-                    object : XC_MethodHook() {
-                        override fun afterHookedMethod(param: MethodHookParam) {
-                            val context = XposedHelpers.getObjectField(param.thisObject, "mContext") as Context
+            XposedExtensions.hookMethodIfExists(
+                "com.android.systemui.statusbar.phone.CentralSurfacesImpl",
+                lpparam.classLoader,
+                "start",
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        val context = XposedExtensions.getObjectFieldSafe(param.thisObject, "mContext") as? Context
+                        if (context != null) {
                             ensureControllerInitialized(context)
                             syncWindows(context)
                         }
                     }
-                )
-            } catch (e: Throwable) {
-                XposedBridge.log("$TAG ⚠️: CentralSurfaces hook failed")
-            }
+                }
+            )
 
             hookNotifPipeline(lpparam)
             hookMediaPipeline(lpparam)
@@ -80,7 +79,6 @@ class SystemUIA15Hooks {
                     XposedBridge.log("$TAG ⚠️: ML Kit initialization failed or already done: ${e.message}")
                 }
 
-                val eventBus = IslandEventBus()
                 val settingsManager = SettingsManager(context)
                 val hapticsManager = IslandHapticsManager(context, settingsManager)
                 val networkMonitor = IslandNetworkMonitor()
@@ -96,7 +94,7 @@ class SystemUIA15Hooks {
 
                 controller = IslandController(
                     context, settingsManager, mediaManager, hardwareMonitor,
-                    eventBus, hapticsManager, networkMonitor, neuralCore,
+                    hapticsManager, networkMonitor, neuralCore,
                     backupManager, locationManager
                 ).apply {
                     start(context)
@@ -110,9 +108,10 @@ class SystemUIA15Hooks {
         private fun syncWindows(context: Context) {
             val ctrl = controller ?: return
             val settings = ctrl.settingsState
-            val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             
             Handler(Looper.getMainLooper()).post {
+                val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                
                 // 1. REDWOOD ISLAND (TOP)
                 if (settings.islandEnabled && settings.redwoodEnabled) {
                     addOrUpdateWindow(context, wm, isTop = true)
@@ -131,10 +130,14 @@ class SystemUIA15Hooks {
 
         private fun addOrUpdateWindow(context: Context, wm: WindowManager, isTop: Boolean) {
             val ctrl = controller ?: return
-            val settings = ctrl.settingsState
             val ref = if (isTop) topIslandViewRef else bottomIslandViewRef
+            val existingView = ref?.get()
             
-            if (ref?.get() != null) return // Already exists
+            if (existingView != null) {
+                if (existingView.isAttachedToWindow) return
+                // Zombie window detected: reference exists but not attached. Clean up.
+                try { wm.removeViewImmediate(existingView) } catch (_: Exception) {}
+            }
 
             try {
                 val moduleContext = try { 
@@ -142,13 +145,10 @@ class SystemUIA15Hooks {
                 } catch (e: Exception) { context }
 
                 val view = DynamicIslandView(context, moduleContext)
-                // Note: In a real multi-window setup, the controller might need to distinguish
-                // which view it's talking to. For now, we sync state to both.
                 if (isTop) {
                     ctrl.createIslandView(view)
                     topIslandViewRef = WeakReference(view)
                 } else {
-                    // bottom view might need separate registration if logic diverges
                     bottomIslandViewRef = WeakReference(view)
                 }
 
@@ -174,7 +174,6 @@ class SystemUIA15Hooks {
                         layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
                     }
                     
-                    // Mark as trusted to bypass touch occlusion
                     try {
                         val field = WindowManager.LayoutParams::class.java.getField("privateFlags")
                         field.set(this, (field.get(this) as Int) or 0x00000040)
@@ -191,7 +190,9 @@ class SystemUIA15Hooks {
         private fun removeWindow(wm: WindowManager, isTop: Boolean) {
             val ref = if (isTop) topIslandViewRef else bottomIslandViewRef
             ref?.get()?.let {
-                try { wm.removeView(it) } catch (e: Exception) {}
+                try { 
+                    if (it.isAttachedToWindow) wm.removeViewImmediate(it) 
+                } catch (e: Exception) {}
                 if (isTop) topIslandViewRef = null else bottomIslandViewRef = null
             }
         }
@@ -222,25 +223,51 @@ class SystemUIA15Hooks {
                     }
                 }
             )
+
+            XposedHelpers.findAndHookMethod(
+                "com.android.systemui.SystemUIService",
+                lpparam.classLoader,
+                "onDestroy",
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        XposedBridge.log("$TAG: SystemUIService destroying, cleaning up controller")
+                        controller?.destroy()
+                        controller = null
+                    }
+                }
+            )
         }
 
-        // ... (Remaining hook methods stay the same, but use controller safely)
         private fun hookNotifPipeline(lpparam: XC_LoadPackage.LoadPackageParam) {
             try {
-                val pipelineClass = "com.android.systemui.statusbar.notification.collection.NotifPipeline"
-                IslandHookEngine.hookAllMethodsByName(pipelineClass, lpparam.classLoader, "addCollectionListener", object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val listener = param.args.firstOrNull() ?: return
-                        IslandHookEngine.hookAllMethodsByName(listener.javaClass.name, lpparam.classLoader, "onEntryAdded", object : XC_MethodHook() {
-                            override fun afterHookedMethod(innerParam: MethodHookParam) {
-                                val entry = innerParam.args.firstOrNull() ?: return
-                                val sbn = XposedHelpers.callMethod(entry, "getSbn") as android.service.notification.StatusBarNotification
-                                controller?.notificationManager?.processIncomingNotification(sbn.packageName, sbn.notification)
+                // 🎯 Direct NotifCollection hook is more robust than NotifPipeline listener
+                val collectionClass = "com.android.systemui.statusbar.notification.collection.NotifCollection"
+                IslandHookEngine.hookAfterAllOverloads(collectionClass, lpparam.classLoader, "dispatchOnEntryAdded") { param ->
+                    val entry = param.args.firstOrNull() ?: return@hookAfterAllOverloads
+                    val sbn = XposedHelpers.callMethod(entry, "getSbn") as android.service.notification.StatusBarNotification
+                    controller?.notificationManager?.processIncomingNotification(sbn.packageName, sbn.notification)
+                }
+            } catch (e: Throwable) {
+                XposedBridge.log("$TAG ⚠️: NotifCollection hook failed, falling back to pipeline listener")
+                try {
+                    val pipelineClass = "com.android.systemui.statusbar.notification.collection.NotifPipeline"
+                    IslandHookEngine.hookAllMethodsByName(pipelineClass, lpparam.classLoader, "addCollectionListener", object : XC_MethodHook() {
+                        override fun beforeHookedMethod(param: MethodHookParam) {
+                            val listener = param.args.firstOrNull() ?: return
+                            // Only hook if the method exists on this specific listener instance class
+                            if (XposedHelpers.findMethodExactIfExists(listener.javaClass, "onEntryAdded", "com.android.systemui.statusbar.notification.collection.NotificationEntry") != null) {
+                                IslandHookEngine.hookAllMethodsByName(listener.javaClass.name, lpparam.classLoader, "onEntryAdded", object : XC_MethodHook() {
+                                    override fun afterHookedMethod(innerParam: MethodHookParam) {
+                                        val entry = innerParam.args.firstOrNull() ?: return
+                                        val sbn = XposedHelpers.callMethod(entry, "getSbn") as android.service.notification.StatusBarNotification
+                                        controller?.notificationManager?.processIncomingNotification(sbn.packageName, sbn.notification)
+                                    }
+                                })
                             }
-                        })
-                    }
-                })
-            } catch (e: Throwable) {}
+                        }
+                    })
+                } catch (e2: Throwable) {}
+            }
         }
 
         private fun hookMediaPipeline(lpparam: XC_LoadPackage.LoadPackageParam) {

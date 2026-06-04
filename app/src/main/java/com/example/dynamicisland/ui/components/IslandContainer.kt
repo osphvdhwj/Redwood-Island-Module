@@ -29,11 +29,7 @@ fun IslandContainer(
     val configuration = LocalConfiguration.current
     val screenWidthDp = configuration.screenWidthDp.toFloat()
     
-    // Physics tokens from IslandTheme
-    val springDamping = state.theme.springDamping
-    val springStiffness = state.theme.springStiffness
-    
-    val dpPhysicsSpec = spring<Dp>(dampingRatio = springDamping, stiffness = springStiffness)
+    val dpPhysicsSpec = tween<Dp>(durationMillis = 200)
     
     // Determine target dimensions based on state
     val targetWidth = when (state.islandState) {
@@ -43,6 +39,8 @@ fun IslandContainer(
         IslandState.TYPE_3_MAX -> 360f
         IslandState.TYPE_SPLIT -> 180f
         IslandState.TYPE_CUBE -> 85f
+        IslandState.TYPE_ORBITAL -> 64f
+        IslandState.TYPE_BRUTALIST -> 200f
         else -> 45f
     }.coerceIn(state.displayCutoutWidth + 4f, screenWidthDp - 24f)
 
@@ -53,6 +51,8 @@ fun IslandContainer(
         IslandState.TYPE_3_MAX -> 220f
         IslandState.TYPE_SPLIT -> 36f
         IslandState.TYPE_CUBE -> 85f
+        IslandState.TYPE_ORBITAL -> 64f
+        IslandState.TYPE_BRUTALIST -> 48f
         else -> 45f
     }
 
@@ -60,6 +60,8 @@ fun IslandContainer(
         IslandState.TYPE_3_MAX -> 42.dp
         IslandState.TYPE_2_MID -> 16.dp
         IslandState.TYPE_CUBE -> 24.dp
+        IslandState.TYPE_ORBITAL -> 32.dp
+        IslandState.TYPE_BRUTALIST -> 0.dp
         else -> (targetHeight / 2).dp
     }).coerceAtLeast(0.dp)
 
@@ -68,21 +70,42 @@ fun IslandContainer(
     val animatedRadius by animateDpAsState(targetRadius, dpPhysicsSpec, label = "radius")
 
     val isHidden = state.islandState == IslandState.HIDDEN
-    val alpha by animateFloatAsState(if (isHidden) 0f else 1f, tween(300), label = "alpha")
+    val alpha by animateFloatAsState(if (isHidden) 0f else 1f, tween(200), label = "alpha")
 
     // Pillar 5: Strict Lifecycle Scopes. If screen is off, do not render to save battery.
     if (!isHidden && state.isScreenOn) {
+        val isBrutalist = state.islandState == IslandState.TYPE_BRUTALIST
+        val borderSize = if (isBrutalist) 3.dp else 2.dp
+        
         Box(
             modifier = Modifier
                 .width(animatedWidth)
                 .height(animatedHeight)
-                .shadow(16.dp, RoundedCornerShape(animatedRadius), spotColor = Color.Black)
                 .clip(RoundedCornerShape(animatedRadius))
-                .background(Color.Black.copy(alpha = 0.9f))
-                .border(0.5.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(animatedRadius)),
+                .background(Color.Black)
+                .border(borderSize, Color.White, RoundedCornerShape(animatedRadius)),
             contentAlignment = Alignment.Center
         ) {
             content()
         }
+    }
+}
+
+/**
+ * Specialized Brutalist Container
+ * Sharp 0dp corners, 3dp solid borders.
+ */
+@Composable
+fun BrutalistContainer(
+    content: @Composable BoxScope.() -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .wrapContentSize()
+            .background(Color.Black)
+            .border(3.dp, Color.White),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
     }
 }

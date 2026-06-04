@@ -46,7 +46,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.border
 import com.example.dynamicisland.R
 import com.example.dynamicisland.model.LiveActivityModel
-import com.example.dynamicisland.manager.IslandController
+import com.example.dynamicisland.domain.state.IslandController
 import com.example.dynamicisland.model.LocalIslandTheme
 import com.example.dynamicisland.manager.StashedItem
 import com.example.dynamicisland.manager.StashType

@@ -22,7 +22,8 @@ object BatteryPlugin {
     private var lastLevel: Int? = null
 
     private var job: Job? = null
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val supervisorJob = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.IO + supervisorJob)
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -94,6 +95,11 @@ object BatteryPlugin {
             job?.cancel()
             job = null
         }
+    }
+
+    fun destroy(context: Context) {
+        stop(context)
+        supervisorJob.cancel()
     }
 
     @ColorInt

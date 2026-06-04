@@ -2,7 +2,7 @@ package com.example.dynamicisland
 
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import com.example.dynamicisland.manager.IslandController
+import com.example.dynamicisland.domain.state.IslandController
 import javax.inject.Inject
 import dagger.hilt.android.AndroidEntryPoint
 

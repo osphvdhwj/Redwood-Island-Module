@@ -103,8 +103,7 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
                 }
             }
             com.example.dynamicisland.settings.ChargingStyle.CUBE -> {
-                val pulseScale by infiniteTransition.animateFloat(initialValue = 0.9f, targetValue = 1.1f, animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse), label = "pulse")
-                Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }.background(color.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).border(2.dp, color, RoundedCornerShape(12.dp)))
+                com.example.dynamicisland.ui.components.NeuralCubeUI(color = color, modifier = Modifier.size(40.dp))
             }
         }
 

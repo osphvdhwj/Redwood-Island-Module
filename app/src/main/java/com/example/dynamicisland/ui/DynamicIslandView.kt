@@ -57,20 +57,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.random.Random
 
-fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp, isLowLatency: Boolean): Modifier = if (isLowLatency) {
-    this.background(Color.Black.copy(alpha = 0.9f))
-} else {
-    this
-        .blur(blurRadius, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-        .background(
-            Brush.verticalGradient(
-                colors = listOf(
-                    Color.White.copy(alpha = 0.12f),
-                    Color.White.copy(alpha = 0.05f)
-                )
-            )
-        )
-}
+fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp, isLowLatency: Boolean): Modifier = this.background(Color.Black)
 
 fun getPillShape(shape: String, cornerRadius: Float): androidx.compose.foundation.shape.RoundedCornerShape {
     val safeRadius = cornerRadius.coerceAtLeast(0f)

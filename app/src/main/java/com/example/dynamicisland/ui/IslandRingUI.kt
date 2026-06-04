@@ -38,7 +38,7 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
         // --- 💓 SYNERGY PULSE ANIMATION ---
         val pulseScale by animateFloatAsState(
             targetValue = if (isPulsing) 1.15f else 1.0f,
-            animationSpec = spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessMediumLow),
+            animationSpec = tween(200),
             label = "pulse_scale"
         )
         

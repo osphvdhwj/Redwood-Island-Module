@@ -27,7 +27,42 @@ fun DynamicIslandView.PillRouter(
         IslandState.TYPE_CUBE -> {
             if (model is LiveActivityModel.Charging) ChargingCube(model)
         }
+        IslandState.TYPE_ORBITAL -> {
+            if (model is LiveActivityModel.HardwareMonitor) {
+                com.example.dynamicisland.ui.components.OrbitalRingUI(
+                    color = androidx.compose.ui.graphics.Color.White,
+                    speedFactor = (model.fps / 60f).coerceIn(0.1f, 2.0f)
+                )
+            }
+        }
+        IslandState.TYPE_BRUTALIST -> {
+            if (model is LiveActivityModel.SystemAlert) {
+                BrutalistAlert(model)
+            }
+        }
         else -> {}
+    }
+}
+
+@Composable
+fun DynamicIslandView.BrutalistAlert(model: LiveActivityModel.SystemAlert) {
+    com.example.dynamicisland.ui.components.BrutalistContainer {
+        androidx.compose.foundation.layout.Column(
+            modifier = androidx.compose.ui.Modifier.padding(8.dp),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+        ) {
+            androidx.compose.material3.Text(
+                text = model.title,
+                color = androidx.compose.ui.graphics.Color.White,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                fontSize = 14.sp
+            )
+            androidx.compose.material3.Text(
+                text = model.message,
+                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f),
+                fontSize = 12.sp
+            )
+        }
     }
 }
 

@@ -308,13 +308,13 @@ class IslandContentProvider : ContentProvider() {
 
             "CLEAR_AI_MEMORY" -> {
                 context?.let { 
-                    com.example.dynamicisland.manager.IslandNeuralCore(it).clearMemory()
+                    com.example.dynamicisland.domain.state.IslandNeuralCore(it).clearMemory()
                     result.putBoolean("ok", true)
                 }
             }
             "EXPORT_AI_DATA" -> {
                 context?.let {
-                    result.putString("v", com.example.dynamicisland.manager.IslandNeuralCore(it).exportData())
+                    result.putString("v", com.example.dynamicisland.domain.state.IslandNeuralCore(it).exportData())
                 }
             }
             

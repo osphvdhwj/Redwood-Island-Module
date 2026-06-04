@@ -22,6 +22,12 @@ enum class IslandState {
     /** Specialized 3D-like rotating cube for minimized album art. */
     TYPE_CUBE,
 
+    /** Reactive ring with rotating particles. */
+    TYPE_ORBITAL,
+
+    /** Sharp-edged container with solid borders. */
+    TYPE_BRUTALIST,
+
     /** Split view showing two distinct activities simultaneously. */
     TYPE_SPLIT
 }

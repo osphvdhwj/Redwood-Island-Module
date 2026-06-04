@@ -58,9 +58,9 @@ fun updateIslandTransition(
         else -> 450f
     }
 
-    val springSpecDp = spring<Dp>(dampingRatio = damping, stiffness = stiffness)
-    val springSpecFloat = spring<Float>(dampingRatio = damping, stiffness = stiffness)
-    val springSpecColor = spring<Color>(dampingRatio = damping, stiffness = stiffness)
+    val springSpecDp = tween<Dp>(durationMillis = 200)
+    val springSpecFloat = tween<Float>(durationMillis = 200)
+    val springSpecColor = tween<Color>(durationMillis = 200)
 
     val width by transition.animateDp(transitionSpec = { springSpecDp }, label = "width") { state ->
         when (state) {
@@ -97,7 +97,7 @@ fun updateIslandTransition(
                 // 🌪️ Subtle tilt on expansion
                 keyframes { durationMillis = 400; 0f at 0; 1.5f at 150; 0f at 400 }
             } else {
-                spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessLow)
+                tween(durationMillis = 200)
             }
         },
         label = "rotation"
@@ -114,12 +114,12 @@ fun updateIslandTransition(
         if (state == IslandUiState.NOTIFICATION_RING && isCyberpunk) Color(0xFF00FFFF).copy(alpha=0.6f) else Color.White.copy(alpha=0.08f)
     }
 
-    val alpha by transition.animateFloat(transitionSpec = { tween(350, easing = LinearOutSlowInEasing) }, label = "alpha") { state ->
+    val alpha by transition.animateFloat(transitionSpec = { tween(200, easing = LinearOutSlowInEasing) }, label = "alpha") { state ->
         if (state == IslandUiState.HIDDEN) 0f else 1f
     }
 
     val scale by transition.animateFloat(
-        transitionSpec = { if (targetState == IslandUiState.HIDDEN) tween(300) else springSpecFloat },
+        transitionSpec = { tween(durationMillis = 200) },
         label = "scale"
     ) { state ->
         if (state == IslandUiState.HIDDEN) 0.85f else 1f

@@ -11,14 +11,19 @@ import com.example.dynamicisland.settings.CallStyle
 import com.example.dynamicisland.settings.ChargingStyle
 import com.example.dynamicisland.settings.BatteryStyle
 
+enum class IslandShape {
+    PILL, CUBE, ORBITAL, BRUTALIST
+}
+
 data class IslandTheme(
+    val shape: IslandShape = IslandShape.PILL,
     // Original UI Properties
     val mediaBarCap: StrokeCap = StrokeCap.Round,
     val mediaBarThickness: Dp = 4.dp,
     val titleOffsetX: Dp = 0.dp,
     val titleOffsetY: Dp = 0.dp,
     val titleSize: TextUnit = 16.sp,
-    val titleFont: FontFamily = FontFamily.Default,
+    val titleFont: FontFamily = FontFamily.Monospace,
     val timeTextSize: TextUnit = 12.sp,
     val timeTextOffsetX: Dp = 0.dp,
     val batteryRingThickness: Dp = 12.dp,
@@ -27,7 +32,7 @@ data class IslandTheme(
     val buttonSize: Dp = 48.dp,
     val buttonSpacing: Dp = 16.dp,
     val buttonCornerRadius: Dp = 50.dp,
-    val actionAnimType: String = "BOUNCE",
+    val actionAnimType: String = "FLAT",
     val handleWidth: Dp = 40.dp,
     val handleHeight: Dp = 5.dp,
     
@@ -50,16 +55,28 @@ data class IslandTheme(
     val chargingStyle: ChargingStyle = ChargingStyle.RING, 
     val callStyle: CallStyle = CallStyle.IOS,
     val batteryStyle: BatteryStyle = BatteryStyle.PILL,
-    val blurIntensity: Dp = 16.dp,
+    val blurIntensity: Dp = 0.dp,
     val hideOnLandscape: Boolean = false,
 
     // 🎛️ NEW: The "Shadow Properties" (Physics & Deep Colors)
-    val springDamping: Float = 0.85f, // Critically damped (Apple style)
-    val springStiffness: Float = 400f, // Snappy expansion
+    val springDamping: Float = 1f, 
+    val springStiffness: Float = 0f, 
     val autoCollapseTimeMs: Long = 3000L,
-    val isGlassmorphism: Boolean = true, // Toggles deep black vs translucent glass
+    val isGlassmorphism: Boolean = false, // Toggles deep black vs translucent glass
     val accentColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.White,
     val glowColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Transparent
-)
+) {
+    companion object {
+        val Default = IslandTheme()
+        val Brutalist = IslandTheme(
+            shape = IslandShape.BRUTALIST,
+            cornerRadius = 0.dp,
+            mediaBarCap = StrokeCap.Square,
+            buttonCornerRadius = 0.dp
+        )
+        val Orbital = IslandTheme(shape = IslandShape.ORBITAL)
+        val Neural = IslandTheme(shape = IslandShape.CUBE)
+    }
+}
 
 val LocalIslandTheme = compositionLocalOf { IslandTheme() }

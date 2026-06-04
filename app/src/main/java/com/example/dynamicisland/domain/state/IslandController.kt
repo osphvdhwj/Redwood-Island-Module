@@ -1,4 +1,4 @@
-package com.example.dynamicisland.manager
+package com.example.dynamicisland.domain.state
 
 import android.content.*
 import android.database.ContentObserver
@@ -31,7 +31,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import dagger.hilt.android.qualifiers.ApplicationContext
 
-import com.example.dynamicisland.ui.mvi.IslandEventBus
 import com.example.dynamicisland.ui.mvi.IslandIntent
 import com.example.dynamicisland.bridge.MediaBridge
 import java.lang.ref.WeakReference
@@ -43,7 +42,6 @@ class IslandController @Inject constructor(
     private val settingsManager: SettingsManager,
     val mediaManager: IslandMediaManager,
     private val hardwareMonitor: IslandHardwareMonitor,
-    private val eventBus: IslandEventBus,
     private val hapticsManager: IslandHapticsManager,
     private val networkMonitor: IslandNetworkMonitor,
     private val neuralCore: IslandNeuralCore,
@@ -155,8 +153,18 @@ class IslandController @Inject constructor(
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             when (intent.action) {
-                Intent.ACTION_SCREEN_ON -> { mediaManager.isScreenOn = true; hardwareMonitor.isScreenOn = true; evaluatePriority() }
-                Intent.ACTION_SCREEN_OFF -> { mediaManager.isScreenOn = false; hardwareMonitor.isScreenOn = false; evaluatePriority() }
+                Intent.ACTION_SCREEN_ON -> { 
+                    mediaManager.isScreenOn = true; 
+                    hardwareMonitor.isScreenOn = true; 
+                    neuralCore.dispatch(IslandIntent.UpdateScreenState(true))
+                    evaluatePriority() 
+                }
+                Intent.ACTION_SCREEN_OFF -> { 
+                    mediaManager.isScreenOn = false; 
+                    hardwareMonitor.isScreenOn = false; 
+                    neuralCore.dispatch(IslandIntent.UpdateScreenState(false))
+                    evaluatePriority() 
+                }
             }
         }
     }
@@ -185,11 +193,9 @@ class IslandController @Inject constructor(
         BatteryPlugin.onBatteryChanged = { level, isCharging, color, wattage ->
             if (wasCharging != isCharging || level != lastLevel) {
                 // 1-second Pulse Synergy on change
-                scope.launch {
-                    eventBus.emit(IslandIntent.BatteryPulse(level))
-                    if (settingsState.syncPulseVibration) {
-                        hapticsManager.triggerCustomHaptic(200L) // Pulse feel
-                    }
+                neuralCore.dispatch(IslandIntent.BatteryPulse(level))
+                if (settingsState.syncPulseVibration) {
+                    hapticsManager.triggerCustomHaptic(200L) // Pulse feel
                 }
             }
             wasCharging = isCharging
@@ -220,6 +226,7 @@ class IslandController @Inject constructor(
 
     fun loadAndApplySettings() {
         settingsState = settingsManager.getSettingsState()
+        neuralCore.dispatch(IslandIntent.UpdateSettings(settingsState))
         applySettings(settingsState)
     }
 
@@ -253,7 +260,7 @@ class IslandController @Inject constructor(
         // 🛡️ PRO-GRADE VISIBILITY OVERRIDES
         if (isKeyboardVisible || isSystemRecordingActive || isScreenshotActiveInternal) {
             _lastIslandState = IslandState.HIDDEN
-            scope.launch { eventBus.emit(IslandIntent.SyncState(IslandState.HIDDEN, null, null)) }
+            neuralCore.dispatch(IslandIntent.SyncState(IslandState.HIDDEN, null, null))
             return
         }
 
@@ -290,7 +297,7 @@ class IslandController @Inject constructor(
             _lastIslandState = newState
             _lastActiveModel = newModel
             _lastSplitModel = newSplit
-            scope.launch { eventBus.emit(IslandIntent.SyncState(newState, newModel, newSplit)) }
+            neuralCore.dispatch(IslandIntent.SyncState(newState, newModel, newSplit))
             triggerTransitionHaptic(newState)
         }
     }
@@ -348,21 +355,12 @@ class IslandController @Inject constructor(
             override fun onViewAttachedToWindow(v: android.view.View) {
                 v.viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
                 scope.launch(syncJob) {
-                    eventBus.intents.collect { intent ->
-                        when (intent) {
-                            is IslandIntent.SyncState -> {
-                                view.islandState.value = intent.state
-                                view.activeModel.value = intent.activeModel
-                                view.splitModel.value = intent.splitModel
-                            }
-                            is IslandIntent.BatteryPulse -> {
-                                view.triggerBatteryPulse()
-                            }
-                            is IslandIntent.UpdateBattery -> {
-                                view.updateBattery(intent.level, intent.isCharging)
-                            }
-                            else -> {}
-                        }
+                    neuralCore.uiState.collect { state ->
+                        view.islandState.value = state.islandState
+                        view.activeModel.value = state.activeModel
+                        view.splitModel.value = state.splitModel
+                        if (state.isBatteryPulsing) view.triggerBatteryPulse()
+                        view.updateBattery(state.batteryLevel, state.isCharging)
                     }
                 }
             }
@@ -428,15 +426,16 @@ class IslandController @Inject constructor(
         scope.launch {
             _lastActiveModel = model
             _lastIslandState = IslandState.TYPE_2_MID
-            eventBus.emit(IslandIntent.SyncState(IslandState.TYPE_2_MID, model, null))
+            neuralCore.dispatch(IslandIntent.SyncState(IslandState.TYPE_2_MID, model, null))
             delay(duration)
             evaluatePriority()
         }
     }
 
     fun destroy() {
-        context.unregisterReceiver(screenStateReceiver)
-        context.unregisterReceiver(ecosystemReceiver)
+        try { context.unregisterReceiver(screenStateReceiver) } catch (_: Exception) {}
+        try { context.unregisterReceiver(ecosystemReceiver) } catch (_: Exception) {}
+        BatteryPlugin.destroy(context)
         scope.cancel()
         mediaManager.destroy()
         callManager.destroy()
