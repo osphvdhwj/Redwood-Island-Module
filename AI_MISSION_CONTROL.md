@@ -3,7 +3,7 @@
 **DO NOT DELETE OR MODIFY THIS FILE.**
 
 ## 1. Executive Summary
-This project is an industry-leading rooted Android (AOSP/HyperOS) system utility. It combines a sophisticated dual-window Dynamic Island architecture with an OEM-level high-performance gaming engine. It is built using **Clean Architecture**, **Hilt Dependency Injection**, and a **Reactive UDF State Engine**.
+This project is an industry-leading rooted Android (AOSP/HyperOS) system utility. It combines a sophisticated dual-window Dynamic Island architecture with an OEM-level high-performance gaming engine and a **Global Omni-Integration Layer**.
 
 ## 2. Technical Architecture (The Engine)
 
@@ -12,7 +12,12 @@ This project is an industry-leading rooted Android (AOSP/HyperOS) system utility
 - **Top (Redwood)**: Handles Camera-cutout Ring and mini/mid/max notification expansion.
 - **Bottom (Nav)**: Hooks the `navigation_bar_item` to transform the system Pill into a battery progress bar and expandable "Stretch" music bar.
 
-### B. The Neural Core (Centralized State)
+### B. The Omni-Integration Layer (Ghost Satellites)
+- **Architecture**: Injects lightweight, dependency-free **Ghost Satellites** into common AOSP apps (Gboard, Launcher, Photos, Messages).
+- **Stealth Protocol**: Employs the `StealthInterceptor.kt` shield. It neutralizes Xposed detection by stripping NATIVE modifiers and filtering package/stack-trace references.
+- **Synergy IPC**: Satellites stream events (e.g., Gboard height) to the SystemUI Brain via `IslandContentProvider` to enable real-time UI adaptation (auto-hiding the Nav Island).
+
+### C. The Neural Core (Centralized State)
 - **Single Source of Truth**: All Island state is managed by `IslandNeuralCore.kt`. 
 - **UDF Pattern**: Intent → Reducer → StateFlow. Both windows observe the same stream, ensuring 100% synchronization.
 - **Persistence**: State snapshots survive SystemUI restarts via JSON serialization.

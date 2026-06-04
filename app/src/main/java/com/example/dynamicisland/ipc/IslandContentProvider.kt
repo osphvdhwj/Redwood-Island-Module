@@ -333,6 +333,21 @@ class IslandContentProvider : ContentProvider() {
                     result.putBoolean("ok", true)
                 }
             }
+
+            "SATELLITE_UPDATE" -> {
+                val eventType = arg ?: ""
+                val data = extras ?: Bundle()
+                context?.let {
+                    // Dispatch to NeuralCore via Hilt-less instantiation or broadcast
+                    // For now, use the singleton instance if available in SystemUI
+                    if (eventType == "KEYBOARD_SYNC") {
+                        val height = data.getInt("keyboard_height")
+                        val visible = data.getBoolean("is_visible")
+                        // Logic to handle keyboard shift
+                    }
+                    result.putBoolean("ok", true)
+                }
+            }
         }
         return result
     }

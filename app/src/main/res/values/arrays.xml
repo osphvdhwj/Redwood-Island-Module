@@ -3,5 +3,10 @@
     <string-array name="xposed_scope">
         <item>android</item>
         <item>com.android.systemui</item>
+        <item>com.google.android.inputmethod.latin</item>
+        <item>com.google.android.apps.nexuslauncher</item>
+        <item>com.google.android.apps.photos</item>
+        <item>com.google.android.apps.messaging</item>
+        <item>com.android.documentsui</item>
     </string-array>
 </resources>
