@@ -9,7 +9,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -21,8 +20,9 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * ELITE RING RENDERER
- * Supports multiple visual dialects (Standard, Circular, Sam-style, Futuristic).
+ * 🚀 ELITE RING RENDERER
+ * 
+ * Optimized for locked 120FPS. Uses deferred state reads and layer-based scaling.
  */
 @Composable
 fun DynamicIslandView.RingUI(isPulsing: Boolean) {
@@ -36,25 +36,48 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
     val shouldShowRing = (isMedia || globalIsCharging.value || weatherModel != null || settings.showRingIdle) && settings.islandEnabled
 
     if (shouldShowRing) {
-        val safeDur = if (musicModel != null && musicModel.durationMs > 0) musicModel.durationMs.toFloat() else 1f
         val pulseStyle = settings.ringPulseStyle
         
-        // --- Dialect-Aware Physics ---
+        // 🛡️ Optimization 1: Use spring for high-fidelity physical interaction
         val pulseScale by animateFloatAsState(
             targetValue = if (isPulsing) 1.15f else 1.0f,
             animationSpec = if (pack is IconPack.iOS) spring(dampingRatio = 0.4f) else tween(200),
             label = "pulse_scale"
         )
         
+        // 🛡️ Optimization 2: Infinite breathing on the UI thread layer
         val breathScale by rememberInfiniteTransition(label = "ring_pulse").animateFloat(
             initialValue  = if (pulseStyle == RingPulseStyle.BREATH) 0.96f else 1.0f,
             targetValue   = 1.0f,
             animationSpec = if (pulseStyle == RingPulseStyle.BREATH) 
                 infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse)
             else 
-                infiniteRepeatable(tween(1000), RepeatMode.Restart),
+                infiniteRepeatable(tween(1000)),
             label = "scale"
         )
+
+        // 🛡️ Optimization 3: Compute current metrics using derivedStateOf to prevent redundant layout
+        val progressMetrics by remember(isMedia, musicModel, globalBatteryLevel.intValue, globalIsCharging.value) {
+            derivedStateOf {
+                val currentProgress = if (isMedia && musicModel != null && musicModel.durationMs > 0) {
+                    (currentMediaPos.longValue.toFloat() / musicModel.durationMs.toFloat()).coerceIn(0f, 1f)
+                } else {
+                    globalBatteryLevel.intValue / 100f
+                }
+
+                val batteryLevel = globalBatteryLevel.intValue
+                val color = when {
+                    isMedia -> musicModel?.dominantColor?.let { Color(it) } ?: Color.White
+                    globalIsCharging.value -> Color(0xFF00FF00)
+                    else -> when {
+                        batteryLevel <= 10 -> Color(0xFFFF3B30)
+                        batteryLevel <= 25 -> Color(0xFFFF9500)
+                        else -> Color(0xFF32D74B)
+                    }
+                }
+                Pair(currentProgress, color)
+            }
+        }
 
         Box(
             modifier = Modifier
@@ -67,23 +90,10 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.size(ringW.value.dp, ringH.value.dp)) {
-                val currentProgress = if (isMedia) (currentMediaPos.longValue.toFloat() / safeDur) else globalBatteryLevel.intValue / 100f
-                val currentBatteryLevel = globalBatteryLevel.intValue
+                val (currentProgress, baseColor) = progressMetrics
                 
-                val baseColor = when {
-                    isMedia -> musicModel?.dominantColor?.let { Color(it) } ?: Color.White
-                    globalIsCharging.value -> Color(0xFF00FF00)
-                    else -> when {
-                        currentBatteryLevel <= 10 -> Color(0xFFFF3B30)
-                        currentBatteryLevel <= 25 -> Color(0xFFFF9500)
-                        else -> Color(0xFF32D74B)
-                    }
-                }
-
-                // --- Dialect Rendering Logic ---
                 when (pack) {
                     is IconPack.Futuristic -> {
-                        // Cyber-HUD Hexagonal segments
                         val segments = 12
                         val sweep = 360f / segments
                         for (i in 0 until segments) {
@@ -98,13 +108,12 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
                         }
                     }
                     is IconPack.Pixel -> {
-                        // Perfect Circular dots
                         val dots = 8
                         for (i in 0 until dots) {
                             val angle = (i * (360f / dots)) - 90f
                             val rad = Math.toRadians(angle.toDouble())
-                            val x = size.width / 2 + (size.width / 2) * Math.cos(rad).toFloat()
-                            val y = size.height / 2 + (size.height / 2) * Math.sin(rad).toFloat()
+                            val x = size.width / 2 + (size.width / 2) * cos(rad).toFloat()
+                            val y = size.height / 2 + (size.height / 2) * sin(rad).toFloat()
                             val active = (currentProgress * dots).toInt() > i
                             drawCircle(
                                 color = if (active) baseColor else baseColor.copy(alpha = 0.15f),
@@ -114,7 +123,6 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
                         }
                     }
                     else -> {
-                        // Standard Fluid Arc
                         val strokeW = ringThickness.value.dp.toPx()
                         drawArc(
                             color = baseColor.copy(alpha = 0.1f),
@@ -123,7 +131,7 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
                         )
                         drawArc(
                             color = baseColor,
-                            startAngle = -90f, sweepAngle = 360f * currentProgress.coerceIn(0f, 1f),
+                            startAngle = -90f, sweepAngle = 360f * currentProgress,
                             useCenter = false,
                             style = Stroke(strokeW, cap = if (pack is IconPack.Outline) StrokeCap.Butt else StrokeCap.Round)
                         )

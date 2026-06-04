@@ -9,11 +9,19 @@ import com.example.dynamicisland.data.repository.BatteryRepository
 import com.example.dynamicisland.domain.dispatchers.DispatcherProvider
 import com.example.dynamicisland.domain.dispatchers.StandardDispatcherProvider
 import com.example.dynamicisland.data.repository.GameHubRepository
+import com.example.dynamicisland.util.shell.ShellExecutor
+import com.example.dynamicisland.util.shell.AndroidShellExecutor
 import dagger.Module
 
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideShellExecutor(): ShellExecutor {
+        return AndroidShellExecutor()
+    }
 
     @Provides
     @Singleton

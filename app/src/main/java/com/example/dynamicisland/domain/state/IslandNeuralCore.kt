@@ -18,12 +18,20 @@ import javax.inject.Singleton
 import dagger.hilt.android.qualifiers.ApplicationContext
 
 /**
- * Island Neural Core (iNC)
- * 
- * A lightweight, on-device reinforcement learning engine.
- * Maps: [AppPackage + MediaState + VisualState] -> [Gesture] -> Confidence
- * 
- * NOW ALSO: Central State Authority for Dynamic Island UI Integrity.
+ * 🧠 ISLAND NEURAL CORE (iNC)
+ *
+ * The definitive state authority and intelligence engine for the Redwood project.
+ *
+ * ## Responsibilities:
+ * 1. **State Authority**: Serves as the Single Source of Truth (SSoT) for all UI components.
+ * 2. **UDF Implementation**: Processes all changes via the Unidirectional Data Flow pattern (Intent -> Reducer -> State).
+ * 3. **Intelligence Layer**: Implements a lightweight, on-device reinforcement learning engine to predict user gestures.
+ * 4. **Persistence**: Ensures system-level state survives SystemUI process churn via JSON snapshots.
+ *
+ * ## Thread Safety:
+ * Employs a combination of `MutableStateFlow` (for atomic state updates) and `Mutex` (for safe filesystem I/O).
+ *
+ * @property context Hilt-injected application context for internal storage access.
  */
 @Singleton
 class IslandNeuralCore @Inject constructor(
@@ -36,6 +44,10 @@ class IslandNeuralCore @Inject constructor(
     private var weights = JSONObject()
 
     private val _uiState = MutableStateFlow(loadStateSnapshot())
+    
+    /**
+     * The reactive UI state observable by any component in the SystemUI process.
+     */
     val uiState = _uiState.asStateFlow()
 
     init {
@@ -64,8 +76,10 @@ class IslandNeuralCore @Inject constructor(
     }
 
     /**
-     * Central dispatch for all Island Intents.
-     * Ensures UI integrity by processing all state changes through a single pipeline.
+     * Dispatches a new intent to the state machine.
+     * This is the ONLY entry point for modifying the Island state.
+     *
+     * @param intent The logical action to be processed (e.g., UpdateBattery, SyncState).
      */
     fun dispatch(intent: IslandIntent) {
         _uiState.update { currentState ->
@@ -77,6 +91,12 @@ class IslandNeuralCore @Inject constructor(
         }
     }
 
+    /**
+     * PURE REDUCER FUNCTION
+     *
+     * Computes the next state based on the current state and the incoming intent.
+     * NO side-effects allowed here (except for specialized coroutine triggers like BatteryPulse).
+     */
     private fun reduce(currentState: IslandUiState, intent: IslandIntent): IslandUiState {
         return when (intent) {
             is IslandIntent.SyncState -> currentState.copy(
@@ -116,10 +136,13 @@ class IslandNeuralCore @Inject constructor(
                     islandState = if (nextModel != null) mapModelToState(nextModel) else IslandState.HIDDEN
                 )
             }
-            else -> currentState // Other intents can be added as needed
+            else -> currentState
         }
     }
 
+    /**
+     * Map model types to physical Island dimensions.
+     */
     private fun mapModelToState(model: LiveActivityModel): IslandState {
         return when (model) {
             is LiveActivityModel.Music -> IslandState.TYPE_2_MID
@@ -166,8 +189,11 @@ class IslandNeuralCore @Inject constructor(
     }
 
     /**
-     * Reinforce a positive interaction.
-     * Every time an action is successfully executed, we increase its weight in this context.
+     * Reinforce a positive interaction in the prediction model.
+     *
+     * @param pkg Target application package.
+     * @param gesture The gesture performed (SWIPE_LEFT, etc.).
+     * @param action The resulting action to be prioritized in the future.
      */
     fun reinforce(pkg: String, islandState: String, isMediaPlaying: Boolean, gesture: String, action: String) {
         val contextKey = "$pkg|$islandState|$isMediaPlaying"
@@ -177,7 +203,6 @@ class IslandNeuralCore @Inject constructor(
         val currentScore = gestureObj.optInt(action, 0)
         gestureObj.put(action, currentScore + 1)
         
-        // Decay other actions in the same context to emphasize the successful one
         val keys = gestureObj.keys()
         while(keys.hasNext()) {
             val key = keys.next()
@@ -192,7 +217,8 @@ class IslandNeuralCore @Inject constructor(
 
     /**
      * Predict the best action for a given context and gesture.
-     * Returns the action with the highest confidence if it exceeds the threshold.
+     *
+     * @return The action ID with the highest confidence score, or null if below threshold.
      */
     fun predict(pkg: String, islandState: String, isMediaPlaying: Boolean, gesture: String, threshold: Int = 10): String? {
         val contextKey = "$pkg|$islandState|$isMediaPlaying"
@@ -215,11 +241,17 @@ class IslandNeuralCore @Inject constructor(
         return if (maxScore >= threshold) bestAction else null
     }
 
+    /**
+     * Wipes all learned behavioral data.
+     */
     fun clearMemory() {
         weights = JSONObject()
         saveWeights()
     }
 
+    /**
+     * Exports the neural weights as a JSON string for debugging.
+     */
     fun exportData(): String? {
         return try { weights.toString(4) } catch (e: Exception) { null }
     }
