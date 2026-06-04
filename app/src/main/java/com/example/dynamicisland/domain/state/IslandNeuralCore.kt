@@ -100,7 +100,9 @@ class IslandNeuralCore @Inject constructor(
             is IslandIntent.UpdateGamingStats -> currentState.copy(
                 gamingFps = intent.fps,
                 gamingFrameMs = intent.frameMs,
-                gamingJankPct = intent.jankPct
+                gamingJankPct = intent.jankPct,
+                gamingCpuUsage = intent.cpuUsage,
+                gamingGpuUsage = intent.gpuUsage
             )
             is IslandIntent.UpdateSettings -> currentState.copy(settings = intent.settings)
             is IslandIntent.UpdateTheme -> currentState.copy(theme = intent.theme)

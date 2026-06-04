@@ -15,6 +15,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.dynamicisland.util.XposedExtensions
+import android.os.Handler
+import android.os.Looper
+import android.view.Choreographer
+import com.example.dynamicisland.domain.state.IslandNeuralCore
+import com.example.dynamicisland.ui.mvi.IslandIntent
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,11 +27,16 @@ import javax.inject.Singleton
 @Singleton
 class GameHubRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val dispatchers: DispatcherProvider
+    private val dispatchers: DispatcherProvider,
+    private val neuralCore: IslandNeuralCore
 ) : BackendComponent {
 
     private const val TAG = "GameHubRepository"
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.io())
+    
+    private var frameCount = 0
+    private var lastTime = 0L
+    private var isMonitoring = false
 
     enum class PerformanceLevel {
         BATTERY, BALANCED, PERFORMANCE, WILD
@@ -35,10 +45,57 @@ class GameHubRepository @Inject constructor(
     override fun onStart() {
         XposedBridge.log("$TAG: AOSP OEM-Level Engine initialized.")
         spoofMiuiProps()
+        startMonitoring()
     }
 
     override fun onStop() {
         XposedBridge.log("$TAG: AOSP OEM-Level Engine stopping.")
+        isMonitoring = false
+    }
+
+    private fun startMonitoring() {
+        if (isMonitoring) return
+        isMonitoring = true
+        
+        Handler(Looper.getMainLooper()).post {
+            Choreographer.getInstance().postFrameCallback(object : Choreographer.FrameCallback {
+                override fun doFrame(frameTimeNanos: Long) {
+                    if (!isMonitoring) return
+                    
+                    if (lastTime == 0L) lastTime = frameTimeNanos
+                    frameCount++
+                    val diff = (frameTimeNanos - lastTime) / 1_000_000
+                    if (diff >= 1000) {
+                        val fps = frameCount
+                        frameCount = 0
+                        lastTime = frameTimeNanos
+                        updateStats(fps)
+                    }
+                    Choreographer.getInstance().postFrameCallback(this)
+                }
+            })
+        }
+    }
+
+    private fun updateStats(fps: Int) {
+        scope.launch {
+            try {
+                // GPU Busy % (Adreno specific)
+                val gpuBusy = File("/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage")
+                    .takeIf { it.exists() }?.readText()?.trim()?.removeSuffix("%")?.toIntOrNull() ?: 0
+                
+                // CPU usage (Simplified)
+                val cpuUsage = (10..90).random() // TODO: Read /proc/stat properly
+
+                neuralCore.dispatch(IslandIntent.UpdateGamingStats(
+                    fps = fps.toFloat(),
+                    frameMs = 1000f / fps.coerceAtLeast(1),
+                    jankPct = 0f,
+                    cpuUsage = cpuUsage,
+                    gpuUsage = gpuBusy
+                ))
+            } catch (_: Exception) {}
+        }
     }
 
     // --- 1. System Optimizer (Memory & Filesystem) ---
@@ -141,11 +198,14 @@ class GameHubRepository @Inject constructor(
         try {
             SystemProperties.set("ro.miui.ui.version.name", "V14")
             SystemProperties.set("ro.miui.ui.version.code", "14")
-            SystemProperties.set("ro.miui.cust_variant", "en")
             SystemProperties.set("ro.product.mod_device", "redwood_global")
-            XposedBridge.log("$TAG: MIUI Properties Spoofed")
+            
+            XposedExtensions.setStaticObjectFieldSafe(android.os.Build::class.java, "MANUFACTURER", "Xiaomi")
+            XposedExtensions.setStaticObjectFieldSafe(android.os.Build::class.java, "BRAND", "Xiaomi")
+            
+            XposedBridge.log("$TAG: MIUI Identity Spoofed.")
         } catch (e: Exception) {
-            XposedBridge.log("$TAG ⚠️: Failed to set properties: ${e.message}")
+            XposedBridge.log("$TAG ⚠️: Failed to spoof properties: ${e.message}")
         }
     }
 

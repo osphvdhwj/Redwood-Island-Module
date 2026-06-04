@@ -30,6 +30,8 @@ data class IslandUiState(
     val gamingFps: Float = 0f,
     val gamingFrameMs: Float = 0f,
     val gamingJankPct: Float = 0f,
+    val gamingCpuUsage: Int = 0,
+    val gamingGpuUsage: Int = 0,
     
     // Settings & Theme
     val settings: SettingsState = SettingsState(),

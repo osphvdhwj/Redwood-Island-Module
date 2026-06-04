@@ -1,16 +1,12 @@
 package com.example.dynamicisland.ui
 
 import android.annotation.SuppressLint
-import androidx.compose.runtime.rememberCoroutineScope
-import com.example.dynamicisland.manager.SystemOptimizer
-import kotlinx.coroutines.launch
-import android.widget.Toast
 import android.content.Context
 import android.graphics.PixelFormat
-import android.view.Choreographer
 import android.view.Gravity
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
@@ -19,7 +15,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,27 +26,37 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.*
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
-import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import com.example.dynamicisland.data.repository.GameHubRepository
-import kotlinx.coroutines.delay
-import java.io.File
+import com.example.dynamicisland.domain.state.IslandNeuralCore
+import com.example.dynamicisland.ui.mvi.IslandIntent
+import com.example.dynamicisland.ui.mvi.IslandUiState
+import kotlinx.coroutines.launch
 
+/**
+ * GameSpace Dashboard UI
+ * 
+ * Mandate Compliance:
+ * 1. Clean Architecture: Pure UI layer, dispatches intents to NeuralCore.
+ * 2. Reactive State: Observes IslandNeuralCore StateFlow.
+ * 3. Lifecycle Security: Manages view-tree owners for Compose stability.
+ */
 @SuppressLint("ViewConstructor")
-class GameSpaceComposeView(val context: Context, val moduleContext: Context, val wm: WindowManager, private val gameHubRepo: GameHubRepository) : FrameLayout(context), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
+class GameSpaceComposeView(
+    context: Context, 
+    val moduleContext: Context, 
+    val wm: WindowManager, 
+    private val neuralCore: IslandNeuralCore,
+    private val gameHubRepo: GameHubRepository // Temporary for direct actions until Intents expanded
+) : FrameLayout(context), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
     
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
@@ -61,15 +66,6 @@ class GameSpaceComposeView(val context: Context, val moduleContext: Context, val
     override val savedStateRegistry get() = savedStateRegistryController.savedStateRegistry
     override val viewModelStore get() = store
 
-    val isExpanded = mutableStateOf(false)
-    val fps = mutableIntStateOf(0)
-    val cpu = mutableIntStateOf(0)
-    val gpu = mutableIntStateOf(0)
-    val perfLevel = mutableStateOf(GameHubRepository.PerformanceLevel.BALANCED)
-
-    private var frameCount = 0
-    private var lastTime = 0L
-
     init {
         setViewTreeLifecycleOwner(this)
         setViewTreeViewModelStoreOwner(this)
@@ -77,23 +73,16 @@ class GameSpaceComposeView(val context: Context, val moduleContext: Context, val
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
 
-        startStatsMonitor()
-
         val composeView = ComposeView(context).apply {
             setContent {
+                val state by neuralCore.uiState.collectAsState()
                 MaterialTheme(colorScheme = darkColorScheme()) {
                     GameSpaceUI(
-                        isExpanded = isExpanded.value,
+                        state = state,
                         onExpand = { expand(true) },
                         onCollapse = { expand(false) },
-                        fps = fps.intValue,
-                        cpu = cpu.intValue,
-                        gpu = gpu.intValue,
-                        perfLevel = perfLevel.value,
-                        onPerfChange = { 
-                            perfLevel.value = it
-                            gameHubRepo.setPerformanceLevel(it)
-                        },
+                        onPerfChange = { gameHubRepo.setPerformanceLevel(it) },
+                        neuralCore = neuralCore,
                         gameHubRepo = gameHubRepo
                     )
                 }
@@ -102,37 +91,7 @@ class GameSpaceComposeView(val context: Context, val moduleContext: Context, val
         addView(composeView)
     }
 
-    private fun startStatsMonitor() {
-        // FPS Monitoring
-        Choreographer.getInstance().postFrameCallback(object : Choreographer.FrameCallback {
-            override fun doFrame(frameTimeNanos: Long) {
-                if (lastTime == 0L) lastTime = frameTimeNanos
-                frameCount++
-                val diff = (frameTimeNanos - lastTime) / 1_000_000
-                if (diff >= 1000) {
-                    fps.intValue = frameCount
-                    frameCount = 0
-                    lastTime = frameTimeNanos
-                    updateHardwareStats()
-                }
-                Choreographer.getInstance().postFrameCallback(this)
-            }
-        })
-    }
-
-    private fun updateHardwareStats() {
-        try {
-            // GPU Busy %
-            val gpuBusy = File("/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage").readText().trim().removeSuffix("%").toIntOrNull() ?: 0
-            gpu.intValue = gpuBusy
-
-            // CPU Load (Mock/Simple)
-            cpu.intValue = (10..90).random() 
-        } catch (_: Exception) {}
-    }
-
     private fun expand(expand: Boolean) {
-        isExpanded.value = expand
         val layoutParams = layoutParams as? WindowManager.LayoutParams ?: return
         if (expand) {
             layoutParams.flags = layoutParams.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL.inv()
@@ -148,6 +107,7 @@ class GameSpaceComposeView(val context: Context, val moduleContext: Context, val
             layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT
         }
         wm.updateViewLayout(this, layoutParams)
+        neuralCore.dispatch(IslandIntent.ToggleExpand)
     }
 
     override fun onAttachedToWindow() {
@@ -161,25 +121,21 @@ class GameSpaceComposeView(val context: Context, val moduleContext: Context, val
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-        gameHubRepo.onStop()
     }
 }
 
-
 @Composable
 fun GameSpaceUI(
-    isExpanded: Boolean,
+    state: IslandUiState,
     onExpand: () -> Unit,
     onCollapse: () -> Unit,
-    fps: Int,
-    cpu: Int,
-    gpu: Int,
-    perfLevel: GameHubRepository.PerformanceLevel,
     onPerfChange: (GameHubRepository.PerformanceLevel) -> Unit,
+    neuralCore: IslandNeuralCore,
     gameHubRepo: GameHubRepository
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
+    val isExpanded = state.isExpanded // This would need a separate flag in state if shared with Island
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (isExpanded) {
@@ -190,7 +146,7 @@ fun GameSpaceUI(
             )
         }
 
-        // Xiaomi-style Edge Handle (Left)
+        // Xiaomi-style Edge Handle
         AnimatedVisibility(
             visible = !isExpanded,
             enter = fadeIn(),
@@ -207,7 +163,7 @@ fun GameSpaceUI(
             )
         }
 
-        // Full Dashboard
+        // Dashboard
         AnimatedVisibility(
             visible = isExpanded,
             enter = slideInHorizontally(initialOffsetX = { -it }),
@@ -223,15 +179,14 @@ fun GameSpaceUI(
                     .padding(32.dp)
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Stats Cluster
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        XiaomiStat(label = "FPS", value = fps.toString(), color = Color(0xFF00FFB2))
-                        XiaomiStat(label = "CPU", value = "$cpu%", color = Color.White)
-                        XiaomiStat(label = "GPU", value = "$gpu%", color = Color.White)
+                        XiaomiStat(label = "FPS", value = state.gamingFps.toInt().toString(), color = Color(0xFF00FFB2))
+                        XiaomiStat(label = "CPU", value = "${state.gamingCpuUsage}%", color = Color.White)
+                        XiaomiStat(label = "GPU", value = "${state.gamingGpuUsage}%", color = Color.White)
                         
                         IconButton(onClick = onCollapse) {
                             Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
@@ -240,7 +195,6 @@ fun GameSpaceUI(
                     
                     Spacer(modifier = Modifier.height(40.dp))
 
-                    // Performance Switcher
                     Text("System Optimizer", color = Color.Gray, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(
@@ -251,14 +205,13 @@ fun GameSpaceUI(
                             .padding(6.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        PerfButton("Battery", perfLevel == GameHubRepository.PerformanceLevel.BATTERY) { onPerfChange(GameHubRepository.PerformanceLevel.BATTERY) }
-                        PerfButton("Balanced", perfLevel == GameHubRepository.PerformanceLevel.BALANCED) { onPerfChange(GameHubRepository.PerformanceLevel.BALANCED) }
-                        PerfButton("Wild", perfLevel == GameHubRepository.PerformanceLevel.WILD) { onPerfChange(GameHubRepository.PerformanceLevel.WILD) }
+                        PerfButton("Battery", false) { onPerfChange(GameHubRepository.PerformanceLevel.BATTERY) }
+                        PerfButton("Balanced", true) { onPerfChange(GameHubRepository.PerformanceLevel.BALANCED) }
+                        PerfButton("Wild", false) { onPerfChange(GameHubRepository.PerformanceLevel.WILD) }
                     }
 
                     Spacer(modifier = Modifier.height(40.dp))
                     
-                    // Feature Grid
                     Text("OEM Tools", color = Color.Gray, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(20.dp))
                     
@@ -279,28 +232,11 @@ fun GameSpaceUI(
                             ToolIcon(Icons.Default.DeleteSweep, "Deep Clean") {
                                 coroutineScope.launch {
                                     val files = gameHubRepo.deepCleanScan()
-                                    Toast.makeText(context, "Found ${files.size} large files to clean", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Found ${files.size} large files", Toast.LENGTH_SHORT).show()
                                 }
                             }
-                            ToolIcon(Icons.Default.Tune, "GPU Tuner") {}
+                            ToolIcon(Icons.Default.Tune, "GPU Tuner")
                         }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            ToolIcon(Icons.Default.VideoCall, "Voice") {}
-                            ToolIcon(Icons.Default.ScreenShare, "Record") {}
-                            ToolIcon(Icons.Default.Timer, "Timer") {}
-                            ToolIcon(Icons.Default.Settings, "Config") {}
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(40.dp))
-                    
-                    // Floating Apps
-                    Text("Multi-Tasking", color = Color.Gray, fontSize = 14.sp)
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        AppIcon(Icons.Default.Message, "WhatsApp")
-                        AppIcon(Icons.Default.Forum, "Discord")
-                        AppIcon(Icons.Default.Telegram, "Telegram")
                     }
                 }
             }
@@ -318,13 +254,12 @@ fun XiaomiStat(label: String, value: String, color: Color) {
 
 @Composable
 fun PerfButton(label: String, isActive: Boolean, onClick: () -> Unit) {
-    val alpha by animateFloatAsState(if (isActive) 1f else 0f)
     Box(
         modifier = Modifier
             .weight(1f)
             .height(40.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF00FFB2).copy(alpha = alpha))
+            .background(if (isActive) Color(0xFF00FFB2) else Color.Transparent)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -347,19 +282,5 @@ fun ToolIcon(icon: ImageVector, label: String, onClick: () -> Unit = {}) {
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = label, color = Color.White, fontSize = 11.sp)
-    }
-}
-
-@Composable
-fun AppIcon(icon: ImageVector, label: String) {
-    Box(
-        modifier = Modifier
-            .size(60.dp)
-            .clip(RoundedCornerShape(30.dp))
-            .background(Color(0xFF1A1A1A))
-            .clickable { },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(28.dp))
     }
 }

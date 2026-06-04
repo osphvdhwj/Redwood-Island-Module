@@ -21,7 +21,13 @@ sealed class IslandIntent {
     data class UpdateRingerMode(val mode: Int) : IslandIntent()
     
     data class UpdateMediaPosition(val positionMs: Long) : IslandIntent()
-    data class UpdateGamingStats(val fps: Float, val frameMs: Float, val jankPct: Float) : IslandIntent()
+    data class UpdateGamingStats(
+        val fps: Float, 
+        val frameMs: Float, 
+        val jankPct: Float,
+        val cpuUsage: Int,
+        val gpuUsage: Int
+    ) : IslandIntent()
     
     data class UpdateSettings(val settings: SettingsState) : IslandIntent()
     data class UpdateTheme(val theme: IslandTheme) : IslandIntent()
