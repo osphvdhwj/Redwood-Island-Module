@@ -57,8 +57,8 @@ The module now incorporates deep system-level optimizations previously exclusive
 
 ---
 
-## Future Dev Notes
-- **Nav Buttons:** Need to brainstorm how to implement Nav Island logic for users who don't use gestures.
-- **Auto-Detection:** Implement an auto-detection button for the Redwood Ring to find camera cutout coordinates.
-- **Status Bar:** Idea for future: Auto-hide system clock when Redwood expands to prevent overlap.
+## Core Synergy & Intelligence
+- **Camera Auto-Detection**: Uses `WindowInsets.displayCutout` to automatically align the Redwood Ring with the device's physical camera punch-hole.
+- **Status Bar Synergy**: Automatically fades out the system clock and notification icons when the Island expands to prevent visual overlap.
+- **Nav Mode Awareness**: Automatically detects Gesture vs 3-Button navigation and adjusts the Nav Island logic to maintain system stability.
 

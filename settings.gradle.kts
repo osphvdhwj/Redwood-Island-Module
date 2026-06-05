@@ -28,3 +28,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "DynamicIsland"
 include(":app")
+include(":shared")
+include(":core")

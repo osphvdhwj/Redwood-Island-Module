@@ -47,12 +47,14 @@ This project is an industry-leading rooted Android (AOSP/HyperOS) system utility
 4. **`jules`**: Use for large-scale, project-wide refactoring tasks.
 5. **`code-review-commons`**: Mandatory for auditing every push to ensure industry quality.
 
-### B. Infrastructure (The Factory)
+### C. Infrastructure (The Factory)
 - **Cloud-First CI**: Local APK building is restricted (Android/Termux environment). Use **GitHub Actions** (`.github/workflows/build-and-verify.yml`) for all APK generation and remote test execution.
 - **Dependency Management**: Centralized via **Gradle Version Catalog** (`gradle/libs.versions.toml`). Mandatory for all new library additions.
 - **Diagnostics**: Use **`RedwoodLogger.kt`** for all logging. Supports priority-based output and automated crash dumps to `/sdcard/Redwood/logs/`.
+- **Shadow Guardian (Audit)**: A dedicated monitoring loop that reviews AI code in real-time, enforcing architectural constraints and Termux-safe (low-RAM) instruction sets.
 
-### C. Rules of Engagement
+### D. Rules of Engagement
+
 - **Defensive Hooking**: Always use `XposedExtensions.kt` wrappers. Never call `findAndHookMethod` directly to avoid crashing SystemUI.
 - **Lifecycle Integrity**: All new components MUST implement `BackendComponent` for clean `onStart`/`onStop` handling.
 - **Context Efficiency**: Combine searches/reads. Never read the same file twice in one turn.

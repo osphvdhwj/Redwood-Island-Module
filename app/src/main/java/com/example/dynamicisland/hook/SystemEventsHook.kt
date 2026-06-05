@@ -110,11 +110,13 @@ object SystemEventsHook {
 
     private fun broadcastAppChange(ctx: Context, pkg: String, userAll: UserHandle) {
         ctx.sendBroadcastAsUser(
-            Intent("com.example.dynamicisland.APP_CHANGED").apply {
-                setPackage("com.android.systemui")
+            Intent("com.example.dynamicisland.BRAIN_EVENT").apply {
+                setPackage("com.example.dynamicisland.core")
+                putExtra("action", "APP_CHANGED")
                 putExtra("pkg", pkg)
             },
-            userAll
+            userAll,
+            "com.redwood.permission.SECURE_IPC"
         )
     }
 
@@ -164,8 +166,6 @@ object SystemEventsHook {
         param: XC_MethodHook.MethodHookParam,
         userAll: UserHandle
     ) {
-        // Robustly extract fields by type — not by index
-        // Works across all 3 overloads confirmed in Evolution X smali
         val pkgName = param.args
             .filterIsInstance<String>()
             .firstOrNull()
@@ -176,44 +176,22 @@ object SystemEventsHook {
             .firstOrNull()
             ?: return
 
-        val extras = notification.extras ?: return
         val ctx = getContext(param) ?: return
 
-        val text  = extras.getString(android.app.Notification.EXTRA_TEXT)  ?: ""
-        val title = extras.getString(android.app.Notification.EXTRA_TITLE) ?: ""
-        val isOngoing = (notification.flags and android.app.Notification.FLAG_ONGOING_EVENT) != 0
-
-        // ── Standard & Live Notifications ──────────────────────────────────
+        // Forward raw notification to the Brain for intelligence analysis
         if (pkgName != "com.android.systemui" && pkgName != "android") {
             ctx.sendBroadcastAsUser(
-                Intent("com.example.dynamicisland.NOTIFICATION_CAUGHT").apply {
-                    setPackage("com.android.systemui")
+                Intent("com.example.dynamicisland.BRAIN_EVENT").apply {
+                    setPackage("com.example.dynamicisland.core")
+                    putExtra("action", "NOTIFICATION_CAUGHT")
                     putExtra("pkg", pkgName)
                     putExtra("notification", notification)
                 },
-                userAll
+                userAll,
+                "com.redwood.permission.SECURE_IPC"
             )
         }
-
-        // ── OTP extraction (multilingual, context-aware) ──────────────────
-        val otpText = "$title $text"
-        if (com.example.dynamicisland.intelligence.OtpTokenizer.looksLikeOtpMessage(otpText)) {
-            val result = com.example.dynamicisland.intelligence.OtpTokenizer
-                .extract(otpText, pkgName)
-            if (result != null && result.isHighConfidence) {
-                ctx.sendBroadcastAsUser(
-                    Intent("com.example.dynamicisland.OTP_CAUGHT").apply {
-                        setPackage("com.android.systemui")
-                        putExtra("otp", result.code)
-                        putExtra("pkg", pkgName)
-                        putExtra("confidence", result.confidence)
-                        putExtra("language", result.language.name)
-                    },
-                    userAll
-                )
-            }
-        }
-        }
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

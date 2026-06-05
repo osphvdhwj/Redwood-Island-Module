@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
+    <application
+        android:name=".IslandApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="Redwood Core"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AppCompat.NoActionBar">
+
+        <activity
+            android:name=".ui.ConfigActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AppCompat.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".ui.DynamicIslandOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
+
+        <service
+            android:name=".ipc.IslandBrainService"
+            android:exported="true"
+            android:permission="com.redwood.permission.SECURE_IPC">
+            <intent-filter>
+                <action android:name="com.example.dynamicisland.BRAIN_SERVICE" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name=".ipc.BrainReceiver"
+            android:exported="true"
+            android:permission="com.redwood.permission.SECURE_IPC">
+            <intent-filter>
+                <action android:name="com.example.dynamicisland.BRAIN_EVENT" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".IslandTileService"
+            android:exported="true"
+            android:label="Redwood Island"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+    </application>
+
+</manifest>
