@@ -9,18 +9,20 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.dp
+import com.example.dynamicisland.settings.AestheticStyle
+import com.example.dynamicisland.settings.SettingsState
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.PI
 
 /**
- * Neural Cube UI
+ * ✨ VYXEL EXPRESSIVE NEURAL CUBE
  * 
  * A 3D-like rotating cube using isometric projection.
- * Syncs with charging or other high-priority states.
+ * Supports LiquidGlass transparency and expressive gradient surfaces.
  */
 @Composable
-fun NeuralCubeUI(color: Color, modifier: Modifier = Modifier) {
+fun NeuralCubeUI(color: Color, settings: SettingsState = SettingsState(), modifier: Modifier = Modifier) {
     val infiniteTransition = rememberInfiniteTransition(label = "cube_rotation")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -33,11 +35,11 @@ fun NeuralCubeUI(color: Color, modifier: Modifier = Modifier) {
     )
 
     Canvas(modifier = modifier.size(60.dp)) {
-        drawNeuralCube(rotation, color)
+        drawNeuralCube(rotation, color, settings.aestheticStyle == AestheticStyle.LIQUID_GLASS)
     }
 }
 
-private fun DrawScope.drawNeuralCube(rotationDeg: Float, color: Color) {
+private fun DrawScope.drawNeuralCube(rotationDeg: Float, color: Color, isLiquidGlass: Boolean) {
     val centerX = size.width / 2
     val centerY = size.height / 2
     val cubeSize = size.minDimension / 3.5f
@@ -68,7 +70,16 @@ private fun DrawScope.drawNeuralCube(rotationDeg: Float, color: Color) {
         listOf(0, 3, 7, 4), listOf(1, 2, 6, 5)  // left, right
     )
 
-    // Simplified depth sorting: draw faces with alpha
+    // LiquidGlass uses a gradient brush instead of flat color
+    val fillBrush = if (isLiquidGlass) {
+        Brush.linearGradient(
+            colors = listOf(color.copy(alpha = 0.4f), color.copy(alpha = 0.1f)),
+            start = Offset(0f, 0f),
+            end = Offset(size.width, size.height)
+        )
+    } else null
+
+    // Depth sorting: draw faces with alpha
     faces.forEach { face ->
         val path = Path().apply {
             moveTo(vertices[face[0]].x, vertices[face[0]].y)
@@ -77,7 +88,13 @@ private fun DrawScope.drawNeuralCube(rotationDeg: Float, color: Color) {
             lineTo(vertices[face[3]].x, vertices[face[3]].y)
             close()
         }
-        drawPath(path, color.copy(alpha = 0.15f))
-        drawPath(path, color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx()))
+        
+        if (isLiquidGlass && fillBrush != null) {
+            drawPath(path, fillBrush)
+            drawPath(path, color.copy(alpha = 0.8f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx()))
+        } else {
+            drawPath(path, color.copy(alpha = 0.15f))
+            drawPath(path, color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx()))
+        }
     }
 }

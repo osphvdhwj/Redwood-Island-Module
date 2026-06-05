@@ -103,7 +103,7 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
                 }
             }
             com.example.dynamicisland.settings.ChargingStyle.CUBE -> {
-                com.example.dynamicisland.ui.components.NeuralCubeUI(color = color, modifier = Modifier.size(40.dp))
+                com.example.dynamicisland.ui.components.NeuralCubeUI(color = color, settings = controller?.settingsState ?: com.example.dynamicisland.settings.SettingsState(), modifier = Modifier.size(40.dp))
             }
         }
 
