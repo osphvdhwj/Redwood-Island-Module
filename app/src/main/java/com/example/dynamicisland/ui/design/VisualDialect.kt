@@ -73,6 +73,25 @@ data class VisualDialect(
                     backgroundAlpha = 0.0f, // True outline
                     accentColor = Color.White
                 )
+                is IconPack.iOS -> VisualDialect( // Alias for Cupertino Glass
+                    cornerRadius = 24.dp,
+                    borderWidth = 0.5.dp,
+                    borderColor = Color.White.copy(alpha = 0.3f),
+                    backgroundAlpha = 0.1f, // High transparency
+                    isGlassy = true,
+                    accentColor = Color.White,
+                    glowColor = Color.White.copy(alpha = 0.1f),
+                    glowRadius = 4.dp
+                )
+                is IconPack.AmoledCyberpunk -> VisualDialect(
+                    cornerRadius = 0.dp,
+                    borderWidth = 3.dp,
+                    borderColor = Color(0xFFFDEE00),
+                    glowColor = Color(0xFFFDEE00).copy(alpha = 0.6f),
+                    glowRadius = 12.dp,
+                    accentColor = Color(0xFFFDEE00),
+                    backgroundAlpha = 1.0f
+                )
                 else -> VisualDialect() // Material You default
             }
         }

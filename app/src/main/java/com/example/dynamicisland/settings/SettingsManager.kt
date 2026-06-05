@@ -128,7 +128,7 @@ class SettingsManager(private val context: Context) {
         CALL_STYLE, CHARGING_STYLE, BATTERY_STYLE, RING_PULSE_STYLE,
         AUTO_BACKUP_ENABLED, AUTO_BACKUP_FREQ_DAYS, STASH_STORAGE_PATH,
         SPLIT_PILL_ENABLED, ICON_PACK,
-        SQUISH_INTENSITY,
+        SQUISH_INTENSITY, FONT_AESTHETIC, APP_LANGUAGE, EXPRESSIVE_MESH_ENABLED,
         
         // Calibration
         POS_RING_X, POS_RING_Y, POS_MINI_X, POS_MINI_Y,
@@ -365,7 +365,10 @@ class SettingsManager(private val context: Context) {
             squishIntensity = getFloat(SettingKey.SQUISH_INTENSITY, 1.0f),
             freeformLaunchEnabled = getBoolean(SettingKey.FREEFORM_LAUNCH_ENABLED, true),
             freeformSmartGesture = getBoolean(SettingKey.FREEFORM_SMART_GESTURE, true),
-            enableFreeformPortalAnim = getBoolean(SettingKey.ENABLE_FREEFORM_PORTAL_ANIM, true)
+            enableFreeformPortalAnim = getBoolean(SettingKey.ENABLE_FREEFORM_PORTAL_ANIM, true),
+            fontAesthetic = try { FontAesthetic.valueOf(getString(SettingKey.FONT_AESTHETIC, "DEFAULT") ?: "DEFAULT") } catch(e: Exception) { FontAesthetic.DEFAULT },
+            appLanguage = getString(SettingKey.APP_LANGUAGE, "System") ?: "System",
+            expressiveMeshEnabled = getBoolean(SettingKey.EXPRESSIVE_MESH_ENABLED, true)
         )
     }
 }

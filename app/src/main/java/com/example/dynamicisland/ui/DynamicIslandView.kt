@@ -1,5 +1,14 @@
 package com.example.dynamicisland.ui
 
+import androidx.compose.runtime.CompositionLocalProvider
+import com.example.dynamicisland.ui.design.AppMD3Theme
+import com.example.dynamicisland.util.TranslationProvider
+import com.example.dynamicisland.util.LocalRedwoodStrings
+import com.example.dynamicisland.settings.SettingsState
+import com.example.dynamicisland.settings.IconPack
+import com.example.dynamicisland.ui.LocalIconPack
+package com.example.dynamicisland.ui
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -180,6 +189,20 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
         val composeView = ComposeView(context).apply {
             setContent {
                 val settings = controller?.settingsState ?: SettingsState()
+                
+                AppMD3Theme(settings = settings) {
+                    CompositionLocalProvider(
+                        LocalIconPack provides settings.iconPack,
+                        LocalRedwoodStrings provides TranslationProvider.getStrings(settings.appLanguage)
+                    ) {
+                        Surface(
+                            color = Color.Transparent,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            IslandMainContent()
+                        }
+                    }
+                }
                 
                 // 🔥 Start Burn-In Protection
                 LaunchedEffect(settings.antiBurnInEnabled) {

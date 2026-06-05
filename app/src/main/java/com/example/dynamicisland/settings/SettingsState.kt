@@ -2,7 +2,7 @@ package com.example.dynamicisland.settings
 
 import androidx.compose.ui.graphics.Color
 
-enum class DesignLanguage { MATERIAL_YOU, APPLE_LIQUID_GLASS }
+enum class DesignLanguage { MATERIAL_YOU, APPLE_LIQUID_GLASS, VYXEL_EXPRESSIVE }
 enum class AnimationSpeed { SLOW, NORMAL, FAST }
 enum class CallStyle { IOS, MINIMAL, MODERN }
 enum class ChargingStyle { RING, WAVE, CUBE }
@@ -10,8 +10,9 @@ enum class BatteryStyle { PILL, GAUGE, DIGITAL }
 enum class PhysicsStyle { APPLE, OXYGEN_OS }
 enum class ContentTransitionStyle { SLIDE, FADE_SCALE, FLIP }
 enum class RingPulseStyle { BREATH, LASER, NONE }
-enum class AestheticStyle { GLASS, VOID_BLACK }
+enum class AestheticStyle { GLASS, VOID_BLACK, LIQUID_GLASS }
 enum class ShortcutLayout { GRID, CAROUSEL }
+enum class FontAesthetic { DEFAULT, MONOSPACE, KILO, CHOCOCOOKY, GOOGLE_SANS }
 
 /**
  * THE DEFINITIVE SETTINGS STATE
@@ -40,6 +41,9 @@ data class SettingsState(
     val monochromeIcons: Boolean = false,
     val enableMetaballTear: Boolean = true,
     val squishIntensity: Float = 1.0f,
+    val fontAesthetic: FontAesthetic = FontAesthetic.DEFAULT,
+    val appLanguage: String = "System",
+    val expressiveMeshEnabled: Boolean = true,
 
     // Dual-Mode Architecture (Pillar 1)
     val liveBridgeEnabled: Boolean = false,

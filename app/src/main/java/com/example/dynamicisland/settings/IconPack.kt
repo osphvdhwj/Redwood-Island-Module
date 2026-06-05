@@ -15,11 +15,12 @@ sealed class IconPack(val id: String, val displayName: String) {
     object Futuristic : IconPack("FUTURISTIC", "Cyber-HUD")
     object Minimal : IconPack("MINIMAL", "Dots & Lines")
     object AmoledCyberpunk : IconPack("AMOLED_CYBERPUNK", "High Contrast")
+    object CupertinoGlass : IconPack("CUPERTINO_GLASS", "Liquid Glass")
 
     companion object {
         val ALL = listOf(
             MaterialYou, iOS, OxygenOS, OneUI, 
-            Pixel, Outline, Futuristic, Minimal, AmoledCyberpunk
+            Pixel, Outline, Futuristic, Minimal, AmoledCyberpunk, CupertinoGlass
         )
         
         fun fromString(id: String): IconPack {

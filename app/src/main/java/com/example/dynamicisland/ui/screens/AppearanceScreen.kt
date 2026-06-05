@@ -106,7 +106,20 @@ fun AppearanceScreen(viewModel: SettingsViewModel) {
             onCheckedChange = { viewModel.updateSetting(SettingKey.SYNC_PULSE_VIBRATION, it) }
         )
 
-        SettingsChoiceChip("Aesthetic Mode", state.aestheticStyle.name, listOf("GLASS", "VOID_BLACK")) {
+        SettingsCategoryHeader("Elite Aesthetics")
+        SettingsChoiceChip("Design Language", state.designLanguage.name, listOf("MATERIAL_YOU", "APPLE_LIQUID_GLASS", "VYXEL_EXPRESSIVE")) {
+            viewModel.updateSetting(SettingKey.DESIGN_LANGUAGE, it)
+        }
+
+        SettingsChoiceChip("Font Aesthetic", state.fontAesthetic.name, listOf("DEFAULT", "MONOSPACE", "KILO", "CHOCOCOOKY")) {
+            viewModel.updateSetting(SettingKey.FONT_AESTHETIC, it)
+        }
+
+        SettingsChoiceChip("Module Language", state.appLanguage, listOf("System", "English", "Hindi", "Spanish")) {
+            viewModel.updateSetting(SettingKey.APP_LANGUAGE, it)
+        }
+
+        SettingsChoiceChip("Aesthetic Mode", state.aestheticStyle.name, listOf("GLASS", "VOID_BLACK", "LIQUID_GLASS")) {
             viewModel.updateSetting(SettingKey.AESTHETIC_STYLE, it)
         }
 

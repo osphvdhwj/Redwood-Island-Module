@@ -1,5 +1,8 @@
 package com.example.dynamicisland.ui.design
 
+import com.example.dynamicisland.settings.AestheticStyle
+package com.example.dynamicisland.ui.design
+
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -48,21 +51,38 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
+import com.example.dynamicisland.settings.DesignLanguage
+import com.example.dynamicisland.settings.SettingsState
+import com.example.dynamicisland.settings.FontAesthetic
+
 @Composable
 fun AppMD3Theme(
+    settings: SettingsState = SettingsState(),
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val context = LocalContext.current
+    
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        settings.aestheticStyle == AestheticStyle.LIQUID_GLASS -> VyxelDesignSystem.LiquidGlassBase
+        settings.designLanguage == DesignLanguage.VYXEL_EXPRESSIVE -> {
+            VyxelDesignSystem.getExpressiveMonet(context, darkTheme)
         }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        settings.designLanguage == DesignLanguage.APPLE_LIQUID_GLASS -> {
+            VyxelDesignSystem.LiquidGlassBase
+        }
+        else -> {
+            when {
+                settings.dynamicColors && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                    if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+                }
+                darkTheme -> DarkColorScheme
+                else -> LightColorScheme
+            }
+        }
     }
+    
+    val fontFamily = VyxelDesignSystem.getFontFamily(settings.fontAesthetic)
     
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -78,34 +98,34 @@ fun AppMD3Theme(
         colorScheme = colorScheme,
         typography = Typography(
             headlineMedium = TextStyle(
-                fontFamily = FontFamily.Monospace,
+                fontFamily = fontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 28.sp,
                 letterSpacing = (-0.5).sp
             ),
             titleLarge = TextStyle(
-                fontFamily = FontFamily.Monospace,
+                fontFamily = fontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 letterSpacing = (-0.5).sp
             ),
             titleMedium = TextStyle(
-                fontFamily = FontFamily.Monospace,
+                fontFamily = fontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 16.sp
             ),
             bodyLarge = TextStyle(
-                fontFamily = FontFamily.Monospace,
+                fontFamily = fontFamily,
                 fontWeight = FontWeight.Normal,
                 fontSize = 16.sp
             ),
             bodyMedium = TextStyle(
-                fontFamily = FontFamily.Monospace,
+                fontFamily = fontFamily,
                 fontWeight = FontWeight.Normal,
                 fontSize = 14.sp
             ),
             labelSmall = TextStyle(
-                fontFamily = FontFamily.Monospace,
+                fontFamily = fontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp,
                 letterSpacing = 0.5.sp
