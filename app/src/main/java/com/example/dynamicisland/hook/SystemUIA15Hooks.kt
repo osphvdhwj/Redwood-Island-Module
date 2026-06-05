@@ -59,6 +59,7 @@ class SystemUIA15Hooks {
                 }
             )
 
+            hookStatusBarViews(lpparam)
             hookNotifPipeline(lpparam)
             hookMediaPipeline(lpparam)
             hookHardwareControllers(lpparam)
@@ -66,6 +67,57 @@ class SystemUIA15Hooks {
             hookAssistManager(lpparam)
             hookScreenshotService(lpparam)
             setupReceiver(lpparam)
+        }
+
+        private val statusBarViews = mutableSetOf<WeakReference<View>>()
+
+        private fun hookStatusBarViews(lpparam: XC_LoadPackage.LoadPackageParam) {
+            val clockClass = "com.android.systemui.statusbar.policy.Clock"
+            val iconContainerClass = "com.android.systemui.statusbar.phone.NotificationIconContainer"
+            
+            val viewHook = object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val view = param.thisObject as View
+                    statusBarViews.add(WeakReference(view))
+                    updateStatusBarAlpha()
+                }
+            }
+
+            XposedExtensions.hookMethodIfExists(clockClass, lpparam.classLoader, "onAttachedToWindow", viewHook)
+            XposedExtensions.hookMethodIfExists(iconContainerClass, lpparam.classLoader, "onAttachedToWindow", viewHook)
+            
+            // Periodically check neural core state to sync alpha
+            scope.launch {
+                while(true) {
+                    delay(500)
+                    updateStatusBarAlpha()
+                }
+            }
+        }
+
+        private fun updateStatusBarAlpha() {
+            val ctrl = controller ?: return
+            val islandState = ctrl.neuralCore.uiState.value.islandState
+            
+            // Hide clock/icons if island is MID or MAX (expanded)
+            val shouldHide = islandState == com.example.dynamicisland.ipc.IslandState.TYPE_2_MID || 
+                            islandState == com.example.dynamicisland.ipc.IslandState.TYPE_3_MAX
+            
+            val targetAlpha = if (shouldHide) 0f else 1f
+            
+            Handler(Looper.getMainLooper()).post {
+                statusBarViews.iterator().let { iter ->
+                    while (it.hasNext()) {
+                        val ref = it.next()
+                        val view = ref.get()
+                        if (view == null) {
+                            it.remove()
+                        } else if (view.alpha != targetAlpha) {
+                            view.animate().alpha(targetAlpha).setDuration(200).start()
+                        }
+                    }
+                }
+            }
         }
 
         private fun ensureControllerInitialized(context: Context) {

@@ -254,10 +254,54 @@ class IslandController @Inject constructor(
     private var isSystemRecordingActive = false
     private var isScreenshotActiveInternal = false
 
+    /**
+     * AUTO-DETECT CAMERA CUTOUT
+     * Logic to find the camera cutout coordinates and align the Redwood Ring.
+     */
+    fun autoDetectCutout() {
+        val view = islandView ?: return
+        val insets = view.rootWindowInsets
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            val cutout = insets?.displayCutout
+            if (cutout != null) {
+                val rects = cutout.boundingRects
+                val rect = rects.firstOrNull()
+                if (rect != null) {
+                    val density = context.resources.displayMetrics.density
+                    val x = rect.centerX() / density
+                    val y = rect.centerY() / density
+                    
+                    // Update Calibration States
+                    view.ringX.value = x
+                    view.ringY.value = y
+                    
+                    // Persistence
+                    settingsManager.saveLayoutPositions(
+                        ring = android.graphics.PointF(x, y),
+                        mini = android.graphics.PointF(view.miniX.value, view.miniY.value),
+                        mid  = android.graphics.PointF(view.midX.value, view.midY.value),
+                        max  = android.graphics.PointF(view.maxX.value, view.maxY.value)
+                    )
+                    XposedBridge.log("Redwood: Auto-detected cutout at ($x, $y)")
+                }
+            }
+        }
+    }
+
+    /**
+     * CHECK NAVIGATION MODE
+     * Mode 0: 3-button, Mode 1: 2-button, Mode 2: Gesture
+     */
+    fun is3ButtonNavActive(): Boolean {
+        return Settings.Secure.getInt(context.contentResolver, "navigation_mode", 2) == 0
+    }
+
     fun evaluatePriority() {
         val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         
         // 🛡️ PRO-GRADE VISIBILITY OVERRIDES
+        val is3ButtonNav = is3ButtonNavActive()
+        
         if (isKeyboardVisible || isSystemRecordingActive || isScreenshotActiveInternal) {
             _lastIslandState = IslandState.HIDDEN
             neuralCore.dispatch(IslandIntent.SyncState(IslandState.HIDDEN, null, null))
@@ -266,9 +310,8 @@ class IslandController @Inject constructor(
 
         // 🧠 SYNERGY CHECK: If Nav Island is active, Redwood Island can 'share' data
         // For AOSP: we prioritize Nav Island for controls, Redwood for info.
-        if (settingsState.navIslandMode) {
-             knowledgeBase.put("REDWOOD_ACTIVE", _lastIslandState != IslandState.HIDDEN)
-        }
+        // Disable Nav Island if user is in 3-button mode.
+        val navActive = settingsState.navIslandMode && !is3ButtonNav
 
         IslandPriorityEngineV2.updateContext(
             screenOn = mediaManager.isScreenOn,
