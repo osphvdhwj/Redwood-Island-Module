@@ -5,42 +5,74 @@ import com.example.dynamicisland.core.domain.state.IslandNeuralCore
 import com.example.dynamicisland.shared.model.IslandIntent
 import com.example.dynamicisland.shared.model.LiveActivityModel
 import com.example.dynamicisland.shared.model.ActivityType
+import com.google.mlkit.nl.entityextraction.*
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 🧠 ISLAND GENERATIVE ENGINE (Feature B)
+ * 🧠 ELITE ISLAND GENERATIVE ENGINE (Feature B)
  *
- * Processes screen content and predicts the best UI layout.
- * Turns raw text into proactive 'Generative Island' states.
+ * Processes screen content using on-device ML Kit Entity Extraction.
+ * Predicts user intent and generates proactive Dynamic Island states.
  */
 @Singleton
 class IslandGenerativeEngine @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val neuralCore: IslandNeuralCore
 ) {
 
-    fun processScreenContent(pkg: String, rawText: String) {
-        val intent = analyzeContent(pkg, rawText) ?: return
-        neuralCore.dispatch(intent)
+    private val entityExtractor = EntityExtraction.getClient(
+        EntityExtractorOptions.Builder(EntityExtractorOptions.ENGLISH)
+            .build()
+    )
+
+    init {
+        // Download the ML model in the background
+        entityExtractor.downloadModelIfNeeded()
     }
 
-    private fun analyzeContent(pkg: String, text: String): IslandIntent? {
-        // --- 🛡️ Elite Pattern Matching ---
+    /**
+     * Entry point for processing raw text from Ghost Satellites.
+     */
+    fun processScreenContent(pkg: String, rawText: String) {
+        if (rawText.isBlank()) return
         
-        // 1. Flight Tracking
-        if (text.contains("Flight", ignoreCase = true) && text.contains(Regex("[A-Z]{2}\\d{3,4}"))) {
-            return buildGenerativeIntent("Flight Tracking", "LH454 - In Air", 0xFF007AFF.toInt())
+        entityExtractor.annotate(rawText)
+            .addOnSuccessListener { annotations ->
+                val bestIntent = selectBestIntent(pkg, annotations)
+                bestIntent?.let { neuralCore.dispatch(it) }
+            }
+    }
+
+    private fun selectBestIntent(pkg: String, annotations: List<EntityAnnotation>): IslandIntent? {
+        if (annotations.isEmpty()) return null
+
+        // Priority 1: Flight Tracking
+        val flight = annotations.find { it.entities.any { e -> e.type == Entity.TYPE_FLIGHT_NUMBER } }
+        if (flight != null) {
+            return buildGenerativeIntent("Flight Live", flight.annotatedText, 0xFF007AFF.toInt())
         }
 
-        // 2. OTP/Security Codes (Redundant but proactive)
-        if (text.contains(Regex("\\b\\d{4,6}\\b")) && (text.contains("code") || text.contains("OTP"))) {
-            val code = Regex("\\b\\d{4,6}\\b").find(text)?.value ?: ""
-            return buildGenerativeIntent("Security Code", code, 0xFFFF3B30.toInt())
+        // Priority 2: Tracking Numbers (Parcel)
+        val tracking = annotations.find { it.entities.any { e -> e.type == Entity.TYPE_TRACKING_NUMBER } }
+        if (tracking != null) {
+            return buildGenerativeIntent("Parcel Tracking", tracking.annotatedText, 0xFF34C759.toInt())
         }
 
-        // 3. Shipping / Logistics
-        if (text.contains("Order", ignoreCase = true) && text.contains("Delivered", ignoreCase = true)) {
-             return buildGenerativeIntent("Parcel Alert", "Order #123 Delivered", 0xFF34C759.toInt())
+        // Priority 3: Money/Payments
+        val money = annotations.find { it.entities.any { e -> e.type == Entity.TYPE_MONEY } }
+        if (money != null) {
+             return buildGenerativeIntent("Payment Detected", money.annotatedText, 0xFF5856D6.toInt())
+        }
+
+        // Priority 4: OTP/Codes (via Regex fallback for specific apps)
+        if (pkg.contains("messaging") || pkg.contains("whatsapp")) {
+            val codeRegex = Regex("\\b\\d{4,6}\\b")
+            val match = codeRegex.find(annotations.first().annotatedText)
+            if (match != null) {
+                return buildGenerativeIntent("Security Code", match.value, 0xFFFF3B30.toInt())
+            }
         }
 
         return null

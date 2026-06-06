@@ -66,4 +66,10 @@ dependencies {
 
     // UI Components
     implementation(libs.androidx.appcompat)
+
+    // 🤖 ML Kit Intelligence
+    implementation(libs.mlkit.barcode)
+    implementation(libs.mlkit.translate)
+    implementation(libs.mlkit.language)
+    implementation(libs.mlkit.entity.extraction)
 }

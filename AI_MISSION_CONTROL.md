@@ -22,6 +22,7 @@ This project is an industry-leading rooted Android (AOSP/HyperOS) system utility
 - **UDF Pattern**: Intent → Reducer → StateFlow. Both windows observe the same stream, ensuring 100% synchronization.
 - **Persistence**: State snapshots survive SystemUI restarts via JSON serialization.
 - **Intelligence Active**: 
+    - **Generative Context Engine (Feature B)**: Uses on-device **ML Kit Entity Extraction** to proactively recognize 15+ entity types (Flights, Tracking IDs, Payments) from screen text and generate relevant Island states in real-time.
     - **Prediction Engine**: Uses `UsageStatsManager` for behavioral forecasting (10-minute horizon). Pre-warms app icons and assets before the user even taps.
     - **ML Gesture Classifier**: Online-learning Naive Bayes classifier for elite touch recognition. Adapts to user pressure and velocity profiles.
 
