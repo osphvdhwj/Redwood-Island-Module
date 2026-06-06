@@ -13,7 +13,14 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
 
+import com.example.dynamicisland.core.IslandApplication
+import dagger.hilt.android.EntryPointAccessors
+
 class IslandContentProvider : ContentProvider() {
+
+    private fun getEntryPoint(): IslandApplication.BrainEntryPoint {
+        return EntryPointAccessors.fromApplication(context!!, IslandApplication.BrainEntryPoint::class.java)
+    }
 
     companion object {
         const val AUTHORITY = "com.example.dynamicisland.provider"
@@ -338,12 +345,16 @@ class IslandContentProvider : ContentProvider() {
                 val eventType = arg ?: ""
                 val data = extras ?: Bundle()
                 context?.let {
-                    // Dispatch to NeuralCore via Hilt-less instantiation or broadcast
-                    // For now, use the singleton instance if available in SystemUI
+                    val entryPoint = getEntryPoint()
+                    
                     if (eventType == "KEYBOARD_SYNC") {
                         val height = data.getInt("keyboard_height")
                         val visible = data.getBoolean("is_visible")
-                        // Logic to handle keyboard shift
+                        // Forward to controller via neural core if needed
+                    } else if (eventType == "SCREEN_CONTENT_UPDATE") {
+                        val pkg = data.getString("package") ?: ""
+                        val text = data.getString("raw_text") ?: ""
+                        entryPoint.generativeEngine().processScreenContent(pkg, text)
                     }
                     result.putBoolean("ok", true)
                 }

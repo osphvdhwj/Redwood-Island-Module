@@ -21,8 +21,12 @@ This project is an industry-leading rooted Android (AOSP/HyperOS) system utility
 - **Single Source of Truth**: All Island state is managed by `IslandNeuralCore.kt`. 
 - **UDF Pattern**: Intent → Reducer → StateFlow. Both windows observe the same stream, ensuring 100% synchronization.
 - **Persistence**: State snapshots survive SystemUI restarts via JSON serialization.
+- **Intelligence Active**: 
+    - **Prediction Engine**: Uses `UsageStatsManager` for behavioral forecasting (10-minute horizon). Pre-warms app icons and assets before the user even taps.
+    - **ML Gesture Classifier**: Online-learning Naive Bayes classifier for elite touch recognition. Adapts to user pressure and velocity profiles.
 
-### C. Game Hub v15 (OEM Engine)
+### D. Infrastructure (The Factory)
+
 - **Kernel-Level Boost**: Reaches UID 1000 permissions to drop caches (`echo 3 > /proc/sys/vm/drop_caches`) and compact memory.
 - **Hardware Controller**: Locks Snapdragon GPU clock speeds and switches CPU governors (Battery to "Wild" mode).
 - **Security Emulator**: Spoofs MIUI/Xiaomi properties to unlock 120FPS and hardware-specific features in games.

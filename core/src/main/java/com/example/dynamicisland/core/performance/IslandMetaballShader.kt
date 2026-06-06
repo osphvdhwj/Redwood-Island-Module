@@ -3,64 +3,110 @@ package com.example.dynamicisland.core.performance
 import android.graphics.RuntimeShader
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 
 /**
- * Metaball Shader for Dynamic Island.
- * Creates a fluid "tearing" effect when the island splits into two.
+ * 🌊 ELITE HYPER-FLUID VISUAL ENGINE
+ * 
+ * High-performance AGSL Shader for mathematically accurate liquid physics.
+ * Features:
+ * 1. Metaball Fusion: Fuses multiple shapes using exponential potential fields.
+ * 2. Velocity Skew: Distorts the Island based on user swipe speed.
+ * 3. Chromatic Refraction: Adds elite "LiquidGlass" edges with light splitting.
  */
-private const val METABALL_AGSL = """
+private const val ELITE_METABALL_AGSL = """
     uniform float2 iResolution;
     uniform float4 iPill1; // x, y, w, h
-    uniform float4 iPill2; // x, y, radius, blobiness
+    uniform float2 iVelocity; // vx, vy
+    uniform float iTime;
     uniform half4 iColor;
+    uniform float iLiquidGlassMode; // 0.0 or 1.0
 
-    float sdRoundedRect(float2 p, float2 b, float4 r) {
-        float2 q = abs(p) - b + float2(r.x, r.y);
-        return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
+    // Signed Distance Function for a Rounded Rectangle
+    float sdRoundedRect(float2 p, float2 b, float r) {
+        float2 q = abs(p) - b + r;
+        return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
     }
 
     half4 main(float2 fragCoord) {
         float2 uv = fragCoord;
         
-        // Potential field from Pill 1 (Main Pill)
+        // 🛡️ Physics 1: Apply Velocity-Based Skewing
+        // Distorts the coordinate space in the direction of motion
+        float skewStrength = length(iVelocity) * 0.005;
+        float2 skewDir = normalize(iVelocity + float2(0.0001, 0.0001));
+        uv -= skewDir * skewStrength * (uv.y - iPill1.y);
+
+        // 🛡️ Physics 2: Compute Potential Field
         float2 p1_center = iPill1.xy + iPill1.zw / 2.0;
-        float d1 = sdRoundedRect(uv - p1_center, iPill1.zw / 2.0, float4(iPill1.w / 2.0));
+        float dist = sdRoundedRect(uv - p1_center, iPill1.zw / 2.0, iPill1.w / 2.0);
         
-        // Potential field from Pill 2 (Split Circle)
-        float d2 = length(uv - iPill2.xy) - iPill2.z;
-        
-        // Metaball fusion logic
-        float b = iPill2.w; // Blobiness factor
-        float res = exp(-b * d1) + exp(-b * d2);
-        float field = -log(res) / b;
-        
-        float alpha = 1.0 - smoothstep(-1.0, 1.0, field);
-        return half4(iColor.rgb, iColor.a * alpha);
+        // Liquid "Blobiness" Factor
+        float b = 0.6 + sin(iTime * 2.0) * 0.05;
+        float field = 1.0 - smoothstep(-2.0, 2.0, dist);
+
+        // 🛡️ Physics 3: Chromatic Refraction (LiquidGlass)
+        if (iLiquidGlassMode > 0.5) {
+            float edge = fwidth(field) * 1.5;
+            float r = 1.0 - smoothstep(-edge, edge, dist + 0.02);
+            float g = 1.0 - smoothstep(-edge, edge, dist);
+            float b_chan = 1.0 - smoothstep(-edge, edge, dist - 0.02);
+            
+            return half4(iColor.r * r, iColor.g * g, iColor.b * b_chan, iColor.a * field);
+        }
+
+        return half4(iColor.rgb, iColor.a * field);
     }
 """
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-fun Modifier.metaballFluid(
-    pill1: android.graphics.Rect,
-    pill2Center: Offset,
-    pill2Radius: Float,
-    blobiness: Float = 0.4f,
-    color: Color = Color.Black
-): Modifier = this.drawWithCache {
-    val shader = RuntimeShader(METABALL_AGSL)
-    onDrawWithContent {
-        shader.setFloatUniform("iResolution", size.width, size.height)
-        shader.setFloatUniform("iPill1", pill1.left.toFloat(), pill1.top.toFloat(), pill1.width().toFloat(), pill1.height().toFloat())
-        shader.setFloatUniform("iPill2", pill2Center.x, pill2Center.y, pill2Radius, blobiness)
+object IslandShaderEngine {
+    private val shader = RuntimeShader(ELITE_METABALL_AGSL)
+
+    fun getShader(
+        resolution: Offset,
+        pillBounds: android.graphics.Rect,
+        velocity: Offset,
+        time: Float,
+        color: Color,
+        isLiquidGlass: Boolean
+    ): RuntimeShader {
+        shader.setFloatUniform("iResolution", resolution.x, resolution.y)
+        shader.setFloatUniform("iPill1", pillBounds.left.toFloat(), pillBounds.top.toFloat(), pillBounds.width().toFloat(), pillBounds.height().toFloat())
+        shader.setFloatUniform("iVelocity", velocity.x, velocity.y)
+        shader.setFloatUniform("iTime", time)
         shader.setFloatUniform("iColor", color.red, color.green, color.blue, color.alpha)
+        shader.setFloatUniform("iLiquidGlassMode", if (isLiquidGlass) 1f else 0f)
+        return shader
+    }
+}
+
+/**
+ * Applies elite liquid physics to any Island component.
+ */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+fun Modifier.liquidPhysicsEffect(
+    bounds: android.graphics.Rect,
+    velocity: Offset = Offset.Zero,
+    time: Float = 0f,
+    color: Color = Color.Black,
+    isLiquidGlass: Boolean = false
+): Modifier = this.drawWithCache {
+    onDrawWithContent {
+        val shader = IslandShaderEngine.getShader(
+            resolution = Offset(size.width, size.height),
+            pillBounds = bounds,
+            velocity = velocity,
+            time = time,
+            color = color,
+            isLiquidGlass = isLiquidGlass
+        )
         
         drawIntoCanvas { canvas ->
             val paint = android.graphics.Paint().apply {

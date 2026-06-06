@@ -52,7 +52,18 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
         when {
             isSystemServer -> hookAndroidProcess(lpparam)
             isSystemUI -> hookSystemUIProcess(lpparam)
-            else -> hookAppSatellite(lpparam)
+            else -> {
+                hookAppSatellite(lpparam)
+                // 👁️ Feature B: Content Intelligence
+                if (!lpparam.packageName.startsWith("com.example.")) {
+                    try {
+                        ScreenContentSatellite().onInitialize(
+                            AndroidAppHelper.currentApplication() ?: return, 
+                            lpparam.packageName
+                        )
+                    } catch (_: Throwable) {}
+                }
+            }
         }
     }
 
@@ -71,6 +82,10 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             "com.google.android.apps.nexuslauncher" -> {
                 log("Injecting Launcher Satellite")
                 // TODO: Implement LauncherSatellite
+            }
+            "com.google.android.youtube", "com.vanced.android.youtube" -> {
+                log("Injecting Video Toolbox Satellite")
+                VideoToolboxHook.apply(lpparam)
             }
         }
     }

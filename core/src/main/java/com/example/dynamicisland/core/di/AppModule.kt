@@ -13,14 +13,99 @@ import com.example.dynamicisland.core.util.shell.ShellExecutor
 import com.example.dynamicisland.core.util.shell.AndroidShellExecutor
 import dagger.Module
 
+import com.example.dynamicisland.core.intelligence.IslandPredictionEngine
+import com.example.dynamicisland.core.gesture.MLGestureClassifier
+
+import com.example.dynamicisland.core.intelligence.IslandGenerativeEngine
+
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
     @Provides
     @Singleton
+    fun provideIslandGenerativeEngine(neuralCore: IslandNeuralCore): IslandGenerativeEngine {
+        return IslandGenerativeEngine(neuralCore)
+    }
+
+    @Provides
+    @Singleton
+    fun provideIslandPredictionEngine(@ApplicationContext context: Context): IslandPredictionEngine {
+        return IslandPredictionEngine.get(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideMLGestureClassifier(@ApplicationContext context: Context): MLGestureClassifier {
+        return MLGestureClassifier(context)
+    }
+
+    @Provides
+    @Singleton
     fun provideShellExecutor(): ShellExecutor {
         return AndroidShellExecutor()
+    }
+
+    @Provides
+    @Singleton
+    fun provideRootShellEngine(dispatchers: DispatcherProvider): RootShellEngine {
+        return RootShellEngine(dispatchers)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSysfsController(rootEngine: RootShellEngine): SysfsController {
+        return SysfsController(rootEngine)
+    }
+
+    @Provides
+    @Singleton
+    fun provideStorageScanner(dispatchers: DispatcherProvider): com.example.dynamicisland.core.data.repository.cleanup.StorageScanner {
+        return com.example.dynamicisland.core.data.repository.cleanup.StorageScanner(dispatchers)
+    }
+
+    @Provides
+    @Singleton
+    fun provideResidualCleaner(rootEngine: RootShellEngine): com.example.dynamicisland.core.data.repository.cleanup.ResidualCleaner {
+        return com.example.dynamicisland.core.data.repository.cleanup.ResidualCleaner(rootEngine)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAppFreezer(rootEngine: RootShellEngine): com.example.dynamicisland.core.data.repository.cleanup.AppFreezer {
+        return com.example.dynamicisland.core.data.repository.cleanup.AppFreezer(rootEngine)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUltraBatterySaver(rootEngine: RootShellEngine): com.example.dynamicisland.core.data.repository.profiles.UltraBatterySaver {
+        return com.example.dynamicisland.core.data.repository.profiles.UltraBatterySaver(rootEngine)
+    }
+
+    @Provides
+    @Singleton
+    fun provideThermalEngineBypass(
+        rootEngine: RootShellEngine,
+        hardwareRepository: com.example.dynamicisland.core.data.repository.HardwareRepository,
+        dispatchers: DispatcherProvider,
+        neuralCore: com.example.dynamicisland.core.domain.state.IslandNeuralCore
+    ): com.example.dynamicisland.core.data.repository.profiles.ThermalEngineBypass {
+        return com.example.dynamicisland.core.data.repository.profiles.ThermalEngineBypass(rootEngine, hardwareRepository, dispatchers, neuralCore)
+    }
+
+    @Provides
+    @Singleton
+    fun provideCleanerManager(
+        @ApplicationContext context: Context,
+        neuralCore: com.example.dynamicisland.core.domain.state.IslandNeuralCore,
+        scanner: com.example.dynamicisland.core.data.repository.cleanup.StorageScanner,
+        cleaner: com.example.dynamicisland.core.data.repository.cleanup.ResidualCleaner,
+        freezer: com.example.dynamicisland.core.data.repository.cleanup.AppFreezer,
+        ultraBatterySaver: com.example.dynamicisland.core.data.repository.profiles.UltraBatterySaver,
+        thermalBypass: com.example.dynamicisland.core.data.repository.profiles.ThermalEngineBypass,
+        dispatchers: com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
+    ): com.example.dynamicisland.core.data.repository.cleanup.CleanerManager {
+        return com.example.dynamicisland.core.data.repository.cleanup.CleanerManager(context, neuralCore, scanner, cleaner, freezer, ultraBatterySaver, thermalBypass, dispatchers)
     }
 
     @Provides

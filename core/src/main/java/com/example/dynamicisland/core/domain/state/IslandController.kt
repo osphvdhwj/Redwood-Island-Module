@@ -40,14 +40,46 @@ class IslandController @Inject constructor(
     @ApplicationContext internal val context: Context,
     private val settingsManager: SettingsManager,
     val mediaManager: IslandMediaManager,
-    private val hardwareRepository: com.example.dynamicisland.data.repository.HardwareRepository,
+    private val hardwareRepository: com.example.dynamicisland.core.data.repository.HardwareRepository,
     private val hapticsManager: IslandHapticsManager,
     private val networkMonitor: IslandNetworkMonitor,
     private val neuralCore: IslandNeuralCore,
     private val backupManager: IslandBackupManager,
-    private val locationManager: IslandLocationManager
+    private val locationManager: IslandLocationManager,
+    private val predictionEngine: IslandPredictionEngine,
+    private val gestureClassifier: MLGestureClassifier,
+    private val cleanerManager: com.example.dynamicisland.core.data.repository.cleanup.CleanerManager
 ) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    
+    // ... rest of fields ...
+
+    init {
+        // --- 🤖 AI INTELLIGENCE LOOP ---
+        scope.launch {
+            predictionEngine.prediction.collect { prediction ->
+                if (prediction != null && prediction.confidenceScore > 0.7f) {
+                    RedwoodLogger.i("AI Prediction: User likely to open ${prediction.predictedPackage}")
+                    
+                    // Pre-warm the island UI by loading the app icon into cache
+                    DensityAwareIconCache.get(context).getOrLoadIcon(context, prediction.predictedPackage)
+                    
+                    // If confidence is very high, prepare the Island to show a "Hint" state
+                    if (prediction.confidenceScore > 0.85f && _lastIslandState == IslandState.HIDDEN) {
+                         // Optional: post a very low priority transient hint
+                    }
+                }
+            }
+        }
+
+        // --- 👆 ML GESTURE LOOP ---
+        scope.launch {
+            gestureClassifier.gestureFlow.collect { result ->
+                if (!result.wasAccidental) {
+                    handleGesture(result.gesture)
+                }
+            }
+        }
     private val activeExternalActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
     private val mediaBridge by lazy { MediaBridge(context, mediaManager) }
     private val blurEngine by lazy { IslandBlurEngine.get(context) }
@@ -137,6 +169,7 @@ class IslandController @Inject constructor(
                 }
                 "com.example.dynamicisland.APP_CHANGED" -> {
                     topAppPackage = intent.getStringExtra("pkg") ?: ""
+                    predictionEngine.onAppForegrounded(topAppPackage)
                     evaluatePriority()
                 }
                 "com.example.dynamicisland.HARDWARE_TOGGLE" -> {
@@ -182,6 +215,7 @@ class IslandController @Inject constructor(
         }
         
         loadAndApplySettings()
+        cleanerManager.onStart()
         hardwareRepository.onHardwareUpdate = { 
             currentHardware.value = it
             evaluatePriority() 
@@ -344,6 +378,33 @@ class IslandController @Inject constructor(
         }
     }
 
+    private fun handleGesture(gesture: IslandGesture) {
+        RedwoodLogger.d("Handling ML Gesture: $gesture")
+        val suffix = when (gesture) {
+            IslandGesture.TAP, IslandGesture.SINGLE_TAP -> "single_tap"
+            IslandGesture.DOUBLE_TAP -> "double_tap"
+            IslandGesture.LONG_PRESS -> "long_press"
+            IslandGesture.SWIPE_LEFT -> "swipe_left"
+            IslandGesture.SWIPE_RIGHT -> "swipe_right"
+            IslandGesture.SWIPE_UP -> "swipe_up"
+            IslandGesture.SWIPE_DOWN -> "swipe_down"
+            IslandGesture.TWO_FINGER_TAP -> "two_finger_tap"
+            IslandGesture.PINCH_IN -> "pinch_in"
+            IslandGesture.PINCH_OUT -> "pinch_out"
+            else -> "none"
+        }
+
+        if (gesture == IslandGesture.TWO_FINGER_TAP) {
+            executeSmartAction("TOGGLE_FLASHLIGHT")
+        } else if (gesture == IslandGesture.PINCH_OUT) {
+            _lastIslandState = IslandState.TYPE_3_MAX
+            evaluatePriority()
+        } else {
+            val action = settingsManager.getRawString("${_lastIslandState.name}_$suffix", "NONE")
+            if (action != "NONE") executeSmartAction(action)
+        }
+    }
+
     private fun triggerTransitionHaptic(state: IslandState) {
         hapticsManager.triggerTransitionHaptic(state, null, topAppPackage)
     }
@@ -478,6 +539,7 @@ class IslandController @Inject constructor(
         try { context.unregisterReceiver(screenStateReceiver) } catch (_: Exception) {}
         try { context.unregisterReceiver(ecosystemReceiver) } catch (_: Exception) {}
         batteryRepository.destroy(context)
+        cleanerManager.onStop()
         scope.cancel()
         mediaManager.destroy()
         callManager.destroy()

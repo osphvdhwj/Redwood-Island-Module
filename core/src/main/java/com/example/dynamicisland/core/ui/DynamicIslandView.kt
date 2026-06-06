@@ -77,10 +77,18 @@ fun getPillShape(shape: String, cornerRadius: Float): androidx.compose.foundatio
     }
 }
 
+import com.example.dynamicisland.core.gesture.MLGestureClassifier
+import android.view.MotionEvent
+
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @SuppressLint("ViewConstructor")
 class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLayout(context),
     LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        controller?.gestureClassifier?.onTouchEvent(event)
+        return super.dispatchTouchEvent(event)
+    }
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)

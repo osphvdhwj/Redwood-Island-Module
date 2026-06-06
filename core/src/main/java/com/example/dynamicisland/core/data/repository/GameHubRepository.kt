@@ -36,14 +36,16 @@ import javax.inject.Singleton
  * 3. **MIUI Identity Spoofing**: Tricks games into unlocking 120FPS by faking Xiaomi hardware.
  * 4. **Adaptive Monitoring**: High-frequency FPS and hardware load tracking synchronized to the Neural Core.
  */
-import com.example.dynamicisland.core.util.shell.ShellExecutor
+import com.example.dynamicisland.core.util.shell.SysfsController
+import com.example.dynamicisland.core.util.shell.RootShellEngine
 
 @Singleton
 class GameHubRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val dispatchers: DispatcherProvider,
     private val neuralCore: IslandNeuralCore,
-    private val shell: ShellExecutor
+    private val sysfs: SysfsController,
+    private val rootEngine: RootShellEngine
 ) : BackendComponent {
 
     private const val TAG = "GameHubRepository"
@@ -71,6 +73,13 @@ class GameHubRepository @Inject constructor(
         XposedBridge.log("$TAG: AOSP OEM-Level Engine initialized.")
         spoofMiuiProps()
         startMonitoring()
+        
+        // 🧠 UI-TO-HARDWARE LINKAGE
+        scope.launch {
+            neuralCore.uiState.collect { state ->
+                setPerformanceLevel(state.performanceLevel)
+            }
+        }
     }
 
     override fun onStop() {
@@ -149,9 +158,8 @@ class GameHubRepository @Inject constructor(
                 }
             }
 
-            // Kernel: Drop PageCache, dentries, and inodes
-            shell.executeRoot("echo 3 > /proc/sys/vm/drop_caches")
-            shell.executeRoot("echo 1 > /proc/sys/vm/compact_memory")
+            // Kernel: Drop PageCache and compact RAM via Brain
+            sysfs.performMemoryTurbo()
 
             val afterMem = ActivityManager.MemoryInfo().apply { am.getMemoryInfo(this) }.availMem
             freedMemory = (afterMem - beforeMem).coerceAtLeast(0L)
@@ -173,13 +181,15 @@ class GameHubRepository @Inject constructor(
             val statBefore = StatFs(Environment.getDataDirectory().path)
             val bytesBefore = statBefore.availableBlocksLong * statBefore.blockSizeLong
             
-            shell.executeRoot("rm -rf /data/data/*/cache/*")
-            shell.executeRoot("rm -rf /data/user_de/0/*/cache/*")
-            shell.executeRoot("rm -rf /sdcard/Android/data/*/cache/*")
-            shell.executeRoot("rm -rf /data/log/*")
-            shell.executeRoot("rm -rf /data/tombstones/*")
-            shell.executeRoot("rm -rf /data/anr/*")
-            shell.executeRoot("rm -rf /data/dalvik-cache/*/oat/*/*.vdex")
+            rootEngine.runSequence(listOf(
+                "rm -rf /data/data/*/cache/*",
+                "rm -rf /data/user_de/0/*/cache/*",
+                "rm -rf /sdcard/Android/data/*/cache/*",
+                "rm -rf /data/log/*",
+                "rm -rf /data/tombstones/*",
+                "rm -rf /data/anr/*",
+                "rm -rf /data/dalvik-cache/*/oat/*/*.vdex"
+            ))
 
             val statAfter = StatFs(Environment.getDataDirectory().path)
             val bytesAfter = statAfter.availableBlocksLong * statAfter.blockSizeLong
@@ -249,43 +259,32 @@ class GameHubRepository @Inject constructor(
         }
     }
 
-    private fun applyBatteryProfile() {
-        setCpuGovernor("powersave")
-        setGpuPowerLevel(5, 5)
+    private suspend fun applyBatteryProfile() {
+        sysfs.setCpuGovernor("powersave")
+        sysfs.setGpuPowerLevels(5, 5)
         Process.setThreadPriority(Process.THREAD_PRIORITY_LOWEST)
     }
 
-    private fun applyBalancedProfile() {
-        setCpuGovernor("schedutil")
-        setGpuPowerLevel(0, 5)
+    private suspend fun applyBalancedProfile() {
+        sysfs.setCpuGovernor("schedutil")
+        sysfs.setGpuPowerLevels(0, 5)
         Process.setThreadPriority(Process.THREAD_PRIORITY_DEFAULT)
     }
 
-    private fun applyPerformanceProfile() {
-        setCpuGovernor("performance")
-        setGpuPowerLevel(0, 2)
+    private suspend fun applyPerformanceProfile() {
+        sysfs.setCpuGovernor("performance")
+        sysfs.setGpuPowerLevels(0, 2)
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_DISPLAY)
         trimMemory(60)
     }
 
-    private fun applyWildProfile() {
-        setCpuGovernor("performance")
-        setGpuPowerLevel(0, 0)
+    private suspend fun applyWildProfile() {
+        sysfs.setCpuGovernor("performance")
+        sysfs.setGpuGovernor("performance")
+        sysfs.setGpuPowerLevels(0, 0)
         Process.setThreadPriority(-20)
         trimMemory(80)
         killBackgroundProcesses()
-    }
-
-    private fun setCpuGovernor(governor: String) {
-        for (i in 0..7) {
-            writeSysfs("/sys/devices/system/cpu/cpu$i/cpufreq/scaling_governor", governor)
-        }
-    }
-
-    private fun setGpuPowerLevel(min: Int, max: Int) {
-        writeSysfs("/sys/class/kgsl/kgsl-3d0/min_pwrlevel", min.toString())
-        writeSysfs("/sys/class/kgsl/kgsl-3d0/max_pwrlevel", max.toString())
-        writeSysfs("/sys/class/kgsl/kgsl-3d0/devfreq/adreno_boost", if (min == 0) "3" else "1")
     }
 
     private fun trimMemory(level: Int) {
@@ -303,14 +302,5 @@ class GameHubRepository @Inject constructor(
                 am.killBackgroundProcesses(it.processName)
             }
         }
-    }
-
-    private fun writeSysfs(path: String, value: String) {
-        try {
-            val file = File(path)
-            if (file.exists() && file.canWrite()) {
-                file.writeText(value)
-            }
-        } catch (_: Exception) {}
     }
 }

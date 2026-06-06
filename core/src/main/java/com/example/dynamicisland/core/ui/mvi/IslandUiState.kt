@@ -1,9 +1,10 @@
-package com.example.dynamicisland.core.core.ui.mvi
+package com.example.dynamicisland.core.ui.mvi
 
-import com.example.dynamicisland.core.shared.model.IslandState
-import com.example.dynamicisland.core.core.model.IslandTheme
-import com.example.dynamicisland.core.shared.model.LiveActivityModel
-import com.example.dynamicisland.core.shared.settings.SettingsState
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.core.model.IslandTheme
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.settings.SettingsState
+import com.example.dynamicisland.shared.model.PerformanceLevel
 
 /**
  * Single source of truth for the Dynamic Island UI.
@@ -32,6 +33,9 @@ data class IslandUiState(
     val gamingJankPct: Float = 0f,
     val gamingCpuUsage: Int = 0,
     val gamingGpuUsage: Int = 0,
+    val performanceLevel: PerformanceLevel = PerformanceLevel.BALANCED,
+    val isUltraBatteryActive: Boolean = false,
+    val isThermalBypassActive: Boolean = false,
     
     // Settings & Theme
     val settings: SettingsState = SettingsState(),

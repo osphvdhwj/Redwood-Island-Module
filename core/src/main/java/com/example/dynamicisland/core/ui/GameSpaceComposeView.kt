@@ -41,6 +41,8 @@ import com.example.dynamicisland.shared.model.IslandIntent
 import com.example.dynamicisland.core.ui.mvi.IslandUiState
 import kotlinx.coroutines.launch
 
+import com.example.dynamicisland.shared.model.PerformanceLevel
+
 /**
  * GameSpace Dashboard UI
  * 
@@ -55,7 +57,7 @@ class GameSpaceComposeView(
     val moduleContext: Context, 
     val wm: WindowManager, 
     private val neuralCore: IslandNeuralCore,
-    private val gameHubRepo: GameHubRepository // Temporary for direct actions until Intents expanded
+    private val gameHubRepo: GameHubRepository // Keep for specialized tools (Boost/Clean)
 ) : FrameLayout(context), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
     
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -81,7 +83,7 @@ class GameSpaceComposeView(
                         state = state,
                         onExpand = { expand(true) },
                         onCollapse = { expand(false) },
-                        onPerfChange = { gameHubRepo.setPerformanceLevel(it) },
+                        onPerfChange = { neuralCore.dispatch(IslandIntent.UpdatePerformanceLevel(it)) },
                         neuralCore = neuralCore,
                         gameHubRepo = gameHubRepo
                     )
@@ -129,7 +131,7 @@ fun GameSpaceUI(
     state: IslandUiState,
     onExpand: () -> Unit,
     onCollapse: () -> Unit,
-    onPerfChange: (GameHubRepository.PerformanceLevel) -> Unit,
+    onPerfChange: (PerformanceLevel) -> Unit,
     neuralCore: IslandNeuralCore,
     gameHubRepo: GameHubRepository
 ) {
@@ -205,9 +207,23 @@ fun GameSpaceUI(
                             .padding(6.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        PerfButton("Battery", false) { onPerfChange(GameHubRepository.PerformanceLevel.BATTERY) }
-                        PerfButton("Balanced", true) { onPerfChange(GameHubRepository.PerformanceLevel.BALANCED) }
-                        PerfButton("Wild", false) { onPerfChange(GameHubRepository.PerformanceLevel.WILD) }
+                        PerfButton("Battery", state.performanceLevel == PerformanceLevel.BATTERY) { onPerfChange(PerformanceLevel.BATTERY) }
+                        PerfButton("Balanced", state.performanceLevel == PerformanceLevel.BALANCED) { onPerfChange(PerformanceLevel.BALANCED) }
+                        PerfButton("Wild", state.performanceLevel == PerformanceLevel.WILD) { onPerfChange(PerformanceLevel.WILD) }
+                    }
+
+                    Text("Extreme Profiles", color = Color.Gray, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color(0xFF1A1A1A))
+                            .padding(6.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        PerfButton("Ultra Bat", state.isUltraBatteryActive) { neuralCore.dispatch(IslandIntent.ToggleUltraBattery(!state.isUltraBatteryActive)) }
+                        PerfButton("Bypass", state.isThermalBypassActive) { neuralCore.dispatch(IslandIntent.ToggleThermalBypass(!state.isThermalBypassActive)) }
                     }
 
                     Spacer(modifier = Modifier.height(40.dp))
@@ -218,22 +234,13 @@ fun GameSpaceUI(
                     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                             ToolIcon(Icons.Default.Speed, "Boost RAM") {
-                                coroutineScope.launch {
-                                    val freed = gameHubRepo.boostMemory()
-                                    Toast.makeText(context, "Memory Boosted: ${freed / (1024 * 1024)} MB freed", Toast.LENGTH_SHORT).show()
-                                }
+                                neuralCore.dispatch(IslandIntent.FreezeBackground)
                             }
                             ToolIcon(Icons.Default.CleaningServices, "Clean Junk") {
-                                coroutineScope.launch {
-                                    val freed = gameHubRepo.cleanJunk()
-                                    Toast.makeText(context, "Junk Cleaned: ${freed / (1024 * 1024)} MB freed", Toast.LENGTH_SHORT).show()
-                                }
+                                neuralCore.dispatch(IslandIntent.CleanupStorage)
                             }
                             ToolIcon(Icons.Default.DeleteSweep, "Deep Clean") {
-                                coroutineScope.launch {
-                                    val files = gameHubRepo.deepCleanScan()
-                                    Toast.makeText(context, "Found ${files.size} large files", Toast.LENGTH_SHORT).show()
-                                }
+                                neuralCore.dispatch(IslandIntent.CleanupStorage)
                             }
                             ToolIcon(Icons.Default.Tune, "GPU Tuner")
                         }
