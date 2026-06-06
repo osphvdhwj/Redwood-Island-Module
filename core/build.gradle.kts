@@ -59,7 +59,7 @@ dependencies {
     // System Components
     implementation(libs.androidx.palette.ktx)
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.androidx.work.runtime-ktx)
+    implementation(libs.androidx.work.runtime.ktx)
     
     // Concurrency
     implementation(libs.coroutines.android)
@@ -72,4 +72,11 @@ dependencies {
     implementation(libs.mlkit.translate)
     implementation(libs.mlkit.language)
     implementation(libs.mlkit.entity.extraction)
+
+    // 🧪 Testing
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.mockk)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.google.truth)
+    testImplementation(libs.turbine)
 }

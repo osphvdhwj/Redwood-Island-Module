@@ -1,10 +1,10 @@
-package com.example.dynamicisland.data.repository
+package com.example.dynamicisland.core.data.repository
 
 import android.app.ActivityManager
 import android.content.Context
-import com.example.dynamicisland.domain.dispatchers.DispatcherProvider
-import com.example.dynamicisland.domain.state.IslandNeuralCore
-import com.example.dynamicisland.util.shell.ShellExecutor
+import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
+import com.example.dynamicisland.core.domain.state.IslandNeuralCore
+import com.example.dynamicisland.core.util.shell.ShellExecutor
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher

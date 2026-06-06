@@ -1,8 +1,7 @@
-package com.example.dynamicisland.domain.state
+package com.example.dynamicisland.core.domain.state
 
-import com.example.dynamicisland.ui.mvi.IslandIntent
-import com.example.dynamicisland.ui.mvi.IslandUiState
-import com.example.dynamicisland.ipc.IslandState
+import com.example.dynamicisland.shared.model.IslandIntent
+import com.example.dynamicisland.shared.model.IslandState
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -47,8 +46,6 @@ class IslandNeuralCoreTest {
         neuralCore.dispatch(intent)
 
         // Assert
-        // Note: isBatteryPulsing becomes true then false after delay in real impl.
-        // Here we just verify the battery level update part of the reduction.
         assertEquals(85, neuralCore.uiState.value.batteryLevel)
     }
 }
