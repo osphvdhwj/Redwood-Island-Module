@@ -69,6 +69,9 @@ import com.example.dynamicisland.core.ui.design.BottomAuraPanel
 
 import com.example.dynamicisland.core.performance.metaballFluid
 
+import com.example.dynamicisland.core.performance.eliteFluidSurface
+import androidx.compose.ui.geometry.Rect
+
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun DynamicIslandView.IslandUI(state: IslandState) {
@@ -80,7 +83,15 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     
     val settings = view.controller?.settingsState ?: com.example.dynamicisland.settings.SettingsState()
     val isCyberpunk = settings.iconPack is IconPack.AmoledCyberpunk
-    val isLowLatency = settings.enableLowLatencyMode
+    val isLiquidGlass = settings.aestheticStyle == AestheticStyle.LIQUID_GLASS
+    
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse_time")
+    val time by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 100f,
+        animationSpec = infiniteRepeatable(tween(100000, easing = LinearEasing)),
+        label = "time"
+    )
 
     val uiState = when (state) {
         IslandState.HIDDEN -> IslandUiState.HIDDEN
@@ -151,9 +162,14 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                     rotationZ = animValues.rotation
                     transformOrigin = TransformOrigin(0.5f, 0.5f) 
                 }
-                .clip(RoundedCornerShape(animatedRadius))
-                .background(bgColor)
-                .border(2.dp, Color.White, RoundedCornerShape(animatedRadius))
+                .eliteFluidSurface(
+                    pill1 = android.graphics.Rect(0, 0, with(density) { animatedWidth.roundToPx() }, with(density) { animatedHeight.roundToPx() }),
+                    velocity = view.currentVelocity.value,
+                    time = time,
+                    color = bgColor,
+                    liquidMode = isLiquidGlass,
+                    gpuLoad = view.gpuLoad.value
+                )
                 .geminiAura(enabled = settings.geminiAuraEnabled && (model?.id?.contains("assistant") == true || model?.id?.contains("ai") == true))
                 .pointerInput(Unit) {
                     awaitEachGesture { 
@@ -177,6 +193,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                         onDragStart = { view.isBridgeDragging.value = true },
                         onDragEnd = {
                             view.isBridgeDragging.value = false
+                            view.currentVelocity.value = Offset.Zero
                             if (dragOffsetY > 100f) view.onGestureEvent?.invoke(IslandGesture.SWIPE_DOWN) 
                             else if (dragOffsetY < -40f) view.onGestureEvent?.invoke(IslandGesture.SWIPE_UP)
                             else if (abs(dragOffsetX) > 60f) {
@@ -188,6 +205,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                         onDrag = { change, dragAmount -> 
                             change.consume()
                             dragOffsetY += dragAmount.y; dragOffsetX += dragAmount.x
+                            view.currentVelocity.value = Offset(dragAmount.x, dragAmount.y)
                             if (settings.velocitySquishEnabled) {
                                 scope.launch { view.elasticScale.snapTo(1f + (dragOffsetY / 1500f).coerceIn(-0.1f, 0.2f)) }
                             }

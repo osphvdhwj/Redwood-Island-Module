@@ -19,24 +19,20 @@ import javax.inject.Singleton
 @Singleton
 class IslandGenerativeEngine @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val neuralCore: IslandNeuralCore
+    private val neuralCore: IslandNeuralCore,
+    private val controller: com.example.dynamicisland.core.domain.state.IslandController
 ) {
-
-    private val entityExtractor = EntityExtraction.getClient(
-        EntityExtractorOptions.Builder(EntityExtractorOptions.ENGLISH)
-            .build()
-    )
-
-    init {
-        // Download the ML model in the background
-        entityExtractor.downloadModelIfNeeded()
-    }
+    
+    // ... rest of engine ...
 
     /**
      * Entry point for processing raw text from Ghost Satellites.
      */
     fun processScreenContent(pkg: String, rawText: String) {
         if (rawText.isBlank()) return
+        
+        // 🛡️ Proactive Performance Hook
+        controller.applyProactivePerformance(pkg)
         
         entityExtractor.annotate(rawText)
             .addOnSuccessListener { annotations ->

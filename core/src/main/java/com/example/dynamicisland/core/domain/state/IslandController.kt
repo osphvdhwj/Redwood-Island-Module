@@ -464,6 +464,7 @@ class IslandController @Inject constructor(
                         view.splitModel.value = state.splitModel
                         if (state.isBatteryPulsing) view.triggerBatteryPulse()
                         view.updateBattery(state.batteryLevel, state.isCharging)
+                        view.gpuLoad.floatValue = state.gamingGpuUsage / 100f
                     }
                 }
             }
@@ -474,6 +475,20 @@ class IslandController @Inject constructor(
         })
         currentViewSyncJob = syncJob
         return view
+    }
+
+    /**
+     * PROACTIVE PERFORMANCE ENGINE
+     * Triggered by the Generative Engine when a high-load app is predicted.
+     */
+    fun applyProactivePerformance(pkg: String) {
+        if (pkg.contains("game", ignoreCase = true) || pkg.contains("benchmark", ignoreCase = true)) {
+            RedwoodLogger.i("AI Intent: Game detected. Pre-applying Wild Mode.")
+            com.example.dynamicisland.core.data.repository.GameHubRepository.PerformanceLevel.WILD.let {
+                // Trigger via the GameHubRepository
+                executeSmartAction("SET_PERFORMANCE_WILD")
+            }
+        }
     }
 
     fun executeSmartAction(action: String, data: Intent? = null) {
@@ -492,6 +507,13 @@ class IslandController @Inject constructor(
             "PLAY_PAUSE" -> mediaManager.sendMediaCommand("PLAY_PAUSE")
             "NEXT_TRACK" -> mediaManager.sendMediaCommand("NEXT")
             "PREV_TRACK" -> mediaManager.sendMediaCommand("PREV")
+            "SET_PERFORMANCE_WILD" -> {
+                hardwareRepository.setPerformanceLevel(com.example.dynamicisland.core.data.repository.GameHubRepository.PerformanceLevel.WILD)
+                postTransientNotification(
+                    LiveActivityModel.General("sys_perf", ActivityType.MESSAGE, "Performance", "Wild Mode Active", android.graphics.Color.YELLOW),
+                    3000L
+                )
+            }
             "LIKE_TRACK" -> {
                 if (model is LiveActivityModel.Music) mediaBridge.sendSpecializedCommand(model.appPackageName ?: "", "LIKE")
             }

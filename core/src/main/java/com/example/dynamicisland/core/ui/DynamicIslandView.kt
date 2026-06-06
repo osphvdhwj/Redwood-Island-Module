@@ -123,6 +123,8 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     val bridgeOffsetX = mutableFloatStateOf(0f)
     val bridgeOffsetY = mutableFloatStateOf(0f)
     val isBridgeDragging = mutableStateOf(false)
+    val currentVelocity = mutableStateOf(Offset.Zero)
+    val gpuLoad = mutableFloatStateOf(0f)
     
     // Call UI Callbacks
     var onOpenCallUI: (() -> Unit)? = null
