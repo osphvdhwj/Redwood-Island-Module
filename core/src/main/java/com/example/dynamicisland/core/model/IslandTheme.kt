@@ -1,4 +1,4 @@
-package com.example.dynamicisland.shared.model
+package com.example.dynamicisland.core.model
 
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.StrokeCap

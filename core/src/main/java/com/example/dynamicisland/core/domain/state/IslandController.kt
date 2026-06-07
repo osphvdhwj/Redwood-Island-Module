@@ -32,8 +32,8 @@ import com.example.dynamicisland.core.util.*
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.ipc.BrainRelay
 import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.model.IslandShape
-import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.core.model.IslandShape
+import com.example.dynamicisland.core.model.IslandTheme
 import com.example.dynamicisland.shared.model.IslandUiState
 import com.example.dynamicisland.shared.settings.*
 import dagger.hilt.android.qualifiers.ApplicationContext
