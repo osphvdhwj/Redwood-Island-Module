@@ -40,7 +40,7 @@ dependencies {
 
     // Hilt DI
     implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
+    // kapt(libs.hilt.compiler)
 
     // Jetpack Compose
     implementation(platform(libs.androidx.compose.bom))
