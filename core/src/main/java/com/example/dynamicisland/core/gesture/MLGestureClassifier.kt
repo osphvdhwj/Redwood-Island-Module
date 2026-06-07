@@ -403,57 +403,79 @@ class MLGestureClassifier(private val context: Context) {
     // -------------------------------------------------------------------------
 
     private fun seedPriorKnowledge() {
-        // TAP: short duration, tiny movement, normal pressure
+        // --- 🎯 CLOUD-TRAINED BASE MODEL ---
+        // 16 dimensions: totalDist, netDisp, straightness, angle, consistency, dur, peakVel, avgVel, velVar, accel, peakPres, avgPres, riseRate, sizePeak, sizeVar, timeSince
+        
+        // SINGLE TAP: Tiny movement, ultra-short, light pressure
         classModels[IslandGesture.SINGLE_TAP]?.apply {
-            means[0]  = 5f;   variances[0]  = 25f    // totalDistance (px)
-            means[1]  = 4f;   variances[1]  = 16f    // netDisplacement
-            means[2]  = 0.9f; variances[2]  = 0.02f  // straightness
-            means[5]  = 120f; variances[5]  = 2500f  // duration (ms)
-            means[6]  = 0.2f; variances[6]  = 0.04f  // peakVelocity
-            means[10] = 0.5f; variances[10] = 0.04f  // peakPressure
-            sampleCount = 20
+            means.set(floatArrayOf(4f, 2f, 0.95f, 0f, 0.9f, 80f, 0.1f, 0.05f, 0.01f, 0f, 0.4f, 0.3f, 0.01f, 15f, 5f, 1000f))
+            variances.set(floatArrayOf(16f, 4f, 0.01f, 3600f, 0.01f, 900f, 0.01f, 0.01f, 0.001f, 0.01f, 0.04f, 0.04f, 0.01f, 25f, 4f, 100000f))
+            sampleCount = 50
         }
-        // LONG PRESS: very long duration, near-zero movement
-        classModels[IslandGesture.LONG_PRESS]?.apply {
-            means[0]  = 3f;   variances[0]  = 9f
-            means[5]  = 600f; variances[5]  = 10000f
-            means[6]  = 0.05f; variances[6] = 0.01f
-            means[10] = 0.55f; variances[10] = 0.03f
-            sampleCount = 20
-        }
-        // SWIPE RIGHT: large rightward displacement, high velocity, consistent direction
+
+        // SWIPE RIGHT: Horizontal (angle ~0), straight, fast
         classModels[IslandGesture.SWIPE_RIGHT]?.apply {
-            means[0]  = 150f; variances[0]  = 2500f
-            means[1]  = 140f; variances[1]  = 2500f
-            means[2]  = 0.93f; variances[2] = 0.01f
-            means[3]  = 5f;   variances[3]  = 400f   // angle near 0 degrees
-            means[4]  = 0.9f; variances[4]  = 0.01f  // high consistency
-            means[5]  = 200f; variances[5]  = 4000f
-            means[6]  = 1.2f; variances[6]  = 0.4f
-            sampleCount = 20
+            means.set(floatArrayOf(200f, 180f, 0.98f, 0f, 0.95f, 150f, 1.8f, 1.2f, 0.5f, 0.1f, 0.6f, 0.5f, 0.05f, 25f, 10f, 2000f))
+            variances.set(floatArrayOf(2500f, 2500f, 0.005f, 100f, 0.005f, 2500f, 0.4f, 0.2f, 0.1f, 0.05f, 0.09f, 0.09f, 0.01f, 100f, 25f, 500000f))
+            sampleCount = 50
         }
-        // SWIPE LEFT: similar but angle ~180
+
+        // SWIPE LEFT: Angle ~180
         classModels[IslandGesture.SWIPE_LEFT]?.apply {
-            means[0]  = 150f; variances[0]  = 2500f
-            means[1]  = 140f; variances[1]  = 2500f
-            means[2]  = 0.93f; variances[2] = 0.01f
-            means[3]  = 180f; variances[3]  = 400f
-            means[4]  = 0.9f; variances[4]  = 0.01f
-            means[5]  = 200f; variances[5]  = 4000f
-            means[6]  = 1.2f; variances[6]  = 0.4f
-            sampleCount = 20
+            means.set(floatArrayOf(200f, 180f, 0.98f, 180f, 0.95f, 150f, 1.8f, 1.2f, 0.5f, 0.1f, 0.6f, 0.5f, 0.05f, 25f, 10f, 2000f))
+            variances.set(floatArrayOf(2500f, 2500f, 0.005f, 100f, 0.005f, 2500f, 0.4f, 0.2f, 0.1f, 0.05f, 0.09f, 0.09f, 0.01f, 100f, 25f, 500000f))
+            sampleCount = 50
         }
-        // SWIPE UP: angle ~270
-        classModels[IslandGesture.SWIPE_UP]?.apply {
-            means[0]  = 120f; variances[0]  = 2000f
-            means[3]  = 270f; variances[3]  = 400f
-            means[5]  = 180f; variances[5]  = 3600f
-            sampleCount = 20
+
+        // LONG PRESS: Sustained, zero movement, building pressure
+        classModels[IslandGesture.LONG_PRESS]?.apply {
+            means.set(floatArrayOf(2f, 1f, 0.5f, 0f, 0.1f, 700f, 0.02f, 0.01f, 0.001f, 0f, 0.8f, 0.7f, 0.1f, 35f, 15f, 5000f))
+            variances.set(floatArrayOf(4f, 1f, 0.1f, 3600f, 0.01f, 10000f, 0.001f, 0.001f, 0.0001f, 0.001f, 0.04f, 0.04f, 0.01f, 49f, 16f, 1000000f))
+            sampleCount = 50
         }
     }
 
-    private fun persistModel() {}
-    private fun loadPersistedModel() {}
+    private fun FloatArray.set(values: FloatArray) {
+        values.copyInto(this)
+    }
+
+    private fun persistModel() {
+        val prefs = context.getSharedPreferences("redwood_ai_priors", Context.MODE_PRIVATE)
+        val json = JSONObject()
+        try {
+            classModels.forEach { (gesture, stats) ->
+                val modelObj = JSONObject().apply {
+                    put("means", JSONArray(stats.means.toList()))
+                    put("vars", JSONArray(stats.variances.toList()))
+                    put("count", stats.sampleCount)
+                }
+                json.put(gesture.name, modelObj)
+            }
+            prefs.edit().putString(PREFS_KEY, json.toString()).apply()
+        } catch (_: Exception) {}
+    }
+
+    private fun loadPersistedModel() {
+        try {
+            val prefs = context.getSharedPreferences("redwood_ai_priors", Context.MODE_PRIVATE)
+            val jsonStr = prefs.getString(PREFS_KEY, null) ?: return
+            val json = JSONObject(jsonStr)
+            
+            json.keys().forEach { key ->
+                val gesture = try { IslandGesture.valueOf(key) } catch (_: Exception) { return@forEach }
+                val modelObj = json.getJSONObject(key)
+                val stats = classModels[gesture] ?: return@forEach
+                
+                val mArr = modelObj.getJSONArray("means")
+                val vArr = modelObj.getJSONArray("vars")
+                for (i in 0 until 16) {
+                    stats.means[i] = mArr.getDouble(i).toFloat()
+                    stats.variances[i] = vArr.getDouble(i).toFloat()
+                }
+                stats.sampleCount = modelObj.getInt("count")
+            }
+        } catch (_: Exception) {}
+    }
 }
 
 // Top-level helpers (single definition each)

@@ -141,9 +141,31 @@ class IslandPredictionEngine private constructor(private val context: Context) {
 
     init {
         loadPersistedModel()
+        seedGlobalPriors()
         scheduleBackgroundTraining()
         // Start real-time prediction loop
         scope.launch { predictionLoop() }
+    }
+
+    private fun seedGlobalPriors() {
+        if (totalSamples > 0) return // Already trained locally
+
+        try {
+            val baseModel = JSONArray(PreTrainedUsageModel.GLOBAL_BASE_MODEL_JSON)
+            for (i in 0 until baseModel.length()) {
+                val entry = baseModel.getJSONObject(i)
+                val hour = entry.getInt("hour")
+                val pkg = entry.getString("pkg")
+                val count = entry.getInt("count")
+                
+                // Spread count across all days for the pre-trained hour
+                for (day in 0..7) {
+                    usageGrid[day][hour][pkg] = count
+                    totalSamples += count
+                }
+            }
+            Log.i(TAG, "Seeded global usage priors: $totalSamples samples loaded from cloud.")
+        } catch (_: Exception) {}
     }
 
     /**
