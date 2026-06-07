@@ -3,6 +3,7 @@ package com.example.dynamicisland.core
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.shared.model.*
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch

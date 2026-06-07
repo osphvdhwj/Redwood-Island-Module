@@ -20,24 +20,31 @@ import com.example.dynamicisland.core.bridge.MediaBridge
 import com.example.dynamicisland.core.data.repository.BatteryRepository
 import com.example.dynamicisland.core.data.repository.HardwareRepository
 import com.example.dynamicisland.core.data.repository.cleanup.CleanerManager
+import com.example.dynamicisland.core.data.repository.cleanup.IslandStorageManager
+import com.example.dynamicisland.core.data.repository.cleanup.IslandActionManager
 import com.example.dynamicisland.core.gesture.IslandGesture
 import com.example.dynamicisland.core.gesture.MLGestureClassifier
 import com.example.dynamicisland.core.intelligence.IslandPredictionEngine
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.core.performance.DensityAwareIconCache
+import com.example.dynamicisland.core.model.IslandTheme
+import com.example.dynamicisland.core.model.IslandShape
+import com.example.dynamicisland.core.model.IslandUiState
 import com.example.dynamicisland.core.performance.IslandBlurEngine
 import com.example.dynamicisland.core.sensors.ProximityWakeManager
-import com.example.dynamicisland.core.settings.SettingsManager
 import com.example.dynamicisland.core.ui.DynamicIslandView
-import com.example.dynamicisland.core.util.*
-import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.core.util.RedwoodLogger
+import com.example.dynamicisland.shared.ipc.IslandIPCClient
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.core.settings.SettingsManager
+import com.example.dynamicisland.core.manager.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.lang.ref.WeakReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import de.robv.android.xposed.XposedBridge
 
 /**
  * 🚀 ELITE ISLAND CONTROLLER
@@ -67,8 +74,8 @@ class IslandController @Inject constructor(
     private val mediaBridge by lazy { MediaBridge(context, mediaManager) }
     private val blurEngine by lazy { IslandBlurEngine.get(context) }
     
-    val actionManager by lazy { com.example.dynamicisland.core.manager.IslandActionManager(context, scope) }
-    val storageManager by lazy { com.example.dynamicisland.core.manager.IslandStorageManager(context) }
+    val actionManager by lazy { IslandActionManager(context, scope) }
+    val storageManager by lazy { IslandStorageManager(context) }
 
     private var _lastIslandState: IslandState = IslandState.HIDDEN
     private var _lastActiveModel: LiveActivityModel? = null
@@ -308,7 +315,7 @@ class IslandController @Inject constructor(
             "NEXT_TRACK" -> mediaManager.sendMediaCommand("NEXT")
             "PREV_TRACK" -> mediaManager.sendMediaCommand("PREV")
             "SET_PERFORMANCE_WILD" -> {
-                hardwareRepository.setPerformanceLevel(com.example.dynamicisland.shared.model.PerformanceLevel.WILD)
+                hardwareRepository.setPerformanceLevel(PerformanceLevel.WILD)
                 postTransientNotification(
                     LiveActivityModel.General("sys_perf", ActivityType.MESSAGE, "Performance", "Wild Mode Active", android.graphics.Color.YELLOW),
                     3000L

@@ -1,6 +1,8 @@
 package com.example.dynamicisland.core
 
 import android.app.Application
+import com.example.dynamicisland.core.domain.state.IslandNeuralCore
+import com.example.dynamicisland.core.intelligence.IslandGenerativeEngine
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.HiltAndroidApp
