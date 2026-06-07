@@ -180,7 +180,7 @@ object AppModule {
     @Singleton
     fun provideIslandHapticsManager(
         @ApplicationContext context: Context,
-        settingsManager: com.example.dynamicisland.core.settings.SettingsManager
+        settingsManager: SettingsManager
     ): IslandHapticsManager {
         return IslandHapticsManager(context, settingsManager)
     }
@@ -188,7 +188,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideIslandNetworkMonitor(@ApplicationContext context: Context, dispatchers: DispatcherProvider): IslandNetworkMonitor {
-        return IslandNetworkMonitor()
+        return IslandNetworkMonitor(context, CoroutineScope(SupervisorJob() + dispatchers.io()))
     }
 
     @Provides
@@ -201,5 +201,17 @@ object AppModule {
     @Singleton
     fun provideIslandLocationManager(@ApplicationContext context: Context): IslandLocationManager {
         return IslandLocationManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideIslandActionManager(@ApplicationContext context: Context): IslandActionManager {
+        return IslandActionManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideIslandStorageManager(@ApplicationContext context: Context): IslandStorageManager {
+        return IslandStorageManager(context)
     }
 }

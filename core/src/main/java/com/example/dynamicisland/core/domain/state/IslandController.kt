@@ -9,21 +9,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import com.example.dynamicisland.core.accessibility.IslandAccessibilityManager
-import com.example.dynamicisland.core.achievements.AchievementManager
-import com.example.dynamicisland.core.audio.AudioBeatDetector
-import com.example.dynamicisland.core.bridge.MediaBridge
 import com.example.dynamicisland.core.data.repository.*
-import com.example.dynamicisland.core.data.repository.cleanup.CleanerManager
+import com.example.dynamicisland.core.data.repository.cleanup.*
 import com.example.dynamicisland.core.gesture.IslandGesture
 import com.example.dynamicisland.core.gesture.MLGestureClassifier
 import com.example.dynamicisland.core.intelligence.IslandPredictionEngine
 import com.example.dynamicisland.core.intelligence.DensityAwareIconCache
 import com.example.dynamicisland.core.model.*
 import com.example.dynamicisland.core.performance.IslandBlurEngine
-import com.example.dynamicisland.core.sensors.ProximityWakeManager
 import com.example.dynamicisland.core.ui.DynamicIslandView
-import com.example.dynamicisland.core.util.RedwoodLogger
+import com.example.dynamicisland.core.util.*
+import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.settings.SettingsManager
@@ -52,7 +48,9 @@ class IslandController @Inject constructor(
     private val predictionEngine: IslandPredictionEngine,
     val gestureClassifier: MLGestureClassifier,
     private val cleanerManager: CleanerManager,
-    private val batteryRepository: BatteryRepository
+    private val batteryRepository: BatteryRepository,
+    val actionManager: IslandActionManager,
+    val storageManager: IslandStorageManager
 ) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val blurEngine by lazy { IslandBlurEngine.get(context) }
@@ -67,16 +65,10 @@ class IslandController @Inject constructor(
     private var isSystemRecordingActive = false
     private var isScreenshotActiveInternal = false
     private var isFlashlightActive = false
-    private var wasCharging = false
     private var topAppPackage = ""
 
     var settingsState by mutableStateOf(SettingsState())
         private set
-
-    private val audioBeatDetector by lazy { AudioBeatDetector() }
-    private val accessibilityManager by lazy { IslandAccessibilityManager(context) }
-    private val proximityWakeManager by lazy { ProximityWakeManager(context) }
-    private val mediaBridge by lazy { MediaBridge(context, mediaManager) }
 
     init {
         scope.launch {
@@ -284,7 +276,7 @@ class IslandController @Inject constructor(
 
     fun executeSmartAction(action: String, data: Intent? = null) {
         when (action) {
-            "TOGGLE_FLASHLIGHT" -> setSystemFlashlightActive(!isFlashlightActive)
+            "TOGGLE_FLASHLIGHT" -> actionManager.execute("TOGGLE_FLASHLIGHT")
             "OPEN_DASHBOARD" -> { _lastIslandState = IslandState.TYPE_3_MAX; evaluatePriority() }
             "PLAY_PAUSE" -> mediaManager.sendMediaCommand("PLAY_PAUSE")
             "NEXT_TRACK" -> mediaManager.sendMediaCommand("NEXT")
@@ -300,9 +292,7 @@ class IslandController @Inject constructor(
     }
 
     private fun setSystemFlashlightActive(active: Boolean) {
-        val intent = Intent("com.example.dynamicisland.SET_FLASHLIGHT")
-        intent.putExtra("active", active)
-        context.sendBroadcast(intent)
+        actionManager.execute("TOGGLE_FLASHLIGHT")
     }
 
     fun postTransientNotification(model: LiveActivityModel, duration: Long) {
@@ -323,7 +313,7 @@ class IslandController @Inject constructor(
         cleanerManager.onStop()
         scope.cancel()
         mediaManager.destroy()
-        callManager.onStop()
+        callManager.destroy()
     }
 
     private val callManager = IslandCallManager(context, context.getSystemService(Context.AUDIO_SERVICE) as AudioManager, scope) { evaluatePriority() }
