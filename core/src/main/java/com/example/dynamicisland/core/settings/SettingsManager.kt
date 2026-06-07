@@ -3,15 +3,15 @@ package com.example.dynamicisland.core.settings
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import com.example.dynamicisland.shared.ipc.IslandIPCClient
+import com.example.dynamicisland.shared.settings.*
 import org.json.JSONObject
 
 /**
- * Pro-Grade Settings Manager
+ * 🛠️ PRO-GRADE SETTINGS MANAGER
  * 
- * AUTOMATIC BRIDGE:
- * - In the module app: Reads/Writes to local SharedPreferences.
- * - In SystemUI: Reads from the IslandIPCClient (ContentProvider).
+ * Manages persistence and cross-process synchronization of user preferences.
  */
 class SettingsManager(private val context: Context) {
     private val prefs: SharedPreferences =
@@ -25,133 +25,70 @@ class SettingsManager(private val context: Context) {
             val intent = android.content.Intent("com.example.dynamicisland.RELOAD_PREFS")
             intent.addFlags(android.content.Intent.FLAG_RECEIVER_REGISTERED_ONLY)
             intent.addFlags(android.content.Intent.FLAG_RECEIVER_FOREGROUND)
-            // On some ROMs, setPackage prevents receiving if the UID is different
             context.sendBroadcast(intent)
-            
-            // Also try sending as user ALL if we have the permission (useful when running in system context)
-            try {
-                val userAll = android.os.Process::class.java.getMethod("myUserHandle").invoke(null)
-                context.sendBroadcast(intent)
-            } catch (e: Exception) {}
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
     }
 
-    /**
-     * DEDUPLICATED SETTING KEYS
-     * Mapping for all persistent preferences.
-     */
     enum class SettingKey {
-        // Core Visuals
         DESIGN_LANGUAGE, DYNAMIC_COLORS, ACCENT_COLOR, BLUR_INTENSITY,
         PILL_RADIUS, ANIMATION_SPEED, SHOW_RING_IDLE, PILL_SHAPE,
         DYNAMIC_GRADIENT, GLOW_EFFECT, DOT_MODE, ELASTIC_STRETCH,
         SHADOW_CASTING, CONTENT_AWARE_BLUR, TIME_BASED_THEMES,
         HIGH_CONTRAST_MODE, ICON_PACK_INTEGRATION, AESTHETIC_STYLE,
         MONOCHROME_ICONS, ENABLE_METABALL_TEAR,
-
-        // Dual-Mode (Pillar 1)
         LIVE_BRIDGE_ENABLED, MAGNETIC_EDGE_DOCKING,
         NAV_ISLAND_MODE, IS_NAV_ISLAND_FLOATING, ONE_HAND_MODE_ENABLED,
         NAV_ISLAND_BATTERY_COLORING, REDWOOD_ENABLED,
         NAV_ISLAND_DULL_BACKGROUND, NAV_ISLAND_SHOW_PIPE_INDICATOR,
         NAV_ISLAND_MUSIC_BAR_MORPH, NAV_ISLAND_PANIC_TILE,
-
-        // Aura & Typography (Pillar 2)
         GEMINI_AURA_ENABLED, ROLLING_TYPOGRAPHY_ENABLED,
         THERMAL_THROTTLING_ENABLED,
-
-        // Advanced Integrations (Pillar 3)
         PARSE_DELIVERY_NOTIFICATIONS, WARP_CHARGE_ANIMATION,
         BATTERY_AWARE_ANIMATION, NOW_PLAYING, MUSIC_VISUALIZER_STYLE,
         WAVEFORM_ENABLED, MEDIA_ARTWORK_BLUR, BPM_PULSE,
         AMBIENT_REACTIVE_RING, AMBIENT_REACTIVE,
-
-        // Physics & Gestures (Pillar 4)
         PHYSICS_STYLE, CONTENT_TRANSITION_STYLE, VELOCITY_SQUISH_ENABLED,
         INLINE_REPLY_ENABLED,
-
-        // Dashboard & Widgets (Pillar 5)
         ENABLE_MAX_WIDGETS, SHOW_VITALS_RAM, SHOW_VITALS_CPU,
         SHOW_VITALS_NET, SHOW_VITALS_FPS, SHOW_VITALS_BAT_CYCLES,
         SHORTCUT_LAYOUT,
-
-        // DeGoogled (Pillar 6)
         ASSIST_BRIDGE_ENABLED, ASSIST_BRIDGE_TARGET,
         LENS_BRIDGE_ENABLED, LENS_BRIDGE_TARGET,
-
-        // AI Core
         SMART_GESTURES_ENABLED, SMART_CALL_OVERRIDE,
         SMART_MEDIA_OVERRIDE, SMART_GAMING_OVERRIDE,
         PREDICTION_TINT, PREDICTIVE_ACTIONS, AUTO_DISMISS_DELAY,
         CONTEXTUAL_SUGGESTIONS, GESTURE_LEARNING,
         AI_CONFIDENCE_THRESHOLD, AI_REINFORCEMENT_RATE,
-
-        // Constraints
         ALLOW_MUSIC_MID, ALLOW_MUSIC_MAX, ALLOW_CHARGING_MINI,
         ALLOW_CHARGING_MID, ALLOW_NOTIF_MINI, ALLOW_NOTIF_MID,
         ALLOW_NOTIF_MAX, ALLOW_CALL_MID, ALLOW_CALL_MAX,
         ALLOW_TASK_MINI, ALLOW_TASK_MID,
-
-        // Floating & Accessibility
         FREEFORM_LAUNCH_ENABLED, FREEFORM_SMART_GESTURE,
         ENABLE_FREEFORM_PORTAL_ANIM, TALKBACK_INTEGRATION,
         PROXIMITY_WAKE, TIMER_INTEGRATION,
-
-        // Global & Privacy
         ISLAND_ENABLED, ISLAND_ON_LOCKSCREEN, LOCKSCREEN_FEATURES,
         ALLOWED_NOTIFICATION_APPS, SWIPE_LEFT_ACTION, SWIPE_RIGHT_ACTION,
         HIDE_ON_SCREENSHOT, HIDE_ON_SCREEN_RECORD, HIDE_ISLAND_PER_APP,
         ENABLE_FOCUS_MODE, PRODUCTIVE_APPS, PINNED_APPS, ENABLE_LOW_LATENCY_MODE,
         ENABLE_CLIPBOARD_PAPERCLIP, CLIPBOARD_CLEANER, PRIVACY_DOTS_ENABLED,
         DOZE_MODE_OPTIMISATION,
-
-        // Detection & HUD
         OTP_DETECTION, LINK_INTERCEPT, TRANSLATION, BARCODE, NAVIGATION,
         NOTIFICATION_COALESCING, APP_PERMISSION_CHECKER, GAMING_HUD,
         SHOW_FPS, SHOW_CPU_TEMP,
-
-        // Alerts & Connection
         WIFI_ALERT_DURATION, BT_ALERT_DURATION, HOTSPOT_ALERT_DURATION,
         DATA_ALERT_DURATION, RING_MEDIA_VISIBLE, RING_BATTERY_VISIBLE,
         RING_DATA_VISIBLE, INVISIBLE_RING_TOUCH_PASSTHROUGH,
         ANTI_BURN_IN_ENABLED, ANTI_BURN_IN_INTENSITY,
-
-        // Haptics
         HAPTIC_FEEDBACK, HAPTIC_INTENSITY, RING_CADENCE_VIBRATION,
         HAPTIC_MORSE_ALERTS, SYNC_PULSE_VIBRATION,
-
-        // Role Mapping
         ROLE_CALLING_APP, ALLOWED_MUSIC_APPS, ALLOWED_MEDIA_APPS,
         ALLOWED_NOTES_APPS,
-
-        // Persistence & Storage
         CALL_STYLE, CHARGING_STYLE, BATTERY_STYLE, RING_PULSE_STYLE,
         AUTO_BACKUP_ENABLED, AUTO_BACKUP_FREQ_DAYS, STASH_STORAGE_PATH,
         SPLIT_PILL_ENABLED, ICON_PACK,
         SQUISH_INTENSITY, FONT_AESTHETIC, APP_LANGUAGE, EXPRESSIVE_MESH_ENABLED,
-        
-        // Calibration
         POS_RING_X, POS_RING_Y, POS_MINI_X, POS_MINI_Y,
         POS_MID_X, POS_MID_Y, POS_MAX_X, POS_MAX_Y
-    }
-
-    fun saveLayoutPositions(
-        ring: android.graphics.PointF,
-        mini: android.graphics.PointF,
-        mid: android.graphics.PointF,
-        max: android.graphics.PointF
-    ) {
-        prefs.edit().apply {
-            putFloat(SettingKey.POS_RING_X.name, ring.x)
-            putFloat(SettingKey.POS_RING_Y.name, ring.y)
-            putFloat(SettingKey.POS_MINI_X.name, mini.x)
-            putFloat(SettingKey.POS_MINI_Y.name, mini.y)
-            putFloat(SettingKey.POS_MID_X.name, mid.x)
-            putFloat(SettingKey.POS_MID_Y.name, mid.y)
-            putFloat(SettingKey.POS_MAX_X.name, max.x)
-            putFloat(SettingKey.POS_MAX_Y.name, max.y)
-        }.apply()
-        broadcastUpdate()
     }
 
     fun getBoolean(key: SettingKey, default: Boolean): Boolean =
@@ -216,16 +153,12 @@ class SettingsManager(private val context: Context) {
 
     fun exportAiData(): String? = ipcClient.exportAiData()
 
-    /**
-     * MAPPED SETTINGS STATE
-     * Fully synchronized with SettingsState.kt using NAMED parameters.
-     */
     fun getSettingsState(): SettingsState {
-        val iconPackId = getString(SettingKey.ICON_PACK, "MATERIAL_YOU") ?: "MATERIAL_YOU"
+        val iconPackId = getString(SettingKey.ICON_PACK, "MaterialYou") ?: "MaterialYou"
         return SettingsState(
             designLanguage = try { DesignLanguage.valueOf(getString(SettingKey.DESIGN_LANGUAGE, "MATERIAL_YOU") ?: "MATERIAL_YOU") } catch(e: Exception) { DesignLanguage.MATERIAL_YOU },
             dynamicColors = getBoolean(SettingKey.DYNAMIC_COLORS, true),
-            customAccentColor = Color(getInt(SettingKey.ACCENT_COLOR, 0xFF6750A4.toInt())),
+            customAccentColor = getInt(SettingKey.ACCENT_COLOR, 0xFF6750A4.toInt()),
             blurIntensity = getFloat(SettingKey.BLUR_INTENSITY, 15f),
             pillCornerRadius = getFloat(SettingKey.PILL_RADIUS, 100f),
             animationSpeed = try { AnimationSpeed.valueOf(getString(SettingKey.ANIMATION_SPEED, "NORMAL") ?: "NORMAL") } catch(e: Exception) { AnimationSpeed.NORMAL },
@@ -243,17 +176,21 @@ class SettingsManager(private val context: Context) {
             aestheticStyle = try { AestheticStyle.valueOf(getString(SettingKey.AESTHETIC_STYLE, "GLASS") ?: "GLASS") } catch(e: Exception) { AestheticStyle.GLASS },
             monochromeIcons = getBoolean(SettingKey.MONOCHROME_ICONS, false),
             enableMetaballTear = getBoolean(SettingKey.ENABLE_METABALL_TEAR, true),
+            squishIntensity = getFloat(SettingKey.SQUISH_INTENSITY, 1.0f),
+            fontAesthetic = try { FontAesthetic.valueOf(getString(SettingKey.FONT_AESTHETIC, "DEFAULT") ?: "DEFAULT") } catch(e: Exception) { FontAesthetic.DEFAULT },
+            appLanguage = getString(SettingKey.APP_LANGUAGE, "System") ?: "System",
+            expressiveMeshEnabled = getBoolean(SettingKey.EXPRESSIVE_MESH_ENABLED, true),
             liveBridgeEnabled = getBoolean(SettingKey.LIVE_BRIDGE_ENABLED, false),
             magneticEdgeDocking = getBoolean(SettingKey.MAGNETIC_EDGE_DOCKING, true),
             navIslandMode = getBoolean(SettingKey.NAV_ISLAND_MODE, false),
             isNavIslandFloating = getBoolean(SettingKey.IS_NAV_ISLAND_FLOATING, false),
             oneHandModeEnabled = getBoolean(SettingKey.ONE_HAND_MODE_ENABLED, true),
             navIslandBatteryColoring = getBoolean(SettingKey.NAV_ISLAND_BATTERY_COLORING, true),
-            redwoodEnabled = getBoolean(SettingKey.REDWOOD_ENABLED, true),
             navIslandDullBackground = getBoolean(SettingKey.NAV_ISLAND_DULL_BACKGROUND, true),
             navIslandShowPipeIndicator = getBoolean(SettingKey.NAV_ISLAND_SHOW_PIPE_INDICATOR, true),
             navIslandMusicBarMorph = getBoolean(SettingKey.NAV_ISLAND_MUSIC_BAR_MORPH, true),
             navIslandPanicTile = getBoolean(SettingKey.NAV_ISLAND_PANIC_TILE, true),
+            redwoodEnabled = getBoolean(SettingKey.REDWOOD_ENABLED, true),
             geminiAuraEnabled = getBoolean(SettingKey.GEMINI_AURA_ENABLED, true),
             rollingTypographyEnabled = getBoolean(SettingKey.ROLLING_TYPOGRAPHY_ENABLED, true),
             thermalThrottlingEnabled = getBoolean(SettingKey.THERMAL_THROTTLING_ENABLED, true),

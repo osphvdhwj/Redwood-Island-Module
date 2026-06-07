@@ -1,8 +1,17 @@
 package com.example.dynamicisland.core.settings
 
 import androidx.compose.runtime.*
+import com.example.dynamicisland.shared.settings.SettingsState
+import javax.inject.Inject
 
-class SettingsViewModel(private val settingsManager: SettingsManager) {
+/**
+ * 🛠️ SETTINGS VIEWMODEL
+ * 
+ * Provides a reactive bridge between the persistent settings manager
+ * and the Compose-based configuration UI.
+ */
+class SettingsViewModel @Inject constructor(private val settingsManager: SettingsManager) {
+    
     var state by mutableStateOf(SettingsState())
         private set
 

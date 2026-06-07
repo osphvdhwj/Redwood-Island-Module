@@ -11,7 +11,16 @@ enum class RingPulseStyle { BREATH, LASER, NONE }
 enum class AestheticStyle { GLASS, VOID_BLACK, LIQUID_GLASS }
 enum class ShortcutLayout { GRID, CAROUSEL }
 enum class FontAesthetic { DEFAULT, MONOSPACE, KILO, CHOCOCOOKY, GOOGLE_SANS }
-enum class IconPack { MaterialYou, iOS, OxygenOS, Samsung, Pixel, Futuristic, Minimal, Bold, Outline }
+
+enum class IconPack { 
+    MaterialYou, iOS, OxygenOS, Samsung, Pixel, Futuristic, Minimal, Bold, Outline;
+    
+    companion object {
+        fun fromString(id: String): IconPack {
+            return try { valueOf(id) } catch (_: Exception) { MaterialYou }
+        }
+    }
+}
 
 /**
  * THE DEFINITIVE SETTINGS STATE (CLEAN VERSION)
@@ -55,6 +64,7 @@ data class SettingsState(
     val navIslandShowPipeIndicator: Boolean = true,
     val navIslandMusicBarMorph: Boolean = true,
     val navIslandPanicTile: Boolean = true,
+    val redwoodEnabled: Boolean = true,
 
     // Advanced Visuals (Pillar 2)
     val geminiAuraEnabled: Boolean = true,
@@ -130,7 +140,6 @@ data class SettingsState(
 
     // Global Controls & Privacy
     val islandEnabled: Boolean = true,
-    val redwoodEnabled: Boolean = true,
     val islandOnLockscreen: Boolean = true,
     val lockscreenFeatures: Set<String> = setOf("music", "notifications"),
     val allowedNotificationApps: Set<String> = emptySet(),
@@ -194,5 +203,9 @@ data class SettingsState(
     val chargingStyle: ChargingStyle = ChargingStyle.RING,
     val batteryStyle: BatteryStyle = BatteryStyle.PILL,
     val ringPulseStyle: RingPulseStyle = RingPulseStyle.BREATH,
-    val iconPack: IconPack = IconPack.MaterialYou
+    val iconPack: IconPack = IconPack.MaterialYou,
+    
+    // Performance Levels
+    val isUltraBatteryActive: Boolean = false,
+    val isThermalBypassActive: Boolean = false
 )

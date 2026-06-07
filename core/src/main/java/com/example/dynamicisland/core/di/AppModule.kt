@@ -85,4 +85,121 @@ object AppModule {
             onUncollapseRequested = {}
         )
     }
+
+    @Provides
+    @Singleton
+    fun provideHardwareRepository(
+        @ApplicationContext context: Context,
+        dispatchers: DispatcherProvider
+    ): HardwareRepository {
+        return HardwareRepository(context, dispatchers)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBatteryRepository(
+        @ApplicationContext context: Context,
+        dispatchers: DispatcherProvider
+    ): BatteryRepository {
+        return BatteryRepository(context, dispatchers)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGameHubRepository(
+        @ApplicationContext context: Context,
+        dispatchers: DispatcherProvider,
+        neuralCore: IslandNeuralCore
+    ): GameHubRepository {
+        return GameHubRepository(context, dispatchers, neuralCore)
+    }
+
+    @Provides
+    @Singleton
+    fun provideRootShellEngine(dispatchers: DispatcherProvider): RootShellEngine {
+        return RootShellEngine(dispatchers)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSysfsController(rootEngine: RootShellEngine): SysfsController {
+        return SysfsController(rootEngine)
+    }
+
+    @Provides
+    @Singleton
+    fun provideStorageScanner(dispatchers: DispatcherProvider): StorageScanner {
+        return StorageScanner(dispatchers)
+    }
+
+    @Provides
+    @Singleton
+    fun provideResidualCleaner(rootEngine: RootShellEngine): ResidualCleaner {
+        return ResidualCleaner(rootEngine)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAppFreezer(rootEngine: RootShellEngine): AppFreezer {
+        return AppFreezer(rootEngine)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUltraBatterySaver(rootEngine: RootShellEngine): UltraBatterySaver {
+        return UltraBatterySaver(rootEngine)
+    }
+
+    @Provides
+    @Singleton
+    fun provideThermalEngineBypass(
+        rootEngine: RootShellEngine,
+        hardwareRepository: HardwareRepository,
+        dispatchers: DispatcherProvider,
+        neuralCore: IslandNeuralCore
+    ): ThermalEngineBypass {
+        return ThermalEngineBypass(rootEngine, hardwareRepository, dispatchers, neuralCore)
+    }
+
+    @Provides
+    @Singleton
+    fun provideCleanerManager(
+        @ApplicationContext context: Context,
+        neuralCore: IslandNeuralCore,
+        scanner: StorageScanner,
+        cleaner: ResidualCleaner,
+        freezer: AppFreezer,
+        ultraBatterySaver: UltraBatterySaver,
+        thermalBypass: ThermalEngineBypass,
+        dispatchers: DispatcherProvider
+    ): CleanerManager {
+        return CleanerManager(context, neuralCore, scanner, cleaner, freezer, ultraBatterySaver, thermalBypass, dispatchers)
+    }
+
+    @Provides
+    @Singleton
+    fun provideIslandHapticsManager(
+        @ApplicationContext context: Context,
+        settingsManager: com.example.dynamicisland.core.settings.SettingsManager
+    ): IslandHapticsManager {
+        return IslandHapticsManager(context, settingsManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideIslandNetworkMonitor(@ApplicationContext context: Context, dispatchers: DispatcherProvider): IslandNetworkMonitor {
+        return IslandNetworkMonitor()
+    }
+
+    @Provides
+    @Singleton
+    fun provideIslandBackupManager(@ApplicationContext context: Context, ipcClient: IslandIPCClient): IslandBackupManager {
+        return IslandBackupManager(context, ipcClient)
+    }
+
+    @Provides
+    @Singleton
+    fun provideIslandLocationManager(@ApplicationContext context: Context): IslandLocationManager {
+        return IslandLocationManager(context)
+    }
 }
