@@ -3,11 +3,11 @@ package com.example.dynamicisland.core.manager
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
 
 object ConfigBackupManager {
 

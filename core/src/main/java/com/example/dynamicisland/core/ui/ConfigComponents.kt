@@ -1,7 +1,4 @@
 package com.example.dynamicisland.core.ui
-import com.example.dynamicisland.core.R
-import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.shared.model.*
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -25,6 +22,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dynamicisland.core.R
+import com.example.dynamicisland.core.manager.*
+import com.example.dynamicisland.shared.model.*
 import kotlinx.coroutines.CoroutineScope
 
 @Composable

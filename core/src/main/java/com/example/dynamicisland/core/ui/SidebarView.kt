@@ -2,13 +2,19 @@ package com.example.dynamicisland.core.ui
 
 import android.content.Context
 import android.graphics.PixelFormat
+import android.media.AudioManager
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -20,27 +26,15 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.glassmorphicCard
-import com.example.dynamicisland.core.ui.design.premiumClickable
-import com.example.dynamicisland.core.util.ComposeLifecycleOwner
-
-import com.example.dynamicisland.core.manager.IslandHardwareManager
-import android.media.AudioManager
-
-import android.widget.FrameLayout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.Image
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.dynamicisland.core.manager.IslandHardwareManager
+import com.example.dynamicisland.core.util.ComposeLifecycleOwner
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
-import com.example.dynamicisland.core.ui.VerticalLiquidSlider
 
 class SidebarView(context: Context, private val hardwareManager: IslandHardwareManager) : FrameLayout(context) {
 

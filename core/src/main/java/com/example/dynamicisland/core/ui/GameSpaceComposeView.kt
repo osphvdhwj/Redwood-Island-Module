@@ -38,10 +38,9 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.example.dynamicisland.core.data.repository.GameHubRepository
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
 import com.example.dynamicisland.shared.model.IslandIntent
-import com.example.dynamicisland.core.ui.mvi.IslandUiState
-import kotlinx.coroutines.launch
-
+import com.example.dynamicisland.shared.model.IslandUiState
 import com.example.dynamicisland.shared.model.PerformanceLevel
+import kotlinx.coroutines.launch
 
 /**
  * GameSpace Dashboard UI

@@ -1,11 +1,5 @@
 package com.example.dynamicisland.core.ui
 
-import androidx.compose.ui.unit.sp
-
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.core.hook.ContinuityCameraScanner
-import com.example.dynamicisland.shared.settings.SettingsState
-import com.example.dynamicisland.core.R
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -35,6 +29,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.dynamicisland.core.R
+import com.example.dynamicisland.core.hook.ContinuityCameraScanner
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.settings.SettingsState
 
 @Composable
 fun BarcodeMid(

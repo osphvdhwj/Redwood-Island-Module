@@ -2,9 +2,9 @@ package com.example.dynamicisland.core.manager
 
 import android.net.TrafficStats
 import com.example.dynamicisland.shared.model.LiveActivityModel
-import kotlinx.coroutines.*
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.*
 
 @Singleton
 class IslandNetworkMonitor @Inject constructor() {

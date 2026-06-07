@@ -1,6 +1,7 @@
 package com.example.dynamicisland.core.util
 
 import android.os.Bundle
+import android.view.View
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
@@ -11,7 +12,6 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import android.view.View
 
 class ComposeLifecycleOwner : SavedStateRegistryOwner, ViewModelStoreOwner {
     private var mLifecycleRegistry: LifecycleRegistry = LifecycleRegistry(this)

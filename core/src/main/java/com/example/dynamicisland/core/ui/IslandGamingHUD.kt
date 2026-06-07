@@ -1,7 +1,5 @@
-// File: app/src/main/java/com/example/dynamicisland/ui/IslandGamingHUD.kt
 package com.example.dynamicisland.core.ui
 
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -12,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -20,6 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.shared.model.IslandState   // ← only this import (model.IslandState removed)
+
+// File: app/src/main/java/com/example/dynamicisland/ui/IslandGamingHUD.kt
+
 
 /**
  * BATCH 6: Gaming HUD

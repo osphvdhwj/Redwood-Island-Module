@@ -5,10 +5,10 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.robv.android.xposed.XSharedPreferences
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.DynamicIslandView
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.ChargingStyle
+import de.robv.android.xposed.XSharedPreferences
 
 object IslandPreferencesManager {
 

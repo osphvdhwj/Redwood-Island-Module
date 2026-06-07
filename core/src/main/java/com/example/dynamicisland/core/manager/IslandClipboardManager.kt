@@ -1,9 +1,9 @@
 package com.example.dynamicisland.core.manager
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.ui.DynamicIslandView
 
 import android.content.ClipboardManager
 import android.content.Context
+import com.example.dynamicisland.core.ui.DynamicIslandView
+import com.example.dynamicisland.shared.model.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 

@@ -4,9 +4,9 @@ import android.app.Notification
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
+import com.example.dynamicisland.shared.model.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import com.example.dynamicisland.shared.model.*
 
 /**
  * 📦 ISLAND NOTIFICATION MANAGER

@@ -1,22 +1,20 @@
 package com.example.dynamicisland.core.di
 
 import android.content.Context
-import com.example.dynamicisland.core.data.repository.HardwareRepository
-import com.example.dynamicisland.core.manager.IslandMediaManager
-import com.example.dynamicisland.shared.settings.SettingsManager
-import com.example.dynamicisland.shared.ipc.IslandIPCClient
 import com.example.dynamicisland.core.data.repository.BatteryRepository
+import com.example.dynamicisland.core.data.repository.GameHubRepository
+import com.example.dynamicisland.core.data.repository.HardwareRepository
 import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
 import com.example.dynamicisland.core.domain.dispatchers.StandardDispatcherProvider
-import com.example.dynamicisland.core.data.repository.GameHubRepository
-import com.example.dynamicisland.core.util.shell.ShellExecutor
-import com.example.dynamicisland.core.util.shell.AndroidShellExecutor
-import dagger.Module
-
-import com.example.dynamicisland.core.intelligence.IslandPredictionEngine
 import com.example.dynamicisland.core.gesture.MLGestureClassifier
-
 import com.example.dynamicisland.core.intelligence.IslandGenerativeEngine
+import com.example.dynamicisland.core.intelligence.IslandPredictionEngine
+import com.example.dynamicisland.core.manager.IslandMediaManager
+import com.example.dynamicisland.core.util.shell.AndroidShellExecutor
+import com.example.dynamicisland.core.util.shell.ShellExecutor
+import com.example.dynamicisland.shared.ipc.IslandIPCClient
+import com.example.dynamicisland.shared.settings.SettingsManager
+import dagger.Module
 
 @Module
 @InstallIn(SingletonComponent::class)

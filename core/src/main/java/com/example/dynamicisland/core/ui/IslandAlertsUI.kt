@@ -1,8 +1,4 @@
 package com.example.dynamicisland.core.ui
-import com.example.dynamicisland.core.R
-import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.manager.*
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
@@ -22,6 +18,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
+import com.example.dynamicisland.core.R
+import com.example.dynamicisland.core.manager.*
+import com.example.dynamicisland.shared.model.*
 
 @Composable
 fun DynamicIslandView.SystemAlertMid(alert: LiveActivityModel.SystemAlert) {

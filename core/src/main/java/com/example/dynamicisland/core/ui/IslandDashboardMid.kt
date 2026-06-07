@@ -1,4 +1,3 @@
-// File: app/src/main/java/com/example/dynamicisland/ui/IslandDashboardMid.kt
 package com.example.dynamicisland.core.ui
 
 import androidx.compose.foundation.Image
@@ -24,6 +23,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.shared.model.LiveActivityModel
 import com.example.dynamicisland.shared.model.QSTileState
+
+// File: app/src/main/java/com/example/dynamicisland/ui/IslandDashboardMid.kt
+
 
 @Composable
 fun DynamicIslandView.DashboardMid(model: LiveActivityModel.Dashboard) {

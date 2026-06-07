@@ -1,4 +1,4 @@
-package com.example.dynamicisland.core.ui
+package com.example.dynamicisland.core.ui.states
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas

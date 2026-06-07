@@ -1,10 +1,10 @@
-package com.example.dynamicisland.core.ui.mvi
+package com.example.dynamicisland.shared.model
 
 import com.example.dynamicisland.shared.model.IslandState
 import com.example.dynamicisland.shared.model.IslandTheme
 import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.settings.SettingsState
 import com.example.dynamicisland.shared.model.PerformanceLevel
+import com.example.dynamicisland.shared.settings.SettingsState
 
 /**
  * Single source of truth for the Dynamic Island UI.

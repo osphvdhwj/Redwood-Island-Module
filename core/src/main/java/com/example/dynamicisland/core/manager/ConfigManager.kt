@@ -1,16 +1,16 @@
 package com.example.dynamicisland.core.manager
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.ui.DynamicIslandView
 
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import com.example.dynamicisland.core.ui.DynamicIslandView
+import com.example.dynamicisland.shared.model.*
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.File
 
 object ConfigManager {
 

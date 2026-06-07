@@ -2,10 +2,10 @@ package com.example.dynamicisland.core.util.shell
 
 import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
 import com.example.dynamicisland.core.util.RedwoodLogger
-import kotlinx.coroutines.withContext
 import java.io.DataOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.withContext
 
 /**
  * ⚡ ROOT SHELL ENGINE

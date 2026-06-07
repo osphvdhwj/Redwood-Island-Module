@@ -1,9 +1,4 @@
-// File: app/src/main/java/com/example/dynamicisland/manager/IslandMediaManager.kt
 package com.example.dynamicisland.core.manager
-
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.ui.DynamicIslandView
-import com.example.dynamicisland.core.hook.*
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -19,8 +14,15 @@ import android.renderscript.Element
 import android.renderscript.RenderScript
 import android.renderscript.ScriptIntrinsicBlur
 import androidx.palette.graphics.Palette
-import kotlinx.coroutines.*
+import com.example.dynamicisland.core.hook.*
+import com.example.dynamicisland.core.ui.DynamicIslandView
+import com.example.dynamicisland.shared.model.*
 import kotlin.math.max
+import kotlinx.coroutines.*
+
+// File: app/src/main/java/com/example/dynamicisland/manager/IslandMediaManager.kt
+
+
 
 class IslandMediaManager(
     private val context: Context,

@@ -7,7 +7,6 @@ import android.view.MotionEvent
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import com.example.dynamicisland.core.gesture.IslandGesture
 
 /**
  * BATCH 5: Force Touch Handler

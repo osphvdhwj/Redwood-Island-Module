@@ -3,13 +3,13 @@ package com.example.dynamicisland.core.data.repository.hive
 import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
 import com.example.dynamicisland.core.domain.lifecycle.BackendComponent
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
-import com.example.dynamicisland.shared.model.IslandIntent
 import com.example.dynamicisland.core.util.RedwoodLogger
+import com.example.dynamicisland.shared.model.IslandIntent
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * 🌉 HIVE SYNC BRIDGE (Domain Layer)

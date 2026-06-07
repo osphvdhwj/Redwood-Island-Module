@@ -4,18 +4,18 @@ import android.app.ActivityManager
 import android.content.Context
 import android.provider.Settings
 import android.view.Choreographer
-import com.example.dynamicisland.core.domain.lifecycle.BackendComponent
 import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
+import com.example.dynamicisland.core.domain.lifecycle.BackendComponent
 import com.example.dynamicisland.shared.model.ActivityType
 import com.example.dynamicisland.shared.model.LiveActivityModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class HardwareRepository @Inject constructor(

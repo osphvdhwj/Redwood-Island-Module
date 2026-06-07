@@ -2,19 +2,18 @@ package com.example.dynamicisland.core.data.repository.cleanup
 
 import android.content.Context
 import android.widget.Toast
+import com.example.dynamicisland.core.data.repository.profiles.ThermalEngineBypass
+import com.example.dynamicisland.core.data.repository.profiles.UltraBatterySaver
 import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
 import com.example.dynamicisland.core.domain.lifecycle.BackendComponent
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
 import com.example.dynamicisland.shared.model.IslandIntent
 import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
-
-import com.example.dynamicisland.core.data.repository.profiles.UltraBatterySaver
-import com.example.dynamicisland.core.data.repository.profiles.ThermalEngineBypass
 
 /**
  * 🛠️ CLEANER MANAGER

@@ -1,5 +1,6 @@
-// File: app/src/main/java/com/example/dynamicisland/manager/IslandAction.kt
 package com.example.dynamicisland.core.manager
+
+// File: app/src/main/java/com/example/dynamicisland/manager/IslandAction.kt
 
 /**
  * Every possible action the Dynamic Island can perform when triggered by a gesture.

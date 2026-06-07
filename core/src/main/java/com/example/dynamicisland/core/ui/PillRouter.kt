@@ -1,10 +1,10 @@
 package com.example.dynamicisland.core.ui
 
-import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.fillMaxSize
-import com.example.dynamicisland.shared.model.IslandState
+import androidx.compose.runtime.Composable
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.model.IslandIntent
+import com.example.dynamicisland.shared.model.IslandState
 
 /**
  * PRO-GRADE PILL ROUTER

@@ -3,10 +3,10 @@ package com.example.dynamicisland.core.performance
 import android.media.session.PlaybackState
 import android.os.SystemClock
 import android.view.Choreographer
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * BATCH 5: Choreographer-Synced Media Ticker

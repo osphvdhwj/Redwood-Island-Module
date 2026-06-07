@@ -7,8 +7,8 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import com.example.dynamicisland.shared.model.ActivityType
-import com.example.dynamicisland.shared.model.LiveActivityModel
 import com.example.dynamicisland.shared.model.LiveActivityInfo
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 /**
  * 🛠️ LIVE ACTIVITY MANAGER SERVICE

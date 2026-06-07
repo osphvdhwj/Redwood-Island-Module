@@ -2,11 +2,10 @@ package com.example.dynamicisland.core.gesture
 
 import android.content.Context
 import android.view.MotionEvent
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
 import java.util.concurrent.ConcurrentLinkedDeque
 import kotlin.math.*
-import com.example.dynamicisland.core.gesture.IslandGesture
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 
 /**
  * BATCH 5: ML Gesture Classifier

@@ -1,14 +1,14 @@
 package com.example.dynamicisland.core.manager
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.ui.DynamicIslandView
 
+import android.bluetooth.BluetoothDevice
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.bluetooth.BluetoothDevice
 import android.hardware.usb.UsbManager
 import android.net.wifi.WifiManager
+import com.example.dynamicisland.core.ui.DynamicIslandView
+import com.example.dynamicisland.shared.model.*
 
 class IslandConnectivityManager(
     private val context: Context,

@@ -1,4 +1,4 @@
-package com.example.dynamicisland.core.ui
+package com.example.dynamicisland.core.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -21,7 +21,6 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-
 import com.example.dynamicisland.core.ui.design.IslandColors
 
 /**

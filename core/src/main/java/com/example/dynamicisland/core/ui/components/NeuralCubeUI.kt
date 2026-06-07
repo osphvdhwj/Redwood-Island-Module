@@ -11,9 +11,9 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.shared.settings.AestheticStyle
 import com.example.dynamicisland.shared.settings.SettingsState
+import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlin.math.PI
 
 /**
  * ✨ VYXEL EXPRESSIVE NEURAL CUBE

@@ -1,9 +1,9 @@
 package com.example.dynamicisland.core.audio
 
+import kotlin.math.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlin.math.*
 
 class AudioBeatDetector {
     private val bpmFlow = MutableStateFlow(0f)

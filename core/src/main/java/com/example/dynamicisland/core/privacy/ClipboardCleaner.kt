@@ -5,9 +5,9 @@ import android.content.ClipboardManager
 import android.content.Context
 import com.example.dynamicisland.shared.settings.SettingsManager
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.*
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.*
 
 /**
  * Feature #135 / #158: Automated Privacy Clipboard Cleaner Engine.

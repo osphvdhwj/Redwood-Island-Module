@@ -4,11 +4,11 @@ import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
 import com.example.dynamicisland.core.domain.lifecycle.BackendComponent
 import com.example.dynamicisland.core.domain.state.IslandController
 import com.example.dynamicisland.core.util.RedwoodLogger
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * ⚡ REMOTE INTENT RELAY (Domain Layer)

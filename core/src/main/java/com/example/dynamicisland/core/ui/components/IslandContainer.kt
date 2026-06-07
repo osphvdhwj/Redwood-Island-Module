@@ -14,9 +14,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.dynamicisland.shared.model.IslandState
 import com.example.dynamicisland.core.ui.design.VisualDialect
-import com.example.dynamicisland.core.ui.mvi.IslandUiState
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.IslandUiState
 
 /**
  * 🚀 ELITE PERFORMANCE CONTAINER

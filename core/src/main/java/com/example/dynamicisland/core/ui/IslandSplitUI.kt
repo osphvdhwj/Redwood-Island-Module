@@ -1,8 +1,4 @@
 package com.example.dynamicisland.core.ui
-import com.example.dynamicisland.core.R
-import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.manager.*
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.spring
@@ -26,13 +22,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.math.abs
+import com.example.dynamicisland.core.R
+import com.example.dynamicisland.core.manager.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.model.IslandState
-import androidx.compose.ui.layout.boundsInWindow
+import kotlin.math.abs
 
 @Composable
 fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.compose.ui.unit.Dp, borderColor: Color, xOffset: Float) {

@@ -1,4 +1,4 @@
-package com.example.dynamicisland.core.ipc
+package com.example.dynamicisland.shared.ipc
 
 import android.content.BroadcastReceiver
 import android.content.Context

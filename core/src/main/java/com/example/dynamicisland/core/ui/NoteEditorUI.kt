@@ -1,5 +1,6 @@
 package com.example.dynamicisland.core.ui
 
+import android.content.Intent
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -20,8 +21,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.dynamicisland.core.ui.design.IslandColors
-import android.content.Intent
 
 @Composable
 fun NoteEditorMax(targetNotesApp: String?, onSave: () -> Unit) {

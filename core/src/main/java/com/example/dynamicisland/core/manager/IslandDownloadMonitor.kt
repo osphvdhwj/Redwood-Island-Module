@@ -4,9 +4,9 @@ import android.app.DownloadManager
 import android.content.Context
 import android.database.Cursor
 import com.example.dynamicisland.shared.model.*
-import kotlinx.coroutines.*
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.*
 
 @Singleton
 class IslandDownloadMonitor @Inject constructor(

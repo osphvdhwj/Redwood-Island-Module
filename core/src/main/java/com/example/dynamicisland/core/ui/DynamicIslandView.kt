@@ -1,14 +1,5 @@
 package com.example.dynamicisland.core.ui
 
-import androidx.compose.runtime.CompositionLocalProvider
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.util.TranslationProvider
-import com.example.dynamicisland.core.util.LocalRedwoodStrings
-import com.example.dynamicisland.shared.settings.SettingsState
-import com.example.dynamicisland.shared.settings.IconPack
-import com.example.dynamicisland.core.ui.LocalIconPack
-package com.example.dynamicisland.core.ui
-
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -18,6 +9,7 @@ import android.graphics.Rect
 import android.graphics.Region
 import android.os.Build
 import android.os.Bundle
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewTreeObserver
 import android.view.WindowManager
@@ -31,10 +23,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -50,21 +43,25 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.example.dynamicisland.core.gesture.IslandGesture
-import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.core.gesture.MLGestureClassifier
 import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.DesignLanguage
-import com.example.dynamicisland.shared.settings.SettingsState
-import com.example.dynamicisland.shared.settings.AestheticStyle
 import com.example.dynamicisland.core.util.*
+import com.example.dynamicisland.core.util.LocalRedwoodStrings
+import com.example.dynamicisland.core.util.TranslationProvider
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.settings.AestheticStyle
+import com.example.dynamicisland.shared.settings.DesignLanguage
+import com.example.dynamicisland.shared.settings.IconPack
+import com.example.dynamicisland.shared.settings.SettingsState
+import kotlin.math.abs
+import kotlin.random.Random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
-import kotlin.math.abs
-import kotlin.random.Random
 
 fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp, isLowLatency: Boolean): Modifier = this.background(Color.Black)
 
@@ -77,8 +74,6 @@ fun getPillShape(shape: String, cornerRadius: Float): androidx.compose.foundatio
     }
 }
 
-import com.example.dynamicisland.core.gesture.MLGestureClassifier
-import android.view.MotionEvent
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @SuppressLint("ViewConstructor")

@@ -3,12 +3,12 @@ package com.example.dynamicisland.core.manager
 import android.content.Context
 import android.view.WindowManager
 import com.example.dynamicisland.shared.model.*
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.example.dynamicisland.shared.model.IslandState
 import java.util.PriorityQueue
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 import kotlin.math.max
-import com.example.dynamicisland.shared.model.IslandState
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * PRO-GRADE PRIORITY ENGINE (V2.2)

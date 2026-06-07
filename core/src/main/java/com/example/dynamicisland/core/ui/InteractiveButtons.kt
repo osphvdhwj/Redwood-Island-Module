@@ -1,6 +1,4 @@
 package com.example.dynamicisland.core.ui
-import com.example.dynamicisland.core.R
-import com.example.dynamicisland.shared.model.*
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -21,6 +19,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
+import com.example.dynamicisland.core.R
+import com.example.dynamicisland.shared.model.*
 import kotlinx.coroutines.delay
 
 @Composable

@@ -1,14 +1,9 @@
 package com.example.dynamicisland.core.ui
 
-import com.example.dynamicisland.shared.settings.IconPack
-
-import com.example.dynamicisland.core.R
-import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
 import android.view.WindowManager
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,13 +15,13 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +30,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -53,24 +49,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.example.dynamicisland.core.R
+import com.example.dynamicisland.core.gesture.IslandGesture
+import com.example.dynamicisland.core.manager.*
+import com.example.dynamicisland.core.performance.eliteFluidSurface
+import com.example.dynamicisland.core.performance.metaballFluid
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.settings.IconPack
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.core.gesture.IslandGesture
-import com.example.dynamicisland.core.ui.animations.IslandUiState
-import com.example.dynamicisland.core.ui.animations.updateIslandTransition
-import androidx.compose.foundation.Canvas
-import com.example.dynamicisland.core.ui.design.geminiAura
-import com.example.dynamicisland.core.ui.design.BottomAuraPanel
-
-import com.example.dynamicisland.core.performance.metaballFluid
-
-import com.example.dynamicisland.core.performance.eliteFluidSurface
-import androidx.compose.ui.geometry.Rect
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable

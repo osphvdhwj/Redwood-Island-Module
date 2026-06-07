@@ -8,17 +8,17 @@ import android.util.Log
 import androidx.work.*
 import com.example.dynamicisland.core.manager.IslandMediaManager
 import com.example.dynamicisland.core.performance.DensityAwareIconCache
+import java.util.Calendar
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
+import kotlin.math.max
+import kotlin.math.min
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.Calendar
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit
-import kotlin.math.max
-import kotlin.math.min
 
 /**
  * BATCH 2: Island Prediction Engine

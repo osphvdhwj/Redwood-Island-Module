@@ -1,7 +1,7 @@
 package com.example.dynamicisland.core.data.repository.profiles
 
-import com.example.dynamicisland.core.util.shell.RootShellEngine
 import com.example.dynamicisland.core.util.RedwoodLogger
+import com.example.dynamicisland.core.util.shell.RootShellEngine
 import javax.inject.Inject
 import javax.inject.Singleton
 

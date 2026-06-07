@@ -31,9 +31,9 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.glassmorphicCard
 import com.example.dynamicisland.core.ui.design.premiumClickable
-import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.delay
 
 data class LogEntry(
     val id: String = UUID.randomUUID().toString(),

@@ -1,11 +1,15 @@
 package com.example.dynamicisland.core.domain.state
 
 import android.content.Context
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
 import com.example.dynamicisland.shared.model.IslandIntent
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.IslandUiState
+import com.example.dynamicisland.shared.model.LiveActivityModel
 import com.example.dynamicisland.shared.model.PerformanceLevel
-import com.example.dynamicisland.core.ui.mvi.IslandUiState
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,10 +17,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
-import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
-import dagger.hilt.android.qualifiers.ApplicationContext
 
 /**
  * 🧠 ISLAND NEURAL CORE (iNC) - RELOCATED TO CORE DAEMON

@@ -1,15 +1,15 @@
 package com.example.dynamicisland.core.domain.state
 
+import android.content.Context
 import com.example.dynamicisland.shared.model.IslandIntent
 import com.example.dynamicisland.shared.model.IslandState
 import io.mockk.*
+import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import android.content.Context
-import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class IslandNeuralCoreTest {

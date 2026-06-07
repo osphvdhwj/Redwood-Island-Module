@@ -1,4 +1,4 @@
-package com.example.dynamicisland.core.ui
+package com.example.dynamicisland.core.performance
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -16,12 +16,11 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
-import com.example.dynamicisland.core.performance.AudioReactiveAnalyzer
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.sin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 /**
  * BATCH 2: Audio-Reactive Waveform Bar

@@ -16,10 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.manager.ConfigBackupManager
-import com.example.dynamicisland.shared.settings.SettingsManager.SettingKey
-import com.example.dynamicisland.shared.settings.SettingsViewModel
 import com.example.dynamicisland.core.ui.components.SettingsCategoryHeader
 import com.example.dynamicisland.core.ui.components.SettingsSwitch
+import com.example.dynamicisland.shared.settings.SettingsManager.SettingKey
+import com.example.dynamicisland.shared.settings.SettingsViewModel
 import kotlinx.coroutines.launch
 
 @Composable

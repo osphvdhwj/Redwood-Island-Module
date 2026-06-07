@@ -27,8 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.shared.model.LiveActivityModel
 import com.example.dynamicisland.shared.model.SimpleNotification
-import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.premiumClickable
 
 @Composable
 fun DynamicIslandView.NotificationStackMax(model: LiveActivityModel.NotificationStack) {

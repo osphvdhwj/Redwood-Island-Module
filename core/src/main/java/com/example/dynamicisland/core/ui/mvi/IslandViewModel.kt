@@ -1,16 +1,16 @@
-package com.example.dynamicisland.core.ui.mvi
+package com.example.dynamicisland.shared.model
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
-import com.example.dynamicisland.shared.settings.SettingsManager
 import com.example.dynamicisland.core.system.hook.SystemEventProvider
+import com.example.dynamicisland.shared.settings.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import javax.inject.Inject
 
 /**
  * Central ViewModel for managing the Dynamic Island state using MVI.

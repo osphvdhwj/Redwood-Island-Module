@@ -7,9 +7,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dynamicisland.core.shared.settings.BatteryStyle
 import com.example.dynamicisland.core.shared.settings.CallStyle
 import com.example.dynamicisland.core.shared.settings.ChargingStyle
-import com.example.dynamicisland.core.shared.settings.BatteryStyle
 
 enum class IslandShape {
     PILL, CUBE, ORBITAL, BRUTALIST

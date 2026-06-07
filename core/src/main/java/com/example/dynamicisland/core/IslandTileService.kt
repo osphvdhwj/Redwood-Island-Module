@@ -2,9 +2,8 @@ package com.example.dynamicisland.core
 
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import com.example.dynamicisland.core.domain.state.IslandController
-import javax.inject.Inject
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class IslandTileService : TileService() {

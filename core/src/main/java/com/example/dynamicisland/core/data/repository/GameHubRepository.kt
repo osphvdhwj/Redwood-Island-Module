@@ -12,17 +12,19 @@ import android.view.Choreographer
 import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
 import com.example.dynamicisland.core.domain.lifecycle.BackendComponent
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
+import com.example.dynamicisland.core.util.shell.RootShellEngine
+import com.example.dynamicisland.core.util.shell.SysfsController
 import com.example.dynamicisland.shared.model.IslandIntent
 import com.example.dynamicisland.shared.util.XposedExtensions
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.robv.android.xposed.XposedBridge
+import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * 🎮 GAME HUB REPOSITORY (OEM Engine)
@@ -36,8 +38,6 @@ import javax.inject.Singleton
  * 3. **MIUI Identity Spoofing**: Tricks games into unlocking 120FPS by faking Xiaomi hardware.
  * 4. **Adaptive Monitoring**: High-frequency FPS and hardware load tracking synchronized to the Neural Core.
  */
-import com.example.dynamicisland.core.util.shell.SysfsController
-import com.example.dynamicisland.core.util.shell.RootShellEngine
 
 @Singleton
 class GameHubRepository @Inject constructor(

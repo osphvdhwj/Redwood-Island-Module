@@ -2,6 +2,7 @@ package com.example.dynamicisland.core.ui
 
 import android.content.Context
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
@@ -9,6 +10,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,21 +24,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.shape.RoundedCornerShape
-import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.glassmorphicCard
-import com.example.dynamicisland.core.ui.design.premiumClickable
-import com.example.dynamicisland.core.ui.screens.*
-import com.example.dynamicisland.core.ui.settings.SettingsScreen
-import com.example.dynamicisland.shared.settings.SettingsViewModel
-import com.example.dynamicisland.shared.settings.SettingsManager
-import com.example.dynamicisland.core.manager.IslandBackupManager
-import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
-import android.provider.Settings
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.example.dynamicisland.core.manager.IslandBackupManager
+import com.example.dynamicisland.shared.settings.SettingsManager
+import com.example.dynamicisland.shared.settings.SettingsViewModel
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class ConfigActivity : ComponentActivity() {

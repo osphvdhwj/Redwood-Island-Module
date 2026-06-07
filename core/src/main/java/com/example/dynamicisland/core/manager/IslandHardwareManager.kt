@@ -1,18 +1,17 @@
 package com.example.dynamicisland.core.manager
 
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.ui.DynamicIslandView
-import com.example.dynamicisland.core.hook.*
-
 import android.content.Context
 import android.media.AudioManager
 import android.provider.Settings
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.collectLatest
+import com.example.dynamicisland.core.hook.*
+import com.example.dynamicisland.core.ui.DynamicIslandView
+import com.example.dynamicisland.shared.model.*
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
 
 class IslandHardwareManager(
     private val context: Context,

@@ -1,8 +1,5 @@
 package com.example.dynamicisland.core.ui
 
-import androidx.compose.runtime.collectAsState
-import com.example.dynamicisland.shared.model.LocalIslandTheme
-import com.example.dynamicisland.core.R
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -18,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,8 +28,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dynamicisland.core.R
 import com.example.dynamicisland.core.intelligence.IslandTranslationEngine
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 
 @Composable
 fun DynamicIslandView.TranslationMid(result: IslandTranslationEngine.TranslationResult) {

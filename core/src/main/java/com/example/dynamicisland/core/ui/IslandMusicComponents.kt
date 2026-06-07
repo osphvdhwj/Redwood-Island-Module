@@ -1,8 +1,4 @@
 package com.example.dynamicisland.core.ui
-import com.example.dynamicisland.core.R
-import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.manager.*
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -20,6 +16,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import com.example.dynamicisland.core.R
+import com.example.dynamicisland.core.manager.*
+import com.example.dynamicisland.shared.model.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 

@@ -7,14 +7,13 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.util.Log
-import org.json.JSONObject
+import com.example.dynamicisland.core.IslandApplication
+import dagger.hilt.android.EntryPointAccessors
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
-
-import com.example.dynamicisland.core.IslandApplication
-import dagger.hilt.android.EntryPointAccessors
+import org.json.JSONObject
 
 class IslandContentProvider : ContentProvider() {
 

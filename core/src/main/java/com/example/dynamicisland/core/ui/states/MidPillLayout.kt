@@ -1,4 +1,4 @@
-package com.example.dynamicisland.core.ui
+package com.example.dynamicisland.core.ui.states
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable

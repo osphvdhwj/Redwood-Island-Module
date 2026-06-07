@@ -2,15 +2,15 @@ package com.example.dynamicisland.core.data.repository.profiles
 
 import com.example.dynamicisland.core.data.repository.HardwareRepository
 import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
-import com.example.dynamicisland.core.util.shell.RootShellEngine
-import com.example.dynamicisland.core.util.RedwoodLogger
-import com.example.dynamicisland.shared.model.IslandIntent
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
+import com.example.dynamicisland.core.util.RedwoodLogger
+import com.example.dynamicisland.core.util.shell.RootShellEngine
+import com.example.dynamicisland.shared.model.IslandIntent
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * 🔥 THERMAL ENGINE BYPASS (WILD MODE)

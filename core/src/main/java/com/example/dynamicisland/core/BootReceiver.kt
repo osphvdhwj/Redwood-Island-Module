@@ -1,10 +1,9 @@
 package com.example.dynamicisland.core
-import com.example.dynamicisland.core.manager.ConfigManager
-import com.example.dynamicisland.core.manager.NewConfigManager
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.example.dynamicisland.core.manager.NewConfigManager
 import kotlinx.coroutines.MainScope
 
 class BootReceiver : BroadcastReceiver() {
