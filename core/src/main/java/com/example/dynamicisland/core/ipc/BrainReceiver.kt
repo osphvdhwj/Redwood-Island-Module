@@ -1,4 +1,4 @@
-package com.example.dynamicisland.shared.ipc
+package com.example.dynamicisland.core.ipc
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -69,6 +69,10 @@ class BrainReceiver : BroadcastReceiver() {
                     val caller = extras.getString("caller") ?: ""
                     val number = extras.getString("number") ?: ""
                     IslandIntent.CallStateChanged(state, caller, number)
+                }
+                "SCREEN_CONTEXT" -> {
+                    // Logic to handle semantic screen signals
+                    null
                 }
                 "DISMISS" -> IslandIntent.DismissActive
                 "COLLAPSE" -> IslandIntent.Collapse

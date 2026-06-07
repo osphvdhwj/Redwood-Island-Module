@@ -1,7 +1,11 @@
 package com.example.dynamicisland
 
 import android.app.Application
-import dagger.hilt.android.HiltAndroidApp
 
-@HiltAndroidApp
+/**
+ * REDWOOD SATELLITE APPLICATION
+ * 
+ * Minimal application class for the Xposed module satellite.
+ * UI and Intelligence have been moved to the :core module.
+ */
 class IslandApplication : Application()

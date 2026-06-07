@@ -1,6 +1,6 @@
-package com.example.dynamicisland
-import com.example.dynamicisland.manager.ConfigManager
-import com.example.dynamicisland.manager.NewConfigManager
+package com.example.dynamicisland.core
+import com.example.dynamicisland.core.manager.ConfigManager
+import com.example.dynamicisland.core.manager.NewConfigManager
 
 import android.content.BroadcastReceiver
 import android.content.Context

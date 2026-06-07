@@ -1,4 +1,4 @@
-package com.example.dynamicisland.accessibility
+package com.example.dynamicisland.core.accessibility
 
 import android.content.Context
 import android.os.Build

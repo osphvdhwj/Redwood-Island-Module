@@ -3,7 +3,7 @@ package com.example.dynamicisland.hook
 import android.content.Context
 import android.os.Bundle
 import com.example.dynamicisland.shared.ipc.BrainRelay
-import com.example.dynamicisland.util.XposedExtensions
+import com.example.dynamicisland.shared.util.XposedExtensions
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers

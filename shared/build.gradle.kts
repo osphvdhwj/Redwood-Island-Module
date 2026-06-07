@@ -41,4 +41,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.coroutines.android)
+    
+    // Xposed API (compileOnly for libraries)
+    compileOnly(libs.xposed.api)
 }

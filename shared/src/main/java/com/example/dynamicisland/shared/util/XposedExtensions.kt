@@ -1,4 +1,4 @@
-package com.example.dynamicisland.core.util
+package com.example.dynamicisland.shared.util
 
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
