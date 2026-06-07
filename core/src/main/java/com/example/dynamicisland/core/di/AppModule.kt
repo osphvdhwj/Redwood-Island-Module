@@ -4,32 +4,25 @@ import android.content.Context
 import com.example.dynamicisland.core.data.repository.BatteryRepository
 import com.example.dynamicisland.core.data.repository.GameHubRepository
 import com.example.dynamicisland.core.data.repository.HardwareRepository
+import com.example.dynamicisland.core.data.repository.cleanup.*
+import com.example.dynamicisland.core.data.repository.profiles.*
 import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
 import com.example.dynamicisland.core.domain.dispatchers.StandardDispatcherProvider
-import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
 import com.example.dynamicisland.core.gesture.MLGestureClassifier
 import com.example.dynamicisland.core.intelligence.IslandGenerativeEngine
 import com.example.dynamicisland.core.intelligence.IslandPredictionEngine
 import com.example.dynamicisland.core.manager.IslandMediaManager
-import com.example.dynamicisland.core.model.*
-import com.example.dynamicisland.core.util.shell.AndroidShellExecutor
-import com.example.dynamicisland.core.util.shell.RootShellEngine
-import com.example.dynamicisland.core.util.shell.ShellExecutor
-import com.example.dynamicisland.core.util.shell.SysfsController
-import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.core.util.shell.*
 import com.example.dynamicisland.shared.ipc.IslandIPCClient
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.shared.settings.SettingsManager
+import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.*
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -37,8 +30,12 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideIslandGenerativeEngine(neuralCore: IslandNeuralCore): IslandGenerativeEngine {
-        return IslandGenerativeEngine(neuralCore)
+    fun provideIslandGenerativeEngine(
+        @ApplicationContext context: Context,
+        neuralCore: IslandNeuralCore,
+        controller: com.example.dynamicisland.core.domain.state.IslandController
+    ): IslandGenerativeEngine {
+        return IslandGenerativeEngine(context, neuralCore, controller)
     }
 
     @Provides
@@ -73,52 +70,52 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideStorageScanner(dispatchers: DispatcherProvider): com.example.dynamicisland.core.data.repository.cleanup.StorageScanner {
-        return com.example.dynamicisland.core.data.repository.cleanup.StorageScanner(dispatchers)
+    fun provideStorageScanner(dispatchers: DispatcherProvider): StorageScanner {
+        return StorageScanner(dispatchers)
     }
 
     @Provides
     @Singleton
-    fun provideResidualCleaner(rootEngine: RootShellEngine): com.example.dynamicisland.core.data.repository.cleanup.ResidualCleaner {
-        return com.example.dynamicisland.core.data.repository.cleanup.ResidualCleaner(rootEngine)
+    fun provideResidualCleaner(rootEngine: RootShellEngine): ResidualCleaner {
+        return ResidualCleaner(rootEngine)
     }
 
     @Provides
     @Singleton
-    fun provideAppFreezer(rootEngine: RootShellEngine): com.example.dynamicisland.core.data.repository.cleanup.AppFreezer {
-        return com.example.dynamicisland.core.data.repository.cleanup.AppFreezer(rootEngine)
+    fun provideAppFreezer(rootEngine: RootShellEngine): AppFreezer {
+        return AppFreezer(rootEngine)
     }
 
     @Provides
     @Singleton
-    fun provideUltraBatterySaver(rootEngine: RootShellEngine): com.example.dynamicisland.core.data.repository.profiles.UltraBatterySaver {
-        return com.example.dynamicisland.core.data.repository.profiles.UltraBatterySaver(rootEngine)
+    fun provideUltraBatterySaver(rootEngine: RootShellEngine): UltraBatterySaver {
+        return UltraBatterySaver(rootEngine)
     }
 
     @Provides
     @Singleton
     fun provideThermalEngineBypass(
         rootEngine: RootShellEngine,
-        hardwareRepository: com.example.dynamicisland.core.data.repository.HardwareRepository,
+        hardwareRepository: HardwareRepository,
         dispatchers: DispatcherProvider,
-        neuralCore: com.example.dynamicisland.core.domain.state.IslandNeuralCore
-    ): com.example.dynamicisland.core.data.repository.profiles.ThermalEngineBypass {
-        return com.example.dynamicisland.core.data.repository.profiles.ThermalEngineBypass(rootEngine, hardwareRepository, dispatchers, neuralCore)
+        neuralCore: IslandNeuralCore
+    ): ThermalEngineBypass {
+        return ThermalEngineBypass(rootEngine, hardwareRepository, dispatchers, neuralCore)
     }
 
     @Provides
     @Singleton
     fun provideCleanerManager(
         @ApplicationContext context: Context,
-        neuralCore: com.example.dynamicisland.core.domain.state.IslandNeuralCore,
-        scanner: com.example.dynamicisland.core.data.repository.cleanup.StorageScanner,
-        cleaner: com.example.dynamicisland.core.data.repository.cleanup.ResidualCleaner,
-        freezer: com.example.dynamicisland.core.data.repository.cleanup.AppFreezer,
-        ultraBatterySaver: com.example.dynamicisland.core.data.repository.profiles.UltraBatterySaver,
-        thermalBypass: com.example.dynamicisland.core.data.repository.profiles.ThermalEngineBypass,
-        dispatchers: com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
-    ): com.example.dynamicisland.core.data.repository.cleanup.CleanerManager {
-        return com.example.dynamicisland.core.data.repository.cleanup.CleanerManager(context, neuralCore, scanner, cleaner, freezer, ultraBatterySaver, thermalBypass, dispatchers)
+        neuralCore: IslandNeuralCore,
+        scanner: StorageScanner,
+        cleaner: ResidualCleaner,
+        freezer: AppFreezer,
+        ultraBatterySaver: UltraBatterySaver,
+        thermalBypass: ThermalEngineBypass,
+        dispatchers: DispatcherProvider
+    ): CleanerManager {
+        return CleanerManager(context, neuralCore, scanner, cleaner, freezer, ultraBatterySaver, thermalBypass, dispatchers)
     }
 
     @Provides
@@ -146,9 +143,10 @@ object AppModule {
     @Singleton
     fun provideGameHubRepository(
         @ApplicationContext context: Context,
-        dispatchers: DispatcherProvider
+        dispatchers: DispatcherProvider,
+        neuralCore: IslandNeuralCore
     ): GameHubRepository {
-        return GameHubRepository(context, dispatchers)
+        return GameHubRepository(context, dispatchers, neuralCore)
     }
 
     @Provides
