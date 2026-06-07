@@ -21,11 +21,6 @@ object VideoToolboxHook {
     fun apply(lpparam: de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam) {
         if (!TARGET_APPS.contains(lpparam.packageName)) return
 
-        // 🛡️ Stealth Activation
-        if (StealthInterceptor.isCloaked()) {
-             // In a real scenario we'd do deeper obfuscation here.
-        }
-
         try {
             // Hook PowerManager or DisplayManager to spoof screen state.
             // Often, apps check isInteractive()

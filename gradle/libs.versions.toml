@@ -23,7 +23,7 @@ appcompat = "1.7.0"
 mlkitBarcode = "18.3.0"
 mlkitTranslate = "17.0.3"
 mlkitLanguage = "17.0.0"
-mlkitEntityExtraction = "16.0.0"
+mlkitEntityExtraction = "16.0.0-beta6"
 xposed = "82"
 
 [libraries]

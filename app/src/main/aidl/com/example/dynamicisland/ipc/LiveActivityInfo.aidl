@@ -1,3 +1,3 @@
-package com.example.dynamicisland.ipc;
+package com.example.dynamicisland.shared.ipc;
 
 parcelable LiveActivityInfo;

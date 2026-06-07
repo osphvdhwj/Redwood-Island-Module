@@ -1,4 +1,4 @@
-package com.example.dynamicisland.ipc
+package com.example.dynamicisland.shared.ipc
 
 import android.content.Context
 import android.content.Intent

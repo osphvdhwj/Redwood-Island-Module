@@ -75,7 +75,7 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
     
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         when (theme.chargingStyle) {
-            com.example.dynamicisland.settings.ChargingStyle.RING -> {
+            com.example.dynamicisland.shared.settings.ChargingStyle.RING -> {
                 val spinAngle by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart), label = "spin")
                 if (model.isPluggedIn || isLow) { 
                     Box(modifier = Modifier.size(54.dp).graphicsLayer { rotationZ = spinAngle }) {
@@ -86,7 +86,7 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
                     }
                 }
             }
-            com.example.dynamicisland.settings.ChargingStyle.WAVE -> {
+            com.example.dynamicisland.shared.settings.ChargingStyle.WAVE -> {
                 val waveOffset by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 1f, animationSpec = infiniteRepeatable(tween(2000, easing = LinearEasing), RepeatMode.Restart), label = "wave")
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val path = androidx.compose.ui.graphics.Path()
@@ -102,8 +102,8 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
                     drawPath(path, color.copy(alpha = 0.3f))
                 }
             }
-            com.example.dynamicisland.settings.ChargingStyle.CUBE -> {
-                com.example.dynamicisland.ui.components.NeuralCubeUI(color = color, settings = controller?.settingsState ?: com.example.dynamicisland.settings.SettingsState(), modifier = Modifier.size(40.dp))
+            com.example.dynamicisland.shared.settings.ChargingStyle.CUBE -> {
+                com.example.dynamicisland.ui.components.NeuralCubeUI(color = color, settings = controller?.settingsState ?: com.example.dynamicisland.shared.settings.SettingsState(), modifier = Modifier.size(40.dp))
             }
         }
 

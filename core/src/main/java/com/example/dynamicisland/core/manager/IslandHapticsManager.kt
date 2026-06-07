@@ -13,7 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 @Singleton
 class IslandHapticsManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val settingsManager: com.example.dynamicisland.settings.SettingsManager
+    private val settingsManager: com.example.dynamicisland.shared.settings.SettingsManager
 ) {
     private var lastHapticState: IslandState = IslandState.HIDDEN
 

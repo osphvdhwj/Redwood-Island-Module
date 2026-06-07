@@ -42,7 +42,7 @@ object FutureFrameworkA15Hooks {
                         
                         context.sendBroadcastAsUser(
                             Intent(ACTION_FUTURE_TOP_APP_CHANGED).apply {
-                                setPackage("com.android.systemui")
+                                setPackage("com.example.dynamicisland.core")
                                 putExtra("pkg", packageName)
                             },
                             userAll
@@ -67,7 +67,7 @@ object FutureFrameworkA15Hooks {
                     
                     context.sendBroadcastAsUser(
                         Intent(ACTION_FUTURE_VOLUME_CHANGED).apply {
-                            setPackage("com.android.systemui")
+                            setPackage("com.example.dynamicisland.core")
                             putExtra("streamType", streamType)
                             putExtra("index", index)
                         },
@@ -90,7 +90,7 @@ object FutureFrameworkA15Hooks {
                     
                     context.sendBroadcastAsUser(
                         Intent(ACTION_FUTURE_BRIGHTNESS_CHANGED).apply {
-                            setPackage("com.android.systemui")
+                            setPackage("com.example.dynamicisland.core")
                             putExtra("brightness", mAppliedBrightness)
                         },
                         userAll
@@ -113,7 +113,7 @@ object FutureFrameworkA15Hooks {
                         val context = getContextFromParam(param) ?: return
                         context.sendBroadcastAsUser(
                             Intent(ACTION_FUTURE_PRIVACY_INDICATOR).apply {
-                                setPackage("com.android.systemui")
+                                setPackage("com.example.dynamicisland.core")
                                 putExtra("op", if (code == 26) "CAMERA" else "MIC")
                                 putExtra("pkg", pkg)
                             },
@@ -137,7 +137,7 @@ object FutureFrameworkA15Hooks {
                     val context = getContextFromParam(param) ?: return
                     context.sendBroadcastAsUser(
                         Intent(ACTION_FUTURE_BIOMETRIC_AUTH).apply {
-                            setPackage("com.android.systemui")
+                            setPackage("com.example.dynamicisland.core")
                             putExtra("authenticated", true)
                         },
                         userAll

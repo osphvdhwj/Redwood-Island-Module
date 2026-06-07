@@ -47,9 +47,4 @@ class GboardSatellite : SatelliteBase {
     override fun onDestroy() {
         // Cleanup if necessary
     }
-
-    // Overload for ease of use in hooks
-    fun dispatchEvent(context: Context, eventType: String, data: Bundle) {
-        onInitialize(context, context.packageName)
-    }
 }

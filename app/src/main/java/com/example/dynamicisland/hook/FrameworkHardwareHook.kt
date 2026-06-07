@@ -28,11 +28,12 @@ object FrameworkHardwareHook {
                     val ctx = getContext(param) ?: return
                     ctx.sendBroadcastAsUser(
                         Intent("com.example.dynamicisland.HARDWARE_TOGGLE").apply {
-                            setPackage("com.android.systemui")
+                            setPackage("com.example.dynamicisland.core")
                             putExtra("type",  "RINGER")
                             putExtra("state", ringerMode)
                         },
-                        userAll
+                        userAll,
+                        "com.redwood.permission.SECURE_IPC"
                     )
                 } catch (_: Throwable) {}
             }

@@ -93,7 +93,7 @@ object CrDroidAPIHook {
                                     val context = getContextFromParam(param) ?: return
                                     context.sendBroadcastAsUser(
                                         Intent(ACTION_GAME_MODE_CHANGED).apply {
-                                            setPackage("com.android.systemui")
+                                            setPackage("com.example.dynamicisland.core")
                                             putExtra("pkg",       pkg)
                                             putExtra("isActive",  isEntering)
                                             putExtra("gameMode",  modeInt)
@@ -139,7 +139,7 @@ object CrDroidAPIHook {
                                 if (level > 1) {
                                     context.sendBroadcastAsUser(
                                         Intent(ACTION_THERMAL_PROFILE).apply {
-                                            setPackage("com.android.systemui")
+                                            setPackage("com.example.dynamicisland.core")
                                             putExtra("level",   level)
                                             putExtra("profile", profileName)
                                         },
@@ -176,7 +176,7 @@ object CrDroidAPIHook {
 
                                 context.sendBroadcastAsUser(
                                     Intent(ACTION_DISPLAY_MODE).apply {
-                                        setPackage("com.android.systemui")
+                                        setPackage("com.example.dynamicisland.core")
                                         refreshRate?.let { putExtra("refreshRate", it.toInt()) }
                                         modeId?.let     { putExtra("modeId", it) }
                                     },
@@ -205,7 +205,7 @@ object CrDroidAPIHook {
                 val context = getContextFromParam(param) ?: return@hookAfter
                 context.sendBroadcastAsUser(
                     Intent(ACTION_SMART_CHARGE).apply {
-                        setPackage("com.android.systemui")
+                        setPackage("com.example.dynamicisland.core")
                         putExtra("limit", limit)
                         putExtra("active", limit < 100)
                     },
@@ -235,7 +235,7 @@ object CrDroidAPIHook {
                                 val context  = getContextFromParam(param) ?: return
                                 context.sendBroadcastAsUser(
                                     Intent(ACTION_ONE_HANDED).apply {
-                                        setPackage("com.android.systemui")
+                                        setPackage("com.example.dynamicisland.core")
                                         putExtra("isActive", isActive)
                                     },
                                     userAll

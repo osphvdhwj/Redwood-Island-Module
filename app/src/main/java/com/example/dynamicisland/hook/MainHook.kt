@@ -1,15 +1,21 @@
 package com.example.dynamicisland.hook
 
+import android.app.AndroidAppHelper
 import android.app.Application
 import android.content.Context
 import com.example.dynamicisland.satellite.GboardSatellite
+import com.example.dynamicisland.satellite.ScreenContentSatellite
 import de.robv.android.xposed.*
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
-object SystemUIContextKeeper {
-    var qsTileHost: Any? = null
-}
-
+/**
+ * 🚀 REDWOOD MAIN ENTRY POINT (Xposed)
+ * 
+ * Orchestrates the 'Brain vs Sensors' architecture.
+ * - Handles 'Ghost Satellite' injection into user apps.
+ * - Handles 'System Sensor' injection into android/systemui.
+ * - Enforces Global Stealth via the StealthInterceptor.
+ */
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     companion object {
@@ -40,7 +46,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
-        // 🛡️ MANDATE 2: Stealth Interception (Global)
+        // 🛡️ MANDATE: Stealth Interception (Global)
         StealthInterceptor.apply(lpparam)
 
         val isSystemServer = lpparam.packageName == "android" || 
@@ -54,8 +60,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             isSystemUI -> hookSystemUIProcess(lpparam)
             else -> {
                 hookAppSatellite(lpparam)
-                // 👁️ Feature B: Content Intelligence
-                if (!lpparam.packageName.startsWith("com.example.")) {
+                // 👁️ Feature B: Content Intelligence (Ghost Sensor)
+                // Skip our own package and system server
+                if (!lpparam.packageName.startsWith("com.example.dynamicisland") && !isSystemServer) {
                     try {
                         ScreenContentSatellite().onInitialize(
                             AndroidAppHelper.currentApplication() ?: return, 
@@ -70,7 +77,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     // --- 🛰️ SATELLITE LOADER (App-Level Synergy) ---
 
     private fun hookAppSatellite(lpparam: XC_LoadPackage.LoadPackageParam) {
-        // Ghost Satellites: Minimal footprint, no heavy dependencies.
         when (lpparam.packageName) {
             "com.google.android.inputmethod.latin" -> {
                 log("Injecting Gboard Satellite")
@@ -79,10 +85,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                     lpparam.packageName
                 )
             }
-            "com.google.android.apps.nexuslauncher" -> {
-                log("Injecting Launcher Satellite")
-                // TODO: Implement LauncherSatellite
-            }
             "com.google.android.youtube", "com.vanced.android.youtube" -> {
                 log("Injecting Video Toolbox Satellite")
                 VideoToolboxHook.apply(lpparam)
@@ -90,7 +92,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
         }
     }
 
-    // --- android process ---
+    // --- android process (System Server) ---
 
     private fun hookAndroidProcess(lpparam: XC_LoadPackage.LoadPackageParam) {
         log("Applying android-process hooks")

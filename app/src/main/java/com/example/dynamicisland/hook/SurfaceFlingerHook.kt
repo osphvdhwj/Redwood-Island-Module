@@ -135,14 +135,16 @@ object SurfaceFlingerHook {
             try {
                 val context = android.app.AndroidAppHelper.currentApplication() ?: return
                 context.sendBroadcastAsUser(
-                    Intent(ACTION_FRAME_STATS).apply {
-                        setPackage("com.android.systemui")
+                    Intent("com.example.dynamicisland.BRAIN_EVENT").apply {
+                        setPackage("com.example.dynamicisland.core")
+                        putExtra("action", "GAMING_STATS")
                         putExtra("fps",         fps)
-                        putExtra("frameMs",     avgFrameMs)
-                        putExtra("jankPct",     jankPct)
-                        putExtra("refreshRate", refreshRate)
+                        putExtra("frame_ms",    avgFrameMs)
+                        putExtra("jank_pct",    jankPct)
+                        putExtra("refresh_rate", refreshRate)
                     },
-                    userAll
+                    userAll,
+                    "com.redwood.permission.SECURE_IPC"
                 )
             } catch (_: Throwable) {}
         }

@@ -19,7 +19,7 @@ interface SatelliteBase {
     /**
      * Standardized event dispatcher to send data to the SystemUI Brain.
      */
-    fun dispatchEvent(eventType: String, data: Bundle)
+    fun dispatchEvent(context: Context, eventType: String, data: Bundle)
 
     /**
      * Called when the host process is terminating or the hook is removed.

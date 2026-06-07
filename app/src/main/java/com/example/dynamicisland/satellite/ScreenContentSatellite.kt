@@ -36,7 +36,7 @@ class ScreenContentSatellite : SatelliteBase {
 
     private fun scanContent(activity: android.app.Activity, pkg: String) {
         try {
-            val rootNode = activity.window.decorView.rootView.accessibilityNodeInfo ?: return
+            val rootNode = activity.window.decorView.rootView.createAccessibilityNodeInfo() ?: return
             val content = extractTextRecursive(rootNode)
             
             val bundle = Bundle().apply {

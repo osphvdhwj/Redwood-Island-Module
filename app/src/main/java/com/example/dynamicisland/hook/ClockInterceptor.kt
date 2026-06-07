@@ -1,7 +1,7 @@
 package com.example.dynamicisland.hook
-import com.example.dynamicisland.model.*
+import com.example.dynamicisland.shared.model.*
 
-import com.example.dynamicisland.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.LiveActivityModel
 import android.app.Notification
 import android.graphics.Color
 import android.service.notification.StatusBarNotification

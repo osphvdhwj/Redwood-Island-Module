@@ -111,7 +111,7 @@ object FrameworkAlarmTriggerHook {
 
             context.sendBroadcastAsUser(
                 Intent(ACTION_TRIGGERED).apply {
-                    setPackage("com.android.systemui")
+                    setPackage("com.example.dynamicisland.core")
                     putExtra("triggerTime", triggerTime)
                     putExtra("pkg",         pkg)
                     putExtra("label",       label)
@@ -133,7 +133,7 @@ object FrameworkAlarmTriggerHook {
 
             context.sendBroadcastAsUser(
                 Intent(ACTION_DISMISSED).apply {
-                    setPackage("com.android.systemui")
+                    setPackage("com.example.dynamicisland.core")
                     putExtra("triggerTime", triggerTime)
                 },
                 userAll

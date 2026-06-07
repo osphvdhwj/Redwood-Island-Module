@@ -42,13 +42,15 @@ object FrameworkTelecomHook {
                     }.getOrNull()?.takeIf { it.isNotEmpty() } ?: callerNumber
 
                     ctx.sendBroadcastAsUser(
-                        Intent("com.example.dynamicisland.CALL_STATE_CHANGED").apply {
-                            setPackage("com.android.systemui")
+                        Intent("com.example.dynamicisland.BRAIN_EVENT").apply {
+                            setPackage("com.example.dynamicisland.core")
+                            putExtra("action", "CALL_STATE_CHANGED")
                             putExtra("state",  stateStr)
                             putExtra("caller", callerName)
                             putExtra("number", callerNumber)
                         },
-                        userAll
+                        userAll,
+                        "com.redwood.permission.SECURE_IPC"
                     )
                 } catch (_: Throwable) {}
             }

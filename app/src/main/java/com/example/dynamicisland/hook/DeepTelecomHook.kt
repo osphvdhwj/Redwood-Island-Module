@@ -78,8 +78,9 @@ object DeepTelecomHook {
                             isLikelySpam(context, rawNumber)
                         } else false
 
-                        val intent = Intent("com.example.dynamicisland.CALL_STATE_CHANGED").apply {
-                            setPackage("com.android.systemui")
+                        val intent = Intent("com.example.dynamicisland.BRAIN_EVENT").apply {
+                            setPackage("com.example.dynamicisland.core")
+                            putExtra("action",       "CALL_STATE_CHANGED")
                             putExtra("state",        stateStr)
                             putExtra("caller",       contactInfo.displayName)
                             putExtra("number",       rawNumber)
@@ -87,7 +88,7 @@ object DeepTelecomHook {
                             putExtra("relationLabel", contactInfo.relationLabel)
                             putExtra("isSpam",       isSpam)
                         }
-                        context.sendBroadcastAsUser(intent, userAll)
+                        context.sendBroadcastAsUser(intent, userAll, "com.redwood.permission.SECURE_IPC")
 
                     } catch (_: Throwable) {}
                 }

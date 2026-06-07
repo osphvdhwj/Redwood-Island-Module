@@ -58,7 +58,7 @@ object InfinityXAPIHook {
                         
                         context.sendBroadcastAsUser(
                             Intent(ACTION_INFINITY_GAME_MODE).apply {
-                                setPackage("com.android.systemui")
+                                setPackage("com.example.dynamicisland.core")
                                 putExtra("isActive", isActive)
                                 putExtra("pkg", pkg)
                             },
@@ -89,7 +89,7 @@ object InfinityXAPIHook {
                         
                         context.sendBroadcastAsUser(
                             Intent(ACTION_INFINITY_THERMAL).apply {
-                                setPackage("com.android.systemui")
+                                setPackage("com.example.dynamicisland.core")
                                 putExtra("profile", profile)
                             },
                             userAll
@@ -114,7 +114,7 @@ object InfinityXAPIHook {
                     
                     context.sendBroadcastAsUser(
                         Intent(ACTION_INFINITY_SUB_STATE).apply {
-                            setPackage("com.android.systemui")
+                            setPackage("com.example.dynamicisland.core")
                             putExtra("state", state)
                         },
                         userAll
@@ -138,7 +138,7 @@ object InfinityXAPIHook {
                     
                     context.sendBroadcastAsUser(
                         Intent(ACTION_INFINITY_ROOD_EVENT).apply {
-                            setPackage("com.android.systemui")
+                            setPackage("com.example.dynamicisland.core")
                             putExtra("type", eventType)
                         },
                         userAll
@@ -160,7 +160,7 @@ object InfinityXAPIHook {
                     val context = getContextFromParam(param) ?: return
                     context.sendBroadcastAsUser(
                         Intent(ACTION_INFINITY_EDGE_LIGHT).apply {
-                            setPackage("com.android.systemui")
+                            setPackage("com.example.dynamicisland.core")
                             putExtra("isActive", true)
                         },
                         userAll
@@ -181,7 +181,7 @@ object InfinityXAPIHook {
                     val context = param.thisObject as? android.app.Activity ?: return
                     context.sendBroadcastAsUser(
                         Intent("com.example.dynamicisland.INFINITY_SUITE_OPENED").apply {
-                            setPackage("com.android.systemui")
+                            setPackage("com.example.dynamicisland.core")
                         },
                         userAll
                     )

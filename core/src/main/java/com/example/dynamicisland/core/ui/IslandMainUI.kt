@@ -81,7 +81,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     
-    val settings = view.controller?.settingsState ?: com.example.dynamicisland.settings.SettingsState()
+    val settings = view.controller?.settingsState ?: com.example.dynamicisland.shared.settings.SettingsState()
     val isCyberpunk = settings.iconPack is IconPack.AmoledCyberpunk
     val isLiquidGlass = settings.aestheticStyle == AestheticStyle.LIQUID_GLASS
     

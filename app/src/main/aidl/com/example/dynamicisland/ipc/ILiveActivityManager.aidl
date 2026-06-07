@@ -1,6 +1,6 @@
-package com.example.dynamicisland.ipc;
+package com.example.dynamicisland.shared.ipc;
 
-import com.example.dynamicisland.ipc.LiveActivityInfo;
+import com.example.dynamicisland.shared.ipc.LiveActivityInfo;
 import android.os.Bundle;
 
 interface ILiveActivityManager {

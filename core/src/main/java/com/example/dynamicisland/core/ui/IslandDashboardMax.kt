@@ -85,7 +85,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                         .size(40.dp)
                         .background(Color.White.copy(alpha = 0.1f), CircleShape)
                         .squishClickable { 
-                            controller.postTransientNotification(com.example.dynamicisland.model.LiveActivityModel.QuickNote(), -1)
+                            controller.postTransientNotification(com.example.dynamicisland.shared.model.LiveActivityModel.QuickNote(), -1)
                         },
                     contentAlignment = Alignment.Center
                 ) {
