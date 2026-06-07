@@ -22,19 +22,14 @@ import com.example.dynamicisland.core.data.repository.HardwareRepository
 import com.example.dynamicisland.core.data.repository.cleanup.CleanerManager
 import com.example.dynamicisland.core.gesture.IslandGesture
 import com.example.dynamicisland.core.gesture.MLGestureClassifier
-import com.example.dynamicisland.core.hook.CrDroidAPIHook
-import com.example.dynamicisland.core.hook.InfinityXAPIHook
 import com.example.dynamicisland.core.intelligence.IslandPredictionEngine
 import com.example.dynamicisland.core.model.*
-import com.example.dynamicisland.core.model.IslandShape
-import com.example.dynamicisland.core.model.IslandTheme
-import com.example.dynamicisland.core.model.IslandUiState
 import com.example.dynamicisland.core.performance.IslandBlurEngine
 import com.example.dynamicisland.core.sensors.ProximityWakeManager
+import com.example.dynamicisland.core.settings.SettingsManager
 import com.example.dynamicisland.core.ui.DynamicIslandView
 import com.example.dynamicisland.core.util.*
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.ipc.BrainRelay
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -72,8 +67,8 @@ class IslandController @Inject constructor(
     private val mediaBridge by lazy { MediaBridge(context, mediaManager) }
     private val blurEngine by lazy { IslandBlurEngine.get(context) }
     
-    val actionManager by lazy { IslandActionManager(context, scope) }
-    val storageManager by lazy { IslandStorageManager(context) }
+    val actionManager by lazy { com.example.dynamicisland.core.manager.IslandActionManager(context, scope) }
+    val storageManager by lazy { com.example.dynamicisland.core.manager.IslandStorageManager(context) }
 
     private var _lastIslandState: IslandState = IslandState.HIDDEN
     private var _lastActiveModel: LiveActivityModel? = null
@@ -81,7 +76,6 @@ class IslandController @Inject constructor(
     private val _activeTheme = mutableStateOf(IslandTheme())
     
     val currentHardware = mutableStateOf<LiveActivityModel.HardwareMonitor?>(null)
-    val stashHistory get() = storageManager.stashHistory
 
     internal var islandView: DynamicIslandView? = null
     private var currentViewSyncJob: Job? = null
@@ -91,7 +85,6 @@ class IslandController @Inject constructor(
     private var isFlashlightActive = false
     private var wasCharging = false
     private var topAppPackage = ""
-    private var moduleIndex = 0
 
     var settingsState by mutableStateOf(SettingsState())
         private set
@@ -142,6 +135,7 @@ class IslandController @Inject constructor(
                 "com.example.dynamicisland.APP_CHANGED" -> {
                     topAppPackage = intent.getStringExtra("pkg") ?: ""
                     predictionEngine.onAppForegrounded(topAppPackage)
+                    applyProactivePerformance(topAppPackage)
                     evaluatePriority()
                 }
                 "com.example.dynamicisland.HARDWARE_TOGGLE" -> {
@@ -189,6 +183,7 @@ class IslandController @Inject constructor(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(ecosystemReceiver, ecoFilter, Context.RECEIVER_EXPORTED)
         } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
             context.registerReceiver(ecosystemReceiver, ecoFilter)
         }
         
@@ -218,44 +213,19 @@ class IslandController @Inject constructor(
         evaluatePriority()
     }
 
-    fun autoDetectCutout() {
-        val view = islandView ?: return
-        val insets = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) view.rootWindowInsets else null
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            val cutout = insets?.displayCutout
-            if (cutout != null) {
-                val rect = cutout.boundingRects.firstOrNull()
-                if (rect != null) {
-                    val density = context.resources.displayMetrics.density
-                    val x = rect.centerX() / density
-                    val y = rect.centerY() / density
-                    view.ringX.floatValue = x
-                    view.ringY.floatValue = y
-                    XposedBridge.log("Redwood: Auto-detected cutout at ($x, $y)")
-                }
-            }
-        }
-    }
-
-    fun is3ButtonNavActive(): Boolean {
-        return Settings.Secure.getInt(context.contentResolver, "navigation_mode", 2) == 0
-    }
-
     fun evaluatePriority() {
-        val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         if (isSystemRecordingActive || isScreenshotActiveInternal) {
             neuralCore.dispatch(IslandIntent.SyncState(IslandState.HIDDEN, null, null))
             return
         }
 
-        // --- Hardware stats integration ---
         val hw = hardwareRepository.hardwareState.value
         if (hw != null) {
             neuralCore.dispatch(IslandIntent.UpdateGamingStats(
                 fps = hw.fps,
                 frameMs = hw.frameMs,
                 jankPct = hw.jankPct,
-                cpuUsage = hw.cpuFreqMhz, // Simplified mapping
+                cpuUsage = hw.cpuFreqMhz,
                 gpuUsage = 0
             ))
         }
@@ -272,7 +242,6 @@ class IslandController @Inject constructor(
     }
 
     private fun handleGesture(gesture: IslandGesture) {
-        RedwoodLogger.d("Handling ML Gesture: $gesture")
         val suffix = when (gesture) {
             IslandGesture.TAP, IslandGesture.SINGLE_TAP -> "single_tap"
             IslandGesture.DOUBLE_TAP -> "double_tap"
@@ -332,7 +301,6 @@ class IslandController @Inject constructor(
     }
 
     fun executeSmartAction(action: String, data: Intent? = null) {
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         when (action) {
             "TOGGLE_FLASHLIGHT" -> setSystemFlashlightActive(!isFlashlightActive)
             "OPEN_DASHBOARD" -> { _lastIslandState = IslandState.TYPE_3_MAX; evaluatePriority() }
@@ -340,7 +308,7 @@ class IslandController @Inject constructor(
             "NEXT_TRACK" -> mediaManager.sendMediaCommand("NEXT")
             "PREV_TRACK" -> mediaManager.sendMediaCommand("PREV")
             "SET_PERFORMANCE_WILD" -> {
-                hardwareRepository.setPerformanceLevel(com.example.dynamicisland.core.data.repository.GameHubRepository.PerformanceLevel.WILD)
+                hardwareRepository.setPerformanceLevel(com.example.dynamicisland.shared.model.PerformanceLevel.WILD)
                 postTransientNotification(
                     LiveActivityModel.General("sys_perf", ActivityType.MESSAGE, "Performance", "Wild Mode Active", android.graphics.Color.YELLOW),
                     3000L
@@ -376,7 +344,7 @@ class IslandController @Inject constructor(
         callManager.destroy()
     }
 
-    private val callManager = IslandCallManager(context, audioManager, scope) { evaluatePriority() }
+    private val callManager = IslandCallManager(context, context.getSystemService(Context.AUDIO_SERVICE) as AudioManager, scope) { evaluatePriority() }
     internal val notificationManager = IslandNotificationManager(context, scope, 
         onProgressCaught = { evaluatePriority() },
         onNavigationCaught = { postTransientNotification(it, 5000L) },

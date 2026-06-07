@@ -7,6 +7,9 @@ import com.example.dynamicisland.shared.model.*
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 
+/**
+ * Listens for system boot events to initialize the Island configuration.
+ */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action

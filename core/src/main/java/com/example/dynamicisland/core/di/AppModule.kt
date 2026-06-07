@@ -34,7 +34,7 @@ object AppModule {
     fun provideIslandGenerativeEngine(
         @ApplicationContext context: Context,
         neuralCore: IslandNeuralCore,
-        controller: IslandController
+        controller: dagger.Lazy<IslandController>
     ): IslandGenerativeEngine {
         return IslandGenerativeEngine(context, neuralCore, controller)
     }

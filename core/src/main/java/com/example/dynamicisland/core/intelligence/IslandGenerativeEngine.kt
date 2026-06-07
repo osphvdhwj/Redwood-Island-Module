@@ -1,16 +1,11 @@
 package com.example.dynamicisland.core.intelligence
 
 import android.content.Context
-import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.core.domain.state.IslandController
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
-import com.example.dynamicisland.core.model.*
-import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.model.ActivityType
-import com.example.dynamicisland.shared.model.IslandIntent
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.settings.*
 import com.google.mlkit.nl.entityextraction.*
+import dagger.Lazy
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,23 +16,21 @@ import javax.inject.Singleton
  * Processes screen content using on-device ML Kit Entity Extraction.
  * Predicts user intent and generates proactive Dynamic Island states.
  */
+
 @Singleton
 class IslandGenerativeEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val neuralCore: IslandNeuralCore,
-    private val controller: com.example.dynamicisland.core.domain.state.IslandController
+    private val controller: Lazy<IslandController>
 ) {
     
-    // ... rest of engine ...
+    // ... model init ...
 
-    /**
-     * Entry point for processing raw text from Ghost Satellites.
-     */
     fun processScreenContent(pkg: String, rawText: String) {
         if (rawText.isBlank()) return
         
         // 🛡️ Proactive Performance Hook
-        controller.applyProactivePerformance(pkg)
+        controller.get().applyProactivePerformance(pkg)
         
         entityExtractor.annotate(rawText)
             .addOnSuccessListener { annotations ->
