@@ -1,25 +1,12 @@
 package com.example.dynamicisland.core.intelligence.nn
 
-import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.model.*
-import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
-
 /**
  * 🚀 MULTI-LAYER PERCEPTRON (MLP)
- * 
- * Supports deep forward passes and dynamic backpropagation (SGD).
- * Designed to hold 10,000+ parameters for complex behavioral mapping.
  */
 class SequentialNet(val layerSizes: IntArray) {
     val weights = Array(layerSizes.size - 1) { i -> Tensor(layerSizes[i], layerSizes[i + 1]).apply { randomize() } }
     val biases = Array(layerSizes.size - 1) { i -> Tensor(1, layerSizes[i + 1]).apply { randomize() } }
 
-    /**
-     * Forward pass generating an output probability distribution.
-     * @param input Tensor of shape [1, input_size]
-     */
     fun forward(input: Tensor): Tensor {
         var current = input
         for (i in weights.indices) {
@@ -31,16 +18,9 @@ class SequentialNet(val layerSizes: IntArray) {
         return current.softmax()
     }
 
-    /**
-     * Trains the network on a single sample using Stochastic Gradient Descent.
-     * @param input Tensor of shape [1, input_size]
-     * @param targetIndex The index of the correct output class.
-     * @param lr Learning Rate.
-     */
     fun train(input: Tensor, targetIndex: Int, lr: Float) {
-        // Forward pass with activations cached for backprop
         val activations = mutableListOf<Tensor>(input)
-        val zValues = mutableListOf<Tensor>() // Pre-activation sums
+        val zValues = mutableListOf<Tensor>() 
 
         var current = input
         for (i in weights.indices) {
@@ -51,7 +31,6 @@ class SequentialNet(val layerSizes: IntArray) {
             activations.add(current)
         }
 
-        // Backpropagation: Calculate Output Error (Cross Entropy + Softmax derivative)
         val output = activations.last()
         val dZ = Tensor(1, output.cols)
         for (i in 0 until output.cols) {
@@ -60,11 +39,9 @@ class SequentialNet(val layerSizes: IntArray) {
 
         var currentError = dZ
 
-        // Propagate backwards
         for (i in weights.indices.reversed()) {
             val prevActivation = activations[i]
             
-            // Calculate gradients
             val dW = Tensor(weights[i].rows, weights[i].cols)
             for (r in 0 until prevActivation.cols) {
                 for (c in 0 until currentError.cols) {
@@ -72,9 +49,8 @@ class SequentialNet(val layerSizes: IntArray) {
                 }
             }
             
-            val dB = currentError // For batch size 1
+            val dB = currentError
 
-            // Calculate error for next layer down (if not input layer)
             var nextError: Tensor? = null
             if (i > 0) {
                 nextError = Tensor(1, weights[i].rows)
@@ -84,7 +60,6 @@ class SequentialNet(val layerSizes: IntArray) {
                     }
                 }
                 
-                // Derivative of ReLU
                 val zPrev = zValues[i - 1]
                 for (j in 0 until nextError.cols) {
                     if (zPrev[0, j] <= 0f) {
@@ -93,7 +68,6 @@ class SequentialNet(val layerSizes: IntArray) {
                 }
             }
 
-            // Apply gradients (SGD)
             for (j in weights[i].data.indices) {
                 weights[i].data[j] -= lr * dW.data[j]
             }

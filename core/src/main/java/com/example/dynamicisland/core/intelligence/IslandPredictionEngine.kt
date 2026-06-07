@@ -15,10 +15,6 @@ import java.util.Calendar
 
 /**
  * 🧠 ELITE NEURAL PREDICTION ENGINE
- * 
- * Uses a true Multi-Layer Perceptron (MLP) built from scratch in Kotlin.
- * Contains over 12,000 parameters to map non-linear relationships between 
- * time, day, battery, and previous app usage to predict the next user action.
  */
 class IslandPredictionEngine private constructor(private val context: Context) {
 
@@ -27,7 +23,7 @@ class IslandPredictionEngine private constructor(private val context: Context) {
     private val INPUT_DIM = 4
     private val HIDDEN_1 = 64
     private val HIDDEN_2 = 128
-    private val MAX_APPS = 100 // Top 100 most used apps
+    private val MAX_APPS = 100 
     
     private val mlp = SequentialNet(intArrayOf(INPUT_DIM, HIDDEN_1, HIDDEN_2, MAX_APPS))
     
@@ -42,10 +38,6 @@ class IslandPredictionEngine private constructor(private val context: Context) {
         seedAppIndices()
     }
 
-    /**
-     * Called by the system when a new app is launched.
-     * This acts as the "Online Training" trigger.
-     */
     fun onAppForegrounded(packageName: String, batteryLevel: Int = 50) {
         scope.launch {
             if (!appIndexMap.containsKey(packageName)) {
@@ -53,31 +45,20 @@ class IslandPredictionEngine private constructor(private val context: Context) {
                     val idx = appIndexMap.size
                     appIndexMap[packageName] = idx
                     indexAppMap[idx] = packageName
-                } else return@launch // App not tracked
+                } else return@launch 
             }
             
             val targetIdx = appIndexMap[packageName]!!
             
-            // 1. Train the network on what just happened
             val inputTensor = buildInputVector(batteryLevel)
             mlp.train(inputTensor, targetIdx, 0.01f)
             
-            // 2. Predict what will happen next
             currentAppIndex = targetIdx
             
             val nextInput = buildInputVector(batteryLevel)
             val outputDist = mlp.forward(nextInput)
-            
-            // Find argmax
-            var maxProb = -1f
-            var maxIdx = -1
-            for (i in 0 until MAX_APPS) {
-                val prob = outputDist[0, i]
-                if (prob > maxProb) {
-                    maxProb = prob
-                    maxIdx = i
-                }
-            }
+            val maxIdx = outputDist.argmax()
+            val maxProb = outputDist[0, maxIdx]
             
             if (maxIdx != -1 && maxProb > 0.6f && indexAppMap.containsKey(maxIdx)) {
                 val predPkg = indexAppMap[maxIdx]!!
@@ -91,8 +72,8 @@ class IslandPredictionEngine private constructor(private val context: Context) {
 
     private fun buildInputVector(battery: Int): Tensor {
         val cal = Calendar.getInstance()
-        val hour = cal.get(Calendar.HOUR_OF_DAY) / 24f // Normalized 0-1
-        val day = cal.get(Calendar.DAY_OF_WEEK) / 7f // Normalized 0-1
+        val hour = cal.get(Calendar.HOUR_OF_DAY) / 24f 
+        val day = cal.get(Calendar.DAY_OF_WEEK) / 7f 
         val prevApp = currentAppIndex.toFloat() / MAX_APPS.toFloat()
         val bat = battery / 100f
         

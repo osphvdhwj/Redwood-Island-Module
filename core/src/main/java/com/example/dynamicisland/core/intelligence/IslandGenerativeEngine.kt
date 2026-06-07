@@ -29,13 +29,9 @@ class IslandGenerativeEngine @Inject constructor(
     )
 
     init {
-        // Download the ML model in the background
         entityExtractor.downloadModelIfNeeded()
     }
 
-    /**
-     * Entry point for processing raw text from Ghost Satellites.
-     */
     fun processScreenContent(pkg: String, rawText: String) {
         if (rawText.isBlank()) return
         
@@ -44,13 +40,13 @@ class IslandGenerativeEngine @Inject constructor(
         
         entityExtractor.annotate(rawText)
             .addOnSuccessListener { annotations ->
-                val bestIntent = selectBestIntent(pkg, annotations)
+                val bestIntent = selectBestIntent(pkg, annotations, rawText)
                 bestIntent?.let { neuralCore.dispatch(it) }
             }
     }
 
-    private fun selectBestIntent(pkg: String, annotations: List<EntityAnnotation>): IslandIntent? {
-        if (annotations.isEmpty()) return null
+    private fun selectBestIntent(pkg: String, annotations: List<EntityAnnotation>, rawText: String): IslandIntent? {
+        if (annotations.isEmpty() && rawText.isEmpty()) return null
 
         // Priority 1: Flight Tracking
         val flight = annotations.find { it.entities.any { e -> e.type == Entity.TYPE_FLIGHT_NUMBER } }

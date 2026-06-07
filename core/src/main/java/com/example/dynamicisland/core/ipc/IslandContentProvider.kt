@@ -148,10 +148,7 @@ class IslandContentProvider : ContentProvider() {
             try {
                 val legacy = ctx.getSharedPreferences("island_prefs", Context.MODE_PRIVATE)
                 bootstrapFromSharedPrefs(legacy)
-                Log.i(TAG, "Bootstrapped ${store.size} keys from legacy prefs")
-            } catch (e: Exception) {
-                Log.w(TAG, "No legacy prefs to bootstrap: ${e.message}")
-            }
+            } catch (e: Exception) { }
         }
         return true
     }
@@ -318,15 +315,15 @@ class IslandContentProvider : ContentProvider() {
             }
 
             "CLEAR_AI_MEMORY" -> {
-                context?.let { 
-                    com.example.dynamicisland.domain.state.IslandNeuralCore(it).clearMemory()
+                try {
+                    getEntryPoint().neuralCore().clearMemory()
                     result.putBoolean("ok", true)
-                }
+                } catch (_: Exception) {}
             }
             "EXPORT_AI_DATA" -> {
-                context?.let {
-                    result.putString("v", com.example.dynamicisland.domain.state.IslandNeuralCore(it).exportData())
-                }
+                try {
+                    result.putString("v", getEntryPoint().neuralCore().exportData())
+                } catch (_: Exception) {}
             }
             
             "GET_AI_WEIGHTS" -> {
@@ -350,12 +347,7 @@ class IslandContentProvider : ContentProvider() {
                 val data = extras ?: Bundle()
                 context?.let {
                     val entryPoint = getEntryPoint()
-                    
-                    if (eventType == "KEYBOARD_SYNC") {
-                        val height = data.getInt("keyboard_height")
-                        val visible = data.getBoolean("is_visible")
-                        // Forward to controller via neural core if needed
-                    } else if (eventType == "SCREEN_CONTENT_UPDATE") {
+                    if (eventType == "SCREEN_CONTENT_UPDATE") {
                         val pkg = data.getString("package") ?: ""
                         val text = data.getString("raw_text") ?: ""
                         entryPoint.generativeEngine().processScreenContent(pkg, text)

@@ -1,22 +1,12 @@
 package com.example.dynamicisland.core.intelligence.nn
 
-import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.model.*
-import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.random.Random
 
 /**
  * 🧠 ELITE NATIVE TENSOR ENGINE
- * 
- * A zero-dependency, highly optimized matrix math and neural network engine
- * written entirely in Kotlin. Supports 10,000+ parameters, Backpropagation,
- * and Non-Linear Activation (ReLU, Softmax).
  */
-
 class Tensor(val rows: Int, val cols: Int) {
     val data = FloatArray(rows * cols)
 
@@ -25,11 +15,22 @@ class Tensor(val rows: Int, val cols: Int) {
 
     fun randomize() {
         for (i in data.indices) {
-            data[i] = (Random.nextFloat() * 2f - 1f) * 0.1f // Small random init (Xavier-ish)
+            data[i] = (Random.nextFloat() * 2f - 1f) * 0.1f
         }
     }
 
-    // Matrix Multiplication (Forward Pass)
+    fun argmax(): Int {
+        var maxVal = Float.NEGATIVE_INFINITY
+        var maxIdx = -1
+        for (i in data.indices) {
+            if (data[i] > maxVal) {
+                maxVal = data[i]
+                maxIdx = i
+            }
+        }
+        return maxIdx
+    }
+
     fun dot(other: Tensor): Tensor {
         if (this.cols != other.rows) throw IllegalArgumentException("Shape mismatch: ${this.cols} != ${other.rows}")
         val result = Tensor(this.rows, other.cols)
@@ -45,7 +46,6 @@ class Tensor(val rows: Int, val cols: Int) {
         return result
     }
 
-    // Element-wise Addition (Bias addition)
     fun add(other: Tensor): Tensor {
         val result = Tensor(rows, cols)
         for (i in data.indices) {
@@ -54,7 +54,6 @@ class Tensor(val rows: Int, val cols: Int) {
         return result
     }
 
-    // ReLU Activation
     fun relu(): Tensor {
         val result = Tensor(rows, cols)
         for (i in data.indices) {
@@ -63,7 +62,6 @@ class Tensor(val rows: Int, val cols: Int) {
         return result
     }
 
-    // Softmax Activation (for output probabilities)
     fun softmax(): Tensor {
         val result = Tensor(rows, cols)
         var maxVal = Float.NEGATIVE_INFINITY

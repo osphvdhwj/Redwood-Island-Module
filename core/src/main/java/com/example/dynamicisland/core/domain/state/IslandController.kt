@@ -1,13 +1,9 @@
 package com.example.dynamicisland.core.domain.state
 
 import android.content.*
-import android.database.ContentObserver
-import android.graphics.Bitmap
 import android.media.AudioManager
 import android.os.*
 import android.provider.Settings
-import android.util.Log
-import android.util.LruCache
 import android.view.WindowManager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,23 +13,17 @@ import com.example.dynamicisland.core.accessibility.IslandAccessibilityManager
 import com.example.dynamicisland.core.achievements.AchievementManager
 import com.example.dynamicisland.core.audio.AudioBeatDetector
 import com.example.dynamicisland.core.bridge.MediaBridge
-import com.example.dynamicisland.core.data.repository.BatteryRepository
-import com.example.dynamicisland.core.data.repository.HardwareRepository
+import com.example.dynamicisland.core.data.repository.*
 import com.example.dynamicisland.core.data.repository.cleanup.CleanerManager
-import com.example.dynamicisland.core.data.repository.cleanup.IslandStorageManager
-import com.example.dynamicisland.core.data.repository.cleanup.IslandActionManager
 import com.example.dynamicisland.core.gesture.IslandGesture
 import com.example.dynamicisland.core.gesture.MLGestureClassifier
 import com.example.dynamicisland.core.intelligence.IslandPredictionEngine
-import com.example.dynamicisland.core.performance.DensityAwareIconCache
-import com.example.dynamicisland.core.model.IslandTheme
-import com.example.dynamicisland.core.model.IslandShape
-import com.example.dynamicisland.core.model.IslandUiState
+import com.example.dynamicisland.core.intelligence.DensityAwareIconCache
+import com.example.dynamicisland.core.model.*
 import com.example.dynamicisland.core.performance.IslandBlurEngine
 import com.example.dynamicisland.core.sensors.ProximityWakeManager
 import com.example.dynamicisland.core.ui.DynamicIslandView
 import com.example.dynamicisland.core.util.RedwoodLogger
-import com.example.dynamicisland.shared.ipc.IslandIPCClient
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.settings.SettingsManager
@@ -44,13 +34,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import de.robv.android.xposed.XposedBridge
 
 /**
  * 🚀 ELITE ISLAND CONTROLLER
- * 
- * The central logic hub for the standalone Root Core Application.
- * Orchestrates UI state, hardware interactions, and AI intelligence.
  */
 @Singleton
 class IslandController @Inject constructor(
@@ -69,21 +55,12 @@ class IslandController @Inject constructor(
     private val batteryRepository: BatteryRepository
 ) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    
-    private val activeExternalActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
-    private val mediaBridge by lazy { MediaBridge(context, mediaManager) }
     private val blurEngine by lazy { IslandBlurEngine.get(context) }
     
-    val actionManager by lazy { IslandActionManager(context, scope) }
-    val storageManager by lazy { IslandStorageManager(context) }
-
     private var _lastIslandState: IslandState = IslandState.HIDDEN
     private var _lastActiveModel: LiveActivityModel? = null
-    private var _lastSplitModel: LiveActivityModel? = null
     private val _activeTheme = mutableStateOf(IslandTheme())
     
-    val currentHardware = mutableStateOf<LiveActivityModel.HardwareMonitor?>(null)
-
     internal var islandView: DynamicIslandView? = null
     private var currentViewSyncJob: Job? = null
     
@@ -99,9 +76,9 @@ class IslandController @Inject constructor(
     private val audioBeatDetector by lazy { AudioBeatDetector() }
     private val accessibilityManager by lazy { IslandAccessibilityManager(context) }
     private val proximityWakeManager by lazy { ProximityWakeManager(context) }
+    private val mediaBridge by lazy { MediaBridge(context, mediaManager) }
 
     init {
-        // --- 🎨 Dynamic Color Sync ---
         scope.launch {
             blurEngine.vibrantColor.collect { vibrant ->
                 if (vibrant != null && settingsState.dynamicColors) {
@@ -115,7 +92,6 @@ class IslandController @Inject constructor(
             }
         }
 
-        // --- 🤖 AI INTELLIGENCE LOOP ---
         scope.launch {
             predictionEngine.prediction.collect { prediction ->
                 if (prediction != null && prediction.confidenceScore > 0.7f) {
@@ -125,7 +101,6 @@ class IslandController @Inject constructor(
             }
         }
 
-        // --- 👆 ML GESTURE LOOP ---
         scope.launch {
             gestureClassifier.gestureFlow.collect { result ->
                 if (!result.wasAccidental) {
@@ -317,7 +292,7 @@ class IslandController @Inject constructor(
             "SET_PERFORMANCE_WILD" -> {
                 hardwareRepository.setPerformanceLevel(PerformanceLevel.WILD)
                 postTransientNotification(
-                    LiveActivityModel.General("sys_perf", ActivityType.MESSAGE, "Performance", "Wild Mode Active", android.graphics.Color.YELLOW),
+                    LiveActivityModel.General("sys_perf", ActivityType.MESSAGE, "Performance", "Wild Mode Active", 0xFFFFFF00.toInt()),
                     3000L
                 )
             }
@@ -348,7 +323,7 @@ class IslandController @Inject constructor(
         cleanerManager.onStop()
         scope.cancel()
         mediaManager.destroy()
-        callManager.destroy()
+        callManager.onStop()
     }
 
     private val callManager = IslandCallManager(context, context.getSystemService(Context.AUDIO_SERVICE) as AudioManager, scope) { evaluatePriority() }
