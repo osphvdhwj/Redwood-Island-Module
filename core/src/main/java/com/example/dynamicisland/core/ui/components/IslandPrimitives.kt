@@ -21,7 +21,12 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.core.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
 
 /**
  * The core physical container for all Island states.

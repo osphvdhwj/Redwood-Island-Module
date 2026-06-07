@@ -4,6 +4,11 @@ import android.content.Context
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.MotionEvent
+import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow

@@ -7,6 +7,11 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.shared.settings.IconPack
 
 /**

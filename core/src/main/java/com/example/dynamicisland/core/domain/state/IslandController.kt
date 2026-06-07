@@ -25,6 +25,10 @@ import com.example.dynamicisland.core.gesture.MLGestureClassifier
 import com.example.dynamicisland.core.hook.CrDroidAPIHook
 import com.example.dynamicisland.core.hook.InfinityXAPIHook
 import com.example.dynamicisland.core.intelligence.IslandPredictionEngine
+import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.core.model.IslandShape
+import com.example.dynamicisland.core.model.IslandTheme
+import com.example.dynamicisland.core.model.IslandUiState
 import com.example.dynamicisland.core.performance.IslandBlurEngine
 import com.example.dynamicisland.core.sensors.ProximityWakeManager
 import com.example.dynamicisland.core.ui.DynamicIslandView
@@ -32,9 +36,6 @@ import com.example.dynamicisland.core.util.*
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.ipc.BrainRelay
 import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.model.IslandShape
-import com.example.dynamicisland.core.model.IslandTheme
-import com.example.dynamicisland.core.model.IslandUiState
 import com.example.dynamicisland.shared.settings.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.lang.ref.WeakReference

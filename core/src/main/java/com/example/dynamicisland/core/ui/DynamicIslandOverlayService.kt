@@ -8,7 +8,12 @@ import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
 import android.view.WindowManager
+import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.domain.state.IslandController
+import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 

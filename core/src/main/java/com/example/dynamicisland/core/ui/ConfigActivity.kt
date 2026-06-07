@@ -26,7 +26,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.manager.IslandBackupManager
+import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.shared.settings.SettingsManager
 import com.example.dynamicisland.shared.settings.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint

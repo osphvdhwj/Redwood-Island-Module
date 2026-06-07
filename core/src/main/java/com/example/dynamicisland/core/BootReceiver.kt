@@ -3,7 +3,9 @@ package com.example.dynamicisland.core
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
 import kotlinx.coroutines.MainScope
 
 class BootReceiver : BroadcastReceiver() {

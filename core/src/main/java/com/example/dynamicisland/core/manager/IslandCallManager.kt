@@ -1,4 +1,8 @@
 package com.example.dynamicisland.core.manager
+import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.core.domain.state.*
 
 import android.content.BroadcastReceiver
 import android.content.Context

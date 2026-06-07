@@ -19,8 +19,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.model.*
 import com.example.dynamicisland.core.ui.components.SettingsCategoryHeader
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

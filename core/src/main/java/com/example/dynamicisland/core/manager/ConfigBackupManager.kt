@@ -3,6 +3,11 @@ package com.example.dynamicisland.core.manager
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlinx.coroutines.Dispatchers

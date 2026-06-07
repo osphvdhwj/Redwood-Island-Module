@@ -1,5 +1,10 @@
 package com.example.dynamicisland.core.intelligence.nn
 
+import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.random.Random

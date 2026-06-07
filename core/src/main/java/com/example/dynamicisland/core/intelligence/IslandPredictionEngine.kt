@@ -4,9 +4,13 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.util.Log
-import com.example.dynamicisland.core.intelligence.nn.SequentialNet
-import com.example.dynamicisland.core.intelligence.nn.Tensor
+import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.core.model.*
 import com.example.dynamicisland.core.util.RedwoodLogger
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
+import java.util.Calendar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -16,7 +20,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.Calendar
 
 /**
  * 🧠 ELITE NEURAL PREDICTION ENGINE

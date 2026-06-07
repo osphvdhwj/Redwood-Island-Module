@@ -11,10 +11,15 @@ import android.os.SystemProperties
 import android.view.Choreographer
 import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
 import com.example.dynamicisland.core.domain.lifecycle.BackendComponent
+import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
+import com.example.dynamicisland.core.model.*
 import com.example.dynamicisland.core.util.shell.RootShellEngine
 import com.example.dynamicisland.core.util.shell.SysfsController
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.model.IslandIntent
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.shared.util.XposedExtensions
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.robv.android.xposed.XposedBridge

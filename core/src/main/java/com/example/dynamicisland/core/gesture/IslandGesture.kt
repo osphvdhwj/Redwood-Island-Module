@@ -1,5 +1,11 @@
 package com.example.dynamicisland.core.gesture
 
+import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
+
 /**
  * Every recognisable gesture for the Dynamic Island.
  * Expanded with multi-finger and custom library support.

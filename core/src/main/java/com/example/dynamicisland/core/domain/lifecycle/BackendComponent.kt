@@ -1,5 +1,11 @@
 package com.example.dynamicisland.core.domain.lifecycle
 
+import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
+
 /**
  * REWOOD LIFECYCLE PROTOCOL
  *

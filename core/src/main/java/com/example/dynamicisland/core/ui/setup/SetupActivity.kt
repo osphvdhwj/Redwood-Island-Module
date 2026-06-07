@@ -32,11 +32,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.core.model.*
 import com.example.dynamicisland.core.ui.ConfigActivity
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
 import com.example.dynamicisland.core.ui.design.glassmorphicCard
 import com.example.dynamicisland.core.util.IslandProcessUtils
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
 import kotlinx.coroutines.launch
 
 /**

@@ -1,5 +1,11 @@
 package com.example.dynamicisland.core.experimental
 
+import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
+
 class MorseCodeInputHandler {
     private val morseMap = mapOf(
         ".-" to 'A', "-..." to 'B', "-.-." to 'C', "-.." to 'D',

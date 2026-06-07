@@ -1,9 +1,12 @@
 package com.example.dynamicisland.core.model
 
+import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.core.model.IslandTheme
 import com.example.dynamicisland.shared.model.LiveActivityModel
 import com.example.dynamicisland.shared.model.PerformanceLevel
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.shared.settings.SettingsState
 
 /**
