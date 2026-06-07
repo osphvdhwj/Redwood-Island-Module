@@ -1,4 +1,4 @@
-package com.example.dynamicisland.shared.ipc
+package com.example.dynamicisland.core.ipc
 
 import android.content.*
 import android.database.Cursor

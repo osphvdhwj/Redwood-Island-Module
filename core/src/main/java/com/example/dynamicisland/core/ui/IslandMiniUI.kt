@@ -2,37 +2,24 @@ package com.example.dynamicisland.core.ui
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.dynamicisland.core.R
-import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.core.model.*
-import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.settings.*
 
 @Composable
 fun IslandMiniUI(model: LiveActivityModel) {
@@ -41,7 +28,7 @@ fun IslandMiniUI(model: LiveActivityModel) {
         targetState = model,
         transitionSpec = {
             fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300)) using
-            SizeTransform { initialSize, targetSize -> tween(300) }
+            SizeTransform { _, _ -> tween(300) }
         },
         label = "MiniPillContent"
     ) { currentModel ->
@@ -88,9 +75,10 @@ private fun MiniMusicView(music: LiveActivityModel.Music) {
     ) {
         // Left: Album Art
         Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(Color.DarkGray)) {
-            if (music.albumArt != null) {
+            val art = music.albumArt
+            if (art != null) {
                 Image(
-                    bitmap = music.albumArt.asImageBitmap(),
+                    bitmap = art.asImageBitmap(),
                     contentDescription = "Album Art",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -112,7 +100,8 @@ private fun MiniMusicView(music: LiveActivityModel.Music) {
 
         // Right: Play/pause indicator (waveform placeholder)
         Box(modifier = Modifier.width(30.dp).height(20.dp), contentAlignment = Alignment.Center) {
-            val color = if (music.dominantColor != null) Color(music.dominantColor) else Color.White
+            val dColor = music.dominantColor
+            val color = if (dColor != null) Color(dColor) else Color.White
             Text(
                 text = if (music.isPlaying) "ılılı" else "—",
                 color = color,
@@ -146,9 +135,10 @@ private fun MiniDownloadView(task: LiveActivityModel.OngoingTask) {
         }
 
         // Right: Live network speed
-        if (task.networkSpeed != null) {
+        val speed = task.networkSpeed
+        if (speed != null) {
             Text(
-                text = task.networkSpeed,
+                text = speed,
                 color = Color.Cyan,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
@@ -167,9 +157,10 @@ private fun MiniLinkView(link: LiveActivityModel.LinkIntercept) {
     ) {
         // Left: Target app icon and name
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (link.targetAppIcon != null) {
+            val icon = link.targetAppIcon
+            if (icon != null) {
                 Image(
-                    bitmap = link.targetAppIcon.asImageBitmap(),
+                    bitmap = icon.asImageBitmap(),
                     contentDescription = null,
                     modifier = Modifier.size(20.dp).clip(CircleShape)
                 )

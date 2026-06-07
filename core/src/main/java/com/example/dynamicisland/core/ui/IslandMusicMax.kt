@@ -11,9 +11,6 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.*
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,34 +20,24 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.dynamicisland.core.R
-import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.core.model.*
-import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
 
 @Composable
 fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
     val view = this
     val dynamicTextColor = Color(music.titleTextColor).takeIf { it != Color.Transparent && it != Color.Black } ?: Color.White
-    val theme = LocalIslandTheme.current
     val context = LocalContext.current
     
     var isBluetooth by remember { mutableStateOf(false) }
@@ -74,8 +61,9 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         // --- Layer 1: Cinematic Blurred Background ---
-        if (music.albumArt != null) {
-            val bgBitmap = music.blurredAlbumArt?.asImageBitmap() ?: music.albumArt.asImageBitmap()
+        val art = music.albumArt
+        if (art != null) {
+            val bgBitmap = music.blurredAlbumArt?.asImageBitmap() ?: art.asImageBitmap()
             Image(
                 bitmap = bgBitmap,
                 contentDescription = null,
@@ -93,7 +81,8 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
             animationSpec = infiniteRepeatable(tween(2500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
             label = "p"
         )
-        val dominantColor = music.dominantColor?.let { Color(it) } ?: Color.Black
+        val dColor = music.dominantColor
+        val dominantColor = if (dColor != null) Color(dColor) else Color.Black
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -117,9 +106,10 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (music.appIcon != null) {
+                    val appIcon = music.appIcon
+                    if (appIcon != null) {
                         Image(
-                            bitmap = music.appIcon.asImageBitmap(),
+                            bitmap = appIcon.asImageBitmap(),
                             contentDescription = null,
                             modifier = Modifier
                                 .size(20.dp)
@@ -160,9 +150,10 @@ fun DynamicIslandView.MusicMax(music: LiveActivityModel.Music) {
                 var artPressed by remember { mutableStateOf(false) }
                 val artScale by animateFloatAsState(if(artPressed) 0.9f else 1f, spring(dampingRatio = 0.6f, stiffness = 400f), label="art")
                 
-                if (music.albumArt != null) {
+                val albumArt = music.albumArt
+                if (albumArt != null) {
                     Image(
-                        bitmap = music.albumArt.asImageBitmap(),
+                        bitmap = albumArt.asImageBitmap(),
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier

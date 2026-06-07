@@ -7,22 +7,14 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Process
 import android.os.StatFs
-import android.os.SystemProperties
 import android.view.Choreographer
 import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
 import com.example.dynamicisland.core.domain.lifecycle.BackendComponent
-import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
-import com.example.dynamicisland.core.model.*
-import com.example.dynamicisland.core.util.shell.RootShellEngine
-import com.example.dynamicisland.core.util.shell.SysfsController
-import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.core.util.RedwoodLogger
 import com.example.dynamicisland.shared.model.IslandIntent
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.shared.util.XposedExtensions
+import com.example.dynamicisland.shared.model.PerformanceLevel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import de.robv.android.xposed.XposedBridge
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,67 +27,33 @@ import kotlinx.coroutines.withContext
  * 🎮 GAME HUB REPOSITORY (OEM Engine)
  *
  * An industry-grade performance engine that brings OEM-level gaming optimizations 
- * to AOSP devices. Integrates deep system hooks with kernel-level commands.
- *
- * ## Key Features:
- * 1. **Kernel Memory Boost**: Uses UID 1000 permissions to drop kernel PageCache and compact RAM.
- * 2. **Hardware Clock Locking**: Manipulates Snapdragon Adreno GPU power levels and CPU governors.
- * 3. **MIUI Identity Spoofing**: Tricks games into unlocking 120FPS by faking Xiaomi hardware.
- * 4. **Adaptive Monitoring**: High-frequency FPS and hardware load tracking synchronized to the Neural Core.
+ * to AOSP devices. Managed natively by the Core App daemon.
  */
-
 @Singleton
 class GameHubRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val dispatchers: DispatcherProvider,
-    private val neuralCore: IslandNeuralCore,
-    private val sysfs: SysfsController,
-    private val rootEngine: RootShellEngine
+    private val neuralCore: IslandNeuralCore
 ) : BackendComponent {
 
-    private const val TAG = "GameHubRepository"
+    private val TAG = "GameHubRepository"
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.io())
     
     private var frameCount = 0
     private var lastTime = 0L
     private var isMonitoring = false
 
-    /**
-     * Supported hardware performance profiles.
-     */
-    enum class PerformanceLevel {
-        /** Minimum clocks, maximum power saving. */
-        BATTERY,
-        /** Balanced clocks, reactive scaling. */
-        BALANCED,
-        /** Locked high clocks for stable FPS. */
-        PERFORMANCE,
-        /** Absolute maximum clocks, background suppression, highest priority. */
-        WILD
-    }
-
     override fun onStart() {
-        XposedBridge.log("$TAG: AOSP OEM-Level Engine initialized.")
+        RedwoodLogger.i(TAG, "AOSP OEM-Level Engine initialized.")
         spoofMiuiProps()
         startMonitoring()
-        
-        // 🧠 UI-TO-HARDWARE LINKAGE
-        scope.launch {
-            neuralCore.uiState.collect { state ->
-                setPerformanceLevel(state.performanceLevel)
-            }
-        }
     }
 
     override fun onStop() {
-        XposedBridge.log("$TAG: AOSP OEM-Level Engine stopping.")
+        RedwoodLogger.i(TAG, "AOSP OEM-Level Engine stopping.")
         isMonitoring = false
     }
 
-    /**
-     * Starts the high-frequency hardware monitor.
-     * Uses Choreographer to measure frame-to-frame intervals (FPS).
-     */
     private fun startMonitoring() {
         if (isMonitoring) return
         isMonitoring = true
@@ -120,9 +78,6 @@ class GameHubRepository @Inject constructor(
         }
     }
 
-    /**
-     * Dispatches current hardware vitals to the Island Neural Core.
-     */
     private fun updateStats(fps: Int) {
         scope.launch {
             try {
@@ -130,111 +85,61 @@ class GameHubRepository @Inject constructor(
                 val gpuBusy = File("/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage")
                     .takeIf { it.exists() }?.readText()?.trim()?.removeSuffix("%")?.toIntOrNull() ?: 0
                 
-                // CPU usage (Placeholder for complex proc parsing)
-                val cpuUsage = (10..90).random() 
-
                 neuralCore.dispatch(IslandIntent.UpdateGamingStats(
                     fps = fps.toFloat(),
                     frameMs = 1000f / fps.coerceAtLeast(1),
                     jankPct = 0f,
-                    cpuUsage = cpuUsage,
+                    cpuUsage = (10..90).random(), // Placeholder
                     gpuUsage = gpuBusy
                 ))
             } catch (_: Exception) {}
         }
     }
 
-    // --- 1. SYSTEM OPTIMIZER (RESOURCES) ---
-
-    /**
-     * Forcefully clears kernel and userspace memory.
-     * @return The amount of physical RAM freed in bytes.
-     */
     suspend fun boostMemory(): Long = withContext(dispatchers.io()) {
         var freedMemory = 0L
         try {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             val beforeMem = ActivityManager.MemoryInfo().apply { am.getMemoryInfo(this) }.availMem
 
-            // Userspace: Terminate background cached processes
-            am.runningAppProcesses?.forEach { app ->
-                if (app.importance >= ActivityManager.RunningAppProcessInfo.IMPORTANCE_BACKGROUND) {
-                    am.killBackgroundProcesses(app.processName)
-                }
-            }
-
-            // Kernel: Drop PageCache and compact RAM via Brain
-            sysfs.performMemoryTurbo()
+            // Drop kernel caches (Requires root via su)
+            executeShellCommand("echo 3 > /proc/sys/vm/drop_caches")
+            executeShellCommand("echo 1 > /proc/sys/vm/compact_memory")
 
             val afterMem = ActivityManager.MemoryInfo().apply { am.getMemoryInfo(this) }.availMem
             freedMemory = (afterMem - beforeMem).coerceAtLeast(0L)
             
-            XposedBridge.log("$TAG: Boost freed ${freedMemory / (1024 * 1024)} MB")
+            RedwoodLogger.i(TAG, "Boost freed ${freedMemory / (1024 * 1024)} MB")
         } catch (e: Exception) {
-            XposedBridge.log("$TAG ❌: Memory boost failed - ${e.message}")
+            RedwoodLogger.e(TAG, "Memory boost failed", e)
         }
         return@withContext freedMemory
     }
 
-    /**
-     * Securely wipes system logs and obsolete caches.
-     * @return The amount of storage space freed in bytes.
-     */
     suspend fun cleanJunk(): Long = withContext(dispatchers.io()) {
         var freedSpace = 0L
         try {
             val statBefore = StatFs(Environment.getDataDirectory().path)
             val bytesBefore = statBefore.availableBlocksLong * statBefore.blockSizeLong
             
-            rootEngine.runSequence(listOf(
-                "rm -rf /data/data/*/cache/*",
-                "rm -rf /data/user_de/0/*/cache/*",
-                "rm -rf /sdcard/Android/data/*/cache/*",
-                "rm -rf /data/log/*",
-                "rm -rf /data/tombstones/*",
-                "rm -rf /data/anr/*",
-                "rm -rf /data/dalvik-cache/*/oat/*/*.vdex"
-            ))
+            executeShellCommand("rm -rf /data/data/*/cache/*")
+            executeShellCommand("rm -rf /data/user_de/0/*/cache/*")
+            executeShellCommand("rm -rf /sdcard/Android/data/*/cache/*")
+            executeShellCommand("rm -rf /data/log/*")
+            executeShellCommand("rm -rf /data/tombstones/*")
+            executeShellCommand("rm -rf /data/anr/*")
 
             val statAfter = StatFs(Environment.getDataDirectory().path)
             val bytesAfter = statAfter.availableBlocksLong * statAfter.blockSizeLong
-            
             freedSpace = (bytesAfter - bytesBefore).coerceAtLeast(0L)
         } catch (e: Exception) {
-            XposedBridge.log("$TAG ❌: Junk cleaning failed - ${e.message}")
+            RedwoodLogger.e(TAG, "Junk cleaning failed", e)
         }
         return@withContext freedSpace
     }
 
-    /**
-     * Non-blocking I/O scan for large forgotten files.
-     */
-    suspend fun deepCleanScan(): List<File> = withContext(dispatchers.io()) {
-        val largeFiles = mutableListOf<File>()
-        try {
-            val sdcard = Environment.getExternalStorageDirectory()
-            sdcard.walkTopDown()
-                .maxDepth(4)
-                .onEnter { !it.isHidden && it.name != "Android" }
-                .filter { it.isFile }
-                .forEach { file ->
-                    if (file.length() > 50 * 1024 * 1024 || file.extension.lowercase() == "apk") {
-                        largeFiles.add(file)
-                    }
-                }
-        } catch (e: Exception) {
-            XposedBridge.log("$TAG ❌: Deep scan failed - ${e.message}")
-        }
-        return@withContext largeFiles
-    }
-
-    // --- 2. HARDWARE CONTROLLER (SCALING) ---
-
-    /**
-     * Switches the device's hardware governor and clock profile.
-     */
     fun setPerformanceLevel(level: PerformanceLevel) {
-        XposedBridge.log("$TAG: Applying Security Profile -> ${level.name}")
+        RedwoodLogger.i(TAG, "Applying Security Profile -> ${level.name}")
         scope.launch {
             try {
                 when (level) {
@@ -244,68 +149,44 @@ class GameHubRepository @Inject constructor(
                     PerformanceLevel.WILD -> applyWildProfile()
                 }
             } catch (e: Exception) {
-                XposedBridge.log("$TAG ❌: Failed to apply performance profile: ${e.message}")
+                RedwoodLogger.e(TAG, "Failed to apply performance profile", e)
             }
         }
     }
 
     private fun spoofMiuiProps() {
+        // Since we are in the Core App daemon with Root, we use 'resetprop' or 'setprop' via shell
+        executeShellCommand("setprop ro.miui.ui.version.name V14")
+        executeShellCommand("setprop ro.miui.ui.version.code 14")
+        executeShellCommand("setprop ro.product.mod_device redwood_global")
+    }
+
+    private fun applyBatteryProfile() {
+        executeShellCommand("for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo powersave > \$i; done")
+    }
+
+    private fun applyBalancedProfile() {
+        executeShellCommand("for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo schedutil > \$i; done")
+    }
+
+    private fun applyPerformanceProfile() {
+        executeShellCommand("for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$i; done")
+    }
+
+    private fun applyWildProfile() {
+        executeShellCommand("for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$i; done")
+        executeShellCommand("echo 0 > /sys/class/kgsl/kgsl-3d0/min_pwrlevel")
+    }
+
+    private fun executeShellCommand(cmd: String) {
         try {
-            SystemProperties.set("ro.miui.ui.version.name", "V14")
-            SystemProperties.set("ro.miui.ui.version.code", "14")
-            SystemProperties.set("ro.product.mod_device", "redwood_global")
-            
-            XposedExtensions.setStaticObjectFieldSafe(android.os.Build::class.java, "MANUFACTURER", "Xiaomi")
-            XposedExtensions.setStaticObjectFieldSafe(android.os.Build::class.java, "BRAND", "Xiaomi")
-            
-            XposedBridge.log("$TAG: MIUI Identity Spoofed.")
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
+            process.waitFor()
         } catch (e: Exception) {
-            XposedBridge.log("$TAG ⚠️: Failed to spoof properties: ${e.message}")
-        }
-    }
-
-    private suspend fun applyBatteryProfile() {
-        sysfs.setCpuGovernor("powersave")
-        sysfs.setGpuPowerLevels(5, 5)
-        Process.setThreadPriority(Process.THREAD_PRIORITY_LOWEST)
-    }
-
-    private suspend fun applyBalancedProfile() {
-        sysfs.setCpuGovernor("schedutil")
-        sysfs.setGpuPowerLevels(0, 5)
-        Process.setThreadPriority(Process.THREAD_PRIORITY_DEFAULT)
-    }
-
-    private suspend fun applyPerformanceProfile() {
-        sysfs.setCpuGovernor("performance")
-        sysfs.setGpuPowerLevels(0, 2)
-        Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_DISPLAY)
-        trimMemory(60)
-    }
-
-    private suspend fun applyWildProfile() {
-        sysfs.setCpuGovernor("performance")
-        sysfs.setGpuGovernor("performance")
-        sysfs.setGpuPowerLevels(0, 0)
-        Process.setThreadPriority(-20)
-        trimMemory(80)
-        killBackgroundProcesses()
-    }
-
-    private fun trimMemory(level: Int) {
-        try {
-            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            val method = ActivityManager::class.java.getMethod("trimMemory", Int::class.javaPrimitiveType)
-            method.invoke(am, level)
-        } catch (_: Exception) {}
-    }
-
-    private fun killBackgroundProcesses() {
-        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        am.runningAppProcesses?.forEach {
-            if (it.importance > ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) {
-                am.killBackgroundProcesses(it.processName)
-            }
+            try {
+                val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", cmd))
+                process.waitFor()
+            } catch (_: Exception) {}
         }
     }
 }

@@ -58,11 +58,11 @@ sealed class LiveActivityModel {
         override val type: ActivityType = ActivityType.MESSAGE,
         val title: String,
         val artist: String,
-        val albumArt: Bitmap? = null,
+        @JvmField val albumArt: Bitmap? = null,
         val albumArtUri: String? = null,
-        val blurredAlbumArt: Bitmap? = null,
-        val appIcon: Bitmap? = null,
-        val dominantColor: Int? = null,
+        @JvmField val blurredAlbumArt: Bitmap? = null,
+        @JvmField val appIcon: Bitmap? = null,
+        @JvmField val dominantColor: Int? = null,
         val titleTextColor: Int = -1, // WHITE
         val isPlaying: Boolean,
         val durationMs: Long,
@@ -123,7 +123,7 @@ sealed class LiveActivityModel {
         override val type: ActivityType = ActivityType.TIMER,
         val packageName: String,
         val appName: String,
-        val appIcon: Bitmap?,
+        @JvmField val appIcon: Bitmap?,
         val targetTimeMs: Long,
         override val isTransient: Boolean = true,
         override val isCritical: Boolean = true,
@@ -138,7 +138,7 @@ sealed class LiveActivityModel {
         val text: String,
         val progress: Int,
         val progressMax: Int,
-        val networkSpeed: String? = null,
+        @JvmField val networkSpeed: String? = null,
         override val isTransient: Boolean = true,
         override val isCritical: Boolean = false,
         override val isSensitive: Boolean = false
@@ -164,13 +164,12 @@ sealed class LiveActivityModel {
         override val isSensitive: Boolean = false
     ) : LiveActivityModel()
 
-    // Simplified Navigation for Shared
     data class Navigation(
         override val id: String = "sys_nav",
         override val type: ActivityType = ActivityType.NAVIGATION,
         val instruction: String,
         val distance: String,
-        val nextTurnIconId: String? = null, // Use ID instead of ImageVector
+        val nextTurnIconId: String? = null,
         override val isTransient: Boolean = false,
         override val isCritical: Boolean = false,
         override val isSensitive: Boolean = false
@@ -197,6 +196,58 @@ sealed class LiveActivityModel {
         override val isCritical: Boolean = false,
         override val isSensitive: Boolean = false
     ) : LiveActivityModel()
+
+    data class LinkIntercept(
+        override val id: String,
+        val url: String,
+        val urlHost: String,
+        @JvmField val targetAppIcon: Bitmap?,
+        val targetAppName: String,
+        override val type: ActivityType = ActivityType.MESSAGE,
+        override val isTransient: Boolean = true,
+        override val isCritical: Boolean = false,
+        override val isSensitive: Boolean = false
+    ) : LiveActivityModel()
+
+    data class RealityPill(
+        override val id: String,
+        val contextLabel: String,
+        val actionLabel: String,
+        override val type: ActivityType = ActivityType.NONE,
+        override val isTransient: Boolean = true,
+        override val isCritical: Boolean = false,
+        override val isSensitive: Boolean = false
+    ) : LiveActivityModel()
+    
+    data class WeatherMood(
+        override val id: String = "sys_weather",
+        val temp: String,
+        val condition: String,
+        override val type: ActivityType = ActivityType.NONE,
+        override val isTransient: Boolean = true,
+        override val isCritical: Boolean = false,
+        override val isSensitive: Boolean = false
+    ) : LiveActivityModel()
+    
+    data class VolumeMixer(
+        override val id: String = "sys_volume",
+        val mediaLevel: Int,
+        val ringLevel: Int,
+        val alarmLevel: Int,
+        val systemLevel: Int,
+        override val type: ActivityType = ActivityType.HARDWARE,
+        override val isTransient: Boolean = true,
+        override val isCritical: Boolean = false,
+        override val isSensitive: Boolean = false
+    ) : LiveActivityModel()
+
+    object QuickNote : LiveActivityModel() {
+        override val id: String = "sys_quicknote"
+        override val type: ActivityType = ActivityType.ONGOING_TASK
+        override val isTransient: Boolean = false
+        override val isCritical: Boolean = false
+        override val isSensitive: Boolean = true
+    }
 }
 
 data class SimpleNotification(
@@ -204,7 +255,7 @@ data class SimpleNotification(
     val title: String,
     val text: String,
     val timestamp: Long,
-    val avatar: Bitmap?,
+    @JvmField val avatar: Bitmap?,
     val remoteActions: List<RemoteNotificationAction>
 )
 
@@ -216,7 +267,7 @@ data class RemoteNotificationAction(
 
 data class CustomMediaAction(
     val action: String,
-    val icon: Bitmap?,
+    @JvmField val icon: Bitmap?,
     val label: String
 )
 

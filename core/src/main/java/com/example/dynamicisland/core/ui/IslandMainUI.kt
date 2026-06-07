@@ -55,10 +55,8 @@ import com.example.dynamicisland.core.gesture.IslandGesture
 import com.example.dynamicisland.core.manager.*
 import com.example.dynamicisland.core.model.*
 import com.example.dynamicisland.core.performance.eliteFluidSurface
-import com.example.dynamicisland.core.performance.metaballFluid
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.model.IslandState
 import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.shared.settings.IconPack
 import kotlin.math.abs
@@ -159,7 +157,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
                     transformOrigin = TransformOrigin(0.5f, 0.5f) 
                 }
                 .eliteFluidSurface(
-                    pill1 = android.graphics.Rect(0, 0, with(density) { animatedWidth.roundToPx() }, with(density) { animatedHeight.roundToPx() }),
+                    pill1 = android.graphics.Rect(0, 0, with(density) { animatedWidth.toPx().toInt() }, with(density) { animatedHeight.toPx().toInt() }),
                     velocity = view.currentVelocity.value,
                     time = time,
                     color = bgColor,

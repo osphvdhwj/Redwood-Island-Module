@@ -1,7 +1,6 @@
 package com.example.dynamicisland.core.util
 
 import android.util.Log
-import de.robv.android.xposed.XposedBridge
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -9,12 +8,12 @@ import java.util.Locale
 
 /**
  * STAFF-LEVEL DIAGNOSTIC ENGINE
- *
+ * 
  * Provides high-performance, structured logging with prioritized output
- * and optional local crash dumping for on-device debugging.
+ * and automated crash dumping for the Core App daemon.
  */
 object RedwoodLogger {
-    private const val TAG = "RedwoodIsland"
+    private const val TAG = "RedwoodCore"
     private const val LOG_DIR = "/sdcard/Redwood/logs"
     
     enum class Priority(val prefix: String) {
@@ -25,32 +24,33 @@ object RedwoodLogger {
         FATAL("💀 FATAL")
     }
 
+    // Support both (message) and (tag, message) patterns for flexibility
     fun d(message: String) = log(Priority.DEBUG, message)
+    fun d(tag: String, message: String) = log(Priority.DEBUG, "[$tag] $message")
+    
     fun i(message: String) = log(Priority.INFO, message)
+    fun i(tag: String, message: String) = log(Priority.INFO, "[$tag] $message")
+    
     fun w(message: String) = log(Priority.WARN, message)
+    fun w(tag: String, message: String) = log(Priority.WARN, "[$tag] $message")
+    
     fun e(message: String, throwable: Throwable? = null) = log(Priority.ERROR, message, throwable)
+    fun e(tag: String, message: String, throwable: Throwable? = null) = log(Priority.ERROR, "[$tag] $message", throwable)
+    
     fun f(message: String, throwable: Throwable? = null) = log(Priority.FATAL, message, throwable)
 
     private fun log(priority: Priority, message: String, throwable: Throwable? = null) {
-        val formattedMessage = "${priority.prefix}: $message"
-        
-        // 1. Always log to XposedBridge (Industry Standard)
-        XposedBridge.log("$TAG $formattedMessage")
-        if (throwable != null) {
-            XposedBridge.log(throwable)
-        }
-
-        // 2. Log to Logcat for real-time monitoring
+        // Log to Logcat for daemon debugging
         when (priority) {
             Priority.DEBUG -> Log.d(TAG, message)
             Priority.INFO -> Log.i(TAG, message)
             Priority.WARN -> Log.w(TAG, message)
-            Priority.ERROR, Priority.FATAL -> Log.e(TAG, message, throwable)
+            Priority.ERROR -> Log.e(TAG, message, throwable)
+            Priority.FATAL -> Log.e(TAG, "FATAL: $message", throwable)
         }
 
-        // 3. Conditional Crash Dumping
         if (priority == Priority.FATAL) {
-            dumpToDisk(formattedMessage, throwable)
+            dumpToDisk(message, throwable)
         }
     }
 
@@ -58,22 +58,9 @@ object RedwoodLogger {
         try {
             val dir = File(LOG_DIR)
             if (!dir.exists()) dir.mkdirs()
-            
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-            val file = File(dir, "crash_$timestamp.txt")
-            
-            val content = buildString {
-                appendLine("TIMESTAMP: $timestamp")
-                appendLine("MESSAGE: $message")
-                if (throwable != null) {
-                    appendLine("STACKTRACE:")
-                    appendLine(Log.getStackTraceString(throwable))
-                }
-            }
-            
-            file.writeText(content)
-        } catch (e: Exception) {
-            XposedBridge.log("$TAG ⚠️ Failed to dump crash to disk: ${e.message}")
-        }
+            val file = File(dir, "core_crash_$timestamp.txt")
+            file.writeText("MESSAGE: $message\nSTACKTRACE: ${Log.getStackTraceString(throwable)}")
+        } catch (_: Exception) {}
     }
 }

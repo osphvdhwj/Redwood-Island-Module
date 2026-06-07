@@ -237,7 +237,7 @@ object ProgrammaticIcons {
         defaultHeight = 24.dp,
         viewportWidth = 24f,
         viewportHeight = 24f
-    ).path(stroke = SolidColor(Color.White), strokeWidth = 1.5f) {
+    ).path(stroke = SolidColor(Color.White), strokeLineWidth = 1.5f) {
         moveTo(12f, 18f)
         lineTo(12.01f, 18.01f)
         moveTo(8.5f, 14.5f)
@@ -280,7 +280,7 @@ object ProgrammaticIcons {
         defaultHeight = 24.dp,
         viewportWidth = 24f,
         viewportHeight = 24f
-    ).path(stroke = SolidColor(Color.White), strokeWidth = 2f) {
+    ).path(stroke = SolidColor(Color.White), strokeLineWidth = 2f) {
         moveTo(2f, 6f)
         horizontalLineTo(22f)
         verticalLineTo(18f)
@@ -315,7 +315,7 @@ object ProgrammaticIcons {
         defaultHeight = 24.dp,
         viewportWidth = 24f,
         viewportHeight = 24f
-    ).path(stroke = SolidColor(Color.White), strokeWidth = 2f) {
+    ).path(stroke = SolidColor(Color.White), strokeLineWidth = 2f) {
         moveTo(5f, 5f)
         horizontalLineTo(19f)
         verticalLineTo(19f)

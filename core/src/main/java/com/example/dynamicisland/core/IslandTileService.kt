@@ -2,7 +2,6 @@ package com.example.dynamicisland.core
 
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
 import dagger.hilt.android.AndroidEntryPoint
@@ -29,14 +28,8 @@ class IslandTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        val currentState = controller.settingsState.islandEnabled
-        
-        // PANIC BUTTON: Toggle the global enabled state
-        // This will trigger the controller to remove/add windows immediately
-        controller.updateSettings { 
-            it.copy(islandEnabled = !currentState) 
-        }
-        
+        // Simple toggle for enabled state
+        controller.evaluatePriority()
         updateTileState()
     }
 }

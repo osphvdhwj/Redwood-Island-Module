@@ -14,12 +14,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.model.*
-import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.settings.*
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -33,7 +28,7 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
     val model = activeModel.value
     val musicModel = model as? LiveActivityModel.Music
     val weatherModel = model as? LiveActivityModel.WeatherMood
-    val settings = controller?.settingsState ?: SettingsState()
+    val settings = controller?.settingsState ?: com.example.dynamicisland.shared.settings.SettingsState()
     val pack = settings.iconPack
     
     val isMedia = musicModel != null && musicModel.isPlaying
@@ -45,15 +40,15 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
         // 🛡️ Optimization 1: Use spring for high-fidelity physical interaction
         val pulseScale by animateFloatAsState(
             targetValue = if (isPulsing) 1.15f else 1.0f,
-            animationSpec = if (pack is IconPack.iOS) spring(dampingRatio = 0.4f) else tween(200),
+            animationSpec = if (pack is com.example.dynamicisland.shared.settings.IconPack.iOS) spring(dampingRatio = 0.4f) else tween(200),
             label = "pulse_scale"
         )
         
         // 🛡️ Optimization 2: Infinite breathing on the UI thread layer
         val breathScale by rememberInfiniteTransition(label = "ring_pulse").animateFloat(
-            initialValue  = if (pulseStyle == RingPulseStyle.BREATH) 0.96f else 1.0f,
+            initialValue  = if (pulseStyle == com.example.dynamicisland.shared.settings.RingPulseStyle.BREATH) 0.96f else 1.0f,
             targetValue   = 1.0f,
-            animationSpec = if (pulseStyle == RingPulseStyle.BREATH) 
+            animationSpec = if (pulseStyle == com.example.dynamicisland.shared.settings.RingPulseStyle.BREATH) 
                 infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse)
             else 
                 infiniteRepeatable(tween(1000)),
@@ -97,7 +92,7 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
                 val (currentProgress, baseColor) = progressMetrics
                 
                 when (pack) {
-                    is IconPack.Futuristic -> {
+                    is com.example.dynamicisland.shared.settings.IconPack.Futuristic -> {
                         val segments = 12
                         val sweep = 360f / segments
                         for (i in 0 until segments) {
@@ -111,7 +106,7 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
                             )
                         }
                     }
-                    is IconPack.Pixel -> {
+                    is com.example.dynamicisland.shared.settings.IconPack.Pixel -> {
                         val dots = 8
                         for (i in 0 until dots) {
                             val angle = (i * (360f / dots)) - 90f
@@ -137,7 +132,7 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
                             color = baseColor,
                             startAngle = -90f, sweepAngle = 360f * currentProgress,
                             useCenter = false,
-                            style = Stroke(strokeW, cap = if (pack is IconPack.Outline) StrokeCap.Butt else StrokeCap.Round)
+                            style = Stroke(strokeW, cap = if (pack is com.example.dynamicisland.shared.settings.IconPack.Outline) StrokeCap.Butt else StrokeCap.Round)
                         )
                     }
                 }

@@ -28,12 +28,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.model.*
-import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.settings.*
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -80,9 +75,10 @@ fun DynamicIslandView.MusicMini(music: LiveActivityModel.Music) {
                 )
             }
             
-            if (music.albumArt != null) {
+            val art = music.albumArt
+            if (art != null) {
                 Image(
-                    bitmap = music.albumArt.asImageBitmap(),
+                    bitmap = art.asImageBitmap(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
