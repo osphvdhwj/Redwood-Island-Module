@@ -14,7 +14,17 @@ import com.example.dynamicisland.core.util.shell.AndroidShellExecutor
 import com.example.dynamicisland.core.util.shell.ShellExecutor
 import com.example.dynamicisland.shared.ipc.IslandIPCClient
 import com.example.dynamicisland.shared.settings.SettingsManager
-import dagger.Module
+import com.example.dynamicisland.core.domain.state.IslandNeuralCore
+import com.example.dynamicisland.core.util.shell.RootShellEngine
+import com.example.dynamicisland.core.util.shell.SysfsController
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -140,12 +150,6 @@ object AppModule {
     @Singleton
     fun provideIslandIPCClient(@ApplicationContext context: Context): IslandIPCClient {
         return IslandIPCClient.get(context)
-    }
-
-    @Provides
-    @Singleton
-    fun provideSystemEventProvider(): SystemEventProvider {
-        return AospEventProvider()
     }
 
     @Provides

@@ -1,4 +1,4 @@
-package com.example.dynamicisland.shared.model
+package com.example.dynamicisland.core.model
 
 import com.example.dynamicisland.shared.model.IslandState
 import com.example.dynamicisland.core.model.IslandTheme
