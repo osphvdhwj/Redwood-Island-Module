@@ -24,7 +24,6 @@ object RedwoodLogger {
         FATAL("💀 FATAL")
     }
 
-    // Support both (message) and (tag, message) patterns for flexibility
     fun d(message: String) = log(Priority.DEBUG, message)
     fun d(tag: String, message: String) = log(Priority.DEBUG, "[$tag] $message")
     
@@ -40,7 +39,6 @@ object RedwoodLogger {
     fun f(message: String, throwable: Throwable? = null) = log(Priority.FATAL, message, throwable)
 
     private fun log(priority: Priority, message: String, throwable: Throwable? = null) {
-        // Log to Logcat for daemon debugging
         when (priority) {
             Priority.DEBUG -> Log.d(TAG, message)
             Priority.INFO -> Log.i(TAG, message)

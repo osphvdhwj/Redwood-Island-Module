@@ -30,10 +30,11 @@ class ThermalEngineBypass @Inject constructor(
     private val dispatchers: DispatcherProvider,
     private val neuralCore: IslandNeuralCore // To dispatch fallback intents if we overheat
 ) {
-    private val TAG = "ThermalBypass"
-    
-    // CRITICAL DOMAIN CONSTRAINT: Hardcoded Safety Limit
-    private const val SAFETY_TEMP_LIMIT_CELSIUS = 45.0f
+    companion object {
+        private const val TAG = "ThermalBypass"
+        // CRITICAL DOMAIN CONSTRAINT: Hardcoded Safety Limit
+        private const val SAFETY_TEMP_LIMIT_CELSIUS = 45.0f
+    }
 
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.io())
     private var isBypassed = false

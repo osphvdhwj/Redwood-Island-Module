@@ -32,11 +32,11 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.core.model.LocalIslandTheme
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.model.ActivityType
 import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LocalIslandTheme
 import com.example.dynamicisland.shared.settings.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive

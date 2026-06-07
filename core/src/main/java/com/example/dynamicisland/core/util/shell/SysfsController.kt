@@ -14,15 +14,17 @@ class SysfsController @Inject constructor(
     private val rootEngine: RootShellEngine
 ) {
     
-    // CPU Governor Paths
-    private const val CPU_GOVERNOR_PATTERN = "/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
-    
-    // Snapdragon GPU (KGSL) Paths
-    private const val GPU_MIN_PWRLEVEL = "/sys/class/kgsl/kgsl-3d0/min_pwrlevel"
-    private const val GPU_MAX_PWRLEVEL = "/sys/class/kgsl/kgsl-3d0/max_pwrlevel"
-    private const val GPU_GOVERNOR = "/sys/class/kgsl/kgsl-3d0/devfreq/governor"
-    private const val GPU_ADRENO_BOOST = "/sys/class/kgsl/kgsl-3d0/devfreq/adreno_boost"
-    private const val GPU_BUSY_PCT = "/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage"
+    companion object {
+        // CPU Governor Paths
+        private const val CPU_GOVERNOR_PATTERN = "/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
+        
+        // Snapdragon GPU (KGSL) Paths
+        private const val GPU_MIN_PWRLEVEL = "/sys/class/kgsl/kgsl-3d0/min_pwrlevel"
+        private const val GPU_MAX_PWRLEVEL = "/sys/class/kgsl/kgsl-3d0/max_pwrlevel"
+        private const val GPU_GOVERNOR = "/sys/class/kgsl/kgsl-3d0/devfreq/governor"
+        private const val GPU_ADRENO_BOOST = "/sys/class/kgsl/kgsl-3d0/devfreq/adreno_boost"
+        private const val GPU_BUSY_PCT = "/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage"
+    }
 
     /**
      * Sets CPU scaling governor project-wide.

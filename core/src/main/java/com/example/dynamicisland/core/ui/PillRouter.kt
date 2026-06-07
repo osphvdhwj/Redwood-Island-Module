@@ -1,7 +1,13 @@
 package com.example.dynamicisland.core.ui
 
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.model.*
 import com.example.dynamicisland.shared.ipc.*
@@ -33,8 +39,8 @@ fun DynamicIslandView.PillRouter(
         }
         IslandState.TYPE_ORBITAL -> {
             if (model is LiveActivityModel.HardwareMonitor) {
-                com.example.dynamicisland.ui.components.OrbitalRingUI(
-                    color = androidx.compose.ui.graphics.Color.White,
+                OrbitalRingUI(
+                    color = Color.White,
                     speedFactor = (model.fps / 60f).coerceIn(0.1f, 2.0f)
                 )
             }
@@ -50,20 +56,20 @@ fun DynamicIslandView.PillRouter(
 
 @Composable
 fun DynamicIslandView.BrutalistAlert(model: LiveActivityModel.SystemAlert) {
-    com.example.dynamicisland.ui.components.BrutalistContainer {
-        androidx.compose.foundation.layout.Column(
-            modifier = androidx.compose.ui.Modifier.padding(8.dp),
-            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+    BrutalistContainer {
+        Column(
+            modifier = Modifier.padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            androidx.compose.material3.Text(
+            Text(
                 text = model.title,
-                color = androidx.compose.ui.graphics.Color.White,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )
-            androidx.compose.material3.Text(
+            Text(
                 text = model.message,
-                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f),
+                color = Color.White.copy(alpha = 0.7f),
                 fontSize = 12.sp
             )
         }
@@ -93,7 +99,6 @@ fun DynamicIslandView.MidPillRouter(model: LiveActivityModel, onIntent: (IslandI
         is LiveActivityModel.SystemAlert -> SystemAlertMid(model)
         is LiveActivityModel.Dashboard -> DashboardMid(model)
         is LiveActivityModel.General -> {
-            // Smart delegation for general models
             when {
                 model.id.contains("translation") -> TranslationGeneralMid(model)
                 model.id.contains("barcode")     -> BarcodeGeneralMid(model)
@@ -120,6 +125,5 @@ fun DynamicIslandView.MaxPillRouter(model: LiveActivityModel, onIntent: (IslandI
 
 @Composable
 private fun MiniDefaultView() {
-    // Elegant fallback for unknown types
-    androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.fillMaxSize())
+    Spacer(modifier = Modifier.fillMaxSize())
 }

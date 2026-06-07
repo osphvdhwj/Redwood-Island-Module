@@ -8,14 +8,15 @@ import com.example.dynamicisland.core.data.repository.cleanup.*
 import com.example.dynamicisland.core.data.repository.profiles.*
 import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
 import com.example.dynamicisland.core.domain.dispatchers.StandardDispatcherProvider
+import com.example.dynamicisland.core.domain.state.IslandController
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
 import com.example.dynamicisland.core.gesture.MLGestureClassifier
 import com.example.dynamicisland.core.intelligence.IslandGenerativeEngine
 import com.example.dynamicisland.core.intelligence.IslandPredictionEngine
-import com.example.dynamicisland.core.manager.IslandMediaManager
+import com.example.dynamicisland.core.ipc.IslandIPCClient
+import com.example.dynamicisland.core.manager.*
+import com.example.dynamicisland.core.settings.SettingsManager
 import com.example.dynamicisland.core.util.shell.*
-import com.example.dynamicisland.shared.ipc.IslandIPCClient
-import com.example.dynamicisland.shared.settings.SettingsManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,7 +34,7 @@ object AppModule {
     fun provideIslandGenerativeEngine(
         @ApplicationContext context: Context,
         neuralCore: IslandNeuralCore,
-        controller: com.example.dynamicisland.core.domain.state.IslandController
+        controller: IslandController
     ): IslandGenerativeEngine {
         return IslandGenerativeEngine(context, neuralCore, controller)
     }
@@ -177,5 +178,29 @@ object AppModule {
         dispatchers: DispatcherProvider
     ): HardwareRepository {
         return HardwareRepository(context, dispatchers)
+    }
+
+    @Provides
+    @Singleton
+    fun provideIslandHapticsManager(@ApplicationContext context: Context): IslandHapticsManager {
+        return IslandHapticsManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideIslandNetworkMonitor(@ApplicationContext context: Context, dispatchers: DispatcherProvider): IslandNetworkMonitor {
+        return IslandNetworkMonitor(context, CoroutineScope(SupervisorJob() + dispatchers.io()))
+    }
+
+    @Provides
+    @Singleton
+    fun provideIslandBackupManager(@ApplicationContext context: Context): IslandBackupManager {
+        return IslandBackupManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideIslandLocationManager(@ApplicationContext context: Context): IslandLocationManager {
+        return IslandLocationManager(context)
     }
 }
