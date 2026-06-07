@@ -1,6 +1,8 @@
 package com.example.dynamicisland.core.gesture
 
 import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
 import android.view.MotionEvent
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.model.*

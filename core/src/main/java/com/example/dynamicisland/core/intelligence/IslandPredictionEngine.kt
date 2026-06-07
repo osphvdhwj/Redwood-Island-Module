@@ -1,25 +1,17 @@
 package com.example.dynamicisland.core.intelligence
 
-import android.app.usage.UsageEvents
-import android.app.usage.UsageStatsManager
 import android.content.Context
-import android.util.Log
-import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.core.intelligence.nn.SequentialNet
+import com.example.dynamicisland.core.intelligence.nn.Tensor
 import com.example.dynamicisland.core.util.RedwoodLogger
-import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
-import java.util.Calendar
+import com.example.dynamicisland.shared.model.IslandIntent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.json.JSONArray
-import org.json.JSONObject
+import java.util.Calendar
 
 /**
  * 🧠 ELITE NEURAL PREDICTION ENGINE
@@ -31,13 +23,7 @@ import org.json.JSONObject
 class IslandPredictionEngine private constructor(private val context: Context) {
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    private val PREFS_NAME = "redwood_mlp_weights"
     
-    // Model Architecture: 
-    // Input: 4 dimensions (Normalized: TimeOfDay, DayOfWeek, PrevAppID, BatteryLevel)
-    // Hidden 1: 64 neurons (ReLU)
-    // Hidden 2: 128 neurons (ReLU)
-    // Output: MAX_APPS classes (Softmax probabilities)
     private val INPUT_DIM = 4
     private val HIDDEN_1 = 64
     private val HIDDEN_2 = 128
@@ -47,14 +33,12 @@ class IslandPredictionEngine private constructor(private val context: Context) {
     
     private val appIndexMap = mutableMapOf<String, Int>()
     private val indexAppMap = mutableMapOf<Int, String>()
-    private var lastAppIndex = 0
     private var currentAppIndex = 0
     
     private val _prediction = MutableStateFlow<PredictionResult?>(null)
     val prediction = _prediction.asStateFlow()
 
     init {
-        loadPersistedWeights()
         seedAppIndices()
     }
 
@@ -76,10 +60,9 @@ class IslandPredictionEngine private constructor(private val context: Context) {
             
             // 1. Train the network on what just happened
             val inputTensor = buildInputVector(batteryLevel)
-            mlp.train(inputTensor, targetIdx, lr = 0.01f)
+            mlp.train(inputTensor, targetIdx, 0.01f)
             
             // 2. Predict what will happen next
-            lastAppIndex = currentAppIndex
             currentAppIndex = targetIdx
             
             val nextInput = buildInputVector(batteryLevel)
@@ -89,8 +72,9 @@ class IslandPredictionEngine private constructor(private val context: Context) {
             var maxProb = -1f
             var maxIdx = -1
             for (i in 0 until MAX_APPS) {
-                if (outputDist[0, i] > maxProb) {
-                    maxProb = outputDist[0, i]
+                val prob = outputDist[0, i]
+                if (prob > maxProb) {
+                    maxProb = prob
                     maxIdx = i
                 }
             }
@@ -102,8 +86,6 @@ class IslandPredictionEngine private constructor(private val context: Context) {
             } else {
                 _prediction.value = null
             }
-            
-            savePersistedWeights()
         }
     }
 
@@ -132,16 +114,6 @@ class IslandPredictionEngine private constructor(private val context: Context) {
             appIndexMap[pkg] = i
             indexAppMap[i] = pkg
         }
-    }
-
-    // --- Serialization ---
-
-    private fun savePersistedWeights() {
-        // Debounce saving
-    }
-
-    private fun loadPersistedWeights() {
-        // Loads from SharedPreferences
     }
 
     data class PredictionResult(val predictedPackage: String, val confidenceScore: Float)

@@ -16,16 +16,26 @@ import javax.inject.Singleton
  * Processes screen content using on-device ML Kit Entity Extraction.
  * Predicts user intent and generates proactive Dynamic Island states.
  */
-
 @Singleton
 class IslandGenerativeEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val neuralCore: IslandNeuralCore,
     private val controller: Lazy<IslandController>
 ) {
-    
-    // ... model init ...
 
+    private val entityExtractor = EntityExtraction.getClient(
+        EntityExtractorOptions.Builder(EntityExtractorOptions.ENGLISH)
+            .build()
+    )
+
+    init {
+        // Download the ML model in the background
+        entityExtractor.downloadModelIfNeeded()
+    }
+
+    /**
+     * Entry point for processing raw text from Ghost Satellites.
+     */
     fun processScreenContent(pkg: String, rawText: String) {
         if (rawText.isBlank()) return
         
@@ -63,7 +73,7 @@ class IslandGenerativeEngine @Inject constructor(
         // Priority 4: OTP/Codes (via Regex fallback for specific apps)
         if (pkg.contains("messaging") || pkg.contains("whatsapp")) {
             val codeRegex = Regex("\\b\\d{4,6}\\b")
-            val match = codeRegex.find(annotations.first().annotatedText)
+            val match = codeRegex.find(rawText)
             if (match != null) {
                 return buildGenerativeIntent("Security Code", match.value, 0xFFFF3B30.toInt())
             }
@@ -72,12 +82,12 @@ class IslandGenerativeEngine @Inject constructor(
         return null
     }
 
-    private fun buildGenerativeIntent(title: String, body: String, color: Int): IslandIntent {
+    private fun buildGenerativeIntent(title: String, dataText: String, color: Int): IslandIntent {
         val model = LiveActivityModel.General(
             id = "gen_${System.currentTimeMillis()}",
             type = ActivityType.MESSAGE,
             title = title,
-            body = body,
+            dataText = dataText,
             accentColor = color
         )
         return IslandIntent.SyncState(
