@@ -1,4 +1,4 @@
-package com.example.dynamicisland.core.ipc
+package com.example.dynamicisland.shared.ipc
 
 /**
  * Represents the visual state and size configuration of the Dynamic Island.

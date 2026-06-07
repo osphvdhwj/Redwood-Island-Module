@@ -23,8 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.core.model.ActivityType
-import com.example.dynamicisland.core.model.LocalIslandTheme
+import com.example.dynamicisland.shared.model.ActivityType
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 

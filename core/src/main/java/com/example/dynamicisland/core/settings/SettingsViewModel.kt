@@ -1,4 +1,4 @@
-package com.example.dynamicisland.core.settings
+package com.example.dynamicisland.shared.settings
 
 import androidx.compose.runtime.*
 

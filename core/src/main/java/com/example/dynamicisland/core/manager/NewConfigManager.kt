@@ -3,8 +3,8 @@ package com.example.dynamicisland.core.manager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import com.example.dynamicisland.core.ipc.IslandContentProvider
-import com.example.dynamicisland.core.ipc.IslandIPCClient
+import com.example.dynamicisland.shared.ipc.IslandContentProvider
+import com.example.dynamicisland.shared.ipc.IslandIPCClient
 import kotlinx.coroutines.*
 
 object NewConfigManager {

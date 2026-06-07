@@ -1,4 +1,4 @@
-package com.example.dynamicisland.core.ipc
+package com.example.dynamicisland.shared.ipc
 
 import com.example.dynamicisland.shared.model.LiveActivityModel
 import android.app.Service
@@ -8,7 +8,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.*
 import android.util.Log
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.json.JSONObject

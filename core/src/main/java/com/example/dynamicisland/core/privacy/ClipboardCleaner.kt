@@ -3,7 +3,7 @@ package com.example.dynamicisland.core.privacy
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import com.example.dynamicisland.core.settings.SettingsManager
+import com.example.dynamicisland.shared.settings.SettingsManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import javax.inject.Inject

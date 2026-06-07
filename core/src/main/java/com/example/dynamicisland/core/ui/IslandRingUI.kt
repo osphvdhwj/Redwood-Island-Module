@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.core.settings.*
+import com.example.dynamicisland.shared.settings.*
 import kotlin.math.cos
 import kotlin.math.sin
 

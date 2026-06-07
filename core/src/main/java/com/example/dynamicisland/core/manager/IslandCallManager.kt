@@ -8,12 +8,18 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.AudioManager
 import android.net.Uri
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.DynamicIslandView
 import com.example.dynamicisland.shared.model.IslandState
 import kotlinx.coroutines.*
 import java.io.InputStream
 
+/**
+ * 📞 ISLAND CALL MANAGER
+ * 
+ * Orchestrates telephony and VOIP call states.
+ * Listens for system-wide call events and maps them to LiveActivityModels.
+ */
 class IslandCallManager(
     private val context: Context,
     private val audioManager: AudioManager,
@@ -25,7 +31,13 @@ class IslandCallManager(
     
     private val callReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
-            if (intent.action == "com.example.dynamicisland.CALL_STATE_CHANGED") {
+            val action = if (intent.action == "com.example.dynamicisland.BRAIN_EVENT") {
+                intent.getStringExtra("action")
+            } else {
+                intent.action?.removePrefix("com.example.dynamicisland.")
+            }
+
+            if (action == "CALL_STATE_CHANGED") {
                 val state = intent.getStringExtra("state") ?: return
                 val caller = intent.getStringExtra("caller") ?: "Unknown Caller"
                 val number = intent.getStringExtra("number")
@@ -89,7 +101,10 @@ class IslandCallManager(
     }
 
     fun startMonitoring() {
-        val filter = IntentFilter("com.example.dynamicisland.CALL_STATE_CHANGED")
+        val filter = IntentFilter().apply {
+            addAction("com.example.dynamicisland.BRAIN_EVENT")
+            addAction("com.example.dynamicisland.CALL_STATE_CHANGED")
+        }
         val securePermission = "com.redwood.permission.SECURE_IPC"
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(callReceiver, filter, securePermission, null, Context.RECEIVER_EXPORTED)

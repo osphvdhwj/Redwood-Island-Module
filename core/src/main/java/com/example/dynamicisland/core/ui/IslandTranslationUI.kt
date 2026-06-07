@@ -1,7 +1,7 @@
 package com.example.dynamicisland.core.ui
 
 import androidx.compose.runtime.collectAsState
-import com.example.dynamicisland.core.model.LocalIslandTheme
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 import com.example.dynamicisland.core.R
 import android.content.ClipData
 import android.content.ClipboardManager

@@ -6,7 +6,7 @@ import android.provider.Settings
 import android.view.Choreographer
 import com.example.dynamicisland.core.domain.lifecycle.BackendComponent
 import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
-import com.example.dynamicisland.core.model.ActivityType
+import com.example.dynamicisland.shared.model.ActivityType
 import com.example.dynamicisland.shared.model.LiveActivityModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*

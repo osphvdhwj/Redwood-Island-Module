@@ -16,7 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.ui.components.*
-import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.shared.settings.SettingsViewModel
 
 @Composable
 fun AdvancedTriggersScreen(prefs: SharedPreferences, viewModel: SettingsViewModel) {

@@ -6,7 +6,7 @@ import android.content.Intent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.robv.android.xposed.XSharedPreferences
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.DynamicIslandView
 import com.example.dynamicisland.shared.settings.ChargingStyle
 

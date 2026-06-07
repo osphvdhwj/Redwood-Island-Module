@@ -29,8 +29,8 @@ import com.example.dynamicisland.core.ui.design.glassmorphicCard
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.screens.*
 import com.example.dynamicisland.core.ui.settings.SettingsScreen
-import com.example.dynamicisland.core.settings.SettingsViewModel
-import com.example.dynamicisland.core.settings.SettingsManager
+import com.example.dynamicisland.shared.settings.SettingsViewModel
+import com.example.dynamicisland.shared.settings.SettingsManager
 import com.example.dynamicisland.core.manager.IslandBackupManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject

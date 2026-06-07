@@ -10,7 +10,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import com.example.dynamicisland.core.R
 import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
 
 import android.content.Context
 import androidx.compose.foundation.Image

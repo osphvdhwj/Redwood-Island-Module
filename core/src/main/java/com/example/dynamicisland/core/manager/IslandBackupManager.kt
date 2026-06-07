@@ -3,7 +3,7 @@ package com.example.dynamicisland.core.manager
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Environment
-import com.example.dynamicisland.core.ipc.IslandIPCClient
+import com.example.dynamicisland.shared.ipc.IslandIPCClient
 import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat

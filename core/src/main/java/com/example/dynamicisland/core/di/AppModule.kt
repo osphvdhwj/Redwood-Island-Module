@@ -3,8 +3,8 @@ package com.example.dynamicisland.core.di
 import android.content.Context
 import com.example.dynamicisland.core.data.repository.HardwareRepository
 import com.example.dynamicisland.core.manager.IslandMediaManager
-import com.example.dynamicisland.core.settings.SettingsManager
-import com.example.dynamicisland.core.ipc.IslandIPCClient
+import com.example.dynamicisland.shared.settings.SettingsManager
+import com.example.dynamicisland.shared.ipc.IslandIPCClient
 import com.example.dynamicisland.core.data.repository.BatteryRepository
 import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
 import com.example.dynamicisland.core.domain.dispatchers.StandardDispatcherProvider

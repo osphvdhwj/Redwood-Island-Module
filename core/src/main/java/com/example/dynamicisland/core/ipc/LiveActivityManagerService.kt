@@ -1,4 +1,4 @@
-package com.example.dynamicisland.core.ipc
+package com.example.dynamicisland.shared.ipc
 
 import android.app.Service
 import android.content.Intent
@@ -6,9 +6,16 @@ import android.os.Binder
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
-import com.example.dynamicisland.core.model.ActivityType
+import com.example.dynamicisland.shared.model.ActivityType
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.LiveActivityInfo
 
+/**
+ * 🛠️ LIVE ACTIVITY MANAGER SERVICE
+ * 
+ * Manages external activities posted by third-party apps or satellites.
+ * Broadcasts updates to the Brain for processing.
+ */
 class LiveActivityManagerService : Service() {
 
     private val activeActivities = mutableMapOf<String, LiveActivityModel.ExternalActivity>()
@@ -66,7 +73,7 @@ class LiveActivityManagerService : Service() {
 
     private fun broadcastActivityUpdate(model: LiveActivityModel.ExternalActivity) {
         val intent = Intent("com.example.dynamicisland.EXTERNAL_ACTIVITY_UPDATED").apply {
-            setPackage("com.android.systemui")
+            setPackage("com.example.dynamicisland.core")
             putExtra("activity_id",  model.id)
             putExtra("package_name", model.info.appPackage)
             putExtra("layout_type",  model.info.layoutType)
@@ -77,7 +84,7 @@ class LiveActivityManagerService : Service() {
 
     private fun broadcastActivityEnd(activityId: String) {
         val intent = Intent("com.example.dynamicisland.EXTERNAL_ACTIVITY_ENDED").apply {
-            setPackage("com.android.systemui")
+            setPackage("com.example.dynamicisland.core")
             putExtra("activity_id", activityId)
         }
         sendBroadcast(intent, "com.redwood.permission.SECURE_IPC")

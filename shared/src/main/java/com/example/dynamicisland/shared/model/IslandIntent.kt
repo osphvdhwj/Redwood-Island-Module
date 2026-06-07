@@ -1,5 +1,7 @@
 package com.example.dynamicisland.shared.model
 
+import android.app.Notification
+import android.os.Bundle
 import com.example.dynamicisland.shared.settings.SettingsState
 
 /**
@@ -35,6 +37,12 @@ sealed class IslandIntent {
     object ToggleExpand : IslandIntent()
     object Collapse : IslandIntent()
     
+    // External App Events
+    data class AppChanged(val pkg: String) : IslandIntent()
+    data class NotificationCaught(val pkg: String, val notification: Notification) : IslandIntent()
+    data class MediaSync(val pkg: String, val song: String, val artist: String, val isPlaying: Boolean) : IslandIntent()
+    data class CallStateChanged(val state: String, val caller: String, val number: String) : IslandIntent()
+
     // Performance & Lifecycle
     data class UpdateScreenState(val isScreenOn: Boolean) : IslandIntent()
     data class UpdatePowerSaveMode(val isPowerSaveMode: Boolean) : IslandIntent()

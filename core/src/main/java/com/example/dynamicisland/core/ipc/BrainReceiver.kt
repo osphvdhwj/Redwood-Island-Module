@@ -1,8 +1,9 @@
-package com.example.dynamicisland.core.ipc
+package com.example.dynamicisland.shared.ipc
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
 import com.example.dynamicisland.shared.model.IslandIntent
 import dagger.hilt.android.AndroidEntryPoint
@@ -42,6 +43,33 @@ class BrainReceiver : BroadcastReceiver() {
                     cpuUsage = extras.getInt("cpu_usage"),
                     gpuUsage = extras.getInt("gpu_usage")
                 )
+                "APP_CHANGED" -> {
+                    val pkg = extras.getString("pkg") ?: ""
+                    IslandIntent.AppChanged(pkg)
+                }
+                "NOTIFICATION_CAUGHT" -> {
+                    val pkg = extras.getString("pkg") ?: ""
+                    val notif = if (Build.VERSION.SDK_INT >= 33) {
+                        extras.getParcelable("notification", android.app.Notification::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        extras.getParcelable("notification")
+                    }
+                    if (notif != null) IslandIntent.NotificationCaught(pkg, notif) else null
+                }
+                "MEDIA_SYNC" -> {
+                    val pkg = extras.getString("pkg") ?: ""
+                    val song = extras.getString("song") ?: ""
+                    val artist = extras.getString("artist") ?: ""
+                    val isPlaying = extras.getBoolean("isPlaying", false)
+                    IslandIntent.MediaSync(pkg, song, artist, isPlaying)
+                }
+                "CALL_STATE_CHANGED" -> {
+                    val state = extras.getString("state") ?: ""
+                    val caller = extras.getString("caller") ?: ""
+                    val number = extras.getString("number") ?: ""
+                    IslandIntent.CallStateChanged(state, caller, number)
+                }
                 "DISMISS" -> IslandIntent.DismissActive
                 "COLLAPSE" -> IslandIntent.Collapse
                 else -> null

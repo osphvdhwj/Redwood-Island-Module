@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.view.View
 import com.example.dynamicisland.core.hook.SystemUIContextKeeper
-import com.example.dynamicisland.core.model.QSTileState
+import com.example.dynamicisland.shared.model.QSTileState
 import de.robv.android.xposed.XposedHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay

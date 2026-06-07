@@ -3,8 +3,8 @@ package com.example.dynamicisland.core.manager
 import android.content.Context
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.dynamicisland.core.ipc.IslandIPCClient
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.ipc.IslandIPCClient
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.DynamicIslandView
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.filterNotNull

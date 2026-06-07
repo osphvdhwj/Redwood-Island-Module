@@ -3,7 +3,7 @@ package com.example.dynamicisland.core.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.fillMaxSize
 import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.model.IslandIntent
 
 /**

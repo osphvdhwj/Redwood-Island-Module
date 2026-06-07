@@ -2,7 +2,7 @@ package com.example.dynamicisland.core.ui
 
 import com.example.dynamicisland.core.R
 import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas

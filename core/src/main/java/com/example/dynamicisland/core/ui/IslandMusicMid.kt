@@ -1,6 +1,6 @@
 package com.example.dynamicisland.core.ui
 
-import com.example.dynamicisland.core.model.LocalIslandTheme
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown

@@ -47,10 +47,10 @@ import androidx.compose.foundation.border
 import com.example.dynamicisland.core.R
 import com.example.dynamicisland.shared.model.LiveActivityModel
 import com.example.dynamicisland.core.domain.state.IslandController
-import com.example.dynamicisland.core.model.LocalIslandTheme
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 import com.example.dynamicisland.core.manager.StashedItem
 import com.example.dynamicisland.core.manager.StashType
-import com.example.dynamicisland.core.model.ActivityType
+import com.example.dynamicisland.shared.model.ActivityType
 import com.example.dynamicisland.core.ui.design.VisualDialect
 import com.example.dynamicisland.shared.settings.IconPack
 

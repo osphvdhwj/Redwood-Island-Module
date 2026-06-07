@@ -4,8 +4,8 @@ import com.example.dynamicisland.shared.settings.IconPack
 
 import com.example.dynamicisland.core.R
 import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.core.model.*
-import com.example.dynamicisland.core.settings.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
 import android.view.WindowManager
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*

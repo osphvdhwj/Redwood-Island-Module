@@ -2,7 +2,7 @@ package com.example.dynamicisland.core.manager
 
 import android.content.Context
 import android.view.WindowManager
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.model.IslandState
 import com.example.dynamicisland.shared.settings.SettingsState
 

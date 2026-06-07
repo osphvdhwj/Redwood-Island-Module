@@ -52,7 +52,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.example.dynamicisland.core.gesture.IslandGesture
 import com.example.dynamicisland.shared.model.IslandState
 import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.DesignLanguage
 import com.example.dynamicisland.shared.settings.SettingsState
 import com.example.dynamicisland.shared.settings.AestheticStyle

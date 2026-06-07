@@ -3,7 +3,7 @@ package com.example.dynamicisland.core.ui.mvi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
-import com.example.dynamicisland.core.settings.SettingsManager
+import com.example.dynamicisland.shared.settings.SettingsManager
 import com.example.dynamicisland.core.system.hook.SystemEventProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow

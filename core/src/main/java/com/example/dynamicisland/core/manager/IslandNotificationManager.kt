@@ -1,14 +1,19 @@
 package com.example.dynamicisland.core.manager
-import com.example.dynamicisland.core.model.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 
 import android.app.Notification
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import com.example.dynamicisland.shared.model.*
 
+/**
+ * 📦 ISLAND NOTIFICATION MANAGER
+ * 
+ * Processes incoming system notifications, extracts rich metadata,
+ * and manages the notification stack logic for the Brain.
+ */
 class IslandNotificationManager(
     private val context: Context,
     private val scope: CoroutineScope,

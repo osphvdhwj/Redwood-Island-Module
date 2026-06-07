@@ -175,7 +175,44 @@ sealed class LiveActivityModel {
         override val isCritical: Boolean = false,
         override val isSensitive: Boolean = false
     ) : LiveActivityModel()
+
+    data class ExternalActivity(
+        override val id: String,
+        override val type: ActivityType = ActivityType.MESSAGE,
+        val info: LiveActivityInfo,
+        val state: Bundle,
+        override val isTransient: Boolean = false,
+        override val isCritical: Boolean = false,
+        override val isSensitive: Boolean = false
+    ) : LiveActivityModel()
+
+    data class NotificationStack(
+        override val id: String,
+        val pkgName: String,
+        val notifications: List<SimpleNotification>,
+        val totalCount: Int,
+        val accentColor: Int = -1,
+        override val type: ActivityType = ActivityType.MESSAGE,
+        override val isTransient: Boolean = false,
+        override val isCritical: Boolean = false,
+        override val isSensitive: Boolean = false
+    ) : LiveActivityModel()
 }
+
+data class SimpleNotification(
+    val id: String,
+    val title: String,
+    val text: String,
+    val timestamp: Long,
+    val avatar: Bitmap?,
+    val remoteActions: List<RemoteNotificationAction>
+)
+
+data class RemoteNotificationAction(
+    val title: String,
+    val intent: android.app.PendingIntent?,
+    val isReply: Boolean
+)
 
 data class CustomMediaAction(
     val action: String,

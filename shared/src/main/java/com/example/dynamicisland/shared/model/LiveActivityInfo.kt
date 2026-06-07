@@ -1,4 +1,4 @@
-package com.example.dynamicisland.core.ipc
+package com.example.dynamicisland.shared.model
 
 import android.os.Bundle
 import android.os.Parcel
