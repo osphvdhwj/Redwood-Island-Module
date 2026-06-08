@@ -21,6 +21,10 @@ The ultimate high-performance UI customization and game optimization suite for r
 
 ## 🏗️ Technical Architecture
 
+### 📚 Developer API
+Redwood Core acts as a backend daemon. Other developers can build custom frontends or utility apps by tapping into our IPC intents.  
+👉 **[View the Redwood Core Developer API Guide](CORE_API.md)**
+
 ### 1. IPC & State Management
 Utilizes a decentralized broadcast and ContentProvider-based IPC mechanism to synchronize state across the `android` (System Server) and `com.example.dynamicisland.core` processes. This bypasses SELinux restrictions and ensures zero-latency responsiveness to system events.
 
