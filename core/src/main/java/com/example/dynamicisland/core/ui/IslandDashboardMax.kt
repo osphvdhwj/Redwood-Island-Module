@@ -11,7 +11,7 @@ import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.foundation.background
@@ -142,8 +142,8 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
         // --- Section 1.5: Widgets (NEW) ---
         if (settings.enableMaxWidgets) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.weight(1f)) { MiniWeatherWidget("24°C", "Sunny") }
-                Box(Modifier.weight(1f)) { MiniCalendarWidget("Meeting", "14:00") }
+                // Box(Modifier.weight(1f)) { MiniWeatherWidget("24°C", "Sunny") }
+                // Box(Modifier.weight(1f)) { MiniCalendarWidget("Meeting", "14:00") }
             }
         }
 

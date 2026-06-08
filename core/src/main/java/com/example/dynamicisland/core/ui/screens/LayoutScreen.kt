@@ -11,7 +11,7 @@ import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.material3.*
@@ -19,7 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.example.dynamicisland.core.manager.NewNewConfigManager
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.manager.IslandBackupManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -27,7 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.manager.NewNewConfigManager
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.components.SettingsCategoryHeader
 import com.example.dynamicisland.core.ui.components.SettingsSlider
@@ -54,19 +54,19 @@ fun LayoutScreen(prefs: SharedPreferences) {
     var ringT by remember { mutableFloatStateOf(prefs.getFloat("ring_thickness", 6f)) }
 
     LaunchedEffect(selectedTab) {
-        w = prefs.getFloat("${currentPrefix}_w", NewNewConfigManager.getDefaultWidth(currentPrefix))
-        h = prefs.getFloat("${currentPrefix}_h", NewNewConfigManager.getDefaultHeight(currentPrefix))
+        w = prefs.getFloat("${currentPrefix}_w", NewConfigManager.getDefaultWidth(currentPrefix))
+        h = prefs.getFloat("${currentPrefix}_h", NewConfigManager.getDefaultHeight(currentPrefix))
         x = prefs.getFloat("${currentPrefix}_x", 0f)
         y = prefs.getFloat("${currentPrefix}_y", 48f)
-        r = prefs.getFloat("${currentPrefix}_r", NewNewConfigManager.getDefaultRadius(currentPrefix))
+        r = prefs.getFloat("${currentPrefix}_r", NewConfigManager.getDefaultRadius(currentPrefix))
         
         // Notify service of active calibration target
-        NewNewConfigManager.setCalibrationMode(context, true, currentPrefix)
+        NewConfigManager.setCalibrationMode(context, true, currentPrefix)
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            NewNewConfigManager.setCalibrationMode(context, false, "")
+            NewConfigManager.setCalibrationMode(context, false, "")
         }
     }
 
@@ -131,12 +131,12 @@ fun LayoutScreen(prefs: SharedPreferences) {
                 title = "Width", 
                 description = "Horizontal span (tap value for manual input).",
                 value = w, 
-                defaultValue = NewNewConfigManager.getDefaultWidth(currentPrefix),
+                defaultValue = NewConfigManager.getDefaultWidth(currentPrefix),
                 valueRange = widthRange, 
                 onValueChange = { 
                     w = it
                     if (currentPrefix == "ring") h = it // Ring stays circular
-                    NewNewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
+                    NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
                 }
             )
             
@@ -144,12 +144,12 @@ fun LayoutScreen(prefs: SharedPreferences) {
                 title = "Height", 
                 description = "Vertical span.",
                 value = h, 
-                defaultValue = NewNewConfigManager.getDefaultHeight(currentPrefix),
+                defaultValue = NewConfigManager.getDefaultHeight(currentPrefix),
                 valueRange = heightRange, 
                 onValueChange = { 
                     h = it
                     if (currentPrefix == "ring") w = it
-                    NewNewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
+                    NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
                 }
             )
             
@@ -161,7 +161,7 @@ fun LayoutScreen(prefs: SharedPreferences) {
                 valueRange = -200f..200f, 
                 onValueChange = { 
                     x = it
-                    NewNewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
+                    NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
                 }
             )
 
@@ -173,7 +173,7 @@ fun LayoutScreen(prefs: SharedPreferences) {
                 valueRange = -40f..300f, 
                 onValueChange = { 
                     y = it
-                    NewNewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
+                    NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
                 }
             )
 
@@ -182,11 +182,11 @@ fun LayoutScreen(prefs: SharedPreferences) {
                     title = "Corner Radius", 
                     description = "Curve intensity (4 to 60 dp).",
                     value = r, 
-                    defaultValue = NewNewConfigManager.getDefaultRadius(currentPrefix),
+                    defaultValue = NewConfigManager.getDefaultRadius(currentPrefix),
                     valueRange = 4f..60f, 
                     onValueChange = { 
                         r = it
-                        NewNewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
+                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
                     }
                 )
             }
@@ -201,7 +201,7 @@ fun LayoutScreen(prefs: SharedPreferences) {
                     valueRange = 1f..12f, 
                     onValueChange = { 
                         ringT = it
-                        NewNewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
+                        NewConfigManager.saveAndBroadcast(prefs, scope, context, currentPrefix, w, h, x, y, r, ringT)
                     }
                 )
             }

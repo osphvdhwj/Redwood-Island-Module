@@ -11,7 +11,7 @@ import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.foundation.Image
@@ -19,7 +19,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import com.example.dynamicisland.core.manager.NewNewConfigManager
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.manager.IslandBackupManager
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,7 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.manager.NewNewConfigManager
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.AppPickerActivity
 import com.example.dynamicisland.core.ui.components.SettingsCategoryHeader
@@ -104,7 +104,7 @@ private fun MD3SingleRoleSelector(
         if (result.resultCode == android.app.Activity.RESULT_OK) {
             val pkg = result.data?.getStringArrayExtra("package_names")?.firstOrNull() ?: ""
             selectedPkg = pkg
-            NewNewConfigManager.commitAndBroadcast(prefs, scope, context, { putString(roleKey, pkg) })
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString(roleKey, pkg) })
         }
     }
 
@@ -172,7 +172,7 @@ private fun MD3MultiRoleSelector(
         if (result.resultCode == android.app.Activity.RESULT_OK) {
             val pkgs = result.data?.getStringArrayExtra("package_names")?.toSet() ?: emptySet()
             selectedPkgs = pkgs
-            NewNewConfigManager.commitAndBroadcast(prefs, scope, context, { putStringSet(roleKey.uppercase(), pkgs) })
+            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putStringSet(roleKey.uppercase(), pkgs) })
         }
     }
 
@@ -233,7 +233,7 @@ private fun MD3MultiRoleSelector(
                         onClick = {
                             val newSet = selectedPkgs + pkg
                             selectedPkgs = newSet
-                            NewNewConfigManager.commitAndBroadcast(prefs, scope, context, { putStringSet(roleKey.uppercase(), newSet) })
+                            NewConfigManager.commitAndBroadcast(prefs, scope, context, { putStringSet(roleKey.uppercase(), newSet) })
                         },
                         label = { Text(name) },
                         leadingIcon = { Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(14.dp)) }

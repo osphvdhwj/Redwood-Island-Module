@@ -11,7 +11,7 @@ import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.runtime.*
@@ -19,9 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.manager.NewNewConfigManager
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.manager.IslandBackupManager
-import com.example.dynamicisland.core.manager.NewNewConfigManager
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.AppPickerActivity
 import com.example.dynamicisland.core.ui.components.*
@@ -47,7 +47,7 @@ fun FocusModeScreen(prefs: SharedPreferences) {
             icon = Icons.Default.FilterCenterFocus,
             checked = prefs.getBoolean("ENABLE_FOCUS_MODE", false),
             onCheckedChange = { value -> 
-                NewNewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("ENABLE_FOCUS_MODE", value) }) 
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("ENABLE_FOCUS_MODE", value) }) 
             }
         )
 
