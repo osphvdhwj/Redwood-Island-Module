@@ -1,38 +1,31 @@
-# Redwood Island 🏝️
+# Redwood Island & Core 🏝️
 
-The ultimate high-performance Dynamic Island & Navigation enhancement module for rooted AOSP/HyperOS devices.
+The ultimate high-performance UI customization and game optimization suite for rooted AOSP/HyperOS devices.
 
 ## 🌟 Key Features
 
-### 🔴 Redwood Island (Top)
-*   **Battery Ring:** Persistent battery percentage ring (hole-punch or custom position).
-*   **Adaptive Expansion:** The island grows fluidly out of the Battery Ring.
-*   **Smart Stacking:** Manages multiple notifications with priority-weighted scoring.
-*   **Liquid Physics:** High-fidelity animations with customizable "Tactile Squish".
-*   **Dashboard Max:** Expandable 2x6 / 1x5 units for music, hardware stats, and shortcuts.
+### 🔴 Redwood Island (The Brain)
+*   **Game Turbo UI:** Native Jetpack Compose implementation of a Xiaomi-style Game Space overlay, featuring an animated FPS graph, vertical brightness/volume sliders, and performance mode toggles.
+*   **Performance Engine:** Real-time hardware monitoring (CPU/GPU/FPS) via AOSP-level shell access, capable of dynamically applying CPU scaling governors (Battery, Balanced, Wild).
+*   **Top Island (Battery Ring & Stacking):** Persistent battery percentage ring with priority-weighted notification stacking and fluid liquid physics.
+*   **Nav Island:** System Pill hooking to turn the bottom navigation pill into a battery progress bar or music control.
 
-### 💊 Nav Island (Bottom)
-*   **System Pill Hook:** Directly modifies the Android Navigation Pill—not just an overlay.
-*   **Battery Progress:** The pill itself acts as a sleek battery progress bar.
-*   **Dynamic Morphing:** Expands into a "Music Bar" or "Shortcuts Bar" (Google Lens/Gemini style).
-*   **Gesture Synergy:** Synchronized pulses with the Top Island during battery state changes.
+### 💊 Redwood Core (The Ghost)
+*   **LSPosed Injection:** A lightweight, UI-less Xposed module that intercepts system events directly from the Android framework (SystemUI, ActivityManager) and securely forwards them to Redwood Island via `IslandContentProvider`.
 
 ## 🛠️ Technical Highlights
+*   **Dual-App Architecture:** Clean separation between the `core` (UI and logic) and `app` (Satellite/Hook) modules.
+*   **Root Shell Executor:** Bypasses standard Android APIs to directly communicate with kernel sysfs paths (`/sys/devices/system/cpu/...` and `/sys/class/kgsl/...`) for true system-level control.
+*   **Native Compose Overlay:** The Game Space overlay is built entirely in Jetpack Compose, avoiding heavy WebViews while achieving 60+ FPS animated charts and blurred backgrounds.
 *   **Dual-Window Architecture:** Uses independent top/bottom windows to bypass Android 12+ Touch Occlusion (No touch blocking).
-*   **Hardware Blur:** Real-time AGSL/Palette extraction for adaptive wallpaper-based theming.
-*   **Zero Leak Lifecycle:** Aggressive bitmap recycling and memory hardening for 4+ day uptime.
-*   **LSPosed Powered:** Deep hooks into SystemUI for native performance.
 
 ## 🏗️ Technical Architecture
 
-### 1. Unified Controller (`IslandController.kt`)
-Redwood Island utilizes a decentralized controller that manages two distinct overlay layers. It uses an internal `KnowledgeBase` (LruCache) to synchronize battery states and gesture pulses across the Top and Bottom islands without redundant sensor polling.
+### 1. IPC & State Management
+Utilizes a decentralized broadcast and ContentProvider-based IPC mechanism to synchronize state across the `android` (System Server) and `com.example.dynamicisland.core` processes. This bypasses SELinux restrictions and ensures zero-latency responsiveness to system events.
 
 ### 2. The Omni-Gesture Engine
-A custom touch interception layer that uses `OnComputeInternalInsetsListener` to punch dynamic "touch holes" in the system-wide overlay. This allows the Island to remain interactive while permitting 100% of touches to pass through to the underlying OS when the Island is idle.
-
-### 3. IPC & State Management
-Utilizes a decentralized broadcast-based IPC mechanism to synchronize state across the `android` (System Server) and `com.android.systemui` processes. This bypasses SELinux restrictions and ensures zero-latency responsiveness to system events.
+A custom touch interception layer that uses `OnComputeInternalInsetsListener` to punch dynamic "touch holes" in the system-wide overlay. This allows overlays to remain interactive while permitting 100% of touches to pass through to the underlying OS when idle.
 
 ---
 
