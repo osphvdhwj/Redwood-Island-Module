@@ -7,10 +7,15 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
 import android.os.Handler
 import android.os.Looper
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.model.ActivityType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 

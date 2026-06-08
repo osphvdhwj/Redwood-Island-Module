@@ -9,6 +9,11 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
 import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -22,14 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.shared.settings.AestheticStyle
-import com.example.dynamicisland.shared.settings.DesignLanguage
-import com.example.dynamicisland.shared.settings.FontAesthetic
-import com.example.dynamicisland.shared.settings.SettingsState
 
 private val DarkColorScheme = darkColorScheme(
     primary = IslandColors.accentCyan,

@@ -10,12 +10,12 @@ import android.view.Gravity
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
 import com.example.dynamicisland.core.settings.SettingsViewModel
 import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.core.ui.design.IslandColors
+import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
 import android.view.WindowManager
 import com.example.dynamicisland.core.domain.state.*

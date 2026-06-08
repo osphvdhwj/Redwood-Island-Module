@@ -1,14 +1,19 @@
 package com.example.dynamicisland.core.domain.state
 
 import android.content.Context
-import com.example.dynamicisland.shared.model.IslandIntent
-import com.example.dynamicisland.shared.model.IslandState
 import io.mockk.*
 import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.shared.settings.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
+import com.example.dynamicisland.shared.model.*
 import org.junit.jupiter.api.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)

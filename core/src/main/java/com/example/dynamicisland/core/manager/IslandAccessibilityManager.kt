@@ -7,6 +7,13 @@ import android.view.accessibility.AccessibilityManager
 
 /**
  * Manages accessibility announcements for Dynamic Island state changes.
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
  * Integrates with Android's accessibility service to provide spoken feedback
  * when the island transitions between states.
  */

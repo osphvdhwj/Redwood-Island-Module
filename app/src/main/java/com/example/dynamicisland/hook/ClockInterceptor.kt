@@ -3,12 +3,17 @@ package com.example.dynamicisland.hook
 import android.app.Notification
 import android.graphics.Color
 import android.service.notification.StatusBarNotification
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.model.LiveActivityModel
 
 object ClockInterceptor {
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.shared.settings.*
 
     private const val PKG_AOSP_CLOCK = "com.android.deskclock"
+import com.example.dynamicisland.shared.model.*
     private const val PKG_GOOGLE_CLOCK = "com.google.android.deskclock"
 
     fun inspect(sbn: StatusBarNotification): LiveActivityModel? {

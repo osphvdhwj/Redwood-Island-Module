@@ -7,6 +7,13 @@ import kotlinx.coroutines.launch
 
 /**
  * Pillar 5: Performance Optimization
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
  * Utility to debounce high-frequency events like hardware gauges (CPU temp, FPS).
  * Ensures that the UI is updated at a maximum rate (e.g. 4Hz / 250ms interval)
  * to prevent CPU thrashing and excessive recompositions.

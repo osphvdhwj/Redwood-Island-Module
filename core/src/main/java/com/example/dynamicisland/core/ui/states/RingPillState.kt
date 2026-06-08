@@ -10,12 +10,12 @@ import androidx.compose.ui.Alignment
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
 import com.example.dynamicisland.core.settings.SettingsViewModel
 import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.core.ui.design.IslandColors
+import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -63,6 +63,7 @@ fun RingPill(
         // Feature 192: Ambient floating particles if an event is active
         if (hasActiveBackgroundEvent) {
             AmbientParticles(accentColor)
+        }
     }
 }
 private fun AmbientParticles(color: Color) {
@@ -72,6 +73,7 @@ private fun AmbientParticles(color: Color) {
         targetValue = 360f,
         animationSpec = infiniteRepeatable(animation = tween(10000, easing = LinearEasing)),
         label = "particle_rotation"
+    )
     val particles = remember { List(4) { Offset(Random.nextFloat(), Random.nextFloat()) } }
     Canvas(modifier = Modifier.fillMaxSize()) {
         val center = Offset(size.width / 2, size.height / 2)

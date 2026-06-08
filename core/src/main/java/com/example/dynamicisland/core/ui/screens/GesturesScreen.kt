@@ -9,24 +9,24 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
 import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.manager.IslandBackupManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.components.SettingsCategoryHeader
 import com.example.dynamicisland.core.ui.components.SettingsSwitch
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
 import kotlinx.coroutines.launch
 
 @Composable

@@ -3,7 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
-    id("org.jetbrains.kotlin.kapt")
+    alias(libs.plugins.kotlin.ksp)
 }
 
 android {
@@ -40,7 +40,7 @@ dependencies {
 
     // Hilt DI
     implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)
 
     // Jetpack Compose
     implementation(platform(libs.androidx.compose.bom))

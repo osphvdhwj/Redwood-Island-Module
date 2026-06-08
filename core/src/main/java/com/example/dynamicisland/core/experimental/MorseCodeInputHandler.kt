@@ -1,15 +1,19 @@
 package com.example.dynamicisland.core.experimental
 
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
 
 class MorseCodeInputHandler {
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
     private val morseMap = mapOf(
+import com.example.dynamicisland.shared.settings.*
         ".-" to 'A', "-..." to 'B', "-.-." to 'C', "-.." to 'D',
         "." to 'E', "..-." to 'F', "--." to 'G', "...." to 'H',
+import com.example.dynamicisland.shared.model.*
         ".." to 'I', ".---" to 'J', "-.-" to 'K', ".-.." to 'L',
         "--" to 'M', "-." to 'N', "---" to 'O', ".--." to 'P',
         "--.-" to 'Q', ".-." to 'R', "..." to 'S', "-" to 'T',

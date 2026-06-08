@@ -7,6 +7,13 @@ class SequentialNet(val layerSizes: IntArray) {
     val weights = Array(layerSizes.size - 1) { i -> Tensor(layerSizes[i], layerSizes[i + 1]).apply { randomize() } }
     val biases = Array(layerSizes.size - 1) { i -> Tensor(1, layerSizes[i + 1]).apply { randomize() } }
 
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
     fun forward(input: Tensor): Tensor {
         var current = input
         for (i in weights.indices) {

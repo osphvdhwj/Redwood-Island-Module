@@ -2,12 +2,18 @@ package com.example.dynamicisland.shared.model
 
 import android.app.Notification
 import android.os.Bundle
-import com.example.dynamicisland.shared.settings.SettingsState
 
 /**
  * Intents representing user or system actions that affect the Dynamic Island.
  * Clean version for Shared module.
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
  */
+import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
 sealed class IslandIntent {
     data class UpdateState(val state: IslandState) : IslandIntent()
     data class SyncState(val state: IslandState, val activeModel: LiveActivityModel?, val splitModel: LiveActivityModel?) : IslandIntent()

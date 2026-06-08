@@ -1,15 +1,19 @@
 package com.example.dynamicisland.core.intelligence
 
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
 
 /**
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
  * ✨ CLOUD-TRAINED GLOBAL USAGE PRIORS
+import com.example.dynamicisland.shared.settings.*
  * 
  * Pre-computed probabilistic model of common Android usage patterns.
+import com.example.dynamicisland.shared.model.*
  * 
  * Includes:
  * 1. Morning (7am-10am): High probability of Media (Spotify/YT Music) and Navigation (Maps).

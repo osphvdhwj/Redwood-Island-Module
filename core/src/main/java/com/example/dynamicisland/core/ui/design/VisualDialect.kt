@@ -3,13 +3,17 @@ package com.example.dynamicisland.core.ui.design
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.dynamicisland.shared.settings.IconPack
 
 /**
  * HIGH-FIDELITY VISUAL DIALECT (Pillar 2)
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
 import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
  * Defines the physical properties and aesthetic "accent" of the Island
+import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
  * based on the active IconPack (Dialect).
  */
 data class VisualDialect(

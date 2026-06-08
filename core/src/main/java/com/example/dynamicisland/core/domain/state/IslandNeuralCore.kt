@@ -2,16 +2,18 @@ package com.example.dynamicisland.core.domain.state
 
 import android.content.Context
 import com.example.dynamicisland.core.model.IslandUiState
-import com.example.dynamicisland.shared.model.IslandIntent
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.model.PerformanceLevel
-import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.example.dynamicisland.shared.settings.*
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.*
+import com.example.dynamicisland.shared.model.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

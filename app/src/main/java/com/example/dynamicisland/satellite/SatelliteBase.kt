@@ -7,6 +7,13 @@ import android.os.Bundle
  * 🛰️ GHOST SATELLITE INTERFACE (Omni-Integration)
  *
  * A dependency-free interface for app-specific sensors. 
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
  * Designed to be loaded into third-party processes (Gboard, Launcher) 
  * without triggering ClassNotFound errors for Hilt, Compose, or ML Kit.
  */
