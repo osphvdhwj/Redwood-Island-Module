@@ -59,6 +59,7 @@ fun RingPill(
         }
     }
 }
+@Composable
 private fun AmbientParticles(color: Color) {
     val infiniteTransition = rememberInfiniteTransition(label = "particles")
     val rotation by infiniteTransition.animateFloat(

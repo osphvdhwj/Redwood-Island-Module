@@ -41,6 +41,8 @@ import kotlinx.coroutines.launch
 import com.example.dynamicisland.shared.settings.SettingsState
 import com.example.dynamicisland.shared.model.LiveActivityModel
 import com.example.dynamicisland.shared.settings.ChargingStyle
+import com.example.dynamicisland.core.ui.components.text.RollingNumberText
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 
 @Composable
 fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) {

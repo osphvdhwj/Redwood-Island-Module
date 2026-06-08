@@ -27,6 +27,7 @@ import com.example.dynamicisland.core.R
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 
 @Composable
 fun DynamicIslandView.SplitPill(model: LiveActivityModel, onClick: () -> Unit) {

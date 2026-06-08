@@ -35,6 +35,7 @@ import com.example.dynamicisland.core.R
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.intelligence.IslandTranslationEngine
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 
 @Composable
 fun DynamicIslandView.TranslationMid(result: IslandTranslationEngine.TranslationResult) {

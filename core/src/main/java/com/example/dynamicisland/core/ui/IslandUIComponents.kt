@@ -39,6 +39,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import com.example.dynamicisland.shared.model.ActivityType
 import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.core.ui.components.text.RollingNumberText
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 
 object IslandPhysics {
     val Damping = Spring.DampingRatioMediumBouncy

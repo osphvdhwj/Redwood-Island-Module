@@ -26,6 +26,7 @@ import com.example.dynamicisland.core.R
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.ipc.*
 import kotlinx.coroutines.delay
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 
 @Composable
 fun InteractiveIconButton(logicalIcon: IconProvider.LogicalIcon, tint: Color, baseSize: Dp, bgAlpha: Float = 0f, onClick: () -> Unit) {

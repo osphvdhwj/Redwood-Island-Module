@@ -52,6 +52,7 @@ import com.example.dynamicisland.shared.model.StashType
 import com.example.dynamicisland.shared.model.StashedItem
 import com.example.dynamicisland.shared.settings.IconPack
 import com.example.dynamicisland.shared.settings.ShortcutLayout
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 
 @Composable
 fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controller: IslandController) {
