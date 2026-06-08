@@ -44,6 +44,14 @@ sealed class IslandIntent {
     data class MediaSync(val pkg: String, val song: String, val artist: String, val isPlaying: Boolean) : IslandIntent()
     data class CallStateChanged(val state: String, val caller: String, val number: String) : IslandIntent()
 
+    // Advanced Daemon Hooks
+    data class UpdateCameraState(val isActive: Boolean) : IslandIntent()
+    data class UpdateThermalState(val cpuTemp: Float) : IslandIntent()
+    data class UpdateForegroundApp(val pkg: String) : IslandIntent()
+    data class UpdateRefreshRate(val hz: Int) : IslandIntent()
+    data class UpdateBatteryStats(val dischargeRate: Int) : IslandIntent()
+    data class UpdateNetworkStats(val txSpeed: Long, val rxSpeed: Long) : IslandIntent()
+
     // Performance & Lifecycle
     data class UpdateScreenState(val isScreenOn: Boolean) : IslandIntent()
     data class UpdatePowerSaveMode(val isPowerSaveMode: Boolean) : IslandIntent()

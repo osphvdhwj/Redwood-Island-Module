@@ -47,6 +47,12 @@ class RootDaemonEngine @Inject constructor(
                 // Start hook listeners in background
                 startAudioHook()
                 startPerAppVolumeHook()
+                startCameraHook()
+                startThermalHook()
+                startForegroundAppHook()
+                startRefreshRateHook()
+                startBatteryStatsHook()
+                startNetworkStatsHook()
                 startHardwareIntentListener()
 
                 // Read continuous stream from daemon
@@ -102,6 +108,36 @@ class RootDaemonEngine @Inject constructor(
         executeInDaemon(hookCmd)
     }
 
+    private fun startCameraHook() {
+        val hookCmd = "logcat -b all -v raw -s CameraService | grep -E 'connect|disconnect'"
+        executeInDaemon("$hookCmd &")
+    }
+
+    private fun startThermalHook() {
+        val hookCmd = "while true; do temp=\$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null); if [ ! -z \"\$temp\" ]; then echo \"DAEMON_EVENT: THERMAL \$temp\"; fi; sleep 5; done &"
+        executeInDaemon(hookCmd)
+    }
+
+    private fun startForegroundAppHook() {
+        val hookCmd = "logcat -b events -v raw -s am_wm_activity_launch | grep 'am_wm_activity_launch'"
+        executeInDaemon("$hookCmd &")
+    }
+
+    private fun startRefreshRateHook() {
+        val hookCmd = "while true; do fps=\$(dumpsys SurfaceFlinger | grep -o 'refresh-rate [0-9]*' | grep -o '[0-9]*' | head -n 1); if [ ! -z \"\$fps\" ]; then echo \"DAEMON_EVENT: REFRESH_RATE \$fps\"; fi; sleep 2; done &"
+        executeInDaemon(hookCmd)
+    }
+
+    private fun startBatteryStatsHook() {
+        val hookCmd = "while true; do rate=\$(cat /sys/class/power_supply/battery/current_now 2>/dev/null); if [ ! -z \"\$rate\" ]; then echo \"DAEMON_EVENT: BATTERY_RATE \$rate\"; fi; sleep 5; done &"
+        executeInDaemon(hookCmd)
+    }
+
+    private fun startNetworkStatsHook() {
+        val hookCmd = "while true; do stats=\$(grep wlan0 /proc/net/dev | awk '{print \$2,\$10}'); if [ ! -z \"\$stats\" ]; then echo \"DAEMON_EVENT: NETWORK_STATS \$stats\"; fi; sleep 2; done &"
+        executeInDaemon(hookCmd)
+    }
+
     /**
      * Phase 3: Hardware Intent Listener
      * Listens for UI intents to change hardware settings via shell.
@@ -133,11 +169,55 @@ class RootDaemonEngine @Inject constructor(
                 Log.d(TAG, "Daemon: Mic Inactive Hook triggered")
                 neuralCore.dispatch(IslandIntent.UpdateMicState(false))
             }
-            line == "DAEMON_EVENT: APP_VOL_ACTIVE" -> {
+            line.contains("CameraService") && line.contains("connect") -> {
+                neuralCore.dispatch(IslandIntent.UpdateCameraState(true))
+            }
+            line.contains("CameraService") && line.contains("disconnect") -> {
+                neuralCore.dispatch(IslandIntent.UpdateCameraState(false))
+            }
+            line.contains("am_wm_activity_launch") -> {
+                // Extract package name from am_wm_activity_launch log
+                // Format: [userId, component, ... ]
+                val parts = line.split(",")
+                if (parts.size > 1) {
+                    val component = parts[1].trim()
+                    val pkg = component.split("/")[0]
+                    neuralCore.dispatch(IslandIntent.UpdateForegroundApp(pkg))
+                }
+            }
+            line.startsWith("DAEMON_EVENT: APP_VOL_ACTIVE") -> {
                 neuralCore.dispatch(IslandIntent.UpdatePerAppVolumeState(true))
             }
-            line == "DAEMON_EVENT: APP_VOL_INACTIVE" -> {
+            line.startsWith("DAEMON_EVENT: APP_VOL_INACTIVE") -> {
                 neuralCore.dispatch(IslandIntent.UpdatePerAppVolumeState(false))
+            }
+            line.startsWith("DAEMON_EVENT: THERMAL") -> {
+                val tempRaw = line.removePrefix("DAEMON_EVENT: THERMAL ").trim().toFloatOrNull()
+                if (tempRaw != null) {
+                    // Usually in millidegrees Celsius
+                    val temp = if (tempRaw > 1000) tempRaw / 1000f else tempRaw
+                    neuralCore.dispatch(IslandIntent.UpdateThermalState(temp))
+                }
+            }
+            line.startsWith("DAEMON_EVENT: REFRESH_RATE") -> {
+                val fps = line.removePrefix("DAEMON_EVENT: REFRESH_RATE ").trim().toIntOrNull()
+                if (fps != null) {
+                    neuralCore.dispatch(IslandIntent.UpdateRefreshRate(fps))
+                }
+            }
+            line.startsWith("DAEMON_EVENT: BATTERY_RATE") -> {
+                val rate = line.removePrefix("DAEMON_EVENT: BATTERY_RATE ").trim().toIntOrNull()
+                if (rate != null) {
+                    neuralCore.dispatch(IslandIntent.UpdateBatteryStats(rate))
+                }
+            }
+            line.startsWith("DAEMON_EVENT: NETWORK_STATS") -> {
+                val parts = line.removePrefix("DAEMON_EVENT: NETWORK_STATS ").trim().split(" ")
+                if (parts.size >= 2) {
+                    val rx = parts[0].toLongOrNull() ?: 0L
+                    val tx = parts[1].toLongOrNull() ?: 0L
+                    neuralCore.dispatch(IslandIntent.UpdateNetworkStats(tx, rx))
+                }
             }
         }
     }

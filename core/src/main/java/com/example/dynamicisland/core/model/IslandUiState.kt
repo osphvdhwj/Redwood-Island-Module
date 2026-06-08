@@ -55,6 +55,15 @@ data class IslandUiState(
     val perAppVolume: Int = 0,
     val isPerAppVolumeActive: Boolean = false,
     
+    // Advanced Daemon Hooks
+    val isCameraActive: Boolean = false,
+    val cpuTemperature: Float = 0f,
+    val currentForegroundApp: String = "",
+    val currentRefreshRate: Int = 60,
+    val batteryDischargeRate: Int = 0,
+    val networkTxSpeed: Long = 0L,
+    val networkRxSpeed: Long = 0L,
+    
     // Performance & Lifecycle
     val isScreenOn: Boolean = true,
     val isPowerSaveMode: Boolean = false,

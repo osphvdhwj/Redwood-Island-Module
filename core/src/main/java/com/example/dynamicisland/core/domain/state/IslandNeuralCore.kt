@@ -87,6 +87,12 @@ class IslandNeuralCore @Inject constructor(
             is IslandIntent.UpdatePerAppVolumeState -> currentState.copy(isPerAppVolumeActive = intent.isActive)
             is IslandIntent.UpdateBrightness -> currentState.copy(brightness = intent.brightness, isAutoBrightness = intent.isAuto)
             is IslandIntent.UpdateVolume -> currentState.copy(volume = intent.volume)
+            is IslandIntent.UpdateCameraState -> currentState.copy(isCameraActive = intent.isActive)
+            is IslandIntent.UpdateThermalState -> currentState.copy(cpuTemperature = intent.cpuTemp)
+            is IslandIntent.UpdateForegroundApp -> currentState.copy(currentForegroundApp = intent.pkg)
+            is IslandIntent.UpdateRefreshRate -> currentState.copy(currentRefreshRate = intent.hz)
+            is IslandIntent.UpdateBatteryStats -> currentState.copy(batteryDischargeRate = intent.dischargeRate)
+            is IslandIntent.UpdateNetworkStats -> currentState.copy(networkTxSpeed = intent.txSpeed, networkRxSpeed = intent.rxSpeed)
             is IslandIntent.UpdatePerformanceLevel -> currentState.copy(
                 performanceLevel = intent.level
             )
