@@ -259,6 +259,7 @@ class IslandController @Inject constructor(
                         view.activeModel.value = state.activeModel
                         view.splitModel.value = state.splitModel
                         if (state.isBatteryPulsing) view.triggerBatteryPulse()
+                        view.currentHardware.value = hardwareRepository.hardwareState.value
                         view.updateBattery(state.batteryLevel, state.isCharging)
                         view.gpuLoad.floatValue = state.gamingGpuUsage / 100f
                     }

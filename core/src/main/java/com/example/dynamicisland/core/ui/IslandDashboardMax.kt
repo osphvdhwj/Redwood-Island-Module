@@ -115,7 +115,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
 
         // --- Section 1: System Vitals (Elite Dialect) ---
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            val hw = controller.currentHardware.value
+            val hw = currentHardware.value
             val vitals = mutableListOf<@Composable () -> Unit>()
             
             if (settings.showVitalsRam && hw != null) vitals.add { 

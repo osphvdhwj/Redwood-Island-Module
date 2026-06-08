@@ -12,6 +12,9 @@ import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
 import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.fillMaxSize
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
 import android.os.Build
@@ -173,6 +176,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
     val islandState = mutableStateOf(IslandState.TYPE_0_RING)
     val activeModel = mutableStateOf<LiveActivityModel?>(null)
     val splitModel = mutableStateOf<LiveActivityModel?>(null)
+    val currentHardware = mutableStateOf<LiveActivityModel.HardwareMonitor?>(null)
 
     var onVolumeDrag: ((Int) -> Unit)? = null
     var onStreamVolumeDrag: ((Int, Int) -> Unit)? = null

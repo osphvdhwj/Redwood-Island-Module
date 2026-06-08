@@ -12,6 +12,7 @@ enum class AestheticStyle { GLASS, VOID_BLACK, LIQUID_GLASS }
 enum class ShortcutLayout { GRID, CAROUSEL }
 enum class FontAesthetic { DEFAULT, MONOSPACE, KILO, CHOCOCOOKY, GOOGLE_SANS }
 enum class ActionAnimType { SQUISH, BOUNCE, GLOW, NONE }
+enum class IslandAction { NONE, DISMISS, NEXT_TRACK, PREV_TRACK, PLAY_PAUSE, OPEN_DASHBOARD, TOGGLE_FLASHLIGHT, TAKE_SCREENSHOT, OPEN_SETTINGS }
 
 enum class IconPack { 
     MaterialYou, iOS, OxygenOS, Samsung, Pixel, Futuristic, Minimal, Bold, Outline;
