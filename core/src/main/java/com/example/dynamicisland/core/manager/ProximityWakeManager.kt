@@ -1,4 +1,4 @@
-package com.example.dynamicisland.core.sensors
+package com.example.dynamicisland.core.manager
 
 import android.content.Context
 import android.hardware.Sensor

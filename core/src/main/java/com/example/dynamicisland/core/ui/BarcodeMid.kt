@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.R
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.hook.ContinuityCameraScanner
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
@@ -107,7 +106,7 @@ fun BarcodeMid(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                barcode.label.uppercase(),
+                (barcode.label ?: "Copy").uppercase(),
                 color = accentColor,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Black

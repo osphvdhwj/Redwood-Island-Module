@@ -111,6 +111,7 @@ sealed class LiveActivityModel {
     data class Dashboard(
         val activeTiles: List<QSTileState> = emptyList(),
         val pinnedApps: List<String> = emptyList(),
+        val stashHistory: List<StashedItem> = emptyList(),
         override val id: String = "dashboard",
         override val type: ActivityType = ActivityType.HARDWARE,
         override val isTransient: Boolean = false,
@@ -241,6 +242,17 @@ sealed class LiveActivityModel {
         override val isSensitive: Boolean = false
     ) : LiveActivityModel()
 
+    data class Barcode(
+        override val id: String = "sys_barcode",
+        val content: String,
+        val format: String,
+        val label: String? = null,
+        override val type: ActivityType = ActivityType.NONE,
+        override val isTransient: Boolean = true,
+        override val isCritical: Boolean = false,
+        override val isSensitive: Boolean = false
+    ) : LiveActivityModel()
+
     object QuickNote : LiveActivityModel() {
         override val id: String = "sys_quicknote"
         override val type: ActivityType = ActivityType.ONGOING_TASK
@@ -249,6 +261,15 @@ sealed class LiveActivityModel {
         override val isSensitive: Boolean = true
     }
 }
+
+data class StashedItem(
+    val id: String,
+    val type: StashType,
+    val content: String,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+enum class StashType { TEXT, LINK, IMAGE, FILE }
 
 data class SimpleNotification(
     val id: String,
@@ -281,3 +302,5 @@ data class QSTileState(
 enum class ActivityType {
     MESSAGE, ONGOING_TASK, CHARGING, HARDWARE, ALARM, TIMER, CALL, NAVIGATION, BATTERY_LOW, BLUETOOTH, WIFI, NONE
 }
+
+data class LiveActivityInfo(val pkg: String, val name: String)

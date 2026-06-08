@@ -11,6 +11,7 @@ enum class RingPulseStyle { BREATH, LASER, NONE }
 enum class AestheticStyle { GLASS, VOID_BLACK, LIQUID_GLASS }
 enum class ShortcutLayout { GRID, CAROUSEL }
 enum class FontAesthetic { DEFAULT, MONOSPACE, KILO, CHOCOCOOKY, GOOGLE_SANS }
+enum class ActionAnimType { SQUISH, BOUNCE, GLOW, NONE }
 
 enum class IconPack { 
     MaterialYou, iOS, OxygenOS, Samsung, Pixel, Futuristic, Minimal, Bold, Outline;
@@ -88,6 +89,7 @@ data class SettingsState(
     val contentTransitionStyle: ContentTransitionStyle = ContentTransitionStyle.SLIDE,
     val velocitySquishEnabled: Boolean = true,
     val inlineReplyEnabled: Boolean = true,
+    val actionAnimType: ActionAnimType = ActionAnimType.SQUISH,
 
     // Dashboard & Widgets (Pillar 5)
     val enableMaxWidgets: Boolean = true,

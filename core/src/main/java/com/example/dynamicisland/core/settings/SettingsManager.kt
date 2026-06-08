@@ -2,16 +2,12 @@ package com.example.dynamicisland.core.settings
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import com.example.dynamicisland.core.ipc.IslandIPCClient
 import com.example.dynamicisland.shared.settings.*
 import org.json.JSONObject
 
 /**
  * 🛠️ PRO-GRADE SETTINGS MANAGER
- * 
- * Manages persistence and cross-process synchronization of user preferences.
  */
 class SettingsManager(private val context: Context) {
     private val prefs: SharedPreferences =
@@ -48,7 +44,7 @@ class SettingsManager(private val context: Context) {
         WAVEFORM_ENABLED, MEDIA_ARTWORK_BLUR, BPM_PULSE,
         AMBIENT_REACTIVE_RING, AMBIENT_REACTIVE,
         PHYSICS_STYLE, CONTENT_TRANSITION_STYLE, VELOCITY_SQUISH_ENABLED,
-        INLINE_REPLY_ENABLED,
+        INLINE_REPLY_ENABLED, ACTION_ANIM_TYPE,
         ENABLE_MAX_WIDGETS, SHOW_VITALS_RAM, SHOW_VITALS_CPU,
         SHOW_VITALS_NET, SHOW_VITALS_FPS, SHOW_VITALS_BAT_CYCLES,
         SHORTCUT_LAYOUT,
@@ -208,6 +204,7 @@ class SettingsManager(private val context: Context) {
             contentTransitionStyle = try { ContentTransitionStyle.valueOf(getString(SettingKey.CONTENT_TRANSITION_STYLE, "SLIDE") ?: "SLIDE") } catch(e: Exception) { ContentTransitionStyle.SLIDE },
             velocitySquishEnabled = getBoolean(SettingKey.VELOCITY_SQUISH_ENABLED, true),
             inlineReplyEnabled = getBoolean(SettingKey.INLINE_REPLY_ENABLED, true),
+            actionAnimType = try { ActionAnimType.valueOf(getString(SettingKey.ACTION_ANIM_TYPE, "SQUISH") ?: "SQUISH") } catch(e: Exception) { ActionAnimType.SQUISH },
             enableMaxWidgets = getBoolean(SettingKey.ENABLE_MAX_WIDGETS, true),
             showVitalsRam = getBoolean(SettingKey.SHOW_VITALS_RAM, true),
             showVitalsCpu = getBoolean(SettingKey.SHOW_VITALS_CPU, true),
@@ -241,6 +238,12 @@ class SettingsManager(private val context: Context) {
             allowCallMax = getBoolean(SettingKey.ALLOW_CALL_MAX, true),
             allowTaskMini = getBoolean(SettingKey.ALLOW_TASK_MINI, true),
             allowTaskMid = getBoolean(SettingKey.ALLOW_TASK_MID, true),
+            freeformLaunchEnabled = getBoolean(SettingKey.FREEFORM_LAUNCH_ENABLED, true),
+            freeformSmartGesture = getBoolean(SettingKey.FREEFORM_SMART_GESTURE, true),
+            enableFreeformPortalAnim = getBoolean(SettingKey.ENABLE_FREEFORM_PORTAL_ANIM, true),
+            talkbackIntegration = getBoolean(SettingKey.TALKBACK_INTEGRATION, true),
+            proximityWake = getBoolean(SettingKey.PROXIMITY_WAKE, false),
+            timerIntegration = getBoolean(SettingKey.TIMER_INTEGRATION, true),
             islandEnabled = getBoolean(SettingKey.ISLAND_ENABLED, true),
             islandOnLockscreen = getBoolean(SettingKey.ISLAND_ON_LOCKSCREEN, true),
             lockscreenFeatures = getStringSet(SettingKey.LOCKSCREEN_FEATURES, setOf("music", "notifications")),
@@ -294,18 +297,8 @@ class SettingsManager(private val context: Context) {
             autoBackupEnabled = getBoolean(SettingKey.AUTO_BACKUP_ENABLED, false),
             autoBackupFreqDays = getInt(SettingKey.AUTO_BACKUP_FREQ_DAYS, 7),
             stashStoragePath = getString(SettingKey.STASH_STORAGE_PATH, "/sdcard/DynamicIsland/Archive") ?: "/sdcard/DynamicIsland/Archive",
-            talkbackIntegration = getBoolean(SettingKey.TALKBACK_INTEGRATION, true),
-            proximityWake = getBoolean(SettingKey.PROXIMITY_WAKE, false),
-            timerIntegration = getBoolean(SettingKey.TIMER_INTEGRATION, true),
             splitPillEnabled = getBoolean(SettingKey.SPLIT_PILL_ENABLED, true),
-            iconPack = IconPack.fromString(iconPackId),
-            squishIntensity = getFloat(SettingKey.SQUISH_INTENSITY, 1.0f),
-            freeformLaunchEnabled = getBoolean(SettingKey.FREEFORM_LAUNCH_ENABLED, true),
-            freeformSmartGesture = getBoolean(SettingKey.FREEFORM_SMART_GESTURE, true),
-            enableFreeformPortalAnim = getBoolean(SettingKey.ENABLE_FREEFORM_PORTAL_ANIM, true),
-            fontAesthetic = try { FontAesthetic.valueOf(getString(SettingKey.FONT_AESTHETIC, "DEFAULT") ?: "DEFAULT") } catch(e: Exception) { FontAesthetic.DEFAULT },
-            appLanguage = getString(SettingKey.APP_LANGUAGE, "System") ?: "System",
-            expressiveMeshEnabled = getBoolean(SettingKey.EXPRESSIVE_MESH_ENABLED, true)
+            iconPack = IconPack.fromString(iconPackId)
         )
     }
 }

@@ -36,7 +36,8 @@ data class IslandTheme(
     // Core Dimensions
     val batIconSize: Dp = 18.dp,
     val alertTitleSize: TextUnit = 15.sp,
-    val alertMsgSize: TextUnit = 13.sp
+    val alertMsgSize: TextUnit = 13.sp,
+    val buttonCornerRadius: Dp = 16.dp
 )
 
 val LocalIslandTheme = compositionLocalOf { IslandTheme() }
