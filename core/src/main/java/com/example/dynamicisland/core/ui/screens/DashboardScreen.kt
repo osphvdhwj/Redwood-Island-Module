@@ -7,19 +7,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Palette
-import com.example.dynamicisland.shared.settings.AestheticStyle
-import com.example.dynamicisland.shared.settings.IconPack
-import com.example.dynamicisland.shared.settings.DesignLanguage
-import com.example.dynamicisland.shared.settings.PhysicsStyle
-import com.example.dynamicisland.shared.settings.ContentTransitionStyle
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.shared.model.LocalIslandTheme
-import com.example.dynamicisland.shared.model.IslandTheme
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.MD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.*
@@ -33,7 +30,9 @@ import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.components.ArchiveGridCard
 import com.example.dynamicisland.core.ui.components.ArchiveHeader
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -41,6 +40,7 @@ fun DashboardScreen(
 ) {
     val filters = listOf("Layout", "Theme", "Gestures", "Advanced")
     var selectedFilter by remember { mutableStateOf(filters.first()) }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize()
@@ -71,6 +71,8 @@ fun DashboardScreen(
                     }
                 }
             }
+
+            item {
                 Column {
                     ArchiveHeader(
                         title = "Categories",
@@ -87,16 +89,36 @@ fun DashboardScreen(
                             icon = Icons.Default.Build,
                             onClick = { onCategoryClick("Layout") },
                             modifier = Modifier.weight(1f)
+                        )
+                        ArchiveGridCard(
                             title = "Theme Colors",
                             icon = Icons.Default.Palette,
                             onClick = { onCategoryClick("Theme") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    
                     Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        ArchiveGridCard(
                             title = "Gestures",
                             icon = Icons.Default.TouchApp,
                             onClick = { onCategoryClick("Gestures") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        ArchiveGridCard(
                             title = "Advanced Setup",
                             icon = Icons.Default.Settings,
                             onClick = { onCategoryClick("Advanced") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
         }
     }
 }

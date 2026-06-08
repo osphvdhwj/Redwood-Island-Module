@@ -7,19 +7,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PowerSettingsNew
-import com.example.dynamicisland.shared.settings.AestheticStyle
-import com.example.dynamicisland.shared.settings.IconPack
-import com.example.dynamicisland.shared.settings.DesignLanguage
-import com.example.dynamicisland.shared.settings.PhysicsStyle
-import com.example.dynamicisland.shared.settings.ContentTransitionStyle
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.shared.model.LocalIslandTheme
-import com.example.dynamicisland.shared.model.IslandTheme
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.MD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,15 +28,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodDesignSystem
 import com.example.dynamicisland.core.ui.design.glassmorphicCard
+import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.rememberHapticManager
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
+
 data class NavItemData(
     val title: String,
     val icon: ImageVector
 )
+
 @Composable
 fun FloatingNavBar(
     items: List<NavItemData>,
@@ -82,8 +84,10 @@ fun FloatingNavBar(
         }
         
         Spacer(modifier = Modifier.width(12.dp))
+        
         // Circular FAB with Neon Glow
         Box(
+            modifier = Modifier
                 .size(64.dp)
                 .glassmorphicCard(cornerRadius = 50.dp, glowColor = IslandColors.accentCyan, glowRadius = 12.dp)
                 .premiumClickable { 
@@ -91,24 +95,31 @@ fun FloatingNavBar(
                     onFabClick() 
                 },
             contentAlignment = Alignment.Center
+        ) {
             Icon(
                 Icons.Default.PowerSettingsNew, 
                 contentDescription = "Toggle Island", 
                 tint = IslandColors.accentCyan,
                 modifier = Modifier.size(28.dp)
             )
+        }
     }
 }
+
+@Composable
 fun AnimatedNavItem(
     selected: Boolean,
     onClick: () -> Unit,
     icon: ImageVector,
     label: String
+) {
     val contentColor by animateColorAsState(
         targetValue = if (selected) IslandColors.accentCyan else IslandColors.textSecondary,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "nav_content_color"
     )
+
+    Row(
         modifier = Modifier
             .premiumClickable { onClick() }
             .padding(horizontal = if (selected) 16.dp else 12.dp, vertical = 12.dp)
@@ -116,19 +127,23 @@ fun AnimatedNavItem(
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioNoBouncy,
                     stiffness = Spring.StiffnessMedium
+                )
             ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
+    ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
             tint = contentColor,
             modifier = Modifier.size(24.dp)
         )
+
         AnimatedVisibility(
             visible = selected,
             enter = fadeIn() + expandHorizontally(),
             exit = fadeOut() + shrinkHorizontally()
+        ) {
             Row {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
@@ -137,3 +152,8 @@ fun AnimatedNavItem(
                     style = RedwoodDesignSystem.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
+                )
+            }
+        }
+    }
+}

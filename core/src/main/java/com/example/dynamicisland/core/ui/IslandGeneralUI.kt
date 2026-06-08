@@ -7,19 +7,16 @@ import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import com.example.dynamicisland.shared.settings.AestheticStyle
-import com.example.dynamicisland.shared.settings.IconPack
-import com.example.dynamicisland.shared.settings.DesignLanguage
-import com.example.dynamicisland.shared.settings.PhysicsStyle
-import com.example.dynamicisland.shared.settings.ContentTransitionStyle
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.shared.model.LocalIslandTheme
-import com.example.dynamicisland.shared.model.IslandTheme
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.MD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -97,7 +94,7 @@ fun DynamicIslandView.RealityPillMini(model: LiveActivityModel.RealityPill) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Icon(Icons.Default.Notifications, contentDescription = "Session Time", tint = Color(0xFF00FF00), modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(8.dp))
-        Text(text = "${model.contextLabel} • ${model.actionLabel}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
+        Text(text = "${model.appName} • ${model.sessionMinutes}m", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.safeMarquee(islandState.value))
     }
 }
 

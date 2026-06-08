@@ -7,20 +7,19 @@ import androidx.compose.ui.platform.LocalView
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.settings.AestheticStyle
-import com.example.dynamicisland.shared.settings.IconPack
-import com.example.dynamicisland.shared.settings.DesignLanguage
-import com.example.dynamicisland.shared.settings.PhysicsStyle
-import com.example.dynamicisland.shared.settings.ContentTransitionStyle
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.shared.model.LocalIslandTheme
-import com.example.dynamicisland.shared.model.IslandTheme
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.MD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.shared.model.LocalIslandTheme
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
+
 /**
  * Premium Haptic Manager for UI interactions.
  * Provides consistent, high-quality tactile feedback.
@@ -30,25 +29,45 @@ class HapticManager(private val view: android.view.View) {
     fun light() {
         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
     }
+
     fun medium() {
         view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+    }
+
     fun heavy() {
         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+    }
+
     fun success() {
         // Double tick for success
+        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
         view.postDelayed({
             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
         }, 50)
+    }
+
     fun error() {
         // Triple sharp tick for error
         view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+        view.postDelayed({
             view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
         }, 60)
+        view.postDelayed({
+            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
         }, 120)
+    }
+    
     fun toggleOn() {
+        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+    }
+    
     fun toggleOff() {
+        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+    }
 }
+
 @Composable
 fun rememberHapticManager(): HapticManager {
     val view = LocalView.current
     return remember(view) { HapticManager(view) }
+}

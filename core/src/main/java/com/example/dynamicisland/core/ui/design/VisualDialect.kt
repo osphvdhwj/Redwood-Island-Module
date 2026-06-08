@@ -4,20 +4,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.shared.settings.IconPack
+
 /**
  * HIGH-FIDELITY VISUAL DIALECT (Pillar 2)
-import com.example.dynamicisland.shared.settings.AestheticStyle
-import com.example.dynamicisland.shared.settings.DesignLanguage
-import com.example.dynamicisland.shared.settings.PhysicsStyle
-import com.example.dynamicisland.shared.settings.ContentTransitionStyle
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.shared.model.LocalIslandTheme
-import com.example.dynamicisland.shared.model.IslandTheme
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.MD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.shared.model.LocalIslandTheme
  * Defines the physical properties and aesthetic "accent" of the Island
  * based on the active IconPack (Dialect).
  */
@@ -50,11 +49,13 @@ data class VisualDialect(
                     borderWidth = 1.5.dp,
                     borderColor = Color(0xFFFF0000).copy(alpha = 0.4f), // OnePlus Red accent
                     accentColor = Color(0xFFFF0000)
+                )
                 IconPack.Pixel -> VisualDialect(
                     cornerRadius = 100.dp, // Perfectly circular for mini
                     borderWidth = 1.dp,
                     borderColor = Color.White.copy(alpha = 0.2f),
                     accentColor = Color(0xFF4285F4) // Google Blue
+                )
                 IconPack.Futuristic -> VisualDialect(
                     cornerRadius = 4.dp, // Cyber-sharp
                     borderWidth = 2.dp,
@@ -62,6 +63,7 @@ data class VisualDialect(
                     glowColor = Color(0xFF00FFFF).copy(alpha = 0.5f),
                     glowRadius = 8.dp,
                     accentColor = Color(0xFF00FFFF)
+                )
                 IconPack.Bold -> VisualDialect( // Cyberpunk equivalent
                     cornerRadius = 0.dp, // Brutalist
                     borderWidth = 3.dp,
@@ -70,19 +72,27 @@ data class VisualDialect(
                     glowRadius = 12.dp,
                     accentColor = Color(0xFFFDEE00),
                     backgroundAlpha = 1.0f
+                )
                 IconPack.Minimal -> VisualDialect(
                     cornerRadius = 12.dp,
                     borderWidth = 0.dp,
                     borderColor = Color.Transparent,
                     backgroundAlpha = 0.8f,
                     accentColor = Color.White
+                )
                 IconPack.Outline -> VisualDialect(
                     cornerRadius = 20.dp,
+                    borderWidth = 2.dp,
                     borderColor = Color.White,
                     backgroundAlpha = 0.0f, // True outline
+                    accentColor = Color.White
+                )
                 IconPack.Samsung -> VisualDialect(
                     cornerRadius = 22.dp,
+                    borderWidth = 1.dp,
+                    borderColor = Color.White.copy(alpha = 0.2f),
                     accentColor = Color(0xFF147EFB)
+                )
                 else -> VisualDialect() 
             }
         }

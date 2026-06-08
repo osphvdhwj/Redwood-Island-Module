@@ -7,22 +7,18 @@ import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
-import com.example.dynamicisland.shared.settings.AestheticStyle
-import com.example.dynamicisland.shared.settings.IconPack
-import com.example.dynamicisland.shared.settings.DesignLanguage
-import com.example.dynamicisland.shared.settings.PhysicsStyle
-import com.example.dynamicisland.shared.settings.ContentTransitionStyle
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.shared.model.LocalIslandTheme
-import com.example.dynamicisland.shared.model.IslandTheme
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.MD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import com.example.dynamicisland.core.ui.design.VisualDialect
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -102,7 +98,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                         .size(40.dp)
                         .background(Color.White.copy(alpha = 0.1f), CircleShape)
                         .squishClickable { 
-                            controller.postTransientNotification(com.example.dynamicisland.shared.model.LiveActivityModel.QuickNote, -1)
+                            controller.postTransientNotification(com.example.dynamicisland.shared.model.LiveActivityModel.QuickNote(), -1)
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -149,8 +145,8 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
         // --- Section 1.5: Widgets (NEW) ---
         if (settings.enableMaxWidgets) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Box(Modifier.weight(1f)) { MiniWeatherWidget("24°C", "Sunny") }
-                // Box(Modifier.weight(1f)) { MiniCalendarWidget("Meeting", "14:00") }
+                Box(Modifier.weight(1f)) { MiniWeatherWidget("24°C", "Sunny") }
+                Box(Modifier.weight(1f)) { MiniCalendarWidget("Meeting", "14:00") }
             }
         }
 
@@ -179,9 +175,10 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                 contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (media.albumArt != null) {
+                    val art = media.albumArt
+                    if (art != null) {
                         Image(
-                            bitmap = media.albumArt.asImageBitmap(),
+                            bitmap = art.asImageBitmap(),
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.dp))
@@ -283,7 +280,6 @@ fun DynamicIslandView.StashItemCard(item: StashedItem) {
                 StashType.TEXT -> Icons.Default.Edit
                 StashType.IMAGE -> Icons.Default.Image
                 StashType.FILE -> Icons.Default.Build
-                StashType.LINK -> Icons.Default.Link
             }
             Icon(icon, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
             Spacer(Modifier.height(4.dp))

@@ -7,19 +7,16 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import com.example.dynamicisland.shared.settings.AestheticStyle
-import com.example.dynamicisland.shared.settings.IconPack
-import com.example.dynamicisland.shared.settings.DesignLanguage
-import com.example.dynamicisland.shared.settings.PhysicsStyle
-import com.example.dynamicisland.shared.settings.ContentTransitionStyle
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.shared.model.LocalIslandTheme
-import com.example.dynamicisland.shared.model.IslandTheme
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.MD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
@@ -47,7 +44,9 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
+
 @Composable
 fun IslandPreviewCard(
     modifier: Modifier = Modifier,
@@ -73,6 +72,7 @@ fun IslandPreviewCard(
             }
         }
     }
+
     // Determine target dimensions
     val targetWidth = if (isLivePreview) liveWidth.dp else when (previewState) {
         "call" -> 160.dp
@@ -83,16 +83,22 @@ fun IslandPreviewCard(
             "Call" -> 160.dp
             "Charging" -> 190.dp
             else -> 120.dp
+        }
+    }
+
     val targetHeight = if (isLivePreview) liveHeight.dp else when (previewState) {
         "call" -> 40.dp
         "charging" -> 44.dp
         "music" -> 44.dp
         else -> 44.dp
+    }
+
     val pillWidth by animateDpAsState(targetWidth, label = "w")
     val pillHeight by animateDpAsState(targetHeight, label = "h")
     val pillRadius by animateDpAsState(if (isLivePreview) liveRadius.dp else 100.dp, label = "r")
     val pillOffsetX by animateDpAsState(if (isLivePreview) liveX.dp else 0.dp, label = "x")
     val pillOffsetY by animateDpAsState(if (isLivePreview) liveY.dp else 32.dp, label = "y")
+
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
@@ -114,6 +120,8 @@ fun IslandPreviewCard(
                     cornerRadius = CornerRadius(20.dp.toPx()),
                     style = Stroke(width = 1.dp.toPx())
                 )
+            }
+
             // --- The Island Pill ---
             Box(
                 modifier = Modifier
@@ -145,13 +153,25 @@ fun IslandPreviewCard(
                                     Text("Now Playing", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                     Text("Redwood Audio Engine", color = Color.Gray, fontSize = 8.sp)
                                 }
+                            }
                         }
                         "call" -> {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp)) {
                                 Icon(Icons.Default.Call, null, tint = Color.Green, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
                                 Text("04:20", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
                         "charging" -> {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp)) {
                                 Icon(Icons.Default.BatteryChargingFull, null, tint = Color.Green, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
                                 Text("88%", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
+            }
+        }
+    }
 }

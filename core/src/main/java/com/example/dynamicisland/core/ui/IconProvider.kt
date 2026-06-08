@@ -7,19 +7,16 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.example.dynamicisland.shared.settings.AestheticStyle
-import com.example.dynamicisland.shared.settings.IconPack
-import com.example.dynamicisland.shared.settings.DesignLanguage
-import com.example.dynamicisland.shared.settings.PhysicsStyle
-import com.example.dynamicisland.shared.settings.ContentTransitionStyle
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.shared.model.LocalIslandTheme
-import com.example.dynamicisland.shared.model.IslandTheme
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.MD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
@@ -48,12 +45,12 @@ object IconProvider {
         return when (pack) {
             is IconPack.iOS            -> getiOSIcon(logicalIcon)
             is IconPack.OxygenOS       -> getOxygenIcon(logicalIcon)
-            is IconPack.Samsung          -> getSamIcon(logicalIcon)
+            is IconPack.OneUI          -> getSamIcon(logicalIcon)
             is IconPack.Pixel          -> getPixelIcon(logicalIcon)
             is IconPack.Outline        -> getOutlineIcon(logicalIcon)
             is IconPack.Futuristic     -> getFuturisticIcon(logicalIcon)
             is IconPack.Minimal        -> getMinimalIcon(logicalIcon)
-            is IconPack.Futuristic -> getCyberpunkIcon(logicalIcon)
+            is IconPack.AmoledCyberpunk -> getCyberpunkIcon(logicalIcon)
             else                       -> getMaterialYouIcon(logicalIcon)
         }
     }
@@ -77,7 +74,7 @@ object IconProvider {
         LogicalIcon.SPEED -> Icons.Outlined.Speed
         LogicalIcon.DATA -> Icons.Outlined.SwapVert
         LogicalIcon.RAM -> Icons.Outlined.Memory
-        LogicalIcon.CPU -> Icons.Outlined.Memory
+        LogicalIcon.CPU -> Icons.Outlined.Cpu
         else -> getMaterialYouIcon(icon)
     }
 
@@ -88,7 +85,7 @@ object IconProvider {
         LogicalIcon.PHONE -> Icons.Filled.Phone
         LogicalIcon.DATA -> Icons.Filled.SettingsInputAntenna
         LogicalIcon.RAM -> Icons.Filled.Memory
-        LogicalIcon.CPU -> Icons.Filled.Memory
+        LogicalIcon.CPU -> Icons.Filled.Cpu
         else -> getMaterialYouIcon(icon)
     }
 
@@ -97,7 +94,7 @@ object IconProvider {
         LogicalIcon.WIFI -> Icons.Rounded.Wifi
         LogicalIcon.SETTINGS -> Icons.Rounded.Settings
         LogicalIcon.RAM -> Icons.Rounded.Memory
-        LogicalIcon.CPU -> Icons.Rounded.Memory
+        LogicalIcon.CPU -> Icons.Rounded.Cpu
         else -> getMaterialYouIcon(icon)
     }
 
@@ -108,7 +105,7 @@ object IconProvider {
         LogicalIcon.BATTERY_FULL -> Icons.Outlined.BatteryFull
         LogicalIcon.MAIL -> Icons.Outlined.Mail
         LogicalIcon.RAM -> Icons.Outlined.Memory
-        LogicalIcon.CPU -> Icons.Outlined.Memory
+        LogicalIcon.CPU -> Icons.Outlined.Cpu
         else -> getMaterialYouIcon(icon)
     }
 
@@ -124,7 +121,7 @@ object IconProvider {
         LogicalIcon.WIFI -> Icons.Outlined.Wifi
         LogicalIcon.CLOSE -> Icons.Outlined.Close
         LogicalIcon.RAM -> Icons.Outlined.Memory
-        LogicalIcon.CPU -> Icons.Outlined.Memory
+        LogicalIcon.CPU -> Icons.Outlined.Cpu
         else -> getMaterialYouIcon(icon)
     }
 
@@ -158,7 +155,7 @@ object IconProvider {
         LogicalIcon.HOTSPOT -> Icons.Filled.SettingsInputAntenna
         LogicalIcon.DATA -> Icons.Filled.DataUsage
         LogicalIcon.RAM -> Icons.Filled.Memory
-        LogicalIcon.CPU -> Icons.Filled.Memory
+        LogicalIcon.CPU -> Icons.Filled.Cpu
         LogicalIcon.ALARM -> ProgrammaticIcons.MaterialBell
         LogicalIcon.MUSIC -> ProgrammaticIcons.MaterialMusic
         else -> Icons.Filled.Info
