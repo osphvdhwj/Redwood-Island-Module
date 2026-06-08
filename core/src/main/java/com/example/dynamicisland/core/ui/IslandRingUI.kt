@@ -46,7 +46,7 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
         // 🛡️ Optimization 1: Use spring for high-fidelity physical interaction
         val pulseScale by animateFloatAsState(
             targetValue = if (isPulsing) 1.15f else 1.0f,
-            animationSpec = if (pack is com.example.dynamicisland.shared.settings.IconPack.iOS) spring(dampingRatio = 0.4f) else tween(200),
+            animationSpec = if (pack == com.example.dynamicisland.shared.settings.IconPack.iOS) spring(dampingRatio = 0.4f) else tween(200),
             label = "pulse_scale"
         )
         

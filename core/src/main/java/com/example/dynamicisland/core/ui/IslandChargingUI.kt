@@ -81,7 +81,7 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
     val infiniteTransition = rememberInfiniteTransition(label = "anim")
     
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        when (LocalIslandTheme.current.chargingStyle) {
+        when (controller?.settingsState?.chargingStyle ?: com.example.dynamicisland.shared.settings.ChargingStyle.RING) {
             com.example.dynamicisland.shared.settings.ChargingStyle.RING -> {
                 val spinAngle by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart), label = "spin")
                 if (model.isPluggedIn || isLow) { 

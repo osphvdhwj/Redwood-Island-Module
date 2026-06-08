@@ -47,7 +47,7 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
     val theme = LocalIslandTheme.current
     val isRinging = model.state == "RINGING"
 
-    when (LocalIslandTheme.current.callStyle) {
+    when (controller?.settingsState?.callStyle ?: com.example.dynamicisland.shared.settings.CallStyle.IOS) {
         com.example.dynamicisland.shared.settings.CallStyle.MINIMAL -> {
             Row(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
