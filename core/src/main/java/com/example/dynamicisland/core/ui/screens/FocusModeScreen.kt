@@ -13,6 +13,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.manager.IslandBackupManager
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.AppPickerActivity
 import com.example.dynamicisland.core.ui.components.*

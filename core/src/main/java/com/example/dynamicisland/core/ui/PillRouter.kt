@@ -8,6 +8,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dynamicisland.core.ui.components.OrbitalRingUI
+import com.example.dynamicisland.core.ui.components.BrutalistContainer
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*

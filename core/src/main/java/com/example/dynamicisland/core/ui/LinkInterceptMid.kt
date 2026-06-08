@@ -58,9 +58,10 @@ fun DynamicIslandView.LinkInterceptMid(link: LiveActivityModel.LinkIntercept) {
                 .border(1.dp, accentColor.copy(alpha = 0.30f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            if (link.targetAppIcon != null) {
+            val icon = link.targetAppIcon
+            if (icon != null) {
                 Image(
-                    bitmap = link.targetAppIcon.asImageBitmap(),
+                    bitmap = icon.asImageBitmap(),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize().clip(CircleShape)
                 )

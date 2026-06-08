@@ -7,8 +7,6 @@ import kotlinx.coroutines.launch
 
 /**
  * 🛠️ CONFIGURATION SYNC MANAGER
- * 
- * Synchronizes layout positions and ring dimensions across processes.
  */
 object NewConfigManager {
     fun saveAndBroadcast(
@@ -27,10 +25,45 @@ object NewConfigManager {
                 putFloat("${prefix}_r", r)
                 putFloat("ring_thickness", ringT)
             }.apply()
-            
-            // Trigger system-wide reload
-            val intent = android.content.Intent("com.example.dynamicisland.RELOAD_PREFS")
-            context.sendBroadcast(intent)
+            broadcastReload(context)
         }
     }
+
+    fun commitAndBroadcast(
+        prefs: SharedPreferences,
+        scope: CoroutineScope,
+        context: Context,
+        editBlock: SharedPreferences.Editor.() -> Unit,
+        onDone: (() -> Unit)? = null
+    ) {
+        scope.launch {
+            prefs.edit().apply(editBlock).apply()
+            broadcastReload(context)
+            onDone?.invoke()
+        }
+    }
+
+    fun broadcastUpdateSingle(context: Context, prefs: SharedPreferences, key: String) {
+        broadcastReload(context)
+    }
+
+    fun sendGestureUpdate(context: Context, prefs: SharedPreferences) {
+        broadcastReload(context)
+    }
+
+    fun setCalibrationMode(context: Context, enabled: Boolean, prefix: String) {
+        val intent = android.content.Intent("com.example.dynamicisland.CALIBRATION_MODE")
+        intent.putExtra("enabled", enabled)
+        intent.putExtra("prefix", prefix)
+        context.sendBroadcast(intent)
+    }
+
+    private fun broadcastReload(context: Context) {
+        val intent = android.content.Intent("com.example.dynamicisland.RELOAD_PREFS")
+        context.sendBroadcast(intent)
+    }
+
+    fun getDefaultWidth(prefix: String) = 180f
+    fun getDefaultHeight(prefix: String) = 45f
+    fun getDefaultRadius(prefix: String) = 24f
 }

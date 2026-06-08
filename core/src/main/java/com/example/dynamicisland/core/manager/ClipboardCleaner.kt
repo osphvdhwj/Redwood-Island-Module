@@ -1,9 +1,9 @@
-package com.example.dynamicisland.core.privacy
+package com.example.dynamicisland.core.manager
 
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import com.example.dynamicisland.shared.settings.SettingsManager
+import com.example.dynamicisland.core.settings.SettingsManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton

@@ -58,7 +58,8 @@ import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.performance.eliteFluidSurface
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.core.ui.design.geminiAura
+import com.example.dynamicisland.core.manager.updateIslandTransition
 import com.example.dynamicisland.shared.settings.IconPack
 import kotlin.math.abs
 import kotlin.math.cos
@@ -77,7 +78,7 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     val density = LocalDensity.current
     
     val settings = view.controller?.settingsState ?: com.example.dynamicisland.shared.settings.SettingsState()
-    val isCyberpunk = settings.iconPack is IconPack.AmoledCyberpunk
+    val isCyberpunk = settings.iconPack == IconPack.Futuristic
     val isLiquidGlass = settings.aestheticStyle == AestheticStyle.LIQUID_GLASS
     
     val infiniteTransition = rememberInfiniteTransition(label = "pulse_time")
@@ -88,16 +89,8 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         label = "time"
     )
 
-    val uiState = when (state) {
-        IslandState.HIDDEN -> IslandUiState.HIDDEN
-        IslandState.TYPE_0_RING -> IslandUiState.NOTIFICATION_RING
-        IslandState.TYPE_1_MINI, IslandState.TYPE_2_MID, IslandState.TYPE_CUBE -> IslandUiState.COMPACT
-        IslandState.TYPE_3_MAX -> IslandUiState.MAX_PILL
-        IslandState.TYPE_SPLIT -> IslandUiState.SPLIT_PILL
-    }
-
     val animValues = updateIslandTransition(
-        targetState = uiState,
+        targetState = state,
         isCyberpunk = isCyberpunk,
         physicsStyle = settings.physicsStyle,
         miniWidth = if (state == IslandState.TYPE_2_MID) view.midW.value else if (state == IslandState.TYPE_CUBE) view.cubeW.value else view.miniW.value,
@@ -108,6 +101,8 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         ringHeight = view.ringH.value,
         miniRadius = if (state == IslandState.TYPE_2_MID) view.midR.value else if (state == IslandState.TYPE_CUBE) view.cubeR.value else view.miniR.value,
         maxRadius = view.maxR.value,
+        ringRadius = view.ringR.value
+    )
         ringRadius = view.ringR.value
     )
 
@@ -131,7 +126,10 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
     val bgColor by animateColorAsState(
         targetValue = if (state == IslandState.HIDDEN || state == IslandState.TYPE_0_RING) Color.Transparent else {
             if (settings.aestheticStyle == AestheticStyle.VOID_BLACK) Color.Black
-            else if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) Color(model.dominantColor)
+            else if (model is LiveActivityModel.Music && model.dominantColor != null && state != IslandState.TYPE_3_MAX) {
+                val dColor = model.dominantColor
+                if (dColor != null) Color(dColor) else Color.Transparent
+            }
             else Color.Black
         },
         animationSpec = tween(200),

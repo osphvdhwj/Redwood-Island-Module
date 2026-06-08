@@ -21,7 +21,7 @@ import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.performance.IslandBlurEngine
 import com.example.dynamicisland.core.ui.DynamicIslandView
 import com.example.dynamicisland.core.util.RedwoodLogger
-import com.example.dynamicisland.shared.ipc.IslandIPCClient
+import com.example.dynamicisland.core.ipc.IslandIPCClient
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.settings.SettingsManager
@@ -73,7 +73,7 @@ class IslandController @Inject constructor(
     var settingsState by mutableStateOf(SettingsState())
         private set
 
-    private val proximityWakeManager by lazy { ProximityWakeManager(context) }
+    private val proximityWakeManager: ProximityWakeManager by lazy { ProximityWakeManager(context) }
 
     init {
         scope.launch {

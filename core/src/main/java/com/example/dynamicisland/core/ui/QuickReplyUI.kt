@@ -74,9 +74,10 @@ fun DynamicIslandView.NotificationStackMax(model: LiveActivityModel.Notification
 
         // --- Active Message ---
         Row(verticalAlignment = Alignment.Top) {
-            if (latestNotif.avatar != null) {
+            val avatar = latestNotif.avatar
+            if (avatar != null) {
                 Image(
-                    bitmap = latestNotif.avatar.asImageBitmap(),
+                    bitmap = avatar.asImageBitmap(),
                     contentDescription = null,
                     modifier = Modifier
                         .size(40.dp)

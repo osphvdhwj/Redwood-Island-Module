@@ -5,7 +5,7 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.settings.SettingsManager
+import com.example.dynamicisland.core.settings.SettingsManager
 import javax.inject.Inject
 import javax.inject.Singleton
 

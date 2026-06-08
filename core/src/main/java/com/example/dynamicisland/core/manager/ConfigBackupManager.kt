@@ -70,12 +70,12 @@ object ConfigBackupManager {
             editor.apply()
             
             // Trigger a full update
-            ConfigManager.sendGestureUpdate(context, prefs)
-            ConfigManager.broadcastUpdateSingle(context, prefs, "dashboard")
-            ConfigManager.broadcastUpdateSingle(context, prefs, "theme")
-            ConfigManager.broadcastUpdateSingle(context, prefs, "layout")
-            ConfigManager.broadcastUpdateSingle(context, prefs, "intelligence")
-            ConfigManager.broadcastUpdateSingle(context, prefs, "continuity")
+            NewConfigManager.sendGestureUpdate(context, prefs)
+            NewConfigManager.broadcastUpdateSingle(context, prefs, "dashboard")
+            NewConfigManager.broadcastUpdateSingle(context, prefs, "theme")
+            NewConfigManager.broadcastUpdateSingle(context, prefs, "layout")
+            NewConfigManager.broadcastUpdateSingle(context, prefs, "intelligence")
+            NewConfigManager.broadcastUpdateSingle(context, prefs, "continuity")
             
             // Trigger a reboot broadcast for the main engine to pick up new core settings
             context.sendBroadcast(android.content.Intent("com.example.dynamicisland.RELOAD_PREFS").apply {

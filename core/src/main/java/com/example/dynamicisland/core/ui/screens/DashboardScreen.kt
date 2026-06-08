@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.manager.IslandBackupManager
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.model.*

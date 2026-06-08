@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import com.example.dynamicisland.shared.ipc.IslandIPCClient
+import com.example.dynamicisland.core.ipc.IslandIPCClient
 import com.example.dynamicisland.shared.settings.*
 import org.json.JSONObject
 

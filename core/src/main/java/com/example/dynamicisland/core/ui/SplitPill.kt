@@ -53,7 +53,7 @@ fun DynamicIslandView.SplitPill(model: LiveActivityModel, onClick: () -> Unit) {
             painter = painter,
             contentDescription = null,
             tint = Color.White,
-            modifier = Modifier.size((theme.batIconSize + 8.dp) * 0.6f)
+            modifier = Modifier.size(theme.batIconSize * 0.8f)
         )
     }
 }

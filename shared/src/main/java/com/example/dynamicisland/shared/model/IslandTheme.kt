@@ -31,7 +31,12 @@ data class IslandTheme(
     val accentFont: FontFamily = FontFamily.Default,
     val titleSize: TextUnit = 14.sp,
     val bodySize: TextUnit = 12.sp,
-    val captionSize: TextUnit = 10.sp
+    val captionSize: TextUnit = 10.sp,
+    
+    // Core Dimensions
+    val batIconSize: Dp = 18.dp,
+    val alertTitleSize: TextUnit = 15.sp,
+    val alertMsgSize: TextUnit = 13.sp
 )
 
 val LocalIslandTheme = compositionLocalOf { IslandTheme() }

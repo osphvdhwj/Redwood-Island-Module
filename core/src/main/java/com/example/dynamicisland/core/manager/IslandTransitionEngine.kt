@@ -1,5 +1,4 @@
-package com.example.dynamicisland.core.ui.animations
-import com.example.dynamicisland.core.model.IslandUiState
+package com.example.dynamicisland.core.manager
 
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.*
@@ -7,20 +6,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.IslandState
 import com.example.dynamicisland.shared.settings.PhysicsStyle
-
-enum class IslandUiState {
-    COMPACT,
-    MAX_PILL,
-    SPLIT_PILL,
-    NOTIFICATION_RING,
-    HIDDEN
-}
 
 data class IslandAnimationValues(
     val width: Dp,
@@ -36,7 +23,7 @@ data class IslandAnimationValues(
 
 @Composable
 fun updateIslandTransition(
-    targetState: IslandUiState,
+    targetState: IslandState,
     isCyberpunk: Boolean,
     physicsStyle: PhysicsStyle = PhysicsStyle.APPLE,
     miniWidth: Float = 180f,
@@ -51,56 +38,47 @@ fun updateIslandTransition(
 ): IslandAnimationValues {
     val transition = updateTransition(targetState = targetState, label = "IslandTransition")
 
-    // 💎 LIQUID PHYSICS: High-Grade Fluid Motion
-    // Apple uses a custom spring with high stiffness (around 1000) and very specific damping (0.8 - 0.9)
-    val damping = when (physicsStyle) {
-        PhysicsStyle.APPLE -> 0.85f
-        PhysicsStyle.OXYGEN_OS -> 0.65f
-        else -> 0.75f
-    }
-    val stiffness = when (physicsStyle) {
-        PhysicsStyle.APPLE -> 1200f
-        PhysicsStyle.OXYGEN_OS -> 800f
-        else -> 450f
-    }
-
     val springSpecDp = tween<Dp>(durationMillis = 200)
     val springSpecFloat = tween<Float>(durationMillis = 200)
     val springSpecColor = tween<Color>(durationMillis = 200)
 
     val width by transition.animateDp(transitionSpec = { springSpecDp }, label = "width") { state ->
         when (state) {
-            IslandUiState.COMPACT -> miniWidth.dp
-            IslandUiState.MAX_PILL -> maxWidth.dp
-            IslandUiState.SPLIT_PILL -> (miniWidth * 0.7f).dp
-            IslandUiState.NOTIFICATION_RING -> ringWidth.dp
-            IslandUiState.HIDDEN -> 0.dp
+            IslandState.TYPE_1_MINI -> miniWidth.dp
+            IslandState.TYPE_2_MID -> (miniWidth * 1.5f).dp
+            IslandState.TYPE_3_MAX -> maxWidth.dp
+            IslandState.TYPE_SPLIT -> (miniWidth * 0.7f).dp
+            IslandState.TYPE_0_RING, IslandState.TYPE_ORBITAL -> ringWidth.dp
+            IslandState.HIDDEN -> 0.dp
+            else -> miniWidth.dp
         }
     }
 
     val height by transition.animateDp(transitionSpec = { springSpecDp }, label = "height") { state ->
         when (state) {
-            IslandUiState.COMPACT -> miniHeight.dp
-            IslandUiState.MAX_PILL -> maxHeight.dp
-            IslandUiState.SPLIT_PILL -> miniHeight.dp
-            IslandUiState.NOTIFICATION_RING -> ringHeight.dp
-            IslandUiState.HIDDEN -> 0.dp
+            IslandState.TYPE_1_MINI -> miniHeight.dp
+            IslandState.TYPE_2_MID -> (miniHeight * 1.2f).dp
+            IslandState.TYPE_3_MAX -> maxHeight.dp
+            IslandState.TYPE_SPLIT -> miniHeight.dp
+            IslandState.TYPE_0_RING, IslandState.TYPE_ORBITAL -> ringHeight.dp
+            IslandState.HIDDEN -> 0.dp
+            else -> miniHeight.dp
         }
     }
 
     val cornerRadius by transition.animateDp(transitionSpec = { springSpecDp }, label = "cornerRadius") { state ->
         when (state) {
-            IslandUiState.MAX_PILL -> maxRadius.dp
-            IslandUiState.NOTIFICATION_RING -> ringRadius.dp
-            IslandUiState.COMPACT, IslandUiState.SPLIT_PILL -> miniRadius.dp
-            IslandUiState.HIDDEN -> 0.dp
+            IslandState.TYPE_3_MAX -> maxRadius.dp
+            IslandState.TYPE_0_RING, IslandState.TYPE_ORBITAL -> ringRadius.dp
+            IslandState.TYPE_1_MINI, IslandState.TYPE_2_MID, IslandState.TYPE_SPLIT -> miniRadius.dp
+            IslandState.HIDDEN -> 0.dp
+            else -> miniRadius.dp
         }
     }
 
     val rotation by transition.animateFloat(
         transitionSpec = { 
-            if (targetState == IslandUiState.MAX_PILL) {
-                // 🌪️ Subtle tilt on expansion
+            if (targetState == IslandState.TYPE_3_MAX) {
                 keyframes { durationMillis = 400; 0f at 0; 1.5f at 150; 0f at 400 }
             } else {
                 tween(durationMillis = 200)
@@ -111,28 +89,28 @@ fun updateIslandTransition(
 
     val xOffset by transition.animateFloat(transitionSpec = { springSpecFloat }, label = "xOffset") { state ->
         when (state) {
-            IslandUiState.SPLIT_PILL -> 24f
+            IslandState.TYPE_SPLIT -> 24f
             else -> 0f
         }
     }
 
     val borderColor by transition.animateColor(transitionSpec = { springSpecColor }, label = "borderColor") { state ->
-        if (state == IslandUiState.NOTIFICATION_RING && isCyberpunk) Color(0xFF00FFFF).copy(alpha=0.6f) else Color.White.copy(alpha=0.08f)
+        if ((state == IslandState.TYPE_0_RING || state == IslandState.TYPE_ORBITAL) && isCyberpunk) Color(0xFF00FFFF).copy(alpha=0.6f) else Color.White.copy(alpha=0.08f)
     }
 
     val alpha by transition.animateFloat(transitionSpec = { tween(200, easing = LinearOutSlowInEasing) }, label = "alpha") { state ->
-        if (state == IslandUiState.HIDDEN) 0f else 1f
+        if (state == IslandState.HIDDEN) 0f else 1f
     }
 
     val scale by transition.animateFloat(
         transitionSpec = { tween(durationMillis = 200) },
         label = "scale"
     ) { state ->
-        if (state == IslandUiState.HIDDEN) 0.85f else 1f
+        if (state == IslandState.HIDDEN) 0.85f else 1f
     }
     
     val glowIntensity by animateFloatAsState(
-        targetValue = if (targetState == IslandUiState.NOTIFICATION_RING) 1f else 0f,
+        targetValue = if (targetState == IslandState.TYPE_0_RING || targetState == IslandState.TYPE_ORBITAL) 1f else 0f,
         animationSpec = infiniteRepeatable(tween(1500, easing = SineOverShoot), RepeatMode.Reverse),
         label = "glow"
     )

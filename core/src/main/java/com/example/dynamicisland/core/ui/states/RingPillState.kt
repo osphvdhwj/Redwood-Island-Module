@@ -26,7 +26,7 @@ import kotlin.random.Random
 fun RingPill(
     modifier: Modifier = Modifier,
     hasActiveBackgroundEvent: Boolean = false,
-    accentColor: Color = com.example.dynamicisland.ui.design.IslandColors.accentCyan
+    accentColor: Color = com.example.dynamicisland.core.ui.design.IslandColors.accentCyan
 ) {
     // Subtle breathing animation for the ring
     val infiniteTransition = rememberInfiniteTransition(label = "ring_breathe")

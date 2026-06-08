@@ -92,7 +92,7 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
                 val (currentProgress, baseColor) = progressMetrics
                 
                 when (pack) {
-                    is com.example.dynamicisland.shared.settings.IconPack.Futuristic -> {
+                    com.example.dynamicisland.shared.settings.IconPack.Futuristic -> {
                         val segments = 12
                         val sweep = 360f / segments
                         for (i in 0 until segments) {
@@ -106,7 +106,7 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
                             )
                         }
                     }
-                    is com.example.dynamicisland.shared.settings.IconPack.Pixel -> {
+                    com.example.dynamicisland.shared.settings.IconPack.Pixel -> {
                         val dots = 8
                         for (i in 0 until dots) {
                             val angle = (i * (360f / dots)) - 90f
@@ -132,7 +132,7 @@ fun DynamicIslandView.RingUI(isPulsing: Boolean) {
                             color = baseColor,
                             startAngle = -90f, sweepAngle = 360f * currentProgress,
                             useCenter = false,
-                            style = Stroke(strokeW, cap = if (pack is com.example.dynamicisland.shared.settings.IconPack.Outline) StrokeCap.Butt else StrokeCap.Round)
+                            style = Stroke(strokeW, cap = if (pack == com.example.dynamicisland.shared.settings.IconPack.Outline) StrokeCap.Butt else StrokeCap.Round)
                         )
                     }
                 }

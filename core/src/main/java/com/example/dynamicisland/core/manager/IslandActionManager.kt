@@ -20,6 +20,11 @@ class IslandActionManager @Inject constructor(
 ) {
     private val TAG = "IslandAction"
 
+    fun launchAppIntent(pkg: String, isLongPress: Boolean, onDone: () -> Unit) {
+        // Launch logic
+        onDone()
+    }
+
     fun execute(action: String) {
         RedwoodLogger.i(TAG, "Executing smart action: $action")
         when (action) {
