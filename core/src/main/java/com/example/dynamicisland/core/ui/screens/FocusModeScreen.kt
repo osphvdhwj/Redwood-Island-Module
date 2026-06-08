@@ -7,6 +7,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.example.dynamicisland.shared.settings.AestheticStyle
+import com.example.dynamicisland.shared.settings.IconPack
+import com.example.dynamicisland.shared.settings.DesignLanguage
+import com.example.dynamicisland.shared.settings.PhysicsStyle
+import com.example.dynamicisland.shared.settings.ContentTransitionStyle
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.core.ui.design.IslandColors
+import com.example.dynamicisland.shared.model.LocalIslandTheme
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.premiumClickable
+import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -18,14 +31,11 @@ import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.AppPickerActivity
 import com.example.dynamicisland.core.ui.components.*
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
-
 @Composable
 fun FocusModeScreen(prefs: SharedPreferences) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -42,7 +52,6 @@ fun FocusModeScreen(prefs: SharedPreferences) {
                 NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("ENABLE_FOCUS_MODE", value) }) 
             }
         )
-
         if (prefs.getBoolean("ENABLE_FOCUS_MODE", false)) {
             SettingsCategoryHeader("Productivity Workspace")
             Text(
@@ -62,23 +71,16 @@ fun FocusModeScreen(prefs: SharedPreferences) {
                     }
                     context.startActivity(intent)
                 }
-            )
-            
             SettingsCategoryHeader("Focus Rules")
             SettingsSwitch(
                 title = "Allow Calls",
                 description = "Always show incoming calls even in focus mode.",
                 checked = true, 
                 onCheckedChange = {}
-            )
-            SettingsSwitch(
                 title = "Allow Critical Alerts",
                 description = "Show low battery and OTP detections.",
                 checked = true,
-                onCheckedChange = {}
-            )
         }
-
         Spacer(Modifier.height(120.dp))
     }
 }

@@ -7,6 +7,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import com.example.dynamicisland.shared.settings.AestheticStyle
+import com.example.dynamicisland.shared.settings.IconPack
+import com.example.dynamicisland.shared.settings.DesignLanguage
+import com.example.dynamicisland.shared.settings.PhysicsStyle
+import com.example.dynamicisland.shared.settings.ContentTransitionStyle
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.core.ui.design.IslandColors
+import com.example.dynamicisland.shared.model.LocalIslandTheme
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.premiumClickable
+import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -15,9 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArchiveGridCard(
@@ -58,7 +69,6 @@ fun ArchiveGridCard(
                     modifier = Modifier.size(24.dp)
                 )
             }
-
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
@@ -68,12 +78,8 @@ fun ArchiveGridCard(
         }
     }
 }
-
-@Composable
 fun ArchiveHeader(
-    title: String,
     modifier: Modifier = Modifier
-) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleLarge,
@@ -81,4 +87,3 @@ fun ArchiveHeader(
         color = MaterialTheme.colorScheme.onSurface,
         modifier = modifier.padding(vertical = 16.dp, horizontal = 16.dp)
     )
-}

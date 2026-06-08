@@ -7,6 +7,19 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.example.dynamicisland.shared.settings.AestheticStyle
+import com.example.dynamicisland.shared.settings.IconPack
+import com.example.dynamicisland.shared.settings.DesignLanguage
+import com.example.dynamicisland.shared.settings.PhysicsStyle
+import com.example.dynamicisland.shared.settings.ContentTransitionStyle
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.core.ui.design.IslandColors
+import com.example.dynamicisland.shared.model.LocalIslandTheme
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.premiumClickable
+import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,15 +47,12 @@ import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.AppPickerActivity
 import com.example.dynamicisland.core.ui.components.SettingsCategoryHeader
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
-
 @Composable
 fun AppRolesScreen(prefs: SharedPreferences) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -60,28 +70,17 @@ fun AppRolesScreen(prefs: SharedPreferences) {
             suggestions = listOf("com.spotify.music", "com.google.android.apps.youtube.music", "com.apple.android.music", "org.videolan.vlc"),
             prefs = prefs, context = context, scope = scope
         )
-        
-        MD3MultiRoleSelector(
             title = "Media & Video", 
             roleKey = "allowed_media_apps", 
             icon = Icons.Default.Movie,
             suggestions = listOf("com.netflix.mediaclient", "com.mxtech.videoplayer.ad", "com.google.android.youtube", "org.videolan.vlc"),
-            prefs = prefs, context = context, scope = scope
-        )
-
-        MD3MultiRoleSelector(
             title = "Notes & Productivity", 
             roleKey = "allowed_notes_apps", 
             icon = Icons.Default.EditNote,
             suggestions = listOf("com.google.android.keep", "com.microsoft.office.outlook", "com.notion.id", "com.evernote"),
-            prefs = prefs, context = context, scope = scope
-        )
-
         Spacer(Modifier.height(100.dp))
     }
 }
-
-@Composable
 private fun MD3SingleRoleSelector(
     title: String,
     roleKey: String,
@@ -98,14 +97,10 @@ private fun MD3SingleRoleSelector(
             selectedPkg = pkg
             NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString(roleKey, pkg) })
         }
-    }
-
     val pm = context.packageManager
     val appInfo = remember(selectedPkg) {
         if (selectedPkg.isEmpty()) null
         else try { pm.getApplicationInfo(selectedPkg, 0) } catch (e: Exception) { null }
-    }
-
     Surface(
         onClick = {
             val intent = Intent(context, AppPickerActivity::class.java).apply {
@@ -116,7 +111,6 @@ private fun MD3SingleRoleSelector(
         },
         color = Color.Transparent,
         modifier = Modifier.fillMaxWidth()
-    ) {
         Row(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -131,54 +125,26 @@ private fun MD3SingleRoleSelector(
                 Box(modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape), contentAlignment = Alignment.Center) {
                     Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                 }
-            }
             
             Spacer(Modifier.width(16.dp))
-            
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = title, style = MaterialTheme.typography.bodyLarge)
                 Text(
                     text = appInfo?.loadLabel(pm)?.toString() ?: "Tap to assign",
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (appInfo == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
             Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-        }
-    }
-}
-
-@Composable
 private fun MD3MultiRoleSelector(
-    title: String,
-    roleKey: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
     suggestions: List<String>,
-    prefs: SharedPreferences,
-    context: Context,
-    scope: kotlinx.coroutines.CoroutineScope
-) {
     var selectedPkgs by remember { mutableStateOf(prefs.getStringSet(roleKey.uppercase(), emptySet()) ?: emptySet()) }
-    
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
             val pkgs = result.data?.getStringArrayExtra("package_names")?.toSet() ?: emptySet()
             selectedPkgs = pkgs
             NewConfigManager.commitAndBroadcast(prefs, scope, context, { putStringSet(roleKey.uppercase(), pkgs) })
-        }
-    }
-
-    val pm = context.packageManager
-    
     // Auto-detect installed suggestions
     val installedSuggestions = remember {
         suggestions.filter { pkg ->
             try { pm.getApplicationInfo(pkg, 0); true } catch (e: Exception) { false }
-        }
-    }
-
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
@@ -188,25 +154,14 @@ private fun MD3MultiRoleSelector(
                         putExtra("initial_selection", selectedPkgs.toTypedArray())
                     }
                     launcher.launch(intent)
-                }
                 .padding(horizontal = 24.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
             Box(modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f), CircleShape), contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-            }
-            Spacer(Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
                 Text(text = title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                Text(
                     text = if (selectedPkgs.isEmpty()) "Active-priority enabled for all apps" else "${selectedPkgs.size} apps prioritized",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
-                )
-            }
             Icon(Icons.Default.AddCircleOutline, null, tint = MaterialTheme.colorScheme.primary)
-        }
-
         if (installedSuggestions.isNotEmpty() && selectedPkgs.isEmpty()) {
             Text(
                 "SUGGESTED FOR YOU", 
@@ -230,16 +185,10 @@ private fun MD3MultiRoleSelector(
                         label = { Text(name) },
                         leadingIcon = { Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(14.dp)) }
                     )
-                }
-            }
-        }
-
         // Show selected app icons
         if (selectedPkgs.isNotEmpty()) {
-            Row(
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp).fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
                 selectedPkgs.take(6).forEach { pkg ->
                     val appIcon = try { pm.getApplicationIcon(pkg) } catch (e: Exception) { null }
                     if (appIcon != null) {
@@ -248,14 +197,6 @@ private fun MD3MultiRoleSelector(
                             contentDescription = null,
                             modifier = Modifier.size(32.dp).clip(CircleShape)
                         )
-                    }
-                }
                 if (selectedPkgs.size > 6) {
                     Box(modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape), contentAlignment = Alignment.Center) {
                         Text("+${selectedPkgs.size - 6}", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
-        }
-    }
-}

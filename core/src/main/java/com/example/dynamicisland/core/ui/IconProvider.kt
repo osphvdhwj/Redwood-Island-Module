@@ -7,6 +7,19 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.dynamicisland.shared.settings.AestheticStyle
+import com.example.dynamicisland.shared.settings.IconPack
+import com.example.dynamicisland.shared.settings.DesignLanguage
+import com.example.dynamicisland.shared.settings.PhysicsStyle
+import com.example.dynamicisland.shared.settings.ContentTransitionStyle
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.core.ui.design.IslandColors
+import com.example.dynamicisland.shared.model.LocalIslandTheme
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.premiumClickable
+import com.example.dynamicisland.core.ui.design.geminiAura
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
@@ -35,12 +48,12 @@ object IconProvider {
         return when (pack) {
             is IconPack.iOS            -> getiOSIcon(logicalIcon)
             is IconPack.OxygenOS       -> getOxygenIcon(logicalIcon)
-            is IconPack.OneUI          -> getSamIcon(logicalIcon)
+            is IconPack.Samsung          -> getSamIcon(logicalIcon)
             is IconPack.Pixel          -> getPixelIcon(logicalIcon)
             is IconPack.Outline        -> getOutlineIcon(logicalIcon)
             is IconPack.Futuristic     -> getFuturisticIcon(logicalIcon)
             is IconPack.Minimal        -> getMinimalIcon(logicalIcon)
-            is IconPack.AmoledCyberpunk -> getCyberpunkIcon(logicalIcon)
+            is IconPack.Futuristic -> getCyberpunkIcon(logicalIcon)
             else                       -> getMaterialYouIcon(logicalIcon)
         }
     }

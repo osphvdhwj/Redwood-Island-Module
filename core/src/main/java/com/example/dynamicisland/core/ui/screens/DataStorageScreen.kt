@@ -7,6 +7,19 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import com.example.dynamicisland.shared.settings.AestheticStyle
+import com.example.dynamicisland.shared.settings.IconPack
+import com.example.dynamicisland.shared.settings.DesignLanguage
+import com.example.dynamicisland.shared.settings.PhysicsStyle
+import com.example.dynamicisland.shared.settings.ContentTransitionStyle
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.core.ui.design.IslandColors
+import com.example.dynamicisland.shared.model.LocalIslandTheme
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.premiumClickable
+import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,16 +32,13 @@ import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.components.*
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
-
 @Composable
 fun DataStorageScreen(prefs: SharedPreferences, backupManager: IslandBackupManager) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showRestoreDialog by remember { mutableStateOf(false) }
     var restoreContent by remember { mutableStateOf("") }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -49,14 +59,10 @@ fun DataStorageScreen(prefs: SharedPreferences, backupManager: IslandBackupManag
                 }
             }
         )
-
-        SettingsMenuLink(
             title = "Restore from JSON",
             description = "Import settings from a previously saved JSON string.",
             icon = Icons.Default.Restore,
             onClick = { showRestoreDialog = true }
-        )
-
         SettingsCategoryHeader("Automation")
         SettingsSwitch(
             title = "Automatic Backup",
@@ -64,9 +70,6 @@ fun DataStorageScreen(prefs: SharedPreferences, backupManager: IslandBackupManag
             checked = prefs.getBoolean("AUTO_BACKUP_ENABLED", false),
             onCheckedChange = { value -> 
                 NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("AUTO_BACKUP_ENABLED", value) }) 
-            }
-        )
-        
         if (prefs.getBoolean("AUTO_BACKUP_ENABLED", false)) {
             SettingsSlider(
                 title = "Backup Frequency",
@@ -76,30 +79,18 @@ fun DataStorageScreen(prefs: SharedPreferences, backupManager: IslandBackupManag
                 valueRange = 1f..30f,
                 onValueChange = { value -> 
                     NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putInt("AUTO_BACKUP_FREQ_DAYS", value.toInt()) }) 
-                }
             )
         }
-
         SettingsCategoryHeader("Storage Configuration")
-        SettingsMenuLink(
             title = "Archive Path",
             description = prefs.getString("STASH_STORAGE_PATH", "/sdcard/DynamicIsland/Archive") ?: "/sdcard/DynamicIsland/Archive",
             icon = Icons.Default.Folder,
-            onClick = {
                 Toast.makeText(context, "Folder picker not implemented, using default path.", Toast.LENGTH_SHORT).show()
-            }
-        )
-
         SettingsCategoryHeader("Clipboard Stash")
-        SettingsSwitch(
             title = "Enable Paperclip",
             description = "Show a tiny clip icon on the Island when items are stashed.",
             checked = prefs.getBoolean("ENABLE_CLIPBOARD_PAPERCLIP", true),
-            onCheckedChange = { value -> 
                 NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("ENABLE_CLIPBOARD_PAPERCLIP", value) }) 
-            }
-        )
-
         if (showRestoreDialog) {
             AlertDialog(
                 onDismissRequest = { showRestoreDialog = false },
@@ -122,13 +113,8 @@ fun DataStorageScreen(prefs: SharedPreferences, backupManager: IslandBackupManag
                             Toast.makeText(context, "Invalid Backup JSON", Toast.LENGTH_SHORT).show()
                         }
                     }) { Text("Restore") }
-                },
                 dismissButton = {
                     TextButton(onClick = { showRestoreDialog = false }) { Text("Cancel") }
-                }
-            )
-        }
-
         Spacer(Modifier.height(120.dp))
     }
 }

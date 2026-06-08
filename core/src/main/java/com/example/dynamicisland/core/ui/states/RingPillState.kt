@@ -7,6 +7,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import com.example.dynamicisland.shared.settings.AestheticStyle
+import com.example.dynamicisland.shared.settings.IconPack
+import com.example.dynamicisland.shared.settings.DesignLanguage
+import com.example.dynamicisland.shared.settings.PhysicsStyle
+import com.example.dynamicisland.shared.settings.ContentTransitionStyle
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.core.ui.design.IslandColors
+import com.example.dynamicisland.shared.model.LocalIslandTheme
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.premiumClickable
+import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -16,12 +29,10 @@ import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.components.PillSurface
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
-
 @Composable
 fun RingPill(
     modifier: Modifier = Modifier,
@@ -39,7 +50,6 @@ fun RingPill(
         ),
         label = "ring_alpha"
     )
-
     PillSurface(
         modifier = modifier.size(width = 100.dp, height = 32.dp), // Adjust to your physical cutout size
         shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
@@ -55,15 +65,11 @@ fun RingPill(
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2, size.height / 2)
             )
         }
-
         // Feature 192: Ambient floating particles if an event is active
         if (hasActiveBackgroundEvent) {
             AmbientParticles(accentColor)
-        }
     }
 }
-
-@Composable
 private fun AmbientParticles(color: Color) {
     val infiniteTransition = rememberInfiniteTransition(label = "particles")
     val rotation by infiniteTransition.animateFloat(
@@ -71,15 +77,11 @@ private fun AmbientParticles(color: Color) {
         targetValue = 360f,
         animationSpec = infiniteRepeatable(animation = tween(10000, easing = LinearEasing)),
         label = "particle_rotation"
-    )
-
     val particles = remember { List(4) { Offset(Random.nextFloat(), Random.nextFloat()) } }
-
     Canvas(modifier = Modifier.fillMaxSize()) {
         val center = Offset(size.width / 2, size.height / 2)
         val radiusX = size.width / 2 + 10f
         val radiusY = size.height / 2 + 10f
-
         particles.forEachIndexed { index, seed ->
             val angle = Math.toRadians((rotation + (index * 90) + (seed.x * 30)).toDouble())
             val x = center.x + (radiusX * cos(angle)).toFloat()
@@ -89,7 +91,3 @@ private fun AmbientParticles(color: Color) {
                 color = color.copy(alpha = 0.5f * seed.y),
                 radius = 2f + (seed.x * 2f),
                 center = Offset(x, y)
-            )
-        }
-    }
-}
