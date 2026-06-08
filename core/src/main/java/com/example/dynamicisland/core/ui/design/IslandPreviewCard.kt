@@ -9,12 +9,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.core.ui.components.IslandContainer
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.foundation.shape.RoundedCornerShape

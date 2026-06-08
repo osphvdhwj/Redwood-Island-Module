@@ -9,12 +9,12 @@ import android.os.PowerManager
 import android.provider.Settings
 import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.core.ui.components.IslandContainer
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.activity.ComponentActivity
@@ -46,7 +46,7 @@ import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.ConfigActivity
 import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.RedwoodTheme
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.core.ui.design.glassmorphicCard
 import com.example.dynamicisland.core.util.IslandProcessUtils
 import com.example.dynamicisland.shared.ipc.*
@@ -62,7 +62,7 @@ class SetupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            RedwoodTheme {
+            AppMD3Theme {
                 SetupScreen()
             }
         }

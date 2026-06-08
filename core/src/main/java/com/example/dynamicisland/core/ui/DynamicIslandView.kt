@@ -9,12 +9,12 @@ import android.graphics.Rect
 import android.graphics.Region
 import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.core.ui.components.IslandContainer
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.fillMaxSize
@@ -213,7 +213,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             setContent {
                 val settings = controller?.settingsState ?: SettingsState()
                 
-                AppAppMD3Theme(settings = settings) {
+                AppMD3Theme(settings = settings) {
                     CompositionLocalProvider(
                         LocalIconPack provides settings.iconPack,
                         LocalRedwoodStrings provides TranslationProvider.getStrings(settings.appLanguage)
