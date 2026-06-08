@@ -48,6 +48,8 @@ sealed class IslandIntent {
     data class UpdateScreenState(val isScreenOn: Boolean) : IslandIntent()
     data class UpdatePowerSaveMode(val isPowerSaveMode: Boolean) : IslandIntent()
     data class UpdatePerformanceLevel(val level: PerformanceLevel) : IslandIntent()
+    data class UpdateMicState(val isMicActive: Boolean) : IslandIntent()
+    data class UpdatePerAppVolumeState(val isActive: Boolean) : IslandIntent()
     object CleanupStorage : IslandIntent()
     object FreezeBackground : IslandIntent()
     data class ToggleUltraBattery(val enable: Boolean) : IslandIntent()

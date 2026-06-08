@@ -83,6 +83,10 @@ class IslandNeuralCore @Inject constructor(
                 gamingCpuUsage = intent.cpuUsage,
                 gamingGpuUsage = intent.gpuUsage
             )
+            is IslandIntent.UpdateMicState -> currentState.copy(isMicActive = intent.isMicActive)
+            is IslandIntent.UpdatePerAppVolumeState -> currentState.copy(isPerAppVolumeActive = intent.isActive)
+            is IslandIntent.UpdateBrightness -> currentState.copy(brightness = intent.brightness, isAutoBrightness = intent.isAuto)
+            is IslandIntent.UpdateVolume -> currentState.copy(volume = intent.volume)
             is IslandIntent.UpdatePerformanceLevel -> currentState.copy(
                 performanceLevel = intent.level
             )

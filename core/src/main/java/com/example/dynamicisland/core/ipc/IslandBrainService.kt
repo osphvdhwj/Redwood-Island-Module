@@ -11,6 +11,7 @@ import com.example.dynamicisland.shared.ipc.IIslandBrain
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import com.example.dynamicisland.shared.model.IslandIntent
+import com.example.dynamicisland.core.daemon.RootDaemonEngine
 
 /**
  * 🧠 ISLAND BRAIN SERVICE
@@ -23,6 +24,19 @@ class IslandBrainService : Service() {
 
     @Inject
     lateinit var neuralCore: IslandNeuralCore
+    
+    @Inject
+    lateinit var daemonEngine: RootDaemonEngine
+
+    override fun onCreate() {
+        super.onCreate()
+        daemonEngine.start()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        daemonEngine.stop()
+    }
 
     private val binder = object : IIslandBrain.Stub() {
         override fun dispatch(action: String, extras: Bundle) {
