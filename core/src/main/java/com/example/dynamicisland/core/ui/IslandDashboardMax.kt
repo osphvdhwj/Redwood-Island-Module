@@ -8,15 +8,12 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.MD3Theme
+import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.model.IslandTheme
-import com.example.dynamicisland.shared.model.LocalIslandTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -175,10 +172,9 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                 contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    val art = media.albumArt
-                    if (art != null) {
+                    if (media.albumArt != null) {
                         Image(
-                            bitmap = art.asImageBitmap(),
+                            bitmap = media.albumArt.asImageBitmap(),
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.dp))

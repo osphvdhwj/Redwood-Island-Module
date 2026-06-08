@@ -8,15 +8,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.MD3Theme
+import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.model.IslandTheme
-import com.example.dynamicisland.shared.model.LocalIslandTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,7 +32,7 @@ import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.model.IslandState   // ← only this import (model.IslandState removed)
 import com.example.dynamicisland.shared.settings.*
 
-// File: app/src/main/java/com/example/dynamicisland/ui/IslandGamingHUD.kt
+// File: app/src/main/java/com.example.dynamicisland.core.ui/IslandGamingHUD.kt
 
 
 /**

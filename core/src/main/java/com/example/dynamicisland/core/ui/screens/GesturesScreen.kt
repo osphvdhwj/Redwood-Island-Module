@@ -8,27 +8,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.MD3Theme
+import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.model.IslandTheme
-import com.example.dynamicisland.shared.model.LocalIslandTheme
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.manager.NewNewConfigManager
 import com.example.dynamicisland.core.manager.IslandBackupManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.manager.NewNewConfigManager
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.components.SettingsCategoryHeader
 import com.example.dynamicisland.core.ui.components.SettingsSwitch
@@ -63,7 +60,7 @@ fun GesturesScreen(prefs: SharedPreferences) {
                     title = "Enable Smart Engine", 
                     description = "AI predicts intent and overrides defaults.", 
                     checked = prefs.getBoolean("smart_gestures_enabled", true),
-                    onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("smart_gestures_enabled", it) }) }
+                    onCheckedChange = { NewNewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("smart_gestures_enabled", it) }) }
                 )
                 
                 if (prefs.getBoolean("smart_gestures_enabled", true)) {
@@ -72,19 +69,19 @@ fun GesturesScreen(prefs: SharedPreferences) {
                         title = "Smart Media Controls", 
                         description = "Swipe social media apps to change songs.", 
                         checked = prefs.getBoolean("smart_media_override", true),
-                        onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("smart_media_override", it) }) }
+                        onCheckedChange = { NewNewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("smart_media_override", it) }) }
                     )
                     SettingsSwitch(
                         title = "Smart Gaming Mode", 
                         description = "Auto-Dashboard & Dismiss during games.", 
                         checked = prefs.getBoolean("smart_gaming_override", true),
-                        onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("smart_gaming_override", it) }) }
+                        onCheckedChange = { NewNewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("smart_gaming_override", it) }) }
                     )
                     SettingsSwitch(
                         title = "Smart Call Handling", 
                         description = "Tap to mute, long press to hang up.", 
                         checked = prefs.getBoolean("smart_call_override", true),
-                        onCheckedChange = { NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("smart_call_override", it) }) }
+                        onCheckedChange = { NewNewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean("smart_call_override", it) }) }
                     )
                 }
             }
@@ -195,7 +192,7 @@ private fun MD3GestureSelector(
                     },
                     onClick = {
                         expanded = false
-                        NewConfigManager.commitAndBroadcast(prefs, scope, context, {
+                        NewNewConfigManager.commitAndBroadcast(prefs, scope, context, {
                             if (isOccupied && action != "NONE") {
                                 val statePrefix = prefsKey.substringBeforeLast("_")
                                 assignments.filter { it.value.uppercase() == action }.keys.forEach { suffix ->
@@ -204,7 +201,7 @@ private fun MD3GestureSelector(
                             }
                             putString(prefsKey, action)
                         }) {
-                            NewConfigManager.sendGestureUpdate(context, prefs)
+                            NewNewConfigManager.sendGestureUpdate(context, prefs)
                         }
                     }
                 )

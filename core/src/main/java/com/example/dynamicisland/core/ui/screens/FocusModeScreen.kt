@@ -8,23 +8,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.MD3Theme
+import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.model.IslandTheme
-import com.example.dynamicisland.shared.model.LocalIslandTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.manager.NewNewConfigManager
 import com.example.dynamicisland.core.manager.IslandBackupManager
-import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.manager.NewNewConfigManager
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.AppPickerActivity
 import com.example.dynamicisland.core.ui.components.*
@@ -50,7 +47,7 @@ fun FocusModeScreen(prefs: SharedPreferences) {
             icon = Icons.Default.FilterCenterFocus,
             checked = prefs.getBoolean("ENABLE_FOCUS_MODE", false),
             onCheckedChange = { value -> 
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("ENABLE_FOCUS_MODE", value) }) 
+                NewNewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("ENABLE_FOCUS_MODE", value) }) 
             }
         )
 

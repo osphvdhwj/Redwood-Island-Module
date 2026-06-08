@@ -8,15 +8,12 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.MD3Theme
+import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.model.IslandTheme
-import com.example.dynamicisland.shared.model.LocalIslandTheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -69,7 +66,7 @@ private val LightColorScheme = lightColorScheme(
 
 
 @Composable
-fun AppMD3Theme(
+fun AppAppMD3Theme(
     settings: SettingsState = SettingsState(),
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit

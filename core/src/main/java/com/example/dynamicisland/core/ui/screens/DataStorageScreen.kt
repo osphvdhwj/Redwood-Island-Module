@@ -8,26 +8,23 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.MD3Theme
+import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.model.IslandTheme
-import com.example.dynamicisland.shared.model.LocalIslandTheme
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.manager.NewNewConfigManager
 import com.example.dynamicisland.core.manager.IslandBackupManager
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.manager.IslandBackupManager
-import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.manager.NewNewConfigManager
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.components.*
 import com.example.dynamicisland.shared.ipc.*
@@ -75,7 +72,7 @@ fun DataStorageScreen(prefs: SharedPreferences, backupManager: IslandBackupManag
             description = "Periodically save settings to local storage.",
             checked = prefs.getBoolean("AUTO_BACKUP_ENABLED", false),
             onCheckedChange = { value -> 
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("AUTO_BACKUP_ENABLED", value) }) 
+                NewNewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("AUTO_BACKUP_ENABLED", value) }) 
             }
         )
         
@@ -87,7 +84,7 @@ fun DataStorageScreen(prefs: SharedPreferences, backupManager: IslandBackupManag
                 defaultValue = 7f,
                 valueRange = 1f..30f,
                 onValueChange = { value -> 
-                    NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putInt("AUTO_BACKUP_FREQ_DAYS", value.toInt()) }) 
+                    NewNewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putInt("AUTO_BACKUP_FREQ_DAYS", value.toInt()) }) 
                 }
             )
         }
@@ -108,7 +105,7 @@ fun DataStorageScreen(prefs: SharedPreferences, backupManager: IslandBackupManag
             description = "Show a tiny clip icon on the Island when items are stashed.",
             checked = prefs.getBoolean("ENABLE_CLIPBOARD_PAPERCLIP", true),
             onCheckedChange = { value -> 
-                NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("ENABLE_CLIPBOARD_PAPERCLIP", value) }) 
+                NewNewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("ENABLE_CLIPBOARD_PAPERCLIP", value) }) 
             }
         )
 

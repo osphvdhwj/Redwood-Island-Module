@@ -8,15 +8,12 @@ import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.Region
 import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.MD3Theme
+import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.model.IslandTheme
-import com.example.dynamicisland.shared.model.LocalIslandTheme
 import android.os.Build
 import android.os.Bundle
 import android.view.MotionEvent
@@ -209,7 +206,7 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
             setContent {
                 val settings = controller?.settingsState ?: SettingsState()
                 
-                AppMD3Theme(settings = settings) {
+                AppAppMD3Theme(settings = settings) {
                     CompositionLocalProvider(
                         LocalIconPack provides settings.iconPack,
                         LocalRedwoodStrings provides TranslationProvider.getStrings(settings.appLanguage)

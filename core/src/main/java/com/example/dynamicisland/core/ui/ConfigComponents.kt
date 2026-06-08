@@ -8,15 +8,12 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.MD3Theme
+import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.model.LiveActivityModel
-import com.example.dynamicisland.shared.model.IslandTheme
-import com.example.dynamicisland.shared.model.LocalIslandTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -53,7 +50,7 @@ fun ThemeSlider(label: String, key: String, default: Float, range: ClosedFloatin
             value = localValue, 
             onValueChange = { localValue = it }, 
             onValueChangeFinished = { 
-                ConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat(key, localValue) }) { ConfigManager.sendGestureUpdate(context, prefs) }
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putFloat(key, localValue) }) { NewConfigManager.sendGestureUpdate(context, prefs) }
             }, 
             valueRange = range,
             colors = SliderDefaults.colors(
@@ -114,7 +111,7 @@ fun FeatureSwitch(label: String, key: String, default: Boolean, prefs: SharedPre
             checked = checked, 
             onCheckedChange = { 
                 checked = it
-                ConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean(key, it) }) { ConfigManager.sendGestureUpdate(context, prefs) }
+                NewConfigManager.commitAndBroadcast(prefs, scope, context, { putBoolean(key, it) }) { NewConfigManager.sendGestureUpdate(context, prefs) }
             },
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.primary,
@@ -155,7 +152,7 @@ fun GestureDropdown(label: String, options: Array<IslandAction>, prefs: SharedPr
                     text = { Text(option.name.replace("_", " ")) },
                     onClick = {
                         selectedOption = option.name; expanded = false
-                        ConfigManager.commitAndBroadcast(prefs, scope, context, { putString(prefKey, option.name) }) { ConfigManager.sendGestureUpdate(context, prefs) }
+                        NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString(prefKey, option.name) }) { NewConfigManager.sendGestureUpdate(context, prefs) }
                     }
                 )
             }
