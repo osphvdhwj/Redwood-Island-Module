@@ -219,7 +219,15 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                             color = Color.Transparent,
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            IslandMainContent()
+                            Box(modifier = Modifier
+                                .graphicsLayer { 
+                                    translationX = pixelShiftX.value
+                                    translationY = pixelShiftY.value
+                                }
+                            ) {
+                                RingUI(isBatteryPulsing.value)
+                                IslandUI(islandState.value)
+                            }
                         }
                     }
                 }
@@ -239,18 +247,6 @@ class DynamicIslandView(context: Context, val moduleContext: Context) : FrameLay
                     } else {
                         pixelShiftX.value = 0f
                         pixelShiftY.value = 0f
-                    }
-                }
-
-                MaterialTheme(colorScheme = darkColorScheme()) {
-                    Box(modifier = Modifier
-                        .graphicsLayer { 
-                            translationX = pixelShiftX.value
-                            translationY = pixelShiftY.value
-                        }
-                    ) {
-                        RingUI(isBatteryPulsing.value)
-                        IslandUI(islandState.value)
                     }
                 }
             }

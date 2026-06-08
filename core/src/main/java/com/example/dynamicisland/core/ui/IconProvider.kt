@@ -15,16 +15,9 @@ import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.shared.settings.IconPack
 
 /**
  * ELITE ICON PROVIDER
- * Maps logical island events to high-fidelity icon packs.
- * Optimized for Custom ROM aesthetics.
  */
 val LocalIconPack = compositionLocalOf<IconPack> { IconPack.MaterialYou }
 
@@ -40,19 +33,17 @@ object IconProvider {
     @Composable
     fun getIcon(logicalIcon: LogicalIcon, pack: IconPack): ImageVector {
         return when (pack) {
-            is IconPack.iOS            -> getiOSIcon(logicalIcon)
-            is IconPack.OxygenOS       -> getOxygenIcon(logicalIcon)
-            is IconPack.OneUI          -> getSamIcon(logicalIcon)
-            is IconPack.Pixel          -> getPixelIcon(logicalIcon)
-            is IconPack.Outline        -> getOutlineIcon(logicalIcon)
-            is IconPack.Futuristic     -> getFuturisticIcon(logicalIcon)
-            is IconPack.Minimal        -> getMinimalIcon(logicalIcon)
-            is IconPack.AmoledCyberpunk -> getCyberpunkIcon(logicalIcon)
-            else                       -> getMaterialYouIcon(logicalIcon)
+            IconPack.iOS            -> getiOSIcon(logicalIcon)
+            IconPack.OxygenOS       -> getOxygenIcon(logicalIcon)
+            IconPack.Samsung        -> getSamIcon(logicalIcon)
+            IconPack.Pixel          -> getPixelIcon(logicalIcon)
+            IconPack.Outline        -> getOutlineIcon(logicalIcon)
+            IconPack.Futuristic     -> getFuturisticIcon(logicalIcon)
+            IconPack.Minimal        -> getMinimalIcon(logicalIcon)
+            else                    -> getMaterialYouIcon(logicalIcon)
         }
     }
 
-    // 🍎 iOS Style: Rounded & Symmetrical
     private fun getiOSIcon(icon: LogicalIcon): ImageVector = when (icon) {
         LogicalIcon.WIFI -> Icons.Rounded.Wifi
         LogicalIcon.BLUETOOTH -> Icons.Rounded.Bluetooth
@@ -63,7 +54,6 @@ object IconProvider {
         else -> getMaterialYouIcon(icon)
     }
 
-    // ⚡ OxygenOS Style: Light, Outlined, "Never Settle"
     private fun getOxygenIcon(icon: LogicalIcon): ImageVector = when (icon) {
         LogicalIcon.WIFI -> ProgrammaticIcons.OxygenWifi
         LogicalIcon.BLUETOOTH -> Icons.Outlined.Bluetooth
@@ -71,38 +61,35 @@ object IconProvider {
         LogicalIcon.SPEED -> Icons.Outlined.Speed
         LogicalIcon.DATA -> Icons.Outlined.SwapVert
         LogicalIcon.RAM -> Icons.Outlined.Memory
-        LogicalIcon.CPU -> Icons.Outlined.Cpu
+        LogicalIcon.CPU -> Icons.Outlined.Memory
         else -> getMaterialYouIcon(icon)
     }
 
-    // 📱 Samsung OneUI Style: Chunky, Squircle-friendly
     private fun getSamIcon(icon: LogicalIcon): ImageVector = when (icon) {
         LogicalIcon.WIFI -> Icons.Filled.Wifi
         LogicalIcon.BLUETOOTH -> Icons.Filled.Bluetooth
-        LogicalIcon.PHONE -> Icons.Filled.Phone
+        LogicalIcon.PHONE -> Icons.Filled.Call
         LogicalIcon.DATA -> Icons.Filled.SettingsInputAntenna
         LogicalIcon.RAM -> Icons.Filled.Memory
-        LogicalIcon.CPU -> Icons.Filled.Cpu
+        LogicalIcon.CPU -> Icons.Filled.Memory
         else -> getMaterialYouIcon(icon)
     }
 
-    // 🍭 Pixel Style: Circular variants
     private fun getPixelIcon(icon: LogicalIcon): ImageVector = when (icon) {
         LogicalIcon.WIFI -> Icons.Rounded.Wifi
         LogicalIcon.SETTINGS -> Icons.Rounded.Settings
         LogicalIcon.RAM -> Icons.Rounded.Memory
-        LogicalIcon.CPU -> Icons.Rounded.Cpu
+        LogicalIcon.CPU -> Icons.Rounded.Memory
         else -> getMaterialYouIcon(icon)
     }
 
-    // 🪟 Outline Style: Minimalist Glass
     private fun getOutlineIcon(icon: LogicalIcon): ImageVector = when (icon) {
         LogicalIcon.WIFI -> Icons.Outlined.Wifi
         LogicalIcon.BLUETOOTH -> Icons.Outlined.Bluetooth
         LogicalIcon.BATTERY_FULL -> Icons.Outlined.BatteryFull
         LogicalIcon.MAIL -> Icons.Outlined.Mail
         LogicalIcon.RAM -> Icons.Outlined.Memory
-        LogicalIcon.CPU -> Icons.Outlined.Cpu
+        LogicalIcon.CPU -> Icons.Outlined.Memory
         else -> getMaterialYouIcon(icon)
     }
 
@@ -113,16 +100,14 @@ object IconProvider {
         else -> getCyberpunkIcon(icon)
     }
 
-    // 🌫️ Minimal Style: Ultra-thin lines
     private fun getMinimalIcon(icon: LogicalIcon): ImageVector = when (icon) {
         LogicalIcon.WIFI -> Icons.Outlined.Wifi
         LogicalIcon.CLOSE -> Icons.Outlined.Close
         LogicalIcon.RAM -> Icons.Outlined.Memory
-        LogicalIcon.CPU -> Icons.Outlined.Cpu
+        LogicalIcon.CPU -> Icons.Outlined.Memory
         else -> getMaterialYouIcon(icon)
     }
 
-    // 🌌 Cyberpunk Style: High-contrast, Fractured
     private fun getCyberpunkIcon(icon: LogicalIcon): ImageVector = when (icon) {
         LogicalIcon.PLAY -> Icons.Outlined.PlayArrow
         LogicalIcon.PAUSE -> Icons.Outlined.Pause
@@ -138,7 +123,6 @@ object IconProvider {
         else -> Icons.Outlined.Info
     }
 
-    // 🎨 Material You (Default): Google M3
     private fun getMaterialYouIcon(icon: LogicalIcon): ImageVector = when (icon) {
         LogicalIcon.PLAY -> Icons.Filled.PlayArrow
         LogicalIcon.PAUSE -> Icons.Filled.Pause
@@ -152,7 +136,7 @@ object IconProvider {
         LogicalIcon.HOTSPOT -> Icons.Filled.SettingsInputAntenna
         LogicalIcon.DATA -> Icons.Filled.DataUsage
         LogicalIcon.RAM -> Icons.Filled.Memory
-        LogicalIcon.CPU -> Icons.Filled.Cpu
+        LogicalIcon.CPU -> Icons.Filled.Memory
         LogicalIcon.ALARM -> ProgrammaticIcons.MaterialBell
         LogicalIcon.MUSIC -> ProgrammaticIcons.MaterialMusic
         else -> Icons.Filled.Info

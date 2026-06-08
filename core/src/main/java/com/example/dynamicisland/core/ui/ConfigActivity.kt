@@ -41,7 +41,9 @@ import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.settings.SettingsManager
-import com.example.dynamicisland.shared.settings.SettingsViewModel
+import com.example.dynamicisland.core.ui.screens.*
+import com.example.dynamicisland.core.ui.settings.SettingsScreen
+import com.example.dynamicisland.core.settings.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
