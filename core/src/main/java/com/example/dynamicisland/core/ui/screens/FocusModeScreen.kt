@@ -18,11 +18,14 @@ import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.AppPickerActivity
 import com.example.dynamicisland.core.ui.components.*
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
+
 @Composable
 fun FocusModeScreen(prefs: SharedPreferences) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -39,6 +42,7 @@ fun FocusModeScreen(prefs: SharedPreferences) {
                 NewConfigManager.commitAndBroadcast(prefs, scope, context, editBlock = { putBoolean("ENABLE_FOCUS_MODE", value) }) 
             }
         )
+
         if (prefs.getBoolean("ENABLE_FOCUS_MODE", false)) {
             SettingsCategoryHeader("Productivity Workspace")
             Text(
@@ -58,16 +62,23 @@ fun FocusModeScreen(prefs: SharedPreferences) {
                     }
                     context.startActivity(intent)
                 }
+            )
+            
             SettingsCategoryHeader("Focus Rules")
             SettingsSwitch(
                 title = "Allow Calls",
                 description = "Always show incoming calls even in focus mode.",
                 checked = true, 
                 onCheckedChange = {}
+            )
+            SettingsSwitch(
                 title = "Allow Critical Alerts",
                 description = "Show low battery and OTP detections.",
                 checked = true,
+                onCheckedChange = {}
+            )
         }
+
         Spacer(Modifier.height(120.dp))
     }
 }

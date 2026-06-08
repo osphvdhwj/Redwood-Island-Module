@@ -20,7 +20,9 @@ import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.components.ArchiveGridCard
 import com.example.dynamicisland.core.ui.components.ArchiveHeader
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -28,6 +30,7 @@ fun DashboardScreen(
 ) {
     val filters = listOf("Layout", "Theme", "Gestures", "Advanced")
     var selectedFilter by remember { mutableStateOf(filters.first()) }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize()
@@ -58,6 +61,8 @@ fun DashboardScreen(
                     }
                 }
             }
+
+            item {
                 Column {
                     ArchiveHeader(
                         title = "Categories",
@@ -74,16 +79,36 @@ fun DashboardScreen(
                             icon = Icons.Default.Build,
                             onClick = { onCategoryClick("Layout") },
                             modifier = Modifier.weight(1f)
+                        )
+                        ArchiveGridCard(
                             title = "Theme Colors",
                             icon = Icons.Default.Palette,
                             onClick = { onCategoryClick("Theme") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    
                     Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        ArchiveGridCard(
                             title = "Gestures",
                             icon = Icons.Default.TouchApp,
                             onClick = { onCategoryClick("Gestures") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        ArchiveGridCard(
                             title = "Advanced Setup",
                             icon = Icons.Default.Settings,
                             onClick = { onCategoryClick("Advanced") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
         }
     }
 }

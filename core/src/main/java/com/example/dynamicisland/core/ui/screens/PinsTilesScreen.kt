@@ -25,9 +25,11 @@ import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.components.SettingsCategoryHeader
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
 @Composable
 fun PinsTilesScreen(prefs: SharedPreferences) {
     val context = LocalContext.current
@@ -35,6 +37,7 @@ fun PinsTilesScreen(prefs: SharedPreferences) {
     
     var dynamicQSTiles by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var installedApps by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+
     DisposableEffect(Unit) {
         val receiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
@@ -57,7 +60,9 @@ fun PinsTilesScreen(prefs: SharedPreferences) {
         
         onDispose {
             try { context.unregisterReceiver(receiver) } catch (e: Exception) {}
+        }
     }
+
     LaunchedEffect(Unit) {
         val pm = context.packageManager
         withContext(Dispatchers.IO) {
@@ -68,12 +73,16 @@ fun PinsTilesScreen(prefs: SharedPreferences) {
                     .sortedBy { pair -> pair.first }
                 installedApps = apps
             } catch(e: Throwable) {}
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
         SettingsCategoryHeader("Quick Settings Grid (7 Slots)")
+        
         if (dynamicQSTiles.isEmpty()) {
             CircularProgressIndicator(
                 modifier = Modifier
@@ -83,36 +92,60 @@ fun PinsTilesScreen(prefs: SharedPreferences) {
         } else {
             Column(
                 verticalArrangement = Arrangement.spacedBy(16.dp), 
+                modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 16.dp)
             ) {
                 Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
                     for (i in 0 until 4) { MD3TileSlot(i, prefs, dynamicQSTiles, context) }
+                }
+                Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
                     for (i in 4 until 7) { MD3TileSlot(i, prefs, dynamicQSTiles, context) }
+                }
+            }
+        }
+        
         SettingsCategoryHeader("App Dock (8 Pins)")
+        
         if (installedApps.isEmpty()) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(32.dp)
+            )
+        } else {
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(16.dp), 
                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
                 modifier = Modifier.fillMaxWidth()
+            ) {
                 items(8) { index -> MD3AppPinSlot(index, prefs, installedApps, scope, context) }
+            }
+        }
         Spacer(modifier = Modifier.height(100.dp))
+    }
 }
+
+@Composable
 fun MD3TileSlot(index: Int, prefs: SharedPreferences, dynamicQSTiles: List<Pair<String, String>>, context: Context) {
     var selectedLabel by remember { mutableStateOf(prefs.getString("qs_tile_label_$index", "Empty") ?: "Empty") }
     var expanded by remember { mutableStateOf(false) }
+
     Box(
+        modifier = Modifier
             .size(64.dp)
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable { expanded = true },
         contentAlignment = Alignment.Center
+    ) {
         Text(
             text = selectedLabel.take(4).uppercase(),
             color = if (selectedLabel == "Empty") MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
         )
+        
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(text = { Text("Empty") }, onClick = {
                 selectedLabel = "Empty"
@@ -127,10 +160,18 @@ fun MD3TileSlot(index: Int, prefs: SharedPreferences, dynamicQSTiles: List<Pair<
                     prefs.edit().putString("qs_tile_label_$index", tile.second).putString("qs_tile_spec_$index", tile.first).apply()
                     NewConfigManager.broadcastUpdateSingle(context, prefs, "dashboard")
                 })
+            }
+        }
+    }
+}
+
+@Composable
 fun MD3AppPinSlot(index: Int, prefs: SharedPreferences, installedApps: List<Pair<String, String>>, scope: kotlinx.coroutines.CoroutineScope, context: Context) {
     var selectedAppPkg by remember { mutableStateOf(prefs.getString("pinned_app_$index", "") ?: "") }
     val selectedAppName = installedApps.find { it.second == selectedAppPkg }?.first ?: "+"
+    var expanded by remember { mutableStateOf(false) }
     val hasApp = selectedAppPkg.isNotEmpty()
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
@@ -144,15 +185,25 @@ fun MD3AppPinSlot(index: Int, prefs: SharedPreferences, installedApps: List<Pair
                 text = if (hasApp) selectedAppName.take(1).uppercase() else "+",
                 color = if (hasApp) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.titleMedium
+            )
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
         Text(selectedAppName.take(8), color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.labelSmall)
+
         if (expanded) {
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 DropdownMenuItem(text = { Text("None") }, onClick = {
                     selectedAppPkg = ""; expanded = false
                     NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("pinned_app_$index", "") }) { NewConfigManager.broadcastUpdateSingle(context, prefs, "dashboard") }
+                })
                 installedApps.forEach { pair ->
                     DropdownMenuItem(text = { Text(pair.first) }, onClick = {
                         selectedAppPkg = pair.second; expanded = false
                         NewConfigManager.commitAndBroadcast(prefs, scope, context, { putString("pinned_app_$index", pair.second) }) { NewConfigManager.broadcastUpdateSingle(context, prefs, "dashboard") }
                     })
+                }
+            }
+        }
+    }
+}

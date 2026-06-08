@@ -64,7 +64,7 @@ object IconProvider {
         LogicalIcon.SPEED -> Icons.Outlined.Speed
         LogicalIcon.DATA -> Icons.Outlined.SwapVert
         LogicalIcon.RAM -> Icons.Outlined.Memory
-        LogicalIcon.CPU -> Icons.Outlined.Cpu
+        LogicalIcon.CPU -> Icons.Outlined.Memory
         else -> getMaterialYouIcon(icon)
     }
 
@@ -75,7 +75,7 @@ object IconProvider {
         LogicalIcon.PHONE -> Icons.Filled.Phone
         LogicalIcon.DATA -> Icons.Filled.SettingsInputAntenna
         LogicalIcon.RAM -> Icons.Filled.Memory
-        LogicalIcon.CPU -> Icons.Filled.Cpu
+        LogicalIcon.CPU -> Icons.Filled.Memory
         else -> getMaterialYouIcon(icon)
     }
 
@@ -84,7 +84,7 @@ object IconProvider {
         LogicalIcon.WIFI -> Icons.Rounded.Wifi
         LogicalIcon.SETTINGS -> Icons.Rounded.Settings
         LogicalIcon.RAM -> Icons.Rounded.Memory
-        LogicalIcon.CPU -> Icons.Rounded.Cpu
+        LogicalIcon.CPU -> Icons.Rounded.Memory
         else -> getMaterialYouIcon(icon)
     }
 
@@ -95,7 +95,7 @@ object IconProvider {
         LogicalIcon.BATTERY_FULL -> Icons.Outlined.BatteryFull
         LogicalIcon.MAIL -> Icons.Outlined.Mail
         LogicalIcon.RAM -> Icons.Outlined.Memory
-        LogicalIcon.CPU -> Icons.Outlined.Cpu
+        LogicalIcon.CPU -> Icons.Outlined.Memory
         else -> getMaterialYouIcon(icon)
     }
 
@@ -111,7 +111,7 @@ object IconProvider {
         LogicalIcon.WIFI -> Icons.Outlined.Wifi
         LogicalIcon.CLOSE -> Icons.Outlined.Close
         LogicalIcon.RAM -> Icons.Outlined.Memory
-        LogicalIcon.CPU -> Icons.Outlined.Cpu
+        LogicalIcon.CPU -> Icons.Outlined.Memory
         else -> getMaterialYouIcon(icon)
     }
 
@@ -145,7 +145,7 @@ object IconProvider {
         LogicalIcon.HOTSPOT -> Icons.Filled.SettingsInputAntenna
         LogicalIcon.DATA -> Icons.Filled.DataUsage
         LogicalIcon.RAM -> Icons.Filled.Memory
-        LogicalIcon.CPU -> Icons.Filled.Cpu
+        LogicalIcon.CPU -> Icons.Filled.Memory
         LogicalIcon.ALARM -> ProgrammaticIcons.MaterialBell
         LogicalIcon.MUSIC -> ProgrammaticIcons.MaterialMusic
         else -> Icons.Filled.Info

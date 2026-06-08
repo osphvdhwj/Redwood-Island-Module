@@ -27,10 +27,12 @@ import com.example.dynamicisland.core.settings.SettingsViewModel
 import com.example.dynamicisland.core.ui.components.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
+
 @Composable
 fun AppearanceScreen(viewModel: SettingsViewModel) {
     val state = viewModel.state
     val context = LocalContext.current
+
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         
         // --- LIVE SANDBOX PREVIEW ---
@@ -52,6 +54,7 @@ fun AppearanceScreen(viewModel: SettingsViewModel) {
                 }
             }
         }
+
         SettingsCategoryHeader("Visual Surfaces")
         SettingsSwitch(
             title = "Nav Island Mode",
@@ -68,41 +71,62 @@ fun AppearanceScreen(viewModel: SettingsViewModel) {
                 checked = state.oneHandModeEnabled,
                 onCheckedChange = { viewModel.updateSetting(SettingKey.ONE_HAND_MODE_ENABLED, it) }
             )
+            SettingsSwitch(
                 title = "Dull Background",
                 description = "Keep a subtle background behind the pill for better visibility.",
                 icon = Icons.Default.Visibility,
                 checked = state.navIslandDullBackground,
                 onCheckedChange = { viewModel.updateSetting(SettingKey.NAV_ISLAND_DULL_BACKGROUND, it) }
+            )
+            SettingsSwitch(
                 title = "Pipe Indicator",
                 description = "Show a '|' vertical bar at the current battery level.",
                 icon = Icons.Default.FormatQuote,
                 checked = state.navIslandShowPipeIndicator,
                 onCheckedChange = { viewModel.updateSetting(SettingKey.NAV_ISLAND_SHOW_PIPE_INDICATOR, it) }
+            )
+            SettingsSwitch(
                 title = "Music Bar Morph",
                 description = "The Pill stretches to become the background for music controls.",
                 icon = Icons.Default.MusicNote,
                 checked = state.navIslandMusicBarMorph,
                 onCheckedChange = { viewModel.updateSetting(SettingKey.NAV_ISLAND_MUSIC_BAR_MORPH, it) }
+            )
+        }
+
         SettingsCategoryHeader("Haptics")
+        SettingsSwitch(
             title = "Haptic Feedback",
             description = "Vibrate on island transitions and gestures.",
             icon = Icons.Default.Vibration,
             checked = state.hapticFeedback,
             onCheckedChange = { viewModel.updateSetting(SettingKey.HAPTIC_FEEDBACK, it) }
+        )
+        SettingsSwitch(
             title = "Sync Pulse Vibration",
             description = "Feel a heartbeat when both islands pulse together on battery change.",
             icon = Icons.Default.MonitorHeart,
             checked = state.syncPulseVibration,
             onCheckedChange = { viewModel.updateSetting(SettingKey.SYNC_PULSE_VIBRATION, it) }
+        )
+
         SettingsCategoryHeader("Elite Aesthetics")
         SettingsChoiceChip("Design Language", state.designLanguage.name, listOf("MATERIAL_YOU", "APPLE_LIQUID_GLASS", "VYXEL_EXPRESSIVE")) {
             viewModel.updateSetting(SettingKey.DESIGN_LANGUAGE, it)
+        }
+
         SettingsChoiceChip("Font Aesthetic", state.fontAesthetic.name, listOf("DEFAULT", "MONOSPACE", "KILO", "CHOCOCOOKY")) {
             viewModel.updateSetting(SettingKey.FONT_AESTHETIC, it)
+        }
+
         SettingsChoiceChip("Module Language", state.appLanguage, listOf("System", "English", "Hindi", "Spanish")) {
             viewModel.updateSetting(SettingKey.APP_LANGUAGE, it)
+        }
+
         SettingsChoiceChip("Aesthetic Mode", state.aestheticStyle.name, listOf("GLASS", "VOID_BLACK", "LIQUID_GLASS")) {
             viewModel.updateSetting(SettingKey.AESTHETIC_STYLE, it)
+        }
+
         if (state.aestheticStyle == AestheticStyle.GLASS) {
             SettingsSlider(
                 title = "Frosted Intensity", 
@@ -110,38 +134,59 @@ fun AppearanceScreen(viewModel: SettingsViewModel) {
                 defaultValue = 15f,
                 valueRange = 5f..40f,
                 onValueChange = { viewModel.updateSetting(SettingKey.BLUR_INTENSITY, it) }
+            )
+        }
+
+        SettingsSwitch(
             title = "Monochrome Icons", 
             description = "Force app icons to adopt a consistent chalk style.", 
             checked = state.monochromeIcons,
             icon = Icons.Default.InvertColors,
             onCheckedChange = { viewModel.updateSetting(SettingKey.MONOCHROME_ICONS, it) }
+        )
+
         SettingsCategoryHeader("Icon Engine (Pillar 5)")
         // Correcting access to IconPack enum strings
         SettingsChoiceChip("Icon Set", state.iconPack.name, listOf("MaterialYou", "iOS", "OxygenOS", "Samsung", "Pixel", "Futuristic", "Minimal", "Bold", "Outline")) {
             viewModel.updateSetting(SettingKey.ICON_PACK, it)
+        }
+
         SettingsCategoryHeader("Motion & Physics (Pillar 4)")
         SettingsChoiceChip("Physics Profile", state.physicsStyle.name, listOf("APPLE", "OXYGEN_OS")) {
             viewModel.updateSetting(SettingKey.PHYSICS_STYLE, it)
+        }
+        
         SettingsChoiceChip("Content Transition", state.contentTransitionStyle.name, listOf("SLIDE", "FADE_SCALE", "FLIP")) {
             viewModel.updateSetting(SettingKey.CONTENT_TRANSITION_STYLE, it)
+        }
+
         SettingsSlider(
             title = "Tactile Squish", 
             value = state.squishIntensity, 
             defaultValue = 1.0f,
             valueRange = 0.0f..2.0f,
             onValueChange = { viewModel.updateSetting(SettingKey.SQUISH_INTENSITY, it) }
+        )
+
+        SettingsSwitch(
             title = "Metaball Tear", 
             description = "Liquid drop effect when the Island splits.", 
             checked = state.enableMetaballTear,
             icon = Icons.Default.Waves,
             onCheckedChange = { viewModel.updateSetting(SettingKey.ENABLE_METABALL_TEAR, it) }
+        )
+
         SettingsCategoryHeader("Component Studio")
         SettingsChoiceChip("Call UI", state.callStyle.name, listOf("IOS", "MINIMAL", "MODERN")) {
             viewModel.updateSetting(SettingKey.CALL_STYLE, it)
+        }
         SettingsChoiceChip("Charging UI", state.chargingStyle.name, listOf("RING", "WAVE", "CUBE")) {
             viewModel.updateSetting(SettingKey.CHARGING_STYLE, it)
+        }
         SettingsChoiceChip("Battery Style", state.batteryStyle.name, listOf("PILL", "GAUGE", "DIGITAL")) {
             viewModel.updateSetting(SettingKey.BATTERY_STYLE, it)
+        }
+
         Spacer(modifier = Modifier.height(120.dp))
     }
 }

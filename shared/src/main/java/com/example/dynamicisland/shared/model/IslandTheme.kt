@@ -37,7 +37,8 @@ data class IslandTheme(
     val batIconSize: Dp = 18.dp,
     val alertTitleSize: TextUnit = 15.sp,
     val alertMsgSize: TextUnit = 13.sp,
-    val buttonCornerRadius: Dp = 16.dp
+    val buttonCornerRadius: Dp = 16.dp,
+    val actionAnimType: String = "SQUISH"
 )
 
 val LocalIslandTheme = compositionLocalOf { IslandTheme() }

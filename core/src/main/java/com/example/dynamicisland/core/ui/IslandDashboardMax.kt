@@ -89,7 +89,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                         .size(40.dp)
                         .background(Color.White.copy(alpha = 0.1f), CircleShape)
                         .squishClickable { 
-                            controller.postTransientNotification(com.example.dynamicisland.shared.model.LiveActivityModel.QuickNote(), -1)
+                            controller.postTransientNotification(com.example.dynamicisland.shared.model.LiveActivityModel.QuickNote, -1)
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -136,8 +136,8 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
         // --- Section 1.5: Widgets (NEW) ---
         if (settings.enableMaxWidgets) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.weight(1f)) { MiniWeatherWidget("24°C", "Sunny") }
-                Box(Modifier.weight(1f)) { MiniCalendarWidget("Meeting", "14:00") }
+                // Box(Modifier.weight(1f)) { MiniWeatherWidget("24°C", "Sunny") }
+                // Box(Modifier.weight(1f)) { MiniCalendarWidget("Meeting", "14:00") }
             }
         }
 
@@ -270,6 +270,7 @@ fun DynamicIslandView.StashItemCard(item: StashedItem) {
                 StashType.TEXT -> Icons.Default.Edit
                 StashType.IMAGE -> Icons.Default.Image
                 StashType.FILE -> Icons.Default.Build
+                StashType.LINK -> Icons.Default.Link
             }
             Icon(icon, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
             Spacer(Modifier.height(4.dp))
