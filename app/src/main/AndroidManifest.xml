@@ -11,8 +11,8 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="Redwood Satellite"
+        android:icon="@drawable/atom"
+        android:label="@string/app_name"
         android:supportsRtl="true">
 
         <!-- 🛰️ XPOSED MODULE META-DATA -->
@@ -31,7 +31,7 @@
 
         <!-- 🧠 IPC Provider (Legacy Support) -->
         <provider
-            android:name=".ipc.IslandContentProvider"
+            android:name="com.example.dynamicisland.core.ipc.IslandContentProvider"
             android:authorities="com.example.dynamicisland.provider"
             android:exported="true"
             android:multiprocess="true"

@@ -15,8 +15,9 @@
 }
 
 # 4. Protect LiveActivityModel and other data classes used for IPC/reflection
--keep class com.example.dynamicisland.model.** { *; }
--keep class com.example.dynamicisland.ipc.** { *; }
+-keep class com.example.dynamicisland.shared.model.** { *; }
+-keep class com.example.dynamicisland.core.ipc.** { *; }
+-keep class com.example.dynamicisland.shared.ipc.** { *; }
 
 # 5. ML Kit rules
 -keep class com.google.mlkit.** { *; }
