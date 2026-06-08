@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodDesignSystem
 import com.example.dynamicisland.core.ui.design.glassmorphicCard

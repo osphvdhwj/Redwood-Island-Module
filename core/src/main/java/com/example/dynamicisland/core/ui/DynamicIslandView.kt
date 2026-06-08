@@ -46,7 +46,7 @@ import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.gesture.IslandGesture
 import com.example.dynamicisland.core.gesture.MLGestureClassifier
 import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.util.*
 import com.example.dynamicisland.core.util.LocalRedwoodStrings
 import com.example.dynamicisland.core.util.TranslationProvider

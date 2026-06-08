@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.components.SettingsCategoryHeader
 import com.example.dynamicisland.core.ui.components.SettingsSlider
 import com.example.dynamicisland.shared.ipc.*

@@ -28,7 +28,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.manager.IslandBackupManager
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*

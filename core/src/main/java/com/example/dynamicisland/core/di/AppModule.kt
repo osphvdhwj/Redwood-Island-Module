@@ -187,8 +187,8 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideIslandNetworkMonitor(@ApplicationContext context: Context, dispatchers: DispatcherProvider): IslandNetworkMonitor {
-        return IslandNetworkMonitor(context, CoroutineScope(SupervisorJob() + dispatchers.io()))
+    fun provideIslandNetworkMonitor(): IslandNetworkMonitor {
+        return IslandNetworkMonitor()
     }
 
     @Provides

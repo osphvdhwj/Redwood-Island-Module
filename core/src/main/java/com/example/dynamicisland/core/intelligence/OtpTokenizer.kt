@@ -2,7 +2,7 @@ package com.example.dynamicisland.core.intelligence
 
 import android.util.Log
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*

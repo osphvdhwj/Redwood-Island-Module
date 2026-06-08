@@ -7,6 +7,11 @@ android {
     namespace = "com.example.dynamicisland.shared"
     compileSdk = 35
 
+    buildFeatures {
+        compose = true
+        aidl = true
+    }
+
     defaultConfig {
         minSdk = 26
         targetSdk = 35
@@ -41,6 +46,11 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.coroutines.android)
+
+    // Jetpack Compose (For IslandTheme)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
     
     // Xposed API (compileOnly for libraries)
     compileOnly(libs.xposed.api)

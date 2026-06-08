@@ -8,7 +8,8 @@ import android.content.ServiceConnection
 import android.os.*
 import android.util.Log
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.core.model.IslandUiState
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
@@ -217,6 +218,7 @@ object LiveActivityModelSerializer {
                 obj.put("contextLabel",   model.contextLabel)
                 obj.put("actionLabel",    model.actionLabel)
             }
+            else -> { /* Handle exhaustive check by using else branch or adding all types */ }
         }
         return obj
     }

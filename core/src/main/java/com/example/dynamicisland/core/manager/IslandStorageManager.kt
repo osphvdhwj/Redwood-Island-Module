@@ -1,4 +1,4 @@
-package com.example.dynamicisland.core.data.repository.cleanup
+package com.example.dynamicisland.core.manager
 
 import android.content.Context
 import com.example.dynamicisland.shared.model.LiveActivityModel

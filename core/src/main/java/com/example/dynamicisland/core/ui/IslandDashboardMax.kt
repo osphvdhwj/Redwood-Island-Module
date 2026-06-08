@@ -48,8 +48,8 @@ import com.example.dynamicisland.core.domain.state.IslandController
 import com.example.dynamicisland.core.gesture.IslandGesture
 import com.example.dynamicisland.core.manager.StashType
 import com.example.dynamicisland.core.manager.StashedItem
-import com.example.dynamicisland.core.model.*
-import com.example.dynamicisland.core.model.LocalIslandTheme
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.model.LocalIslandTheme
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.model.ActivityType

@@ -1,4 +1,5 @@
 package com.example.dynamicisland.core.model
+import com.example.dynamicisland.core.model.IslandUiState
 
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.ipc.*

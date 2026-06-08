@@ -11,19 +11,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import com.example.dynamicisland.core.data.repository.*
 import com.example.dynamicisland.core.data.repository.cleanup.*
+import com.example.dynamicisland.core.data.repository.profiles.*
 import com.example.dynamicisland.core.gesture.IslandGesture
 import com.example.dynamicisland.core.gesture.MLGestureClassifier
 import com.example.dynamicisland.core.intelligence.IslandPredictionEngine
-import com.example.dynamicisland.core.intelligence.DensityAwareIconCache
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.core.model.IslandUiState
+import com.example.dynamicisland.core.performance.DensityAwareIconCache
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.performance.IslandBlurEngine
 import com.example.dynamicisland.core.ui.DynamicIslandView
-import com.example.dynamicisland.core.util.*
-import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.core.util.RedwoodLogger
+import com.example.dynamicisland.shared.ipc.IslandIPCClient
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.settings.SettingsManager
 import com.example.dynamicisland.core.manager.*
+import com.example.dynamicisland.core.bridge.MediaBridge
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.lang.ref.WeakReference
 import javax.inject.Inject
@@ -69,6 +72,8 @@ class IslandController @Inject constructor(
 
     var settingsState by mutableStateOf(SettingsState())
         private set
+
+    private val proximityWakeManager by lazy { ProximityWakeManager(context) }
 
     init {
         scope.launch {
@@ -289,10 +294,6 @@ class IslandController @Inject constructor(
                 )
             }
         }
-    }
-
-    private fun setSystemFlashlightActive(active: Boolean) {
-        actionManager.execute("TOGGLE_FLASHLIGHT")
     }
 
     fun postTransientNotification(model: LiveActivityModel, duration: Long) {

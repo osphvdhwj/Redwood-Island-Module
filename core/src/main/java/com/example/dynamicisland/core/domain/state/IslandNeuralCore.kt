@@ -48,6 +48,15 @@ class IslandNeuralCore @Inject constructor(
         }
     }
 
+    fun clearMemory() {
+        stateSnapshotFile.delete()
+        _uiState.value = IslandUiState()
+    }
+
+    fun exportData(): String {
+        return loadStateSnapshot().toString()
+    }
+
     private fun reduce(currentState: IslandUiState, intent: IslandIntent): IslandUiState {
         return when (intent) {
             is IslandIntent.SyncState -> currentState.copy(

@@ -6,7 +6,7 @@ import android.content.Intent
 import android.os.Build
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
-import com.example.dynamicisland.core.model.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.model.IslandIntent

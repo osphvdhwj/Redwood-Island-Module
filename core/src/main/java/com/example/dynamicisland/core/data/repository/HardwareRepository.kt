@@ -7,11 +7,11 @@ import android.view.Choreographer
 import com.example.dynamicisland.core.domain.dispatchers.DispatcherProvider
 import com.example.dynamicisland.core.domain.lifecycle.BackendComponent
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.model.*
-import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.ActivityType
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.PerformanceLevel
 import com.example.dynamicisland.shared.settings.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -65,6 +65,10 @@ class HardwareRepository @Inject constructor(
     override fun onStop() {
         stopPolling()
         Choreographer.getInstance().removeFrameCallback(this)
+    }
+
+    fun setPerformanceLevel(level: PerformanceLevel) {
+        // Implementation for root performance tuning
     }
 
     private fun evaluateState() {
