@@ -6,14 +6,7 @@ import javax.inject.Inject
 /**
  * 🛠️ SETTINGS VIEWMODEL
  * 
-import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.settings.SettingsViewModel
-import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
  * Provides a reactive bridge between the persistent settings manager
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.shared.model.*
  * and the Compose-based configuration UI.
  */
 class SettingsViewModel @Inject constructor(private val settingsManager: SettingsManager) {

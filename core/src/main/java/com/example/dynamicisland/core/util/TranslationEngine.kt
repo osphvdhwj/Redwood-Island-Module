@@ -7,13 +7,6 @@ import androidx.compose.runtime.compositionLocalOf
  * 
  * Ported from Vyxel Apps to provide industry-leading localization.
  */
-import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.settings.SettingsViewModel
-import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.shared.model.*
 data class RedwoodStrings(
     val islandTitle: String = "Redwood Island",
     val settings: String = "Settings",

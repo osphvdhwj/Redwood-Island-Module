@@ -7,13 +7,6 @@ enum class ChargingStyle { RING, WAVE, CUBE }
 enum class BatteryStyle { PILL, GAUGE, DIGITAL }
 enum class PhysicsStyle { APPLE, OXYGEN_OS }
 enum class ContentTransitionStyle { SLIDE, FADE_SCALE, FLIP }
-import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.settings.SettingsViewModel
-import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.shared.model.*
 enum class RingPulseStyle { BREATH, LASER, NONE }
 enum class AestheticStyle { GLASS, VOID_BLACK, LIQUID_GLASS }
 enum class ShortcutLayout { GRID, CAROUSEL }

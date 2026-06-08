@@ -7,13 +7,6 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
-import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.settings.SettingsViewModel
-import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.shared.model.*
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController

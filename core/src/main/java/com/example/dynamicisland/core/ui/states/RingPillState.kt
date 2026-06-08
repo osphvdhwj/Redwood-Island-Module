@@ -7,13 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.settings.SettingsViewModel
-import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
@@ -88,3 +81,7 @@ private fun AmbientParticles(color: Color) {
                 color = color.copy(alpha = 0.5f * seed.y),
                 radius = 2f + (seed.x * 2f),
                 center = Offset(x, y)
+            )
+        }
+    }
+}

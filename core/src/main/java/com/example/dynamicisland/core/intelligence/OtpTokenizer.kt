@@ -4,16 +4,9 @@ import android.util.Log
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.ipc.*
 
-import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.settings.SettingsViewModel
-import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
 /**
-import com.example.dynamicisland.shared.settings.*
  * BATCH 2: Multilingual OTP Tokenizer
  *
-import com.example.dynamicisland.shared.model.*
  * Replaces the fragile single-regex approach in SystemEventsHook with
  * a proper sentence-understanding pipeline that handles:
  *

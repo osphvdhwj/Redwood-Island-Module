@@ -5,15 +5,8 @@ import android.content.Context
 import android.content.Intent
 import com.example.dynamicisland.core.domain.state.IslandController
 import kotlinx.coroutines.MainScope
-import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.settings.SettingsViewModel
 import kotlinx.coroutines.launch
-import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.shared.settings.*
 import dagger.hilt.android.EntryPointAccessors
-import com.example.dynamicisland.shared.model.*
 
 /**
  * Listens for system boot events to initialize the Island configuration.

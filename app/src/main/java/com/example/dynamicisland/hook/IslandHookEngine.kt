@@ -7,13 +7,6 @@ import de.robv.android.xposed.XposedHelpers
 /**
  * Central hook engine providing high-level abstractions for Xposed operations.
  *
-import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.settings.SettingsViewModel
-import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.shared.model.*
  * Key design choices for cross-ROM robustness:
  *
  *  • hookMethodSafe         — single method by exact signature, swallows all errors
