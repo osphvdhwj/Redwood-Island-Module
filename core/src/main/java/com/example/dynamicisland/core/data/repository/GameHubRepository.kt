@@ -33,7 +33,8 @@ import com.example.dynamicisland.shared.model.PerformanceLevel
 class GameHubRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val dispatchers: DispatcherProvider,
-    private val neuralCore: IslandNeuralCore
+    private val neuralCore: IslandNeuralCore,
+    private val shell: com.example.dynamicisland.core.util.shell.ShellExecutor
 ) : BackendComponent {
 
     private val TAG = "GameHubRepository"
@@ -103,8 +104,8 @@ class GameHubRepository @Inject constructor(
             val beforeMem = ActivityManager.MemoryInfo().apply { am.getMemoryInfo(this) }.availMem
 
             // Drop kernel caches (Requires root via su)
-            executeShellCommand("echo 3 > /proc/sys/vm/drop_caches")
-            executeShellCommand("echo 1 > /proc/sys/vm/compact_memory")
+            shell.executeRoot("echo 3 > /proc/sys/vm/drop_caches")
+            shell.executeRoot("echo 1 > /proc/sys/vm/compact_memory")
 
             val afterMem = ActivityManager.MemoryInfo().apply { am.getMemoryInfo(this) }.availMem
             freedMemory = (afterMem - beforeMem).coerceAtLeast(0L)
@@ -122,12 +123,12 @@ class GameHubRepository @Inject constructor(
             val statBefore = StatFs(Environment.getDataDirectory().path)
             val bytesBefore = statBefore.availableBlocksLong * statBefore.blockSizeLong
             
-            executeShellCommand("rm -rf /data/data/*/cache/*")
-            executeShellCommand("rm -rf /data/user_de/0/*/cache/*")
-            executeShellCommand("rm -rf /sdcard/Android/data/*/cache/*")
-            executeShellCommand("rm -rf /data/log/*")
-            executeShellCommand("rm -rf /data/tombstones/*")
-            executeShellCommand("rm -rf /data/anr/*")
+            shell.executeRoot("rm -rf /data/data/*/cache/*")
+            shell.executeRoot("rm -rf /data/user_de/0/*/cache/*")
+            shell.executeRoot("rm -rf /sdcard/Android/data/*/cache/*")
+            shell.executeRoot("rm -rf /data/log/*")
+            shell.executeRoot("rm -rf /data/tombstones/*")
+            shell.executeRoot("rm -rf /data/anr/*")
 
             val statAfter = StatFs(Environment.getDataDirectory().path)
             val bytesAfter = statAfter.availableBlocksLong * statAfter.blockSizeLong
@@ -155,38 +156,25 @@ class GameHubRepository @Inject constructor(
     }
 
     private fun spoofMiuiProps() {
-        // Since we are in the Core App daemon with Root, we use 'resetprop' or 'setprop' via shell
-        executeShellCommand("setprop ro.miui.ui.version.name V14")
-        executeShellCommand("setprop ro.miui.ui.version.code 14")
-        executeShellCommand("setprop ro.product.mod_device redwood_global")
+        shell.executeRoot("setprop ro.miui.ui.version.name V14")
+        shell.executeRoot("setprop ro.miui.ui.version.code 14")
+        shell.executeRoot("setprop ro.product.mod_device redwood_global")
     }
 
     private fun applyBatteryProfile() {
-        executeShellCommand("for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo powersave > \$i; done")
+        shell.execute("for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo powersave > \$i; done")
     }
 
     private fun applyBalancedProfile() {
-        executeShellCommand("for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo schedutil > \$i; done")
+        shell.execute("for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo schedutil > \$i; done")
     }
 
     private fun applyPerformanceProfile() {
-        executeShellCommand("for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$i; done")
+        shell.execute("for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$i; done")
     }
 
     private fun applyWildProfile() {
-        executeShellCommand("for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$i; done")
-        executeShellCommand("echo 0 > /sys/class/kgsl/kgsl-3d0/min_pwrlevel")
-    }
-
-    private fun executeShellCommand(cmd: String) {
-        try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            process.waitFor()
-        } catch (e: Exception) {
-            try {
-                val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", cmd))
-                process.waitFor()
-            } catch (_: Exception) {}
-        }
+        shell.execute("for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$i; done")
+        shell.execute("echo 0 > /sys/class/kgsl/kgsl-3d0/min_pwrlevel")
     }
 }

@@ -109,9 +109,10 @@ object AppModule {
     fun provideGameHubRepository(
         @ApplicationContext context: Context,
         dispatchers: DispatcherProvider,
-        neuralCore: IslandNeuralCore
+        neuralCore: IslandNeuralCore,
+        shell: ShellExecutor
     ): GameHubRepository {
-        return GameHubRepository(context, dispatchers, neuralCore)
+        return GameHubRepository(context, dispatchers, neuralCore, shell)
     }
 
     @Provides
