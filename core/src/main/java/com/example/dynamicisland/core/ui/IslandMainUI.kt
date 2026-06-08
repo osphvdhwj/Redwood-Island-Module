@@ -103,8 +103,6 @@ fun DynamicIslandView.IslandUI(state: IslandState) {
         maxRadius = view.maxR.value,
         ringRadius = view.ringR.value
     )
-        ringRadius = view.ringR.value
-    )
 
     var isSquished by remember { mutableStateOf(false) }
     val touchScale by animateFloatAsState(
