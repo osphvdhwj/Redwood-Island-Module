@@ -51,6 +51,7 @@ sealed class IslandIntent {
     data class UpdateRefreshRate(val hz: Int) : IslandIntent()
     data class UpdateBatteryStats(val dischargeRate: Int) : IslandIntent()
     data class UpdateNetworkStats(val txSpeed: Long, val rxSpeed: Long) : IslandIntent()
+    data class UpdateNotificationState(val isActive: Boolean) : IslandIntent()
 
     // Performance & Lifecycle
     data class UpdateScreenState(val isScreenOn: Boolean) : IslandIntent()
