@@ -29,6 +29,7 @@ import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.manager.*
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.IslandState
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

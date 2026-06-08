@@ -21,6 +21,8 @@ import kotlin.math.cos
 import kotlin.math.sin
 import com.example.dynamicisland.shared.settings.SettingsState
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.settings.IconPack
+import com.example.dynamicisland.shared.settings.RingPulseStyle
 
 /**
  * 🚀 ELITE RING RENDERER

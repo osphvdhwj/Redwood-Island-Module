@@ -32,6 +32,11 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import com.example.dynamicisland.shared.settings.SettingsState
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.ActivityType
+import com.example.dynamicisland.shared.model.IslandIntent
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.shared.model.PerformanceLevel
 
 /**
  * 🚀 ELITE ISLAND CONTROLLER

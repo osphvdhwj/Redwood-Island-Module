@@ -9,6 +9,7 @@ import com.example.dynamicisland.core.domain.state.IslandNeuralCore
 import com.example.dynamicisland.shared.ipc.*
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import com.example.dynamicisland.shared.model.IslandIntent
 
 /**
  * 🧠 BRAIN RECEIVER (Core-side)

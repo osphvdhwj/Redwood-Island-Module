@@ -67,6 +67,8 @@ import kotlinx.coroutines.launch
 import com.example.dynamicisland.core.ui.design.AppMD3Theme
 import com.example.dynamicisland.shared.settings.SettingsState
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.IslandTheme
 
 fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp, isLowLatency: Boolean): Modifier = this.background(Color.Black)
 

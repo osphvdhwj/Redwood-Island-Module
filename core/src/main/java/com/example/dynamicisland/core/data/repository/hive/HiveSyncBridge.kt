@@ -11,6 +11,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import com.example.dynamicisland.shared.model.IslandIntent
 
 /**
  * 🌉 HIVE SYNC BRIDGE (Domain Layer)

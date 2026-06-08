@@ -8,6 +8,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.example.dynamicisland.shared.model.IslandIntent
+import com.example.dynamicisland.shared.model.IslandState
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class IslandNeuralCoreTest {

@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.*
 import org.json.JSONObject
 import org.json.JSONArray
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.ActivityType
+import com.example.dynamicisland.shared.model.IslandState
 
 /**
  * 🛠️ ISLAND STATE SERVICE

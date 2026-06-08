@@ -37,6 +37,8 @@ import com.example.dynamicisland.core.manager.*
 import com.example.dynamicisland.core.ui.design.*
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.settings.CallStyle
 
 @Composable
 fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {

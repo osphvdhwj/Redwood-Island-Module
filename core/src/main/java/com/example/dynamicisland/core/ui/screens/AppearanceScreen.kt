@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.settings.SettingsManager.SettingKey
 import com.example.dynamicisland.core.ui.components.*
 import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.shared.settings.AestheticStyle
+import com.example.dynamicisland.shared.settings.IconPack
 
 @Composable
 fun AppearanceScreen(viewModel: SettingsViewModel) {

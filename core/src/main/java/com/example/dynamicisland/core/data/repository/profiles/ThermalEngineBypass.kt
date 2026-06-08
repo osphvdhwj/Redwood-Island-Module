@@ -13,6 +13,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.IslandIntent
+import com.example.dynamicisland.shared.model.PerformanceLevel
 
 /**
  * 🔥 THERMAL ENGINE BYPASS (WILD MODE)

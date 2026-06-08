@@ -3,6 +3,7 @@ package com.example.dynamicisland.core.ui.design
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.dynamicisland.shared.settings.IconPack
 
 /**
  * HIGH-FIDELITY VISUAL DIALECT (Pillar 2)

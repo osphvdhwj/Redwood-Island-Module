@@ -9,6 +9,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.ActivityType
+import com.example.dynamicisland.shared.model.IslandIntent
+import com.example.dynamicisland.shared.model.IslandState
 
 /**
  * 🧠 ELITE ISLAND GENERATIVE ENGINE (Feature B)

@@ -44,6 +44,8 @@ import com.example.dynamicisland.core.domain.state.IslandNeuralCore
 import com.example.dynamicisland.core.model.IslandUiState
 import com.example.dynamicisland.shared.ipc.*
 import kotlinx.coroutines.launch
+import com.example.dynamicisland.shared.model.IslandIntent
+import com.example.dynamicisland.shared.model.PerformanceLevel
 
 /**
  * GameSpace Dashboard UI

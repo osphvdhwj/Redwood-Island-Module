@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import java.util.concurrent.ConcurrentHashMap
 import org.json.JSONObject
+import com.example.dynamicisland.shared.model.IslandState
 
 // File: app/src/main/java/com/example/dynamicisland/manager/PerAppProfileManager.kt
 

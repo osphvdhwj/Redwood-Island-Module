@@ -5,6 +5,9 @@ import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.settings.SettingsState
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.model.IslandTheme
+import com.example.dynamicisland.shared.model.PerformanceLevel
 
 /**
  * Single source of truth for the Dynamic Island UI.

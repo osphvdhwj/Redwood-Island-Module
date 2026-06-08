@@ -31,6 +31,7 @@ import com.example.dynamicisland.core.manager.*
 import com.example.dynamicisland.shared.ipc.*
 import kotlinx.coroutines.CoroutineScope
 import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.shared.settings.IslandAction
 
 @Composable
 fun ThemeSlider(label: String, key: String, default: Float, range: ClosedFloatingPointRange<Float>, prefs: SharedPreferences, scope: CoroutineScope, context: Context) {

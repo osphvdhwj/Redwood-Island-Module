@@ -6,6 +6,7 @@ import com.example.dynamicisland.core.domain.state.IslandNeuralCore
 import com.example.dynamicisland.core.model.IslandUiState
 import com.example.dynamicisland.core.settings.SettingsManager
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.IslandIntent
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura

@@ -11,6 +11,7 @@ import androidx.compose.ui.text.font.FontFamily
 import com.example.dynamicisland.core.R
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.settings.FontAesthetic
 
 /**
  * ✨ VYXEL EXPRESSIVE DESIGN SYSTEM

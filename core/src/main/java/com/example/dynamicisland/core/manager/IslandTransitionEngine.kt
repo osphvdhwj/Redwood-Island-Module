@@ -6,6 +6,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.settings.PhysicsStyle
 
 data class IslandAnimationValues(
     val width: Dp,

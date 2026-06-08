@@ -5,6 +5,19 @@ import android.content.SharedPreferences
 import com.example.dynamicisland.core.ipc.IslandIPCClient
 import org.json.JSONObject
 import com.example.dynamicisland.shared.settings.SettingsState
+import com.example.dynamicisland.shared.settings.ActionAnimType
+import com.example.dynamicisland.shared.settings.AestheticStyle
+import com.example.dynamicisland.shared.settings.AnimationSpeed
+import com.example.dynamicisland.shared.settings.BatteryStyle
+import com.example.dynamicisland.shared.settings.CallStyle
+import com.example.dynamicisland.shared.settings.ChargingStyle
+import com.example.dynamicisland.shared.settings.ContentTransitionStyle
+import com.example.dynamicisland.shared.settings.DesignLanguage
+import com.example.dynamicisland.shared.settings.FontAesthetic
+import com.example.dynamicisland.shared.settings.IconPack
+import com.example.dynamicisland.shared.settings.PhysicsStyle
+import com.example.dynamicisland.shared.settings.RingPulseStyle
+import com.example.dynamicisland.shared.settings.ShortcutLayout
 
 /**
  * 🛠️ PRO-GRADE SETTINGS MANAGER

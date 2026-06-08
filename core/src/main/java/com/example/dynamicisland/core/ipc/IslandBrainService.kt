@@ -10,6 +10,7 @@ import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.shared.ipc.IIslandBrain
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import com.example.dynamicisland.shared.model.IslandIntent
 
 /**
  * 🧠 ISLAND BRAIN SERVICE

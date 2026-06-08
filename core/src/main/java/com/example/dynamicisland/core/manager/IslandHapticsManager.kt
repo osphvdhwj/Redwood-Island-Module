@@ -7,6 +7,7 @@ import android.os.Vibrator
 import com.example.dynamicisland.core.settings.SettingsManager
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.example.dynamicisland.shared.model.IslandState
 
 /**
  * 📳 ISLAND HAPTICS MANAGER

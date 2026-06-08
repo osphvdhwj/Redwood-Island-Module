@@ -69,6 +69,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.example.dynamicisland.shared.settings.SettingsState
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.IslandState
+import com.example.dynamicisland.shared.settings.AestheticStyle
+import com.example.dynamicisland.shared.settings.IconPack
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable

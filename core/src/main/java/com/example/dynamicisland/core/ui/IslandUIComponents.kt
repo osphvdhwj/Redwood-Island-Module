@@ -37,6 +37,8 @@ import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.ipc.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import com.example.dynamicisland.shared.model.ActivityType
+import com.example.dynamicisland.shared.model.IslandState
 
 object IslandPhysics {
     val Damping = Spring.DampingRatioMediumBouncy

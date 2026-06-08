@@ -4,6 +4,7 @@ import android.app.Notification
 import android.graphics.Color
 import android.service.notification.StatusBarNotification
 import com.example.dynamicisland.shared.model.LiveActivityModel
+import com.example.dynamicisland.shared.model.ActivityType
 
 object ClockInterceptor {
 
