@@ -2,6 +2,8 @@ package com.example.dynamicisland.shared.model
 
 import android.app.Notification
 import android.os.Bundle
+import com.example.dynamicisland.shared.settings.SettingsState
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 /**
  * Intents representing user or system actions that affect the Dynamic Island.
