@@ -8,20 +8,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.core.ui.design.premiumClickable
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.ui.design.geminiAura
+import com.example.dynamicisland.core.settings.SettingsViewModel
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+
 /**
  * Orbital Ring UI
  * 
@@ -34,6 +31,7 @@ fun OrbitalRingUI(color: Color, speedFactor: Float, modifier: Modifier = Modifie
     
     // Base duration is 3000ms, speedFactor increases speed (decreases duration)
     val duration = (3000 / speedFactor.coerceAtLeast(0.1f)).toInt().coerceIn(500, 10000)
+    
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
@@ -43,16 +41,19 @@ fun OrbitalRingUI(color: Color, speedFactor: Float, modifier: Modifier = Modifie
         ),
         label = "rotation"
     )
+
     Canvas(modifier = modifier.fillMaxSize()) {
         val centerX = size.width / 2
         val centerY = size.height / 2
         val radius = size.minDimension / 2 - 8.dp.toPx()
+
         // Draw main ring track
         drawCircle(
             color = color.copy(alpha = 0.15f),
             radius = radius,
             style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx())
         )
+
         // Draw orbital particles
         val particleCount = 3
         for (i in 0 until particleCount) {
@@ -66,13 +67,17 @@ fun OrbitalRingUI(color: Color, speedFactor: Float, modifier: Modifier = Modifie
                 radius = 3.5.dp.toPx(),
                 center = Offset(px, py)
             )
+            
             // Particle glow
+            drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(color.copy(alpha = 0.4f), Color.Transparent),
                     center = Offset(px, py),
                     radius = 10.dp.toPx()
                 ),
                 radius = 10.dp.toPx(),
+                center = Offset(px, py)
+            )
         }
     }
 }

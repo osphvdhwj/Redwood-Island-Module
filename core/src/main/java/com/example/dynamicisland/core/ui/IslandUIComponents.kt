@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
 import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.AppMD3Theme

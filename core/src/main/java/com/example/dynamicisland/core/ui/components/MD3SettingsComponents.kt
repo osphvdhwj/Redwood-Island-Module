@@ -8,14 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.core.ui.design.premiumClickable
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.ui.design.geminiAura
+import com.example.dynamicisland.core.settings.SettingsViewModel
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -31,7 +24,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
+
 @Composable
 fun SettingsExpander(
     title: String,
@@ -69,6 +66,7 @@ fun SettingsExpander(
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp)
+                )
             }
         }
         if (expanded) {
@@ -76,9 +74,14 @@ fun SettingsExpander(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 32.dp, bottom = 8.dp)
+            ) {
                 content()
+            }
+        }
     }
 }
+
+@Composable
 fun SettingsCategoryHeader(title: String) {
     Text(
         text = title,
@@ -90,11 +93,16 @@ fun SettingsCategoryHeader(title: String) {
             .padding(horizontal = 24.dp, vertical = 12.dp)
             .padding(top = 16.dp)
     )
+}
+
+@Composable
 fun SettingsSwitch(
+    title: String,
     description: String? = null,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     icon: ImageVector? = null
+) {
     Surface(
         onClick = { onCheckedChange(!checked) },
         color = Color.Transparent,
@@ -103,44 +111,136 @@ fun SettingsSwitch(
         Row(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
+        ) {
             if (icon != null) {
+                Icon(
                     imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(end = 16.dp).size(24.dp)
+                )
+            }
             Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
+                )
                 if (description != null) {
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 18.sp
+                    )
+                }
+            }
             Switch(
                 checked = checked,
                 onCheckedChange = null,
                 modifier = Modifier.padding(start = 16.dp)
             )
+        }
+    }
+}
+
+@Composable
 fun SettingsMenuLink(
+    title: String,
+    description: String? = null,
+    icon: ImageVector? = null,
     onClick: () -> Unit
+) {
+    Surface(
         onClick = onClick,
+        color = Color.Transparent,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 16.dp).size(24.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (description != null) {
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 18.sp
+                    )
+                }
+            }
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
+@Composable
 fun SettingsSlider(
+    title: String,
+    description: String? = null,
     value: Float,
     defaultValue: Float,
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
     steps: Int = 0,
+    icon: ImageVector? = null,
     valueFormatter: (Float) -> String = { it.toInt().toString() }
+) {
     var isEditingManually by remember { mutableStateOf(false) }
     var manualValue by remember { mutableStateOf(value.toInt().toString()) }
+
     Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 12.dp)
+    ) {
+        Row(
             verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 16.dp).size(24.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (description != null) {
+                    Text(
+                        text = description,
                         style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 14.sp
+                    )
+                }
+            }
             
             // Manual Input Toggle
             Surface(
@@ -150,10 +250,16 @@ fun SettingsSlider(
                 },
                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
                     text = valueFormatter(value),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+
         if (isEditingManually) {
             OutlinedTextField(
                 value = manualValue,
@@ -162,22 +268,31 @@ fun SettingsSlider(
                     it.toFloatOrNull()?.let { f ->
                         if (f in valueRange) onValueChange(f)
                     }
+                },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 trailingIcon = {
                     IconButton(onClick = { isEditingManually = false }) {
                         Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp)
+            )
         } else {
             Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
+            ) {
                 IconButton(
                     onClick = { onValueChange((value - 1f).coerceIn(valueRange)) },
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(Icons.Default.Remove, null, tint = MaterialTheme.colorScheme.primary)
+                }
+
                 Slider(
                     value = value,
                     onValueChange = onValueChange,
@@ -186,22 +301,43 @@ fun SettingsSlider(
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = 8.dp)
+                )
+
+                IconButton(
                     onClick = { onValueChange((value + 1f).coerceIn(valueRange)) },
+                    modifier = Modifier.size(36.dp)
+                ) {
                     Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary)
+                }
+
                 Spacer(Modifier.width(4.dp))
+
+                IconButton(
                     onClick = { onValueChange(defaultValue) },
+                    modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
+                ) {
+                    Icon(
                         Icons.Default.RestartAlt, 
                         contentDescription = "Reset", 
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun SettingsChoiceChip(
     label: String,
     selectedOption: String,
     options: List<String>,
     onOptionSelected: (String) -> Unit
+) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
         Text(
             text = label,
@@ -209,11 +345,20 @@ fun SettingsChoiceChip(
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(bottom = 8.dp)
         )
+        Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             options.forEach { option ->
                 FilterChip(
                     selected = selectedOption == option,
                     onClick = { onOptionSelected(option) },
                     label = { Text(option.lowercase().capitalize()) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
 private fun String.capitalize() = this.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }

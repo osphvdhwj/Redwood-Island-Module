@@ -2,47 +2,25 @@ package com.example.dynamicisland.core.ui
 
 import android.content.Context
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.core.ui.design.premiumClickable
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.ui.screens.*
-import com.example.dynamicisland.core.ui.design.geminiAura
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.manager.IslandBackupManager
-import com.example.dynamicisland.shared.ipc.*
 import com.example.dynamicisland.core.settings.SettingsManager
+import com.example.dynamicisland.core.settings.SettingsViewModel
+import com.example.dynamicisland.core.ui.design.RedwoodTheme
 import com.example.dynamicisland.core.ui.screens.*
 import com.example.dynamicisland.core.ui.settings.SettingsScreen
-import com.example.dynamicisland.core.settings.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -61,7 +39,7 @@ class ConfigActivity : ComponentActivity() {
         
         val composeView = ComposeView(this).apply {
             setContent {
-                AppMD3Theme {
+                RedwoodTheme {
                     ConfigScreenNav(prefs, settingsViewModel, backupManager)
                 }
             }
@@ -136,10 +114,10 @@ fun InteractionsTab(prefs: android.content.SharedPreferences) {
             containerColor = MaterialTheme.colorScheme.surface,
             divider = {}
         ) {
-            Tab(selected = selectedSubTab == 0, onClick = { selectedSubTab = 0 }, text = { Text("App Roles", style = MaterialTheme.typography.labelLarge) })
-            Tab(selected = selectedSubTab == 1, onClick = { selectedSubTab = 1 }, text = { Text("Pins & Tiles", style = MaterialTheme.typography.labelLarge) })
-            Tab(selected = selectedSubTab == 2, onClick = { selectedSubTab = 2 }, text = { Text("Gestures", style = MaterialTheme.typography.labelLarge) })
-            Tab(selected = selectedSubTab == 3, onClick = { selectedSubTab = 3 }, text = { Text("Focus", style = MaterialTheme.typography.labelLarge) })
+            Tab(selected = selectedSubTab == 0, onClick = { selectedSubTab = 0 }, text = { Text("App Roles") })
+            Tab(selected = selectedSubTab == 1, onClick = { selectedSubTab = 1 }, text = { Text("Pins & Tiles") })
+            Tab(selected = selectedSubTab == 2, onClick = { selectedSubTab = 2 }, text = { Text("Gestures") })
+            Tab(selected = selectedSubTab == 3, onClick = { selectedSubTab = 3 }, text = { Text("Focus") })
         }
         when (selectedSubTab) {
             0 -> AppRolesScreen(prefs)

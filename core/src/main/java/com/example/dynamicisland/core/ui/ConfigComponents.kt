@@ -8,6 +8,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
 import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.AppMD3Theme

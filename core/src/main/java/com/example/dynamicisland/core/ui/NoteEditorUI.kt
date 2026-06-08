@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
 import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.AppMD3Theme

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
 import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.AppMD3Theme
@@ -26,7 +27,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.manager.ConfigBackupManager
 import com.example.dynamicisland.core.settings.SettingsManager.SettingKey
-import com.example.dynamicisland.core.settings.SettingsViewModel
 import com.example.dynamicisland.core.ui.components.SettingsCategoryHeader
 import com.example.dynamicisland.core.ui.components.SettingsSwitch
 import kotlinx.coroutines.launch

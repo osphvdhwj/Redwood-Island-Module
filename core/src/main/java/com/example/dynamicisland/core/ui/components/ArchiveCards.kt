@@ -8,21 +8,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.core.ui.design.premiumClickable
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.ui.design.geminiAura
+import com.example.dynamicisland.core.settings.SettingsViewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArchiveGridCard(
@@ -63,6 +60,7 @@ fun ArchiveGridCard(
                     modifier = Modifier.size(24.dp)
                 )
             }
+
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
@@ -72,8 +70,12 @@ fun ArchiveGridCard(
         }
     }
 }
+
+@Composable
 fun ArchiveHeader(
+    title: String,
     modifier: Modifier = Modifier
+) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleLarge,
@@ -81,3 +83,4 @@ fun ArchiveHeader(
         color = MaterialTheme.colorScheme.onSurface,
         modifier = modifier.padding(vertical = 16.dp, horizontal = 16.dp)
     )
+}

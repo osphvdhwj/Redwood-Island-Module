@@ -8,20 +8,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Brush
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.manager.NewConfigManager
-import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.core.ui.design.premiumClickable
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.ui.design.geminiAura
+import com.example.dynamicisland.core.settings.SettingsViewModel
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.shared.settings.*
+
 /**
  * GeminiAuraModifier
  * 
@@ -34,6 +31,7 @@ fun Modifier.geminiAura(
     shape: Shape = RoundedCornerShape(100f)
 ): Modifier = composed {
     if (!enabled) return@composed this
+
     val infiniteTransition = rememberInfiniteTransition(label = "AuraRotation")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -44,6 +42,7 @@ fun Modifier.geminiAura(
         ),
         label = "angle"
     )
+
     this.border(
         width = thickness,
         brush = Brush.sweepGradient(
@@ -53,5 +52,7 @@ fun Modifier.geminiAura(
                 Color(0xFFFF00D0), // Pink
                 Color(0xFF00FBFF)  // Cycle back
             )
+        ),
         shape = shape
+    )
 }

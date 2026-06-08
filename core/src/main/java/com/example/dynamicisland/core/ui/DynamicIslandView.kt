@@ -8,6 +8,7 @@ import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.Region
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.settings.SettingsViewModel
 import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.AppMD3Theme
