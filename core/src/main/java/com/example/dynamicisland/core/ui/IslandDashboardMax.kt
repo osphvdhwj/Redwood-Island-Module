@@ -7,24 +7,12 @@ import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
-import com.example.dynamicisland.core.ui.design.premiumClickable
-import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -54,18 +42,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.R
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.core.domain.state.IslandController
 import com.example.dynamicisland.core.gesture.IslandGesture
-import com.example.dynamicisland.core.manager.StashType
-import com.example.dynamicisland.core.manager.StashedItem
+import com.example.dynamicisland.core.manager.*
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.ui.design.*
 import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.model.LocalIslandTheme
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.model.ActivityType
-import com.example.dynamicisland.shared.model.LiveActivityModel
 import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.shared.settings.IconPack
 
 @Composable
 fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controller: IslandController) {
@@ -74,7 +57,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
     val pack = LocalIconPack.current
     val dialect = VisualDialect.fromIconPack(pack)
     val settings = controller.settingsState
-    val stashItems by controller.stashHistory.collectAsState(initial = emptyList())
+    val stashItems = model.stashHistory
 
     Column(
         modifier = Modifier
@@ -98,7 +81,7 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                         .size(40.dp)
                         .background(Color.White.copy(alpha = 0.1f), CircleShape)
                         .squishClickable { 
-                            controller.postTransientNotification(com.example.dynamicisland.shared.model.LiveActivityModel.QuickNote(), -1)
+                            controller.postTransientNotification(LiveActivityModel.QuickNote, -1)
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -175,9 +158,10 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                 contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (media.albumArt != null) {
+                    val art = media.albumArt
+                    if (art != null) {
                         Image(
-                            bitmap = media.albumArt.asImageBitmap(),
+                            bitmap = art.asImageBitmap(),
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.dp))
@@ -223,7 +207,6 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                     }
                 }
             } else {
-                // Elite Grid Implementation
                 val chunkedTiles = view.qsTiles.chunked(4)
                 chunkedTiles.forEach { rowTiles ->
                     Row(
@@ -233,7 +216,6 @@ fun DynamicIslandView.DashboardMax(model: LiveActivityModel.Dashboard, controlle
                         rowTiles.forEach { tile ->
                             QSTileModern(tile, view.onQsTileClick, pack, dialect)
                         }
-                        // Pad row if not full
                         if (rowTiles.size < 4) {
                             repeat(4 - rowTiles.size) { Spacer(Modifier.width(64.dp)) }
                         }
@@ -279,6 +261,7 @@ fun DynamicIslandView.StashItemCard(item: StashedItem) {
                 StashType.TEXT -> Icons.Default.Edit
                 StashType.IMAGE -> Icons.Default.Image
                 StashType.FILE -> Icons.Default.Build
+                StashType.LINK -> Icons.Default.Link
             }
             Icon(icon, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
             Spacer(Modifier.height(4.dp))
@@ -428,9 +411,8 @@ fun QSTileModern(tileSpec: String, onClick: ((String) -> Unit)?, pack: IconPack,
             "torch" -> "Torch"
             "airplane" -> "Air"
             "location" -> "GPS"
-            else -> tileSpec.take(4).capitalize()
+            else -> tileSpec.take(4).uppercase()
         }
         Text(label, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
     }
 }
-
