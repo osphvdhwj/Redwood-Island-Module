@@ -7,15 +7,14 @@ import android.view.Gravity
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.Toast
-import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.premiumClickable
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -48,13 +47,8 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.example.dynamicisland.core.data.repository.GameHubRepository
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.model.IslandUiState
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.model.IslandIntent
-import com.example.dynamicisland.shared.model.PerformanceLevel
-import com.example.dynamicisland.shared.settings.*
 import kotlinx.coroutines.launch
 
 /**

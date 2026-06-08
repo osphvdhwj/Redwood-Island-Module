@@ -7,15 +7,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
-import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.premiumClickable
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -30,15 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.shared.settings.AestheticStyle
-import com.example.dynamicisland.shared.settings.DesignLanguage
-import com.example.dynamicisland.shared.settings.FontAesthetic
-import com.example.dynamicisland.shared.settings.SettingsState
-
 private val DarkColorScheme = darkColorScheme(
     primary = IslandColors.accentCyan,
     secondary = IslandColors.accentPurple,
@@ -51,11 +42,7 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = IslandColors.textPrimary,
     onSurface = IslandColors.textPrimary,
 )
-
 private val LightColorScheme = lightColorScheme(
-    primary = IslandColors.accentCyan,
-    secondary = IslandColors.accentPurple,
-    tertiary = IslandColors.accentCyan,
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
     surface = Color(0xFFFFFBFE),
@@ -65,9 +52,6 @@ private val LightColorScheme = lightColorScheme(
     onBackground = Color(0xFF1C1B1F),
     onSurface = Color(0xFF1C1B1F),
     */
-)
-
-
 @Composable
 fun AppMD3Theme(
     settings: SettingsState = SettingsState(),
@@ -83,7 +67,6 @@ fun AppMD3Theme(
         }
         settings.designLanguage == DesignLanguage.APPLE_LIQUID_GLASS -> {
             VyxelDesignSystem.LiquidGlassBase
-        }
         else -> {
             when {
                 settings.dynamicColors && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
@@ -92,11 +75,8 @@ fun AppMD3Theme(
                 darkTheme -> DarkColorScheme
                 else -> LightColorScheme
             }
-        }
     }
-    
     val fontFamily = VyxelDesignSystem.getFontFamily(settings.fontAesthetic)
-    
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -104,9 +84,6 @@ fun AppMD3Theme(
             window.statusBarColor = colorScheme.background.toArgb()
             window.navigationBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
-        }
-    }
-
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography(
@@ -117,29 +94,15 @@ fun AppMD3Theme(
                 letterSpacing = (-0.5).sp
             ),
             titleLarge = TextStyle(
-                fontFamily = fontFamily,
-                fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
-                letterSpacing = (-0.5).sp
-            ),
             titleMedium = TextStyle(
-                fontFamily = fontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 16.sp
-            ),
             bodyLarge = TextStyle(
-                fontFamily = fontFamily,
                 fontWeight = FontWeight.Normal,
-                fontSize = 16.sp
-            ),
             bodyMedium = TextStyle(
-                fontFamily = fontFamily,
-                fontWeight = FontWeight.Normal,
                 fontSize = 14.sp
-            ),
             labelSmall = TextStyle(
-                fontFamily = fontFamily,
-                fontWeight = FontWeight.Bold,
                 fontSize = 11.sp,
                 letterSpacing = 0.5.sp
             )

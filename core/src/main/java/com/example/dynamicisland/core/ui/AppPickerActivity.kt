@@ -7,15 +7,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
-import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.premiumClickable
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,10 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 
 class AppPickerActivity : ComponentActivity() {

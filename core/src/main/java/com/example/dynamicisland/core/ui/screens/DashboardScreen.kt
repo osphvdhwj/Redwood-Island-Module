@@ -7,32 +7,26 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Palette
-import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.premiumClickable
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.manager.IslandBackupManager
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.components.ArchiveGridCard
 import com.example.dynamicisland.core.ui.components.ArchiveHeader
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -40,7 +34,6 @@ fun DashboardScreen(
 ) {
     val filters = listOf("Layout", "Theme", "Gestures", "Advanced")
     var selectedFilter by remember { mutableStateOf(filters.first()) }
-
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize()
@@ -71,8 +64,6 @@ fun DashboardScreen(
                     }
                 }
             }
-
-            item {
                 Column {
                     ArchiveHeader(
                         title = "Categories",
@@ -89,36 +80,16 @@ fun DashboardScreen(
                             icon = Icons.Default.Build,
                             onClick = { onCategoryClick("Layout") },
                             modifier = Modifier.weight(1f)
-                        )
-                        ArchiveGridCard(
                             title = "Theme Colors",
                             icon = Icons.Default.Palette,
                             onClick = { onCategoryClick("Theme") },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    
                     Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        ArchiveGridCard(
                             title = "Gestures",
                             icon = Icons.Default.TouchApp,
                             onClick = { onCategoryClick("Gestures") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        ArchiveGridCard(
                             title = "Advanced Setup",
                             icon = Icons.Default.Settings,
                             onClick = { onCategoryClick("Advanced") },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
         }
     }
 }

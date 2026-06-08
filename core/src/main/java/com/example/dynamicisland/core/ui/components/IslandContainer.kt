@@ -7,15 +7,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.premiumClickable
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,14 +24,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.model.IslandUiState
 import com.example.dynamicisland.core.ui.design.VisualDialect
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.model.IslandState
-import com.example.dynamicisland.shared.settings.*
-
 /**
  * 🚀 ELITE PERFORMANCE CONTAINER
  *
@@ -41,7 +35,6 @@ import com.example.dynamicisland.shared.settings.*
  * 1. Recomposition Isolation: Sub-composables observe minimal state.
  * 2. Deferred Calculation: Uses derivedStateOf to prevent redundant layout passes.
  * 3. Hardware Acceleration: Leverages Modifier.graphicsLayer and native shadow layers.
- *
  * @param state The reactive UI state from IslandNeuralCore.
  * @param content The composable content to be rendered inside the physical shell.
  */
@@ -68,30 +61,21 @@ fun IslandContainer(
                 IslandState.TYPE_BRUTALIST -> 200f
                 else -> 45f
             }.coerceIn(state.displayCutoutWidth + 4f, screenWidthDp - 24f)
-
             val height = when (state.islandState) {
-                IslandState.TYPE_0_RING -> 45f
                 IslandState.TYPE_1_MINI -> 36f
                 IslandState.TYPE_2_MID -> 80f
                 IslandState.TYPE_3_MAX -> 220f
                 IslandState.TYPE_SPLIT -> 36f
-                IslandState.TYPE_CUBE -> 85f
-                IslandState.TYPE_ORBITAL -> 64f
                 IslandState.TYPE_BRUTALIST -> 48f
-                else -> 45f
             }
             Pair(width.dp, height.dp)
         }
     }
-
     // 🛡️ Optimization 2: Resolve Visual Dialect once.
     val dialect = remember(state.settings.iconPack) {
         VisualDialect.fromIconPack(state.settings.iconPack)
-    }
-
     // 🛡️ Optimization 3: targetRadius using derivedStateOf.
     val targetRadius by remember(state.islandState, targetDimensions, dialect.cornerRadius) {
-        derivedStateOf {
             val radius = when (state.islandState) {
                 IslandState.TYPE_3_MAX -> dialect.cornerRadius * 1.8f
                 IslandState.TYPE_2_MID -> dialect.cornerRadius
@@ -99,19 +83,12 @@ fun IslandContainer(
                 IslandState.TYPE_ORBITAL -> dialect.cornerRadius * 1.5f
                 IslandState.TYPE_BRUTALIST -> 0.dp
                 else -> (targetDimensions.second / 2)
-            }
             radius.coerceAtLeast(0.dp)
-        }
-    }
-
     val dpPhysicsSpec = remember { tween<Dp>(durationMillis = 200, easing = FastOutSlowInEasing) }
-
     val animatedWidth by animateDpAsState(targetDimensions.first, dpPhysicsSpec, label = "width")
     val animatedHeight by animateDpAsState(targetDimensions.second, dpPhysicsSpec, label = "height")
     val animatedRadius by animateDpAsState(targetRadius, dpPhysicsSpec, label = "radius")
-
     val isHidden = state.islandState == IslandState.HIDDEN
-    
     // 🛡️ Optimization 4: Strict Lifecycle Scopes. If screen is off or hidden, skip entire render.
     if (!isHidden && state.isScreenOn) {
         Box(
@@ -130,18 +107,10 @@ fun IslandContainer(
             contentAlignment = Alignment.Center
         ) {
             content()
-        }
-    }
 }
-
-/**
  * Specialized Brutalist Container for sharp-edged alerts.
  * Optimized for minimal layout overhead.
- */
-@Composable
 fun BrutalistContainer(
-    content: @Composable BoxScope.() -> Unit
-) {
     Box(
         modifier = Modifier
             .wrapContentSize()
@@ -150,5 +119,3 @@ fun BrutalistContainer(
         contentAlignment = Alignment.Center
     ) {
         content()
-    }
-}

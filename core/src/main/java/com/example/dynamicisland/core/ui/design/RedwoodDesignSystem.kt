@@ -7,15 +7,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
-import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.premiumClickable
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -37,11 +36,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.domain.state.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
-
 /**
  * Unified Design System for Redwood Dynamic Island.
  * Features deep blacks, neon accents, and premium glassmorphism.
@@ -59,9 +54,7 @@ data class RedwoodColors(
     val error: Color = Color(0xFFFF4D4D),
     val success: Color = Color(0xFF00E676)
 )
-
 val LocalRedwoodColors = staticCompositionLocalOf { RedwoodColors() }
-
 object IslandColors {
     val background = Color(0xFF000000)
     val surface = Color(0xFF0D0D0D)
@@ -72,11 +65,9 @@ object IslandColors {
     val textPrimary = Color(0xFFFFFFFF)
     val textSecondary = Color(0xB3FFFFFF) // Increased from 0x8C
 }
-
 object RedwoodDesignSystem {
     val colors: RedwoodColors
         @Composable get() = LocalRedwoodColors.current
-
     val typography = Typography(
         headlineMedium = TextStyle(
             fontWeight = FontWeight.Bold,
@@ -84,30 +75,19 @@ object RedwoodDesignSystem {
             letterSpacing = (-0.5).sp
         ),
         titleLarge = TextStyle(
-            fontWeight = FontWeight.Bold,
             fontSize = 20.sp,
-            letterSpacing = (-0.5).sp
-        ),
         titleMedium = TextStyle(
             fontWeight = FontWeight.SemiBold,
             fontSize = 16.sp
-        ),
         bodyLarge = TextStyle(
             fontWeight = FontWeight.Normal,
-            fontSize = 16.sp
-        ),
         bodyMedium = TextStyle(
-            fontWeight = FontWeight.Normal,
             fontSize = 14.sp
-        ),
         labelSmall = TextStyle(
-            fontWeight = FontWeight.Bold,
             fontSize = 11.sp,
             letterSpacing = 0.5.sp
         )
     )
-}
-
 @Composable
 fun AppMD3Theme(content: @Composable () -> Unit) {
     CompositionLocalProvider(
@@ -121,14 +101,9 @@ fun AppMD3Theme(content: @Composable () -> Unit) {
             ),
             typography = RedwoodDesignSystem.typography,
             content = content
-        )
     }
-}
-
-/**
  * Modern Glassmorphism modifier.
  * Applies background blur, semi-transparent background, and a subtle glow border.
- */
 fun Modifier.glassmorphicCard(
     cornerRadius: Dp = 24.dp,
     glowColor: Color = Color.Transparent,
@@ -148,7 +123,6 @@ fun Modifier.glassmorphicCard(
                             canvas.nativeCanvas.drawRoundRect(
                                 0f, 0f, size.width, size.height, cornerRadius.toPx(), cornerRadius.toPx(), paint
                             )
-                        }
                     }
                 } else Modifier
             )
@@ -162,12 +136,7 @@ fun Modifier.glassmorphicCard(
                     end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
                 ),
                 shape = RoundedCornerShape(cornerRadius)
-            )
-    }
-
-/**
  * Premium squish effect for interactive elements.
- */
 fun Modifier.premiumClickable(
     enabled: Boolean = true,
     interactionSource: MutableInteractionSource? = null,
@@ -179,7 +148,6 @@ fun Modifier.premiumClickable(
         targetValue = if (isPressed && enabled) 0.96f else 1f,
         animationSpec = spring(dampingRatio = 0.75f, stiffness = 400f),
         label = "premiumClickableScale"
-    )
     
     this
         .graphicsLayer {
@@ -191,5 +159,3 @@ fun Modifier.premiumClickable(
             interactionSource = actualInteractionSource,
             indication = null,
             onClick = onClick
-        )
-}

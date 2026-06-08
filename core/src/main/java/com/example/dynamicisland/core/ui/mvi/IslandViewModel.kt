@@ -3,27 +3,21 @@ package com.example.dynamicisland.core.ui.mvi
 import androidx.lifecycle.ViewModel
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.domain.state.IslandNeuralCore
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.model.IslandUiState
 import com.example.dynamicisland.core.settings.SettingsManager
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
 import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.model.IslandIntent
-import com.example.dynamicisland.shared.settings.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
-
 /**
  * Central ViewModel for managing the Dynamic Island state using MVI.
  * Now acts as a thin wrapper around IslandNeuralCore's central state.
@@ -33,9 +27,7 @@ class IslandViewModel @Inject constructor(
     private val settingsManager: SettingsManager,
     private val neuralCore: IslandNeuralCore
 ) : ViewModel() {
-
     val uiState: StateFlow<IslandUiState> = neuralCore.uiState
-
     /**
      * Entry point for all state changes.
      * Delegates to IslandNeuralCore for centralized processing.

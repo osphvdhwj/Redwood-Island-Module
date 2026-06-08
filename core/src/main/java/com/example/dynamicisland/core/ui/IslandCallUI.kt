@@ -7,7 +7,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.manager.NewConfigManager
+import com.example.dynamicisland.core.ui.design.IslandColors
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.shared.settings.*
 import androidx.compose.foundation.shape.CircleShape
+import com.example.dynamicisland.shared.model.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -33,12 +40,8 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.R
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.ui.components.IslandContainer
 import com.example.dynamicisland.core.ui.design.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.settings.*
 
 @Composable
 fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
@@ -46,7 +49,7 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
     val theme = LocalIslandTheme.current
     val isRinging = model.state == "RINGING"
 
-    when (theme.callStyle) {
+    when (LocalIslandTheme.current.callStyle) {
         com.example.dynamicisland.shared.settings.CallStyle.MINIMAL -> {
             Row(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),

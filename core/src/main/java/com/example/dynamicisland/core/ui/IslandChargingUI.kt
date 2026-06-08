@@ -7,15 +7,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.mvi.IslandViewModel
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.components.IslandContainer
-import com.example.dynamicisland.shared.model.*
+import com.example.dynamicisland.core.manager.NewConfigManager
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.shared.settings.*
 import com.example.dynamicisland.core.ui.design.premiumClickable
+import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -39,10 +38,7 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.R
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.manager.*
-import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.settings.*
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.pow
@@ -86,7 +82,7 @@ fun DynamicIslandView.ChargingCube(model: LiveActivityModel.Charging) {
     val infiniteTransition = rememberInfiniteTransition(label = "anim")
     
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        when (theme.chargingStyle) {
+        when (LocalIslandTheme.current.chargingStyle) {
             com.example.dynamicisland.shared.settings.ChargingStyle.RING -> {
                 val spinAngle by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart), label = "spin")
                 if (model.isPluggedIn || isLow) { 
