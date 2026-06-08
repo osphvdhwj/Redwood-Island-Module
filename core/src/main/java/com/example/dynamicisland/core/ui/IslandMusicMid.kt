@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.R
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 @Composable
 fun DynamicIslandView.MusicMid(music: LiveActivityModel.Music) {

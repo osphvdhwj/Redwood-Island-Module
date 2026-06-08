@@ -3,6 +3,7 @@ package com.example.dynamicisland.hook
 import android.app.Notification
 import android.graphics.Color
 import android.service.notification.StatusBarNotification
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 object ClockInterceptor {
 

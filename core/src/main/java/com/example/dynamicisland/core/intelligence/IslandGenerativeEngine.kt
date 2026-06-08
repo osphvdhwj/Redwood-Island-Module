@@ -8,6 +8,7 @@ import dagger.Lazy
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 /**
  * 🧠 ELITE ISLAND GENERATIVE ENGINE (Feature B)

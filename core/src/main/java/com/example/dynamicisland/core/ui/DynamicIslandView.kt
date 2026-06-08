@@ -64,6 +64,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.shared.settings.SettingsState
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 fun Modifier.glassBackground(blurRadius: androidx.compose.ui.unit.Dp, isLowLatency: Boolean): Modifier = this.background(Color.Black)
 

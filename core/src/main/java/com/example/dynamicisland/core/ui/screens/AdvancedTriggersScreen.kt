@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.components.*
+import com.example.dynamicisland.core.settings.SettingsViewModel
 @Composable
 fun AdvancedTriggersScreen(prefs: SharedPreferences, viewModel: SettingsViewModel) {
     Column(

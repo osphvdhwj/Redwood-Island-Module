@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.settings.SettingsState
 
 private val DarkColorScheme = darkColorScheme(
     primary = IslandColors.accentCyan,

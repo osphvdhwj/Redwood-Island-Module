@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 /**
  * 📦 ISLAND NOTIFICATION MANAGER

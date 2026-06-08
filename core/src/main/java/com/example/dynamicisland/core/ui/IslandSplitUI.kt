@@ -35,6 +35,7 @@ import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.manager.*
 import com.example.dynamicisland.shared.ipc.*
 import kotlin.math.abs
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 @Composable
 fun DynamicIslandView.SplitCubeUI(state: IslandState, animatedHeight: androidx.compose.ui.unit.Dp, borderColor: Color, xOffset: Float) {

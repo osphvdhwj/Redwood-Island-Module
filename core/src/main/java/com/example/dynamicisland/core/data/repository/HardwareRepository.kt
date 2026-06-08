@@ -16,6 +16,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 @Singleton
 class HardwareRepository @Inject constructor(

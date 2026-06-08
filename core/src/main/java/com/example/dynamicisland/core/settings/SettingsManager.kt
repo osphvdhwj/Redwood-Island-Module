@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.example.dynamicisland.core.ipc.IslandIPCClient
 import org.json.JSONObject
+import com.example.dynamicisland.shared.settings.SettingsState
 
 /**
  * 🛠️ PRO-GRADE SETTINGS MANAGER

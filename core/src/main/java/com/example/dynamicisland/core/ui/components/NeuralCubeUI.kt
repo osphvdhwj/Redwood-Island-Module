@@ -14,6 +14,7 @@ import com.example.dynamicisland.shared.ipc.*
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import com.example.dynamicisland.shared.settings.SettingsState
 
 /**
  * ✨ VYXEL EXPRESSIVE NEURAL CUBE

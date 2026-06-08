@@ -13,6 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 /**
  * 🐝 HIVE DAEMON (Data Layer Implementation)

@@ -26,6 +26,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 // File: app/src/main/java/com.example.dynamicisland.core.ui/IslandDashboardMid.kt
 

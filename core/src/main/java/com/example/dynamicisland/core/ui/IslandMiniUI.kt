@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 @Composable
 fun IslandMiniUI(model: LiveActivityModel) {

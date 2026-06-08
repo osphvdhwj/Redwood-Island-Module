@@ -2,6 +2,7 @@ package com.example.dynamicisland.core.settings
 
 import androidx.compose.runtime.*
 import javax.inject.Inject
+import com.example.dynamicisland.shared.settings.SettingsState
 
 /**
  * 🛠️ SETTINGS VIEWMODEL

@@ -33,6 +33,7 @@ import com.example.dynamicisland.core.ui.AppPickerActivity
 import com.example.dynamicisland.core.ui.components.SettingsCategoryHeader
 import com.example.dynamicisland.shared.ipc.*
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import com.example.dynamicisland.core.manager.NewConfigManager
 
 @Composable
 fun AppRolesScreen(prefs: SharedPreferences) {

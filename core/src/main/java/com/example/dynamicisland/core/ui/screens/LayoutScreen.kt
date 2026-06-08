@@ -23,6 +23,7 @@ import com.example.dynamicisland.core.ui.components.SettingsCategoryHeader
 import com.example.dynamicisland.core.ui.components.SettingsSlider
 import com.example.dynamicisland.shared.ipc.*
 import kotlinx.coroutines.launch
+import com.example.dynamicisland.core.manager.NewConfigManager
 
 @Composable
 fun LayoutScreen(prefs: SharedPreferences) {

@@ -41,6 +41,7 @@ import com.example.dynamicisland.core.ui.design.glassmorphicCard
 import com.example.dynamicisland.core.util.IslandProcessUtils
 import com.example.dynamicisland.shared.ipc.*
 import kotlinx.coroutines.launch
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 
 /**
  * Top-Grade Setup Flow

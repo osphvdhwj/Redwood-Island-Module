@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.ipc.*
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import com.example.dynamicisland.core.ui.design.AppMD3Theme
 
 class AppPickerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

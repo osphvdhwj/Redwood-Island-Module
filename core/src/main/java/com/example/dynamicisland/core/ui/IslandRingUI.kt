@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import kotlin.math.cos
 import kotlin.math.sin
+import com.example.dynamicisland.shared.settings.SettingsState
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 /**
  * 🚀 ELITE RING RENDERER

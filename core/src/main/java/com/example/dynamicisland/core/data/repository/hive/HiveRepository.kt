@@ -3,6 +3,7 @@ package com.example.dynamicisland.core.data.repository.hive
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.shared.ipc.*
 import kotlinx.coroutines.flow.SharedFlow
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 /**
  * 🐝 HIVE REPOSITORY INTERFACE

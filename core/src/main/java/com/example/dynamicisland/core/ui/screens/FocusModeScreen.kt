@@ -16,6 +16,7 @@ import com.example.dynamicisland.core.manager.IslandBackupManager
 import com.example.dynamicisland.core.ui.AppPickerActivity
 import com.example.dynamicisland.core.ui.components.*
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.core.manager.NewConfigManager
 
 @Composable
 fun FocusModeScreen(prefs: SharedPreferences) {

@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.util.IslandImageCache
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 @Composable
 fun ExternalActivityMid(model: LiveActivityModel.ExternalActivity) {

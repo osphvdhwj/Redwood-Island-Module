@@ -22,6 +22,7 @@ import com.example.dynamicisland.core.ui.screens.*
 import com.example.dynamicisland.core.ui.settings.SettingsScreen
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import com.example.dynamicisland.core.settings.SettingsViewModel
 
 @AndroidEntryPoint
 class ConfigActivity : ComponentActivity() {

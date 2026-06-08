@@ -9,6 +9,7 @@ import android.provider.ContactsContract
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 /**
  * BATCH 4: Deep Telecom Hook

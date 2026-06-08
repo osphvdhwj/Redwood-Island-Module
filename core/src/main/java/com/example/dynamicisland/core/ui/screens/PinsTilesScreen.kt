@@ -25,6 +25,7 @@ import com.example.dynamicisland.core.ui.components.SettingsCategoryHeader
 import com.example.dynamicisland.shared.ipc.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.example.dynamicisland.core.manager.NewConfigManager
 
 @Composable
 fun PinsTilesScreen(prefs: SharedPreferences) {

@@ -12,6 +12,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 /**
  * 🔥 THERMAL ENGINE BYPASS (WILD MODE)

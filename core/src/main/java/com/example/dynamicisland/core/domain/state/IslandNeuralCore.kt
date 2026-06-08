@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 /**
  * 🧠 ISLAND NEURAL CORE (iNC) - RELOCATED TO CORE DAEMON

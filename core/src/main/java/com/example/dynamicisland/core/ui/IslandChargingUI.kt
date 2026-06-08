@@ -38,6 +38,8 @@ import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlinx.coroutines.launch
+import com.example.dynamicisland.shared.settings.SettingsState
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 @Composable
 fun DynamicIslandView.ChargingMid(charging: LiveActivityModel.Charging) {

@@ -37,6 +37,8 @@ import com.example.dynamicisland.core.R
 import com.example.dynamicisland.core.domain.state.*
 
 import com.example.dynamicisland.shared.ipc.*
+import com.example.dynamicisland.shared.settings.SettingsState
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 @Composable
 fun BarcodeMid(

@@ -7,6 +7,7 @@ import com.example.dynamicisland.core.domain.state.IslandController
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import dagger.hilt.android.EntryPointAccessors
+import com.example.dynamicisland.core.manager.NewConfigManager
 
 /**
  * Listens for system boot events to initialize the Island configuration.

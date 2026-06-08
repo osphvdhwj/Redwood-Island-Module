@@ -9,6 +9,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.dynamicisland.core.domain.state.*
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.ui.components.IslandContainer
 
 /**
  * Pillar 3: The Root Compose Layout.

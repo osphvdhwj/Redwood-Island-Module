@@ -67,6 +67,8 @@ import kotlin.math.sin
 import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.example.dynamicisland.shared.settings.SettingsState
+import com.example.dynamicisland.shared.model.LiveActivityModel
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
