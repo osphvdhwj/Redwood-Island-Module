@@ -46,6 +46,9 @@ import com.example.dynamicisland.shared.ipc.*
 import kotlinx.coroutines.launch
 import com.example.dynamicisland.shared.model.IslandIntent
 import com.example.dynamicisland.shared.model.PerformanceLevel
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -145,6 +148,12 @@ fun GameSpaceUI(
     gameHubRepo: GameHubRepository
 ) {
     val isExpanded = state.isExpanded
+    
+    // Smooth scale animation when a notification interrupts gaming
+    val panelScale by animateFloatAsState(
+        targetValue = if (state.isNotificationActive) 0.85f else 1f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f)
+    )
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (isExpanded) {
@@ -182,6 +191,7 @@ fun GameSpaceUI(
             Row(
                 modifier = Modifier
                     .fillMaxHeight()
+                    .scale(panelScale) // Applies shrink animation
                     .clip(RoundedCornerShape(topEnd = 40.dp, bottomEnd = 40.dp))
             ) {
                 // Main sliding panel
@@ -270,9 +280,7 @@ fun GameSpaceUI(
                         }
                         Spacer(modifier = Modifier.height(1.dp))
                         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
-                            ActionCell("◈", "Game Svc", null, Modifier.weight(1f), RoundedCornerShape(bottomStart = 8.dp), Color(0xFF1A1A1A)) {}
-                            Spacer(modifier = Modifier.width(1.dp))
-                            ActionCell("🎙", "Voice", "Change voice", Modifier.weight(1f), RoundedCornerShape(bottomEnd = 8.dp), Color(0xFF1A1A1A)) {}
+                            ActionCell("◈", "Game Svc", "System optimizations", Modifier.fillMaxWidth(), RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp), Color(0xFF1A1A1A)) {}
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -299,37 +307,87 @@ fun GameSpaceUI(
                 // Vertical Divider
                 Box(modifier = Modifier.fillMaxHeight().width(1.dp).background(Color(0xFF1E1E1E)))
 
-                // Right Side Sliders
+                // Right Side Sliders (Parallel & Dynamic)
                 var brightness by remember { mutableIntStateOf(72) }
                 var autoBrightness by remember { mutableStateOf(true) }
-                var volume by remember { mutableIntStateOf(55) }
 
-                Column(
+                // Non-linear mapping: Perceived 20-80 maps roughly to 50-80 system brightness
+                val mappedBrightness = if (brightness in 20..80) {
+                    50 + ((brightness - 20) * (30f / 60f)).toInt()
+                } else {
+                    brightness
+                }
+
+                Row(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .width(52.dp)
                         .background(Color(0xEA0A0A0A)) // Darker transparent
-                        .padding(vertical = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    VerticalSlider(
-                        value = brightness,
-                        onChange = { brightness = it; autoBrightness = false },
-                        icon = "☀️",
-                        label = "Bright",
-                        accentColor = Color(0xFFFFD700)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Box(modifier = Modifier.fillMaxWidth(0.6f).height(1.dp).background(Color(0xFF222222)))
-                    Spacer(modifier = Modifier.height(16.dp))
-                    VerticalSlider(
-                        value = volume,
-                        onChange = { volume = it },
-                        icon = "🔊",
-                        label = "Volume",
-                        accentColor = Color(0xFF1DB954)
-                    )
+                    // BRIGHTNESS COLUMN
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        VerticalSlider(
+                            value = brightness,
+                            onChange = { brightness = it; autoBrightness = false },
+                            icon = "☀️",
+                            label = "Bright",
+                            accentColor = Color(0xFFFFD700)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .clickable { autoBrightness = !autoBrightness }
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (autoBrightness) Color(0x33FFD700) else Color(0xFF1A1A1A))
+                                .padding(horizontal = 6.dp, vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("AUTO", fontSize = 8.sp, color = if (autoBrightness) Color(0xFFFFD700) else Color.Gray, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    
+                    // AUDIO COLUMN (Dynamic Context)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        if (state.isMicActive) {
+                            VerticalSlider(
+                                value = state.callVolume,
+                                onChange = { /* Update Call Vol via AudioManager */ },
+                                icon = "📞",
+                                label = "Call",
+                                accentColor = Color(0xFF00FFB2)
+                            )
+                        } else if (state.isPerAppVolumeActive) {
+                            VerticalSlider(
+                                value = state.perAppVolume,
+                                onChange = { /* Update Per App Vol */ },
+                                icon = "📱",
+                                label = "App Vol",
+                                accentColor = Color(0xFF9D00FF)
+                            )
+                        } else {
+                            VerticalSlider(
+                                value = state.volume,
+                                onChange = { /* Update Media Vol */ },
+                                icon = "🔊",
+                                label = "Media",
+                                accentColor = Color(0xFF1DB954)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .clickable { /* Toggle Mute */ }
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFF1A1A1A))
+                                .padding(horizontal = 6.dp, vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("MUTE", fontSize = 8.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
         }

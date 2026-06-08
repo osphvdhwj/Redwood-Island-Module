@@ -36,4 +36,7 @@ Detailed technical requirements and future roadmap can be found in `MASTER_PROJE
 ## ⚖️ License & Disclaimer
 This project is for educational and customization purposes only. Use at your own risk.
 
+This is my channel to save my projects and modules, you may use them as they are Open source.
+https://t.me/X_OR_I_builds
+
 *Note: Redwood Island is not affiliated with Apple Inc. or any Android ROM distribution.*

@@ -49,6 +49,11 @@ data class IslandUiState(
     
     // UI Interactions
     val isExpanded: Boolean = false,
+    val isNotificationActive: Boolean = false,
+    val isMicActive: Boolean = false,
+    val callVolume: Int = 0,
+    val perAppVolume: Int = 0,
+    val isPerAppVolumeActive: Boolean = false,
     
     // Performance & Lifecycle
     val isScreenOn: Boolean = true,
