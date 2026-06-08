@@ -8,10 +8,13 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.Toast
 import com.example.dynamicisland.shared.settings.*
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
+import com.example.dynamicisland.core.ui.components.IslandContainer
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.core.ui.design.IslandColors
 import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
+import com.example.dynamicisland.core.ui.design.AppAppMD3Theme
 import com.example.dynamicisland.core.ui.design.premiumClickable
 import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.animation.AnimatedVisibility
@@ -218,9 +221,9 @@ fun GameSpaceUI(
                             .padding(6.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        PerfButton("Battery", state.performanceLevel == PerformanceLevel.BATTERY) { onPerfChange(PerformanceLevel.BATTERY) }
-                        PerfButton("Balanced", state.performanceLevel == PerformanceLevel.BALANCED) { onPerfChange(PerformanceLevel.BALANCED) }
-                        PerfButton("Wild", state.performanceLevel == PerformanceLevel.WILD) { onPerfChange(PerformanceLevel.WILD) }
+                        Box(Modifier.weight(1f)) { PerfButton("Battery", state.performanceLevel == PerformanceLevel.BATTERY) { onPerfChange(PerformanceLevel.BATTERY) } }
+                        Box(Modifier.weight(1f)) { PerfButton("Balanced", state.performanceLevel == PerformanceLevel.BALANCED) { onPerfChange(PerformanceLevel.BALANCED) } }
+                        Box(Modifier.weight(1f)) { PerfButton("Wild", state.performanceLevel == PerformanceLevel.WILD) { onPerfChange(PerformanceLevel.WILD) } }
                     }
 
                     Text("Extreme Profiles", color = Color.Gray, fontSize = 14.sp)
@@ -233,8 +236,8 @@ fun GameSpaceUI(
                             .padding(6.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        PerfButton("Ultra Bat", state.isUltraBatteryActive) { neuralCore.dispatch(IslandIntent.ToggleUltraBattery(!state.isUltraBatteryActive)) }
-                        PerfButton("Bypass", state.isThermalBypassActive) { neuralCore.dispatch(IslandIntent.ToggleThermalBypass(!state.isThermalBypassActive)) }
+                        Box(Modifier.weight(1f)) { PerfButton("Ultra Bat", state.isUltraBatteryActive) { neuralCore.dispatch(IslandIntent.ToggleUltraBattery(!state.isUltraBatteryActive)) } }
+                        Box(Modifier.weight(1f)) { PerfButton("Bypass", state.isThermalBypassActive) { neuralCore.dispatch(IslandIntent.ToggleThermalBypass(!state.isThermalBypassActive)) } }
                     }
 
                     Spacer(modifier = Modifier.height(40.dp))
@@ -274,11 +277,11 @@ fun XiaomiStat(label: String, value: String, color: Color) {
 fun PerfButton(label: String, isActive: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .weight(1f)
             .height(40.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(if (isActive) Color(0xFF00FFB2) else Color.Transparent)
-            .clickable { onClick() },
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(text = label, color = if (isActive) Color.Black else Color.White, fontSize = 13.sp, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)

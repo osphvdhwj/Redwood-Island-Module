@@ -7,13 +7,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import com.example.dynamicisland.shared.settings.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.core.ui.design.IslandColors
-import com.example.dynamicisland.core.ui.design.RedwoodTheme
-import com.example.dynamicisland.core.ui.design.AppMD3Theme
-import com.example.dynamicisland.core.ui.design.premiumClickable
-import com.example.dynamicisland.core.ui.design.geminiAura
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -40,10 +33,11 @@ import androidx.compose.ui.unit.sp
 import com.example.dynamicisland.core.R
 import com.example.dynamicisland.core.domain.state.*
 import com.example.dynamicisland.core.manager.*
+import com.example.dynamicisland.core.ui.mvi.IslandViewModel
+import com.example.dynamicisland.core.ui.components.IslandContainer
+import com.example.dynamicisland.core.ui.design.*
 import com.example.dynamicisland.shared.model.*
 import com.example.dynamicisland.shared.ipc.*
-import com.example.dynamicisland.shared.model.*
-import com.example.dynamicisland.shared.model.IslandState
 import com.example.dynamicisland.shared.settings.*
 
 @Composable
@@ -59,9 +53,10 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                if (model.contactPhoto != null) {
+                val photo = model.contactPhoto
+                if (photo != null) {
                     Image(
-                        bitmap = model.contactPhoto.asImageBitmap(),
+                        bitmap = photo.asImageBitmap(),
                         contentDescription = null,
                         modifier = Modifier.size(16.dp).clip(CircleShape)
                     )
@@ -102,8 +97,9 @@ fun DynamicIslandView.CallMini(model: LiveActivityModel.Call) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (model.contactPhoto != null) {
-                    Image(bitmap = model.contactPhoto.asImageBitmap(), contentDescription = null, modifier = Modifier.size(20.dp).clip(CircleShape))
+                val photo = model.contactPhoto
+                if (photo != null) {
+                    Image(bitmap = photo.asImageBitmap(), contentDescription = null, modifier = Modifier.size(20.dp).clip(CircleShape))
                 } else {
                     Icon(if (model.isSpam) Icons.Default.Warning else Icons.Default.Phone, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
                 }
@@ -138,8 +134,9 @@ fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {
                 modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.1f), CircleShape).border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                if (model.contactPhoto != null) {
-                    Image(bitmap = model.contactPhoto.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
+                val photo = model.contactPhoto
+                if (photo != null) {
+                    Image(bitmap = photo.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
                 } else {
                     Icon(if (model.isSpam) Icons.Default.Warning else Icons.Default.Person, contentDescription = null, tint = if (model.isSpam) Color.Red else Color.White, modifier = Modifier.size(26.dp))
                 }
@@ -149,8 +146,9 @@ fun DynamicIslandView.CallMid(model: LiveActivityModel.Call) {
         titleColor = if (model.isSpam) Color.Red else Color.White,
         subtitleContent = {
             Column {
-                if (model.relationLabel != null) {
-                    Text(text = model.relationLabel, color = Color.White.copy(alpha=0.7f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                val relation = model.relationLabel
+                if (relation != null) {
+                    Text(text = relation, color = Color.White.copy(alpha=0.7f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(6.dp).background(if (model.isSpam) Color.Red else Color(0xFF30D158), CircleShape))
