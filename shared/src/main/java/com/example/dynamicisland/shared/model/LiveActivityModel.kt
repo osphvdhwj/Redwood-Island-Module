@@ -302,5 +302,3 @@ data class QSTileState(
 enum class ActivityType {
     MESSAGE, ONGOING_TASK, CHARGING, HARDWARE, ALARM, TIMER, CALL, NAVIGATION, BATTERY_LOW, BLUETOOTH, WIFI, NONE
 }
-
-data class LiveActivityInfo(val pkg: String, val name: String)
