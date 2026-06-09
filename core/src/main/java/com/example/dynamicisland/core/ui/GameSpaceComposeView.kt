@@ -53,15 +53,29 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.RenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
+import android.os.Build
+
+const val FrostedGlassShader = """
+    uniform shader composable;
+    uniform float2 size;
+    uniform float radius;
+    
+    half4 main(float2 fragCoord) {
+        half4 color = composable.eval(fragCoord);
+        // Simple fast blur approximation for AGSL
+        half4 sum = color;
+        sum += composable.eval(fragCoord + float2(radius, radius));
+        sum += composable.eval(fragCoord + float2(-radius, -radius));
+        sum += composable.eval(fragCoord + float2(radius, -radius));
+        sum += composable.eval(fragCoord + float2(-radius, radius));
+        return sum / 5.0;
+    }
+"""
 
 /**
  * GameSpace Dashboard UI
- * 
- * Mandate Compliance:
- * 1. Clean Architecture: Pure UI layer, dispatches intents to NeuralCore.
- * 2. Reactive State: Observes IslandNeuralCore StateFlow.
- * 3. Lifecycle Security: Manages view-tree owners for Compose stability.
  */
 @SuppressLint("ViewConstructor")
 class GameSpaceComposeView(
@@ -227,6 +241,19 @@ fun GameSpaceUI(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(264.dp)
+                        .then(
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                Modifier.graphicsLayer {
+                                    renderEffect = android.graphics.RenderEffect.createRuntimeShaderEffect(
+                                        android.graphics.RuntimeShader(FrostedGlassShader).apply {
+                                            setFloatUniform("size", size.width, size.height)
+                                            setFloatUniform("radius", 15f)
+                                        },
+                                        "composable"
+                                    ).asComposeRenderEffect()
+                                }
+                            } else Modifier
+                        )
                         .background(
                             Brush.linearGradient(
                                 colors = listOf(
