@@ -92,8 +92,8 @@ class RootDaemonEngine @Inject constructor(
      * We hook logcat for AudioFlinger native events to detect mic state instantly.
      */
     private fun startAudioHook() {
-        // Look for AudioRecord (Mic) starting or stopping natively
-        val hookCmd = "logcat -b all -v raw -s AudioFlinger | grep -E 'AudioRecord.*start|AudioRecord.*stop'"
+        // Look for AudioRecord (Mic) starting or stopping natively - Android 15 AIDL compatible
+        val hookCmd = "logcat -b all -v raw -s AudioFlinger | grep -iE 'IAfRecordThread|AudioRecord.*start|AudioRecord.*stop'"
         executeInDaemon("$hookCmd &")
     }
 
@@ -114,7 +114,12 @@ class RootDaemonEngine @Inject constructor(
     }
 
     private fun startThermalHook() {
-        val hookCmd = "while true; do temp=\$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null); if [ ! -z \"\$temp\" ]; then echo \"DAEMON_EVENT: THERMAL \$temp\"; fi; sleep 5; done &"
+        // Custom Kernel Mapping for Redwood: 74=CPU, 90=Battery
+        val hookCmd = "while true; do " +
+                "cpu=\$(cat /sys/class/thermal/thermal_zone74/temp 2>/dev/null); " +
+                "batt=\$(cat /sys/class/thermal/thermal_zone90/temp 2>/dev/null); " +
+                "if [ ! -z \"\$cpu\" ]; then echo \"DAEMON_EVENT: THERMAL \$cpu \$batt\"; fi; " +
+                "sleep 5; done &"
         executeInDaemon(hookCmd)
     }
 
@@ -157,18 +162,17 @@ class RootDaemonEngine @Inject constructor(
 
     /**
      * Phase 4: Low Touch Latency Implementation
-     * Tweaks kernel-level input responsiveness and touch boost.
+     * Tweaks kernel-level input responsiveness using custom kernel nodes.
      */
     private fun applyLowLatencyTouch(enable: Boolean) {
         Log.i(TAG, "Applying Low Latency Touch Profile: $enable")
         if (enable) {
-            // Force performance governor on input devices (if available)
-            executeInDaemon("for i in /sys/devices/system/cpu/cpufreq/policy*/touch_boost; do echo 1 > \$i; done")
-            executeInDaemon("for i in /sys/devices/system/cpu/cpufreq/policy*/input_boost; do echo 1 > \$i; done")
+            // Schedutil RTG Boost (Custom Kernel specific)
+            executeInDaemon("for i in /sys/devices/system/cpu/cpufreq/policy*/schedutil/rtg_boost_freq; do echo 1 > \$i; done")
             // System-level touch speed hint
             executeInDaemon("settings put system touch_responsiveness_mode 1")
         } else {
-            executeInDaemon("for i in /sys/devices/system/cpu/cpufreq/policy*/touch_boost; do echo 0 > \$i; done")
+            executeInDaemon("for i in /sys/devices/system/cpu/cpufreq/policy*/schedutil/rtg_boost_freq; do echo 0 > \$i; done")
             executeInDaemon("settings put system touch_responsiveness_mode 0")
         }
     }
@@ -211,11 +215,14 @@ class RootDaemonEngine @Inject constructor(
                 neuralCore.dispatch(IslandIntent.UpdatePerAppVolumeState(false))
             }
             line.startsWith("DAEMON_EVENT: THERMAL") -> {
-                val tempRaw = line.removePrefix("DAEMON_EVENT: THERMAL ").trim().toFloatOrNull()
-                if (tempRaw != null) {
-                    // Usually in millidegrees Celsius
-                    val temp = if (tempRaw > 1000) tempRaw / 1000f else tempRaw
-                    neuralCore.dispatch(IslandIntent.UpdateThermalState(temp))
+                val parts = line.removePrefix("DAEMON_EVENT: THERMAL ").trim().split(" ")
+                if (parts.isNotEmpty()) {
+                    val cpuRaw = parts[0].toFloatOrNull()
+                    if (cpuRaw != null) {
+                        val cpuTemp = if (cpuRaw > 1000) cpuRaw / 1000f else cpuRaw
+                        neuralCore.dispatch(IslandIntent.UpdateThermalState(cpuTemp))
+                    }
+                    // Future: we could add a specific Battery Temp intent if needed
                 }
             }
             line.startsWith("DAEMON_EVENT: REFRESH_RATE") -> {
