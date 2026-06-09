@@ -169,6 +169,34 @@ fun GameSpaceUI(
         animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f)
     )
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val vibrator = remember { context.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator }
+
+    fun triggerVibe() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            vibrator.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK))
+        } else {
+            vibrator.vibrate(10)
+        }
+    }
+
+    // Detachable FPS Pill State
+    var isFpsDetached by remember { mutableStateOf(false) }
+    var fpsOffset by remember { mutableStateOf(Offset(300f, 200f)) }
+    
+    // Morph Animation State
+    var justLaunchedGame by remember(state.currentForegroundApp) { 
+        mutableStateOf(state.currentForegroundApp.isNotEmpty()) 
+    }
+    
+    LaunchedEffect(justLaunchedGame) {
+        if (justLaunchedGame) {
+            // Trigger haptic sequence for game launch transition
+            delay(1500)
+            justLaunchedGame = false
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         if (isExpanded) {
             Box(
@@ -205,20 +233,46 @@ fun GameSpaceUI(
                 }
             }
         }
+        
+        // 💊 Detached FPS Pill
+        if (isFpsDetached && state.currentForegroundApp.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .offset { androidx.compose.ui.unit.IntOffset(fpsOffset.x.toInt(), fpsOffset.y.toInt()) }
+                    .pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            fpsOffset += dragAmount
+                        }
+                    }
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xCC000000).copy(alpha = 0.8f))
+                    .androidx.compose.foundation.border(1.dp, Color(0xFF00FFB2).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                    .padding(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("FPS", color = Color.Gray, fontSize = 10.sp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("${state.gamingFps.toInt()}", color = Color(0xFF00FFB2), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+            }
+        }
 
-        // Xiaomi-style Edge Handle (Liquid Physics Pulse)
+        // Xiaomi-style Edge Handle (Liquid Physics Pulse & Morphing target)
         AnimatedVisibility(
             visible = !isExpanded,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.CenterStart)
         ) {
+            val handleWidth by animateFloatAsState(if (justLaunchedGame) 8f else 4f)
+            val handleColor = if (justLaunchedGame) Color(0xFFFF3B3B) else Color(0xFF00FFB2)
             Box(
                 modifier = Modifier
-                    .width(4.dp)
+                    .width(handleWidth.dp)
                     .height(80.dp)
                     .clip(RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp))
-                    .background(Brush.verticalGradient(listOf(Color(0xFF00FFB2), Color(0xFF00D1FF))))
+                    .background(Brush.verticalGradient(listOf(handleColor, Color(0xFF00D1FF))))
                     .clickable { onExpand() }
             )
         }
@@ -287,8 +341,14 @@ fun GameSpaceUI(
                                 .padding(horizontal = 14.dp, vertical = 4.dp)
                                 .pointerInput(Unit) {
                                     detectDragGestures(
-                                        onDragStart = { /* Log detachment intent */ },
-                                        onDrag = { change, _ -> change.consume() }
+                                        onDragStart = { 
+                                            isFpsDetached = true
+                                            triggerVibe()
+                                        },
+                                        onDrag = { change, dragAmount -> 
+                                            change.consume()
+                                            fpsOffset += dragAmount
+                                        }
                                     )
                                 }
                         ) {
@@ -381,17 +441,6 @@ fun GameSpaceUI(
                 // Right Side Sliders (Parallel & Dynamic)
                 var brightness by remember { mutableIntStateOf(72) }
                 var autoBrightness by remember { mutableStateOf(true) }
-
-                val context = androidx.compose.ui.platform.LocalContext.current
-                val vibrator = remember { context.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator }
-
-                fun triggerVibe() {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                        vibrator.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK))
-                    } else {
-                        vibrator.vibrate(10)
-                    }
-                }
 
                 Row(
                     modifier = Modifier
