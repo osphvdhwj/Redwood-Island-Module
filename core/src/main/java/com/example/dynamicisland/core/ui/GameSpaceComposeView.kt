@@ -355,11 +355,15 @@ fun GameSpaceUI(
                 var brightness by remember { mutableIntStateOf(72) }
                 var autoBrightness by remember { mutableStateOf(true) }
 
-                // Non-linear mapping: Perceived 20-80 maps roughly to 50-80 system brightness
-                val mappedBrightness = if (brightness in 20..80) {
-                    50 + ((brightness - 20) * (30f / 60f)).toInt()
-                } else {
-                    brightness
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val vibrator = remember { context.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator }
+
+                fun triggerVibe() {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                        vibrator.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK))
+                    } else {
+                        vibrator.vibrate(10)
+                    }
                 }
 
                 Row(
@@ -374,7 +378,18 @@ fun GameSpaceUI(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         VerticalSlider(
                             value = brightness,
-                            onChange = { brightness = it; autoBrightness = false },
+                            onChange = { 
+                                brightness = it
+                                autoBrightness = false 
+                                // Non-linear mapping: Perceived 20-80 maps roughly to 50-80 system brightness
+                                val mappedBrightness = if (it in 20..80) {
+                                    50 + ((it - 20) * (30f / 60f)).toInt()
+                                } else {
+                                    it
+                                }
+                                neuralCore.dispatch(IslandIntent.UpdateBrightness(mappedBrightness, false))
+                                triggerVibe()
+                            },
                             icon = "☀️",
                             label = "Bright",
                             accentColor = Color(0xFFFFD700)
@@ -382,7 +397,11 @@ fun GameSpaceUI(
                         Spacer(modifier = Modifier.height(16.dp))
                         Box(
                             modifier = Modifier
-                                .clickable { autoBrightness = !autoBrightness }
+                                .clickable { 
+                                    autoBrightness = !autoBrightness
+                                    neuralCore.dispatch(IslandIntent.UpdateBrightness(brightness, autoBrightness))
+                                    triggerVibe()
+                                }
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(if (autoBrightness) Color(0x33FFD700) else Color(0xFF1A1A1A))
                                 .padding(horizontal = 6.dp, vertical = 4.dp),
@@ -394,36 +413,37 @@ fun GameSpaceUI(
                     
                     // AUDIO COLUMN (Dynamic Context)
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        if (state.isMicActive) {
-                            VerticalSlider(
-                                value = state.callVolume,
-                                onChange = { /* Update Call Vol via AudioManager */ },
-                                icon = "📞",
-                                label = "Call",
-                                accentColor = Color(0xFF00FFB2)
-                            )
-                        } else if (state.isPerAppVolumeActive) {
-                            VerticalSlider(
-                                value = state.perAppVolume,
-                                onChange = { /* Update Per App Vol */ },
-                                icon = "📱",
-                                label = "App Vol",
-                                accentColor = Color(0xFF9D00FF)
-                            )
-                        } else {
-                            VerticalSlider(
-                                value = state.volume,
-                                onChange = { /* Update Media Vol */ },
-                                icon = "🔊",
-                                label = "Media",
-                                accentColor = Color(0xFF1DB954)
-                            )
-                        }
+                        val activeVolume = if (state.isMicActive) state.callVolume 
+                                          else if (state.isPerAppVolumeActive) state.perAppVolume 
+                                          else state.volume
+                        
+                        val activeLabel = if (state.isMicActive) "Call" 
+                                         else if (state.isPerAppVolumeActive) "App Vol" 
+                                         else "Media"
+                        
+                        val activeIcon = if (state.isMicActive) "📞" 
+                                        else if (state.isPerAppVolumeActive) "📱" 
+                                        else "🔊"
+                                        
+                        val activeColor = if (state.isMicActive) Color(0xFF00FFB2) 
+                                         else if (state.isPerAppVolumeActive) Color(0xFF9D00FF) 
+                                         else Color(0xFF1DB954)
+
+                        VerticalSlider(
+                            value = activeVolume,
+                            onChange = { 
+                                neuralCore.dispatch(IslandIntent.UpdateVolume(it)) 
+                                triggerVibe()
+                            },
+                            icon = activeIcon,
+                            label = activeLabel,
+                            accentColor = activeColor
+                        )
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         Box(
                             modifier = Modifier
-                                .clickable { /* Toggle Mute */ }
+                                .clickable { triggerVibe() /* Toggle Mute logic in Core later */ }
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(Color(0xFF1A1A1A))
                                 .padding(horizontal = 6.dp, vertical = 4.dp),

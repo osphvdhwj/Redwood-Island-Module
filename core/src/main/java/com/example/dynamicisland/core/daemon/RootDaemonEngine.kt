@@ -87,6 +87,18 @@ class RootDaemonEngine @Inject constructor(
         }
     }
 
+    private suspend fun executeInDaemonForResult(cmd: String): String = withContext(Dispatchers.IO) {
+        try {
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            val result = reader.readLine() ?: ""
+            process.waitFor()
+            result.trim()
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
     /**
      * Phase 1: Micro-Latency Audio & Mic Detection
      * We hook logcat for AudioFlinger native events to detect mic state instantly.
@@ -114,11 +126,12 @@ class RootDaemonEngine @Inject constructor(
     }
 
     private fun startThermalHook() {
-        // Custom Kernel Mapping for Redwood: 74=CPU, 90=Battery
+        // Custom Kernel Mapping for Redwood: 74=CPU, 90=Battery, 55=GPU
         val hookCmd = "while true; do " +
                 "cpu=\$(cat /sys/class/thermal/thermal_zone74/temp 2>/dev/null); " +
                 "batt=\$(cat /sys/class/thermal/thermal_zone90/temp 2>/dev/null); " +
-                "if [ ! -z \"\$cpu\" ]; then echo \"DAEMON_EVENT: THERMAL \$cpu \$batt\"; fi; " +
+                "gpu=\$(cat /sys/class/thermal/thermal_zone55/temp 2>/dev/null); " +
+                "if [ ! -z \"\$cpu\" ]; then echo \"DAEMON_EVENT: THERMAL \$cpu \$batt \$gpu\"; fi; " +
                 "sleep 5; done &"
         executeInDaemon(hookCmd)
     }
@@ -134,12 +147,30 @@ class RootDaemonEngine @Inject constructor(
     }
 
     private fun startBatteryStatsHook() {
-        val hookCmd = "while true; do rate=\$(cat /sys/class/power_supply/battery/current_now 2>/dev/null); if [ ! -z \"\$rate\" ]; then echo \"DAEMON_EVENT: BATTERY_RATE \$rate\"; fi; sleep 5; done &"
+        // current_now on Redwood is microamperes (uA). Convert to milliamps (mA).
+        // Plus, parse batterystats usage summary for top drainer.
+        val hookCmd = "while true; do " +
+                "uA=\$(cat /sys/class/power_supply/battery/current_now 2>/dev/null); " +
+                "if [ ! -z \"\$uA\" ]; then " +
+                "  mA=\$((uA / 1000)); " +
+                "  echo \"DAEMON_EVENT: BATTERY_RATE \$mA\"; " +
+                "fi; " +
+                "topApp=\$(dumpsys batterystats --usage | grep 'UID u0a' | sort -rn -k 2 | head -n 1 | awk '{print \$2}'); " +
+                "if [ ! -z \"\$topApp\" ]; then echo \"DAEMON_EVENT: TOP_POWER_UID \$topApp\"; fi; " +
+                "sleep 10; done &"
         executeInDaemon(hookCmd)
     }
 
     private fun startNetworkStatsHook() {
-        val hookCmd = "while true; do stats=\$(grep wlan0 /proc/net/dev | awk '{print \$2,\$10}'); if [ ! -z \"\$stats\" ]; then echo \"DAEMON_EVENT: NETWORK_STATS \$stats\"; fi; sleep 2; done &"
+        // Parse /proc/net/dev for wlan0 and rmnet TX/RX bytes
+        val hookCmd = "while true; do " +
+                "wifi=\$(grep wlan0 /proc/net/dev); " +
+                "data=\$(grep -E 'rmnet|rmnet_data0' /proc/net/dev | head -n 1); " +
+                "rx=0; tx=0; " +
+                "if [ ! -z \"\$wifi\" ]; then rx=\$((rx + \$(echo \$wifi | awk '{print \$2}'))); tx=\$((tx + \$(echo \$wifi | awk '{print \$10}'))); fi; " +
+                "if [ ! -z \"\$data\" ]; then rx=\$((rx + \$(echo \$data | awk '{print \$2}'))); tx=\$((tx + \$(echo \$data | awk '{print \$10}'))); fi; " +
+                "echo \"DAEMON_EVENT: NETWORK_STATS \$rx \$tx\"; " +
+                "sleep 2; done &"
         executeInDaemon(hookCmd)
     }
 
@@ -153,11 +184,21 @@ class RootDaemonEngine @Inject constructor(
                 when (intent) {
                     is IslandIntent.UpdateBrightness -> setSystemBrightness(intent.brightness, intent.isAuto)
                     is IslandIntent.ToggleLowLatency -> applyLowLatencyTouch(intent.enable)
-                    // is IslandIntent.UpdateVolume -> setSystemVolume(intent.volume)
+                    is IslandIntent.UpdateVolume -> setSystemVolume(intent.volume)
                     else -> {}
                 }
             }
         }
+    }
+
+    /**
+     * Set system media volume via shell.
+     */
+    fun setSystemVolume(value: Int) {
+        // volume level usually 0-15 or 0-25
+        val maxVol = 15 // Default for most AOSP
+        val volLevel = ((value / 100f) * maxVol).toInt()
+        executeInDaemon("service call audio 3 i32 3 i32 $volLevel i32 1") // setStreamVolume(STREAM_MUSIC)
     }
 
     /**
@@ -206,6 +247,16 @@ class RootDaemonEngine @Inject constructor(
                     val component = parts[1].trim()
                     val pkg = component.split("/")[0]
                     neuralCore.dispatch(IslandIntent.UpdateForegroundApp(pkg))
+                    
+                    // Heuristic for Games: check standard game paths or categories
+                    // For now, we'll verify via shell if the app is CATEGORY_GAME
+                    daemonScope.launch {
+                        val isGame = executeInDaemonForResult("dumpsys package $pkg | grep -q 'category=GAME' && echo 'true' || echo 'false'")
+                        if (isGame == "true") {
+                            Log.d(TAG, "Daemon: Game Launch Detected: $pkg")
+                            neuralCore.dispatch(IslandIntent.UpdateNotificationState(isActive = false)) // Reset shrink
+                        }
+                    }
                 }
             }
             line.startsWith("DAEMON_EVENT: APP_VOL_ACTIVE") -> {
@@ -222,7 +273,20 @@ class RootDaemonEngine @Inject constructor(
                         val cpuTemp = if (cpuRaw > 1000) cpuRaw / 1000f else cpuRaw
                         neuralCore.dispatch(IslandIntent.UpdateThermalState(cpuTemp))
                     }
-                    // Future: we could add a specific Battery Temp intent if needed
+                    if (parts.size >= 3) {
+                        val gpuRaw = parts[2].toFloatOrNull()
+                        if (gpuRaw != null) {
+                            val gpuTemp = if (gpuRaw > 1000) gpuRaw / 1000f else gpuRaw
+                            // Could dispatch a specific GPU intent here if needed
+                        }
+                    }
+                }
+            }
+            line.startsWith("DAEMON_EVENT: TOP_POWER_UID") -> {
+                val uid = line.removePrefix("DAEMON_EVENT: TOP_POWER_UID ").trim()
+                if (uid.isNotEmpty()) {
+                    // Extract package name via dumpsys if needed, or dispatch UID
+                    neuralCore.dispatch(IslandIntent.UpdateTopPowerDrainer(uid))
                 }
             }
             line.startsWith("DAEMON_EVENT: REFRESH_RATE") -> {

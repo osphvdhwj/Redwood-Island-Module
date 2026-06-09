@@ -50,6 +50,7 @@ sealed class IslandIntent {
     data class UpdateForegroundApp(val pkg: String) : IslandIntent()
     data class UpdateRefreshRate(val hz: Int) : IslandIntent()
     data class UpdateBatteryStats(val dischargeRate: Int) : IslandIntent()
+    data class UpdateTopPowerDrainer(val uid: String) : IslandIntent()
     data class UpdateNetworkStats(val txSpeed: Long, val rxSpeed: Long) : IslandIntent()
     data class UpdateNotificationState(val isActive: Boolean) : IslandIntent()
 

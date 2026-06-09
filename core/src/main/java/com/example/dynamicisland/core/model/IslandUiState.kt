@@ -63,6 +63,7 @@ data class IslandUiState(
     val currentForegroundApp: String = "",
     val currentRefreshRate: Int = 60,
     val batteryDischargeRate: Int = 0,
+    val topPowerDrainApp: String = "",
     val networkTxSpeed: Long = 0L,
     val networkRxSpeed: Long = 0L,
     

@@ -49,7 +49,7 @@ The single source of truth broadcasted by the Core. Clients should observe this 
 *   `isMicActive`, `isCameraActive`: Hardware usage booleans.
 *   `isLowLatencyActive`: Indicates if the micro-latency touch boost is engaged.
 *   `widgetStack`: A list of all currently active `LiveActivityModel` objects, enabling iOS-style widget stacking.
-*   `cpuTemperature`, `currentRefreshRate`, `batteryDischargeRate`: System telemetry.
+*   `cpuTemperature`, `currentRefreshRate`, `batteryDischargeRate`, `topPowerDrainApp`: System telemetry.
 *   `currentForegroundApp`: Current app context.
 
 ---
