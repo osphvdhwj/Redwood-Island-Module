@@ -20,6 +20,7 @@ Redwood Core accepts the following unified intents to command hardware or update
 *   `UpdateBrightness(brightness: Int, isAuto: Boolean)`: Overrides system brightness instantly using the root daemon.
 *   `UpdateVolume(volume: Int)`: Updates media volume.
 *   `UpdatePerformanceLevel(level: PerformanceLevel)`: Adjusts CPU scaling governors (`BATTERY`, `BALANCED`, `PERFORMANCE`, `WILD`).
+*   `ToggleLowLatency(enable: Boolean)`: Optimizes kernel-level touch responsiveness and input boost for micro-latency interactions.
 *   `FreezeBackground`: Suspends cached apps in memory to free up RAM.
 *   `CleanupStorage`: Clears system cache, tombstones, and logs.
 *   `ToggleThermalBypass(enable: Boolean)`: Bypasses thermal throttling limits (requires supported kernel).
@@ -46,6 +47,8 @@ The single source of truth broadcasted by the Core. Clients should observe this 
 *   `islandState`: Current physical state of the overlay (`HIDDEN`, `TYPE_0_RING`, `TYPE_1_MINI`, etc.)
 *   `gamingFps`, `gamingCpuUsage`, `gamingGpuUsage`: Live telemetry data.
 *   `isMicActive`, `isCameraActive`: Hardware usage booleans.
+*   `isLowLatencyActive`: Indicates if the micro-latency touch boost is engaged.
+*   `widgetStack`: A list of all currently active `LiveActivityModel` objects, enabling iOS-style widget stacking.
 *   `cpuTemperature`, `currentRefreshRate`, `batteryDischargeRate`: System telemetry.
 *   `currentForegroundApp`: Current app context.
 

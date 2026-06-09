@@ -51,6 +51,8 @@ data class IslandUiState(
     val isExpanded: Boolean = false,
     val isNotificationActive: Boolean = false,
     val isMicActive: Boolean = false,
+    val isLowLatencyActive: Boolean = false,
+    val widgetStack: List<LiveActivityModel> = emptyList(),
     val callVolume: Int = 0,
     val perAppVolume: Int = 0,
     val isPerAppVolumeActive: Boolean = false,

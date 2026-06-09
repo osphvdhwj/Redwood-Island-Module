@@ -147,10 +147,29 @@ class RootDaemonEngine @Inject constructor(
             neuralCore.intentFlow.collect { intent ->
                 when (intent) {
                     is IslandIntent.UpdateBrightness -> setSystemBrightness(intent.brightness, intent.isAuto)
+                    is IslandIntent.ToggleLowLatency -> applyLowLatencyTouch(intent.enable)
                     // is IslandIntent.UpdateVolume -> setSystemVolume(intent.volume)
                     else -> {}
                 }
             }
+        }
+    }
+
+    /**
+     * Phase 4: Low Touch Latency Implementation
+     * Tweaks kernel-level input responsiveness and touch boost.
+     */
+    private fun applyLowLatencyTouch(enable: Boolean) {
+        Log.i(TAG, "Applying Low Latency Touch Profile: $enable")
+        if (enable) {
+            // Force performance governor on input devices (if available)
+            executeInDaemon("for i in /sys/devices/system/cpu/cpufreq/policy*/touch_boost; do echo 1 > \$i; done")
+            executeInDaemon("for i in /sys/devices/system/cpu/cpufreq/policy*/input_boost; do echo 1 > \$i; done")
+            // System-level touch speed hint
+            executeInDaemon("settings put system touch_responsiveness_mode 1")
+        } else {
+            executeInDaemon("for i in /sys/devices/system/cpu/cpufreq/policy*/touch_boost; do echo 0 > \$i; done")
+            executeInDaemon("settings put system touch_responsiveness_mode 0")
         }
     }
 

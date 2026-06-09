@@ -97,6 +97,24 @@ class IslandNeuralCore @Inject constructor(
             is IslandIntent.UpdatePerformanceLevel -> currentState.copy(
                 performanceLevel = intent.level
             )
+            is IslandIntent.ToggleLowLatency -> currentState.copy(isLowLatencyActive = intent.enable)
+            is IslandIntent.NewActivity -> {
+                val newStack = currentState.widgetStack + intent.model
+                currentState.copy(
+                    widgetStack = newStack,
+                    activeModel = intent.model, // Most recent is active
+                    islandState = mapModelToState(intent.model)
+                )
+            }
+            is IslandIntent.RemoveActivity -> {
+                val newStack = currentState.widgetStack.filter { it.id != intent.activityId }
+                val nextModel = newStack.lastOrNull()
+                currentState.copy(
+                    widgetStack = newStack,
+                    activeModel = nextModel,
+                    islandState = if (nextModel != null) mapModelToState(nextModel) else IslandState.HIDDEN
+                )
+            }
             is IslandIntent.ToggleUltraBattery -> currentState.copy(isUltraBatteryActive = intent.enable)
             is IslandIntent.ToggleThermalBypass -> currentState.copy(isThermalBypassActive = intent.enable)
             is IslandIntent.UpdateSettings -> currentState.copy(settings = intent.settings)

@@ -61,6 +61,7 @@ sealed class IslandIntent {
     data class UpdatePerAppVolumeState(val isActive: Boolean) : IslandIntent()
     object CleanupStorage : IslandIntent()
     object FreezeBackground : IslandIntent()
+    data class ToggleLowLatency(val enable: Boolean) : IslandIntent()
     data class ToggleUltraBattery(val enable: Boolean) : IslandIntent()
     data class ToggleThermalBypass(val enable: Boolean) : IslandIntent()
     data class ToggleCalibration(val enabled: Boolean, val targetState: String? = null) : IslandIntent()
