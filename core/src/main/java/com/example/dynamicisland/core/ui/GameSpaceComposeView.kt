@@ -61,6 +61,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import android.os.Build
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.border
 
 const val FrostedGlassShader = """
     uniform shader composable;
@@ -272,7 +273,7 @@ fun GameSpaceUI(
                         drawCircle(
                             color = Color(0xFF00FFB2).copy(alpha = 0.1f),
                             radius = size.minDimension / 2,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp)
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
                         )
                         // Left/Right Audio Peaks Visualization (Mms from AudioFlinger)
                         drawArc(
@@ -280,14 +281,14 @@ fun GameSpaceUI(
                             startAngle = 135f,
                             sweepAngle = 90f,
                             useCenter = false,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4.dp, cap = StrokeCap.Round)
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
                         )
                         drawArc(
                             color = Color(0xFF00FFB2).copy(alpha = state.audioRightPeak.coerceIn(0f, 1f)),
                             startAngle = -45f,
                             sweepAngle = 90f,
                             useCenter = false,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4.dp, cap = StrokeCap.Round)
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
                         )
                     }
                 }
@@ -307,7 +308,7 @@ fun GameSpaceUI(
                     }
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color(0xCC000000).copy(alpha = 0.8f))
-                    .androidx.compose.foundation.border(1.dp, Color(0xFF00FFB2).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                    .border(1.dp, Color(0xFF00FFB2).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
                     .padding(12.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
