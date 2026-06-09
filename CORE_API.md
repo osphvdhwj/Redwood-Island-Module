@@ -54,6 +54,17 @@ The single source of truth broadcasted by the Core. Clients should observe this 
 
 ---
 
+## 🛡️ Stealth & Anti-Cheat Compliance
+
+To ensure users do not receive Game ID bans, all developers interacting with Redwood Core must adhere to the **Passive Stealth Architecture**:
+
+1.  **Scope Isolation:** NEVER include game packages in the LSPosed scope. Hooks must only target `com.android.systemui` and `android`.
+2.  **Passive Telemetry:** Read hardware stats (FPS, CPU, Thermals) exclusively from `/sys` and `/proc` kernel nodes. Never attempt to read or write to a game process's memory.
+3.  **Standard Overlays:** Always use standard `SYSTEM_ALERT_WINDOW` flags. Do not attempt to inject UI frames directly into a game's rendering engine (Vulkan/OpenGL).
+4.  **Non-Invasive Audio:** Use the Core Daemon's `logcat` hooks to monitor system audio states. Never hook an active game's `AudioRecord` or `AudioTrack` instances directly.
+
+---
+
 ## 🛠️ Tutorial: Hooking into Redwood Core
 
 Third-party developers can utilize the Redwood Core daemon to build custom overlays or optimization dashboards.
