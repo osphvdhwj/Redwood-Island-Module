@@ -95,6 +95,7 @@ class IslandNeuralCore @Inject constructor(
             is IslandIntent.UpdateTopPowerDrainer -> currentState.copy(topPowerDrainApp = intent.uid)
             is IslandIntent.UpdateNetworkStats -> currentState.copy(networkTxSpeed = intent.txSpeed, networkRxSpeed = intent.rxSpeed)
             is IslandIntent.UpdateNotificationState -> currentState.copy(isNotificationActive = intent.isActive)
+            is IslandIntent.UpdateAudioRadar -> currentState.copy(audioLeftPeak = intent.leftPeak, audioRightPeak = intent.rightPeak)
             is IslandIntent.UpdatePerformanceLevel -> currentState.copy(
                 performanceLevel = intent.level
             )

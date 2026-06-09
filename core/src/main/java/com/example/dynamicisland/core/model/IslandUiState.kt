@@ -66,6 +66,8 @@ data class IslandUiState(
     val topPowerDrainApp: String = "",
     val networkTxSpeed: Long = 0L,
     val networkRxSpeed: Long = 0L,
+    val audioLeftPeak: Float = 0f,
+    val audioRightPeak: Float = 0f,
     
     // Performance & Lifecycle
     val isScreenOn: Boolean = true,

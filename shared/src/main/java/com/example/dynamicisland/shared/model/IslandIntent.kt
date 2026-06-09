@@ -53,6 +53,7 @@ sealed class IslandIntent {
     data class UpdateTopPowerDrainer(val uid: String) : IslandIntent()
     data class UpdateNetworkStats(val txSpeed: Long, val rxSpeed: Long) : IslandIntent()
     data class UpdateNotificationState(val isActive: Boolean) : IslandIntent()
+    data class UpdateAudioRadar(val leftPeak: Float, val rightPeak: Float) : IslandIntent()
 
     // Performance & Lifecycle
     data class UpdateScreenState(val isScreenOn: Boolean) : IslandIntent()

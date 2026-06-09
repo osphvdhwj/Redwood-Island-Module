@@ -172,11 +172,34 @@ fun GameSpaceUI(
     val context = androidx.compose.ui.platform.LocalContext.current
     val vibrator = remember { context.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator }
 
-    fun triggerVibe() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+    fun vibeExpand() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && vibrator.areAllPrimitivesSupported(android.os.VibrationEffect.Composition.PRIMITIVE_THUD, android.os.VibrationEffect.Composition.PRIMITIVE_TICK)) {
+            vibrator.vibrate(android.os.VibrationEffect.startComposition()
+                .addPrimitive(android.os.VibrationEffect.Composition.PRIMITIVE_THUD)
+                .addPrimitive(android.os.VibrationEffect.Composition.PRIMITIVE_TICK)
+                .compose())
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            vibrator.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_HEAVY_CLICK))
+        }
+    }
+
+    fun vibeSliderTick() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && vibrator.areAllPrimitivesSupported(android.os.VibrationEffect.Composition.PRIMITIVE_LOW_TICK)) {
+            vibrator.vibrate(android.os.VibrationEffect.startComposition()
+                .addPrimitive(android.os.VibrationEffect.Composition.PRIMITIVE_LOW_TICK)
+                .compose())
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            vibrator.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_TICK))
+        }
+    }
+
+    fun vibeClick() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && vibrator.areAllPrimitivesSupported(android.os.VibrationEffect.Composition.PRIMITIVE_CLICK)) {
+            vibrator.vibrate(android.os.VibrationEffect.startComposition()
+                .addPrimitive(android.os.VibrationEffect.Composition.PRIMITIVE_CLICK)
+                .compose())
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             vibrator.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK))
-        } else {
-            vibrator.vibrate(10)
         }
     }
 
@@ -192,12 +215,44 @@ fun GameSpaceUI(
     LaunchedEffect(justLaunchedGame) {
         if (justLaunchedGame) {
             // Trigger haptic sequence for game launch transition
+            vibeExpand()
             delay(1500)
             justLaunchedGame = false
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // Morphing Particle Animation (Island to Edge Handle)
+        AnimatedVisibility(
+            visible = justLaunchedGame,
+            enter = fadeIn(animationSpec = spring(dampingRatio = 0.5f, stiffness = 200f)),
+            exit = fadeOut(animationSpec = spring(dampingRatio = 0.8f, stiffness = 500f))
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                val pathProgress by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (justLaunchedGame) 1f else 0f,
+                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 800, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                )
+                
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    // Start at top center (Top Island), end at middle left (Edge Handle)
+                    val startX = size.width / 2
+                    val startY = 50.dp.toPx()
+                    val endX = 10.dp.toPx()
+                    val endY = size.height / 2
+                    
+                    val currentX = startX + (endX - startX) * pathProgress
+                    val currentY = startY + (endY - startY) * pathProgress
+                    
+                    drawCircle(
+                        color = Color(0xFF00FFB2),
+                        radius = 6.dp.toPx() * (1f - pathProgress * 0.5f), // Shrink as it travels
+                        center = Offset(currentX, currentY)
+                    )
+                }
+            }
+        }
+
         if (isExpanded) {
             Box(
                 modifier = Modifier
@@ -216,14 +271,14 @@ fun GameSpaceUI(
                         )
                         // Left/Right Audio Peaks Visualization (Mms from AudioFlinger)
                         drawArc(
-                            color = Color(0xFF00FFB2).copy(alpha = (0..30).random() / 100f),
+                            color = Color(0xFF00FFB2).copy(alpha = state.audioLeftPeak.coerceIn(0f, 1f)),
                             startAngle = 135f,
                             sweepAngle = 90f,
                             useCenter = false,
                             style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4.dp, cap = StrokeCap.Round)
                         )
                         drawArc(
-                            color = Color(0xFF00FFB2).copy(alpha = (0..30).random() / 100f),
+                            color = Color(0xFF00FFB2).copy(alpha = state.audioRightPeak.coerceIn(0f, 1f)),
                             startAngle = -45f,
                             sweepAngle = 90f,
                             useCenter = false,
@@ -343,7 +398,7 @@ fun GameSpaceUI(
                                     detectDragGestures(
                                         onDragStart = { 
                                             isFpsDetached = true
-                                            triggerVibe()
+                                            vibeClick()
                                         },
                                         onDrag = { change, dragAmount -> 
                                             change.consume()
@@ -464,7 +519,7 @@ fun GameSpaceUI(
                                     it
                                 }
                                 neuralCore.dispatch(IslandIntent.UpdateBrightness(mappedBrightness, false))
-                                triggerVibe()
+                                vibeSliderTick()
                             },
                             icon = "☀️",
                             label = "Bright",
@@ -476,7 +531,7 @@ fun GameSpaceUI(
                                 .clickable { 
                                     autoBrightness = !autoBrightness
                                     neuralCore.dispatch(IslandIntent.UpdateBrightness(brightness, autoBrightness))
-                                    triggerVibe()
+                                    vibeClick()
                                 }
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(if (autoBrightness) Color(0x33FFD700) else Color(0xFF1A1A1A))
@@ -509,7 +564,7 @@ fun GameSpaceUI(
                             value = activeVolume,
                             onChange = { 
                                 neuralCore.dispatch(IslandIntent.UpdateVolume(it)) 
-                                triggerVibe()
+                                vibeSliderTick()
                             },
                             icon = activeIcon,
                             label = activeLabel,
@@ -519,7 +574,7 @@ fun GameSpaceUI(
                         Spacer(modifier = Modifier.height(16.dp))
                         Box(
                             modifier = Modifier
-                                .clickable { triggerVibe() /* Toggle Mute logic in Core later */ }
+                                .clickable { vibeClick() /* Toggle Mute logic in Core later */ }
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(Color(0xFF1A1A1A))
                                 .padding(horizontal = 6.dp, vertical = 4.dp),
